@@ -136,7 +136,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			buffer = requests.get( indexs.get(0) ).encode();
 			
 		} else {
-			List<RedisRequest> tmpRequests = new ArrayList<RedisRequest>();
+			List<RedisRequest> tmpRequests = new ArrayList<RedisRequest>( indexs.size() );
 			for(int idx: indexs) {
 				tmpRequests.add( requests.get( idx ) );
 			}
