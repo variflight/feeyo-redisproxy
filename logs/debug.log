@@ -1,0 +1,3 @@
+2017.09.13 14:55:59 com.feeyo.redis.net.backend.pool.PhysicalNode -  no ilde connection in pool, create new connection for 127.0.0.1:6379 of pool1
+2017.09.13 14:55:59 Connection - register:Connection [ , reactor=NioReactor-1, host=127.0.0.1, port=6379, id=1, startupTime=1505285759246, lastReadTime=1505285759246, lastWriteTime=1505285759246, isClosed=false]
+2017.09.13 14:55:59 Connection - add:Connection [ , reactor=NioReactor-1, host=127.0.0.1, port=6379, id=1, startupTime=1505285759246, lastReadTime=1505285759246, lastWriteTime=1505285759246, isClosed=false]

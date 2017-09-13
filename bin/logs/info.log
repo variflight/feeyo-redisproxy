@@ -1,0 +1,7 @@
+2017.09.13 14:55:59 com.feeyo.redis.virtualmemory.MappedFile - /Users/zhuam/git/variflight/feeyo-redisproxy/store mkdir OK
+2017.09.13 14:55:59 com.feeyo.redis.virtualmemory.VirtualMemoryService - /Users/zhuam/git/variflight/feeyo-redisproxy/store/commitlog create OK
+2017.09.13 14:55:59 com.feeyo.redis.virtualmemory.MappedFileAllocateService - MappedFileAllocateService service started
+2017.09.13 14:55:59 com.feeyo.redis.virtualmemory.CommitLog - FlushRealTimeService service started
+2017.09.13 14:55:59 com.feeyo.redis.net.backend.pool.PhysicalNode - init redis node ,create connections total 1 for 127.0.0.1:6379
+2017.09.13 14:55:59 com.feeyo.redis.net.backend.pool.PhysicalNode - init redis node finished
+2017.09.13 14:56:14 com.feeyo.redis.engine.RedisEngineCtx - Server is started and listening on 8066
