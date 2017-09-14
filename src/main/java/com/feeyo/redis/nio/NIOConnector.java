@@ -32,7 +32,7 @@ public final class NIOConnector extends Thread {
 	public NIOConnector(String name, NIOReactorPool reactorPool) throws IOException {
 		super.setName(name);
 		this.name = name;
-		this.selector = SelectorUtil.openSelector();
+		this.selector = Selector.open();
 		this.reactorPool = reactorPool;
 		this.connectQueue = new LinkedBlockingQueue<Connection>();
 	}
