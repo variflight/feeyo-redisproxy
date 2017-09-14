@@ -90,8 +90,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						resps = null;
 
 						// 后段链接释放
-						backendCon.release();
-						removeBackendConnection(backendCon);
+						removeAndReleaseBackendConnection(backendCon);
 
 						// 数据收集
 						StatUtil.collect(password, PIPELINE_CMD, PIPELINE_KEY, requestSize, responseSize,
@@ -122,8 +121,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 			} else if ( state == ResponseStatusCode.THE_NODE_COMPLETED  ) {
 				
 				// 如果此后端节点数据已经返回完毕，则释放链接
-				backendCon.release();
-				removeBackendConnection(backendCon);
+				removeAndReleaseBackendConnection(backendCon);
 				
 			} else if ( state == ResponseStatusCode.ERROR ) {
 				// 添加回复到虚拟内存中出错。

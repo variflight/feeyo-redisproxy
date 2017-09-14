@@ -664,6 +664,9 @@ public class Manage {
 							StringBuffer sb = new StringBuffer();
 							RedisStandalonePool redisStandalonePool = (RedisStandalonePool) pool;
 							PhysicalNode physicalNode = redisStandalonePool.getPhysicalNode();
+							if (physicalNode == null) 
+								continue;
+								
 							sb.append("   ");
 							sb.append(redisStandalonePool.getId()).append("       ");
 							sb.append("Standalone").append("  ");
@@ -801,7 +804,7 @@ public class Manage {
 					
 					RedisBackendConnection backendCon = pysicalNode.getConnection(callback, frontCon);
 					if (backendCon == null) {
-						backendCon = pysicalNode.createNewConnection(callback, frontCon, true);
+						backendCon = pysicalNode.createNewConnection(callback, frontCon);
 					} else {
 						backendCon.write(request.encode());
 					}

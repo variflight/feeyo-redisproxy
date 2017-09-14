@@ -2,6 +2,7 @@ package com.feeyo.redis.net.backend;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.Calendar;
 
 import com.feeyo.redis.net.RedisConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
@@ -18,7 +19,7 @@ public class RedisBackendConnection extends RedisConnection {
 	
     private BackendCallback callback;
     private PhysicalNode physicalNode;
-    private Object _lock = new Object();
+
     //
     private BackendCallback NULL = new BackendCallback() {
 		@Override
@@ -62,14 +63,7 @@ public class RedisBackendConnection extends RedisConnection {
 	
 	public void release() {
 		this.setCallback( NULL );
-		if (borrowed) {
-			synchronized (_lock) {
-				if (borrowed) {
-					this.physicalNode.releaseConnection(this);
-				}
-			}
-		}
-		this.borrowed = false;
+		this.physicalNode.releaseConnection(this);
 	}
 
 	public void setBorrowed(boolean borrowed) {
@@ -197,6 +191,50 @@ public class RedisBackendConnection extends RedisConnection {
 		sBuffer.append( db ).append("\r\n");
 		
 		write( sBuffer.toString().getBytes() );			
+	}
+	
+	private String toDate(long mills) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis( mills );
+		
+		int date = cal.get( Calendar.DATE );
+		int hour = cal.get( Calendar.HOUR );
+		int minute = cal.get( Calendar.MINUTE );
+		int second = cal.get( Calendar.SECOND );
+		
+		StringBuffer sb = new StringBuffer();
+		sb.append("(").append( date ).append(")");
+		sb.append( hour ).append(":");
+		
+		if ( minute >= 10)	
+			sb.append( minute).append(":");
+		else 
+			sb.append("0").append( minute).append(":");
+		
+		if ( second >= 10 ) 
+			sb.append( second );
+		else
+			sb.append("0").append( second );
+		
+		return sb.toString();
+		
+	}
+	
+	@Override
+	public String toString() {
+		StringBuffer sbuffer = new StringBuffer(100);
+		sbuffer.append( "Connection [ " );
+		sbuffer.append(", reactor=").append( reactor );
+		sbuffer.append(", host=").append( host );
+		sbuffer.append(", port=").append( port );
+		sbuffer.append(", id=").append( id );
+		sbuffer.append(", borrowed=").append( borrowed );
+		sbuffer.append(", startupTime=").append( toDate(startupTime) );
+		sbuffer.append(", lastReadTime=").append( toDate(lastReadTime) );
+		sbuffer.append(", lastWriteTime=").append( toDate(lastWriteTime) );
+		sbuffer.append(", isClosed=").append( isClosed );
+		sbuffer.append("]");
+		return  sbuffer.toString();
 	}
 	
 }

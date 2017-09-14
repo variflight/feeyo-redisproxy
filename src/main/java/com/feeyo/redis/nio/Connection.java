@@ -380,6 +380,9 @@ public abstract class Connection implements ClosableConnection {
 	}
 
 	public void write(byte[] data) throws IOException {
+		if (data == null)
+			return;
+		
 		int size = data.length;
 		if ( size >= NetSystem.getInstance().getBufferPool().getMaxChunkSize() ) {
 			size = NetSystem.getInstance().getBufferPool().getMinChunkSize();

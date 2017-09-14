@@ -80,10 +80,10 @@ public class PhysicalNode {
 			public void handlerError(Exception e, RedisBackendConnection conn) {
 				//ignore
 			}
-		}, null, false);
+		}, null);
 	}
 	
-	public RedisBackendConnection createNewConnection(BackendCallback callback, Object attachment, boolean isBorrowed) throws IOException {
+	public RedisBackendConnection createNewConnection(BackendCallback callback, Object attachment) throws IOException {
 		
 		 int activeCons = this.getActiveCount();// 当前最大活动连接
          if ( activeCons + 1 > size ) {// 下一个连接大于最大连接数
@@ -97,7 +97,6 @@ public class PhysicalNode {
          	// create connection
         	RedisBackendConnection con = factory.make(this, callback, attachment);
     		con.setLastTime( TimeUtil.currentTimeMillis() );
-    		con.setBorrowed(isBorrowed);
     		return con;
          }
 	}
