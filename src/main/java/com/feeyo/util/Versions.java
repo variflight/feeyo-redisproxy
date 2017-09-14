@@ -2,6 +2,6 @@ package com.feeyo.util;
 
 public class Versions {
 	
-	public static String SERVER_VERSION = "redis-proxy-1.8-20170913-v2";
+	public static String SERVER_VERSION = "redis-proxy-1.8-20170914-V2";
 
 }

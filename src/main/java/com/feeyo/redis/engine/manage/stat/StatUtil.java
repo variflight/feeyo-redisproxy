@@ -39,6 +39,7 @@ public class StatUtil {
 	// COMMAND、KEY
 	private static ConcurrentHashMap<String, Command> commandStats = new ConcurrentHashMap<String, Command>();
 	private static ConcurrentHashMap<String, BigKey> bigkeyStats = new ConcurrentHashMap<String, BigKey>();
+	private static ConcurrentHashMap<String, AtomicLong> procTimeMillsDistribution = new ConcurrentHashMap<String, AtomicLong>();
 	
 	// ACCESS
 	private static ConcurrentHashMap<String, AccessStatInfo> accessStats = new ConcurrentHashMap<>();
@@ -87,6 +88,7 @@ public class StatUtil {
 						
 						commandStats.clear();
 						bigkeyStats.clear();
+						procTimeMillsDistribution.clear();
 						//setkeyStats.clear();
 					}
 					
@@ -164,6 +166,9 @@ public class StatUtil {
 		        } catch (Exception e) {
 		        }
 		        
+		        // 计算指令消耗时间分布，5个档（小于5，小于10，小于20，小于50，大于50）
+		        collectProcTimeMillsDistribution( procTimeMills );
+		        
 				// 大key
 				if ( key != null && ( requestSize > BIGKEY_SIZE || responseSize > BIGKEY_SIZE ) ) {	
 					
@@ -207,12 +212,39 @@ public class StatUtil {
         return item;
     }
     
+    private static void collectProcTimeMillsDistribution(int procTimeMills) {
+    	String key = null;
+    	if ( procTimeMills < 5 ) {
+    		key = "<5   ";
+        } else if ( procTimeMills < 10 ) {
+        	key = "5-10 ";
+        } else if ( procTimeMills < 20 ) {
+        	key = "10-20";
+        } else if ( procTimeMills < 50 ) {
+        	key = "20-50";
+        } else {
+        	key = ">50  ";
+        }
+    	
+    	AtomicLong count = procTimeMillsDistribution.get(key);
+    	if (count == null) {
+    		procTimeMillsDistribution.put(key, new AtomicLong(1));
+    	} else {
+    		count.incrementAndGet();
+    	}
+    	
+    }
+    
     public static ConcurrentHashMap<String, AccessStatInfoResult> getTotalAccessStatInfo() {
         return totalResults;
     }
     
     public static ConcurrentHashMap<String, BigKey> getBigKeyStats() {
     	return bigkeyStats;
+    }
+    
+    public static ConcurrentHashMap<String, AtomicLong> getProcTimeMillsDistribution() {
+    	return procTimeMillsDistribution;
     }
 
     public static Set<Entry<String, Command>> getCommandStats() {
