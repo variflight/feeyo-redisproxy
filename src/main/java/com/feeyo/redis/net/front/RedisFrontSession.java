@@ -162,7 +162,8 @@ public class RedisFrontSession {
 				// 管理指令
 				RedisRequest request = e.getRequests().get(0);
 				byte[] buff = Manage.execute(request, frontCon);
-				frontCon.write(buff);
+				if (buff != null)
+					frontCon.write(buff);
 
 			} catch (AutoRespNotTransException e) {
 

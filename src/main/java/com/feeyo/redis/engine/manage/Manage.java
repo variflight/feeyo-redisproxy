@@ -664,6 +664,9 @@ public class Manage {
 							StringBuffer sb = new StringBuffer();
 							RedisStandalonePool redisStandalonePool = (RedisStandalonePool) pool;
 							PhysicalNode physicalNode = redisStandalonePool.getPhysicalNode();
+							if (physicalNode == null) 
+								continue;
+								
 							sb.append("   ");
 							sb.append(redisStandalonePool.getId()).append("       ");
 							sb.append("Standalone").append("  ");
