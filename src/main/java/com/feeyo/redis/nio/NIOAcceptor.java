@@ -34,7 +34,7 @@ public final class NIOAcceptor extends Thread {
 		
 		super.setName(name);
 		this.port = port;
-		this.selector = SelectorUtil.openSelector();
+		this.selector = Selector.open();
 		this.serverChannel = ServerSocketChannel.open();
 		this.serverChannel.configureBlocking(false);
 		

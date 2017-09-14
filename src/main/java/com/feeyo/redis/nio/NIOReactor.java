@@ -64,7 +64,7 @@ public final class NIOReactor {
 		
 		private RWThread(String name) throws IOException {
 			this.setName(name);
-			this.selector = SelectorUtil.openSelector();
+			this.selector = Selector.open();
 			this.registerQueue = new ConcurrentLinkedQueue<Connection>();
 		}
 
