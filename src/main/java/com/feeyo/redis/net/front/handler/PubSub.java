@@ -110,7 +110,7 @@ public class PubSub  {
 			};
 
 			// 创建新连接
-			this.backendCon = node.createNewConnection(callback, frontCon, true);
+			this.backendCon = node.createNewConnection(callback, frontCon);
 			
 		} else {
 			

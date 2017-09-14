@@ -804,7 +804,7 @@ public class Manage {
 					
 					RedisBackendConnection backendCon = pysicalNode.getConnection(callback, frontCon);
 					if (backendCon == null) {
-						backendCon = pysicalNode.createNewConnection(callback, frontCon, true);
+						backendCon = pysicalNode.createNewConnection(callback, frontCon);
 					} else {
 						backendCon.write(request.encode());
 					}

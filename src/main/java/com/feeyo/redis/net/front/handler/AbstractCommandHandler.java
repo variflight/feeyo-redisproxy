@@ -97,7 +97,7 @@ public abstract class AbstractCommandHandler {
 					
 				}
 			};
-			backendCon = node.createNewConnection(delegateCallback, frontCon, true);
+			backendCon = node.createNewConnection(delegateCallback, frontCon);
 			
 		} else {
 			
