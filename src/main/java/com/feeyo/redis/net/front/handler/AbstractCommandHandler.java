@@ -75,6 +75,8 @@ public abstract class AbstractCommandHandler {
 				public void connectionAcquired(RedisBackendConnection conn) {
 					
 					try {
+						conn.setBorrowed(true);
+						
 						// 集群不需要处理 select database
 						if ( poolType == 1) {
 							conn.write( buffer );
@@ -92,7 +94,11 @@ public abstract class AbstractCommandHandler {
 							}
 						}
 					} catch (IOException e) {
-						e.printStackTrace();
+						LOGGER.warn("onHandlerError():" + conn, e);
+						frontCon.close( e.toString() );
+
+						if ( frontCon.getSession() != null)
+							frontCon.getSession().frontHandlerError(e);
 					}
 					
 				}

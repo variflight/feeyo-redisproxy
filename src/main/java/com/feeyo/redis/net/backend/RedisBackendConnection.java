@@ -38,8 +38,8 @@ public class RedisBackendConnection extends RedisConnection {
 		public void handlerError(Exception e, RedisBackendConnection conn) {}
     };
     
-    private int db = 0;				//REDIS select database, default 0
-    private boolean borrowed;
+    private volatile int db = 0;				//REDIS select database, default 0
+    private volatile boolean borrowed = false;
     
 	public RedisBackendConnection(SocketChannel channel) {
 		super(channel);
@@ -198,7 +198,7 @@ public class RedisBackendConnection extends RedisConnection {
 		cal.setTimeInMillis( mills );
 		
 		int date = cal.get( Calendar.DATE );
-		int hour = cal.get( Calendar.HOUR );
+		int hour = cal.get( Calendar.HOUR_OF_DAY );
 		int minute = cal.get( Calendar.MINUTE );
 		int second = cal.get( Calendar.SECOND );
 		
@@ -224,7 +224,7 @@ public class RedisBackendConnection extends RedisConnection {
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
 		sbuffer.append( "Connection [ " );
-		sbuffer.append(", reactor=").append( reactor );
+		sbuffer.append("  reactor=").append( reactor );
 		sbuffer.append(", host=").append( host );
 		sbuffer.append(", port=").append( port );
 		sbuffer.append(", id=").append( id );

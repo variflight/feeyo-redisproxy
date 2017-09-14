@@ -11,7 +11,9 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.nio.buffer.BufferPool;
+import com.feeyo.redis.nio.util.TimeUtil;
 
 
 /**
@@ -35,6 +37,8 @@ public class NetSystem {
 	
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
+	
+	private final int TIMEOUT = 1000 * 60 * 5; //5分钟
 	
 	private final ConcurrentHashMap<Long, Connection> allConnections;
 	private SystemConfig netConfig;
@@ -106,6 +110,8 @@ public class NetSystem {
 		return allConnections;
 	}
 
+	
+	
 	/**
 	 * 定时执行该方法，回收部分资源。
 	 */
@@ -119,6 +125,23 @@ public class NetSystem {
 				continue;
 			}
 
+			// 后端超时的连接关闭
+			if ( c instanceof RedisBackendConnection ) {
+				RedisBackendConnection backendCon = (RedisBackendConnection)c;
+				if (backendCon.isBorrowed() && backendCon.getLastTime() < TimeUtil.currentTimeMillis() - TIMEOUT ) {
+					
+					StringBuffer errBuffer = new StringBuffer(200);
+					errBuffer.append("backend timeout, close it " ).append( c );
+					if ( c.getAttachement() != null ) {
+						errBuffer.append(" , and attach it " ).append( c.getAttachement() );
+					}
+					LOGGER.warn( errBuffer.toString() );
+					
+					
+					c.close("backend timeout");
+				}
+			}
+			
 			// 清理已关闭连接，否则空闲检查。
 			if (c.isClosed()) {
 				it.remove();

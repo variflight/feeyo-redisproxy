@@ -15,6 +15,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,6 +106,7 @@ public class Manage {
 	 *  SHOW NET_IO 该指令兼容过去的 SHOW NETBYTES
 	 *  SHOW VM
 	 *  SHOW POOL
+	 *  SHOW COST
 	 *  
 	 *  SHOW LOG_ERROR
 	 *  SHOW LOG_WARN
@@ -495,14 +498,30 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
+					Map<String, AtomicInteger> poolConnections = new HashMap<String, AtomicInteger>();
 					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
 					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
 						Connection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
+							// 统计每个redis池的连接数 
+							String poolName = ((RedisBackendConnection) c).getPhysicalNode().getPoolName();
+							AtomicInteger poolConnCount = poolConnections.get(poolName);
+							if ( poolConnCount == null ) {
+								poolConnections.put(poolName, new AtomicInteger(1));
+							} else {
+								poolConnCount.incrementAndGet();
+							}
+							
 							lines.add( c.toString() );
 						}
 					}
+					
+					StringBuffer sb = new StringBuffer();
+					for (Map.Entry<String, AtomicInteger> entry : poolConnections.entrySet()) {
+						sb.append(entry.getKey()).append(":").append(entry.getValue().get()).append(". ");
+					}
+					lines.add(sb.toString());
 					
 					return encode( lines );
 					
@@ -652,6 +671,7 @@ public class Manage {
 					Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
 					StringBuffer titleLine = new StringBuffer();
 					titleLine.append("  PoolId").append("   ");
+					titleLine.append("PoolName").append("   ");
 					titleLine.append("PoolType").append("    ");
 					titleLine.append("Address").append("               ");
 					titleLine.append("MinCom").append("   ");
@@ -669,6 +689,7 @@ public class Manage {
 								
 							sb.append("   ");
 							sb.append(redisStandalonePool.getId()).append("       ");
+							sb.append(physicalNode.getPoolName()).append("       ");
 							sb.append("Standalone").append("  ");
 							sb.append(physicalNode.getName()).append("       ");
 							sb.append(physicalNode.getMinCon()).append("       ");
@@ -683,6 +704,7 @@ public class Manage {
 								PhysicalNode physicalNode = clusterNode.getPhysicalNode(); 
 								StringBuffer sb = new StringBuffer();
 								sb.append(redisClusterPool.getId()).append("       ");
+								sb.append(physicalNode.getPoolName()).append("       ");
 								sb.append("cluster").append("     ");
 								sb.append(physicalNode.getName()).append("       ");
 								sb.append(physicalNode.getMinCon()).append("       ");
@@ -695,6 +717,18 @@ public class Manage {
 						}
 					}
 					return encodeObject(list);
+
+				// SHOW COST
+				} else if (arg2.equalsIgnoreCase("COST")) {
+					Collection<Entry<String, AtomicLong>> entrys = StatUtil.getProcTimeMillsDistribution().entrySet();
+
+					List<String> lines = new ArrayList<String>();
+					for (Entry<String, AtomicLong> entry : entrys) {
+						StringBuffer sBuffer = new StringBuffer();
+						sBuffer.append(entry.getKey()).append(": ").append(entry.getValue().get());
+						lines.add(sBuffer.toString());
+					}
+					return encode(lines);
 				}
 			
 			// NODE
@@ -795,9 +829,10 @@ public class Manage {
 						@Override
 						public void connectionAcquired(RedisBackendConnection backendCon) {
 							try {
+								backendCon.setBorrowed( true );
 								backendCon.write(request.encode());
 							} catch (IOException e) {
-								e.printStackTrace();
+								backendCon.close("cluster cmd write err:" + e.toString());
 							}
 						}
 					};
