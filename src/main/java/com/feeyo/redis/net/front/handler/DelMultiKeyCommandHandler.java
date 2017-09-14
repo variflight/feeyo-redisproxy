@@ -140,8 +140,7 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 	                    int responseSize = this.writeToFront(frontCon, newResp, 0);
 
 						// 释放
-						backendCon.release();
-						removeBackendConnection(backendCon);
+						removeAndReleaseBackendConnection(backendCon);
 
 						// 数据收集
 						StatUtil.collect(password, cmd, key, requestSize, responseSize,
@@ -165,8 +164,7 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 			} else if ( state == ResponseStatusCode.THE_NODE_COMPLETED  ) {
 				
 				// 如果此后端节点数据已经返回完毕，则释放链接
-				backendCon.release();
-				removeBackendConnection(backendCon);
+				removeAndReleaseBackendConnection(backendCon);
 				
 			} else if ( state == ResponseStatusCode.ERROR ) {
 				// 添加回复到虚拟内存中出错。

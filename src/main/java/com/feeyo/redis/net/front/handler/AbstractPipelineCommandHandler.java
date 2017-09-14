@@ -5,9 +5,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -96,7 +96,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	protected RouteResult rrs;
 	
 	
-	private CopyOnWriteArraySet<RedisBackendConnection> backendConnections = new CopyOnWriteArraySet<RedisBackendConnection>();
+	private ConcurrentHashMap<Long, RedisBackendConnection> backendConnections = new ConcurrentHashMap<Long, RedisBackendConnection>();
 	
 	private ConcurrentHashMap<String, ResponseNode> responseNodeMap =  new ConcurrentHashMap<String, ResponseNode>(); 
 	private AtomicInteger allResponseCount = new AtomicInteger(0); 					// 接收到返回数据的条数
@@ -253,18 +253,23 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	
 	// 释放所有后端链接
 	private void removeAllBackendConnection() {
-        for (RedisBackendConnection backendConn : backendConnections) {
-        	backendConn.release();
-        }
+        for(Map.Entry<Long, RedisBackendConnection> entry: backendConnections.entrySet()) {
+        	RedisBackendConnection backendConn = entry.getValue();
+        	if (backendConnections.remove(entry.getKey()) != null)
+        		backendConn.release();
+        } 
+		
         backendConnections.clear();
 	}
 	
-	protected void removeBackendConnection(RedisBackendConnection backendConn) {
-		backendConnections.remove(backendConn);
+	protected void removeAndReleaseBackendConnection(RedisBackendConnection backendConn) {
+		if (backendConnections.remove(backendConn.getId()) != null) {
+			backendConn.release();
+		}
 	}
     
 	protected void addBackendConnection(RedisBackendConnection backendConn) {
-		backendConnections.add(backendConn);
+		backendConnections.put(backendConn.getId(), backendConn);
 	}
 	
 	// 消息写入出错
