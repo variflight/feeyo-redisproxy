@@ -87,7 +87,59 @@ public class RedisFrontSession {
 				return;
 			}
 			
-			// 认证检测
+			// 非pipeline 情况下， 特殊指令前置优化性能
+			if ( requests.size() ==  1 ) {
+				
+				RedisRequest request = requests.get(0);
+				byte[] cmd = request.getArgs()[0];
+				int len = cmd.length;
+				if ( len == 4 ) {
+					
+					// AUTH
+					if ( (cmd[0] == 'A' || cmd[0] == 'a') && (cmd[1] == 'U' || cmd[1] == 'u') 
+							&& (cmd[2] == 'T' || cmd[2] == 't') && (cmd[3] == 'H' || cmd[3] == 'h')   ) {
+						
+						if( request.getArgs().length < 2 ) {
+							frontCon.write( ERR_NO_AUTH_NO_PASSWORD );
+							return;
+						}
+						
+						auth( request );
+						return;
+					
+					// ECHO
+					} else if ( (cmd[0] == 'E' || cmd[0] == 'e') && (cmd[1] == 'C' || cmd[1] == 'c') 
+							 && (cmd[2] == 'H' || cmd[2] == 'h') && (cmd[3] == 'O' || cmd[3] == 'o') ) {
+						echo( request );
+						return;
+
+					// PING
+					} else if ( (cmd[0] == 'P' || cmd[0] == 'p') && (cmd[1] == 'I' || cmd[1] == 'i') 
+							 && (cmd[2] == 'N' || cmd[2] == 'n') && (cmd[3] == 'G' || cmd[3] == 'g') ) {
+						frontCon.write(PONG);
+						return;
+						
+					// QUIT
+					} else if ( (cmd[0] == 'Q' || cmd[0] == 'q') && (cmd[1] == 'U' || cmd[1] == 'u') 
+							 && (cmd[2] == 'I' || cmd[2] == 'i') && (cmd[3] == 'T' || cmd[3] == 't') ) {
+						frontCon.write(OK);
+						frontCon.close("quit");
+						return;
+					}
+					
+				} else if ( len == 6 ) {
+					// SELECT
+					if ( (cmd[0] == 'S' || cmd[0] == 's') && (cmd[1] == 'E' || cmd[1] == 'e') 
+							 && (cmd[2] == 'L' || cmd[2] == 'l') && (cmd[3] == 'E' || cmd[3] == 'e')
+							 && (cmd[4] == 'C' || cmd[4] == 'c') && (cmd[5] == 'T' || cmd[5] == 't')) {
+						frontCon.write(OK);
+						return;
+					}
+				}
+				
+			}
+			
+			// 认证
 			if ( !frontCon.isAuthenticated() ) {
 				
 				RedisRequest firstRequest = requests.get(0);

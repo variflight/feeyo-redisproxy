@@ -798,7 +798,7 @@ public class Manage {
 								backendCon.setBorrowed( true );
 								backendCon.write(request.encode());
 							} catch (IOException e) {
-								e.printStackTrace();
+								backendCon.close("cluster cmd write err:" + e.toString());
 							}
 						}
 					};

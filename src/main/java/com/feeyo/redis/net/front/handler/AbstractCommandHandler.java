@@ -94,7 +94,11 @@ public abstract class AbstractCommandHandler {
 							}
 						}
 					} catch (IOException e) {
-						e.printStackTrace();
+						LOGGER.warn("onHandlerError():" + conn, e);
+						frontCon.close( e.toString() );
+
+						if ( frontCon.getSession() != null)
+							frontCon.getSession().frontHandlerError(e);
 					}
 					
 				}
