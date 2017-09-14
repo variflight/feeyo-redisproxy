@@ -198,7 +198,7 @@ public class RedisBackendConnection extends RedisConnection {
 		cal.setTimeInMillis( mills );
 		
 		int date = cal.get( Calendar.DATE );
-		int hour = cal.get( Calendar.HOUR );
+		int hour = cal.get( Calendar.HOUR_OF_DAY );
 		int minute = cal.get( Calendar.MINUTE );
 		int second = cal.get( Calendar.SECOND );
 		
