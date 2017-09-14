@@ -38,8 +38,8 @@ public class RedisBackendConnection extends RedisConnection {
 		public void handlerError(Exception e, RedisBackendConnection conn) {}
     };
     
-    private int db = 0;				//REDIS select database, default 0
-    private boolean borrowed;
+    private volatile int db = 0;				//REDIS select database, default 0
+    private volatile boolean borrowed = false;
     
 	public RedisBackendConnection(SocketChannel channel) {
 		super(channel);

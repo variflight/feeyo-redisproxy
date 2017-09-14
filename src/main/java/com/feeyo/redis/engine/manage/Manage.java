@@ -795,6 +795,7 @@ public class Manage {
 						@Override
 						public void connectionAcquired(RedisBackendConnection backendCon) {
 							try {
+								backendCon.setBorrowed( true );
 								backendCon.write(request.encode());
 							} catch (IOException e) {
 								e.printStackTrace();
