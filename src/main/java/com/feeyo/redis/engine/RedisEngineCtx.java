@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.feeyo.util.NetworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -157,6 +158,9 @@ public class RedisEngineCtx {
         Iterator<String> it = userMap.keySet().iterator();
         String authString  = it.hasNext() ? it.next() : "";
         KeepAlived.check(port, authString);
+		// 7, zk startup
+		ZkClient.INSTANCE().init();
+		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
 	}
 	
 	public byte[] reloadAll() {

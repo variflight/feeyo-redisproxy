@@ -46,11 +46,6 @@ public class RedisServer {
 		Log4jInitializer.configureAndWatch(System.getProperty("FEEYO_HOME"), "log4j.xml", 30000L);
 
 		/**
-		 * 初始化 zookeeper
-		 */
-		ZkClient.INSTANCE().init();
-
-		/**
 		 * 引擎初始化
 		 */
 		RedisEngineCtx.INSTANCE().init();
