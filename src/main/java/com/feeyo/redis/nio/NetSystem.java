@@ -129,8 +129,16 @@ public class NetSystem {
 			if ( c instanceof RedisBackendConnection ) {
 				RedisBackendConnection backendCon = (RedisBackendConnection)c;
 				if (backendCon.isBorrowed() && backendCon.getLastTime() < TimeUtil.currentTimeMillis() - TIMEOUT ) {
-					LOGGER.warn("backend connection timeout, close it " + c);
-					c.close("backend connection timeout");
+					
+					StringBuffer errBuffer = new StringBuffer(200);
+					errBuffer.append("backend timeout, close it " ).append( c );
+					if ( c.getAttachement() != null ) {
+						errBuffer.append(" , and attach it " ).append( c.getAttachement() );
+					}
+					LOGGER.warn( errBuffer.toString() );
+					
+					
+					c.close("backend timeout");
 				}
 			}
 			
