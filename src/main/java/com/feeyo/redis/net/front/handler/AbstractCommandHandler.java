@@ -75,6 +75,8 @@ public abstract class AbstractCommandHandler {
 				public void connectionAcquired(RedisBackendConnection conn) {
 					
 					try {
+						conn.setBorrowed(true);
+						
 						// 集群不需要处理 select database
 						if ( poolType == 1) {
 							conn.write( buffer );
