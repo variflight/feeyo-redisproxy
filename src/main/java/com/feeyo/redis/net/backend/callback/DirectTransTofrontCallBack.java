@@ -150,13 +150,5 @@ public class DirectTransTofrontCallBack implements BackendCallback {
 		// 后端连接关闭, 清理连接池内的 connection
 		backendCon.getPhysicalNode().removeConnection( backendCon );
 	}
-
-	@Override
-	public void handlerError(Exception e, RedisBackendConnection backendCon) {
-		RedisFrontConnection frontCon = getFrontCon( backendCon );
-		if ( frontCon != null && frontCon.getSession() != null ) {
-			frontCon.getSession().backendHandlerError( e );
-		}
-	}
 	
 }

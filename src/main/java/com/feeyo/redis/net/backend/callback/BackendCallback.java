@@ -34,9 +34,4 @@ public interface BackendCallback  {
      */
    void connectionClose(RedisBackendConnection conn, String reason);
     
-    /**
-     * 处理数据的过程中发生错误
-     */
-   void handlerError(Exception e, RedisBackendConnection conn);
-    
 }

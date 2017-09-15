@@ -39,9 +39,4 @@ public abstract class DelegateCallback implements BackendCallback {
 		target.connectionClose(conn, reason);
 	}
 
-	@Override
-	public void handlerError(Exception e, RedisBackendConnection conn) {
-		target.handlerError(e, conn);
-	}
-
 }

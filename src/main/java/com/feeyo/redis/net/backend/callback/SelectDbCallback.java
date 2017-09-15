@@ -72,10 +72,5 @@ public class SelectDbCallback implements BackendCallback {
 	public void connectionClose(RedisBackendConnection conn, String reason) {
 		oldCallback.connectionClose(conn, reason);
 	}
-
-	@Override
-	public void handlerError(Exception e, RedisBackendConnection conn) {
-		oldCallback.handlerError(e, conn);
-	}
 	
 }

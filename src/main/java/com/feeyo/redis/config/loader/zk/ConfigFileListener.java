@@ -18,60 +18,36 @@ public class ConfigFileListener implements ZkDataListener {
     private static Logger LOGGER = LoggerFactory.getLogger( ConfigFileListener.class );
 
     private final String locFilePath;
+    private final String backupPath;
     private boolean autoActivation;
 
-    public ConfigFileListener(String locFilePath, boolean autoActivation) {
+    public ConfigFileListener(String locFilePath, String backupPath, boolean autoActivation) {
         this.locFilePath = locFilePath;
+        this.backupPath = backupPath;
         this.autoActivation = autoActivation;
     }
 
     @Override
     public void zkDataChanged(byte[] data) {
         LOGGER.info("zk data changed. file: {} autoActivation: {}",new Object[] {locFilePath, autoActivation});
-        try {
-            File tmpFile = new File(locFilePath+".tmp");
 
-            FileWriter fw = new FileWriter(tmpFile);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(new String(data));
-            bw.flush();
-            bw.close();
+        ZkClient.saveAndBackupCfgData(data, locFilePath, backupPath);
 
-            // backup the original configure file
-            File targetFile =new File(locFilePath);
-            File targetFileBak = new File(locFilePath+".bak");
-            if (targetFileBak.exists()) {
-                targetFileBak.delete();
+        if (autoActivation) {
+            String fileName = locFilePath.substring(locFilePath.lastIndexOf(File.separator)+1);
+            switch (fileName) {
+                case "user.xml":
+                    RedisEngineCtx.INSTANCE().reloadUser();
+                    break;
+                case "pool.xml":
+                    RedisEngineCtx.INSTANCE().reloadPool();
+                    break;
+                case "server.xml":
+                    RedisEngineCtx.INSTANCE().reloadServer();
+                    break;
+                default:
+                    break;
             }
-            targetFile.renameTo(targetFileBak);
-            targetFile.delete();
-
-            tmpFile.renameTo(targetFile);
-            tmpFile.delete();
-
-            if (autoActivation) {
-                doAutoActivation();
-            }
-
-        } catch (IOException e) {
-            LOGGER.error("",e);
-        }
-    }
-
-    private void doAutoActivation() {
-        String fileName = locFilePath.substring(locFilePath.lastIndexOf(File.separator)+1);
-        switch (fileName) {
-            case "user.xml":
-                RedisEngineCtx.INSTANCE().reloadUser();
-                break;
-            case "pool.xml":
-                RedisEngineCtx.INSTANCE().reloadPool();
-                break;
-            case "server.xml":
-                RedisEngineCtx.INSTANCE().reloadServer();
-                break;
-            default:
-                break;
         }
     }
 

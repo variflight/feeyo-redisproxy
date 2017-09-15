@@ -247,16 +247,10 @@ public class RedisFrontSession {
 			
 		} catch (RedisRequestUnknowException e0) {
 			frontCon.close("unknow redis client .");
-			return;
 
 		} catch (IOException e1) {
-			LOGGER.error("front handle err:", e1);
-			try {
-				String error = "-ERR " + e1.getMessage() + ".\r\n";
-				frontCon.write(error.getBytes());
-			} catch (IOException e) {
-			}
-			return;
+			String error = "-ERR " + e1.getMessage() + ".\r\n";
+			frontCon.write(error.getBytes());
 			
 		} finally {
 			
@@ -319,7 +313,7 @@ public class RedisFrontSession {
 	}
 	
 	// Auth
-	private boolean auth(RedisRequest request) throws IOException {
+	private boolean auth(RedisRequest request) {
 
 		if (request.getArgs().length < 2) {
 			frontCon.write(ERR_NO_AUTH_NO_PASSWORD);
@@ -341,7 +335,7 @@ public class RedisFrontSession {
 	}
 	
 	// Echo
-	protected void echo(RedisRequest request) throws IOException {	
+	protected void echo(RedisRequest request) {	
 		if ( request.getArgs().length != 2 ) {
 			StringBuffer error = new StringBuffer();
 			error.append("-");
@@ -360,7 +354,7 @@ public class RedisFrontSession {
 	}
 	
 	// Select
-	protected void select(RedisRequest request) throws IOException {	
+	protected void select(RedisRequest request) {	
 		if ( request.getArgs().length != 2 ) {
 			StringBuffer error = new StringBuffer();
 			error.append("-");
@@ -509,8 +503,6 @@ public class RedisFrontSession {
 					public void connectionError(Exception e, RedisBackendConnection conn) {}
 					@Override
 					public void connectionClose(RedisBackendConnection conn, String reason) {}
-					@Override
-					public void handlerError(Exception e, RedisBackendConnection conn) {}
 				});
 				pubsub.subscribe(request, node.getPhysicalNode());
 			}
@@ -554,17 +546,6 @@ public class RedisFrontSession {
 		this.cleanup();
 	}
 	
-	public void frontHandlerError(Exception e) {
-		
-		if ( pubsub != null ) 
-			pubsub.unsubscribeAll();
-		
-		if ( currentCommandHandler != null )
-			currentCommandHandler.frontHandlerError(e);
-		
-		this.cleanup();
-	}
-	
 	// BACKEND CONNECTION EVENT 
 	// ---------------------------------------------------------------------------------------
 	public void backendConnectionError(Exception e) {
@@ -585,14 +566,6 @@ public class RedisFrontSession {
 			frontCon.writeErrMessage(reason);
 		
 		frontCon.close("backend connectionClose");
-	}
-	
-	public void backendHandlerError(Exception e) {
-		
-		if ( currentCommandHandler != null )
-			currentCommandHandler.backendHandlerError(e);
-		else
-			frontCon.writeErrMessage(e.toString());
 	}
 	
 }

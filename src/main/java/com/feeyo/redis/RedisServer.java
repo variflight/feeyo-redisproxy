@@ -6,7 +6,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.feeyo.redis.config.loader.zk.ZkClient;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.nio.NetSystem;
@@ -44,11 +43,6 @@ public class RedisServer {
          * 设置 LOG4J
          */
 		Log4jInitializer.configureAndWatch(System.getProperty("FEEYO_HOME"), "log4j.xml", 30000L);
-
-		/**
-		 * 初始化 zookeeper
-		 */
-		ZkClient.INSTANCE().init();
 
 		/**
 		 * 引擎初始化

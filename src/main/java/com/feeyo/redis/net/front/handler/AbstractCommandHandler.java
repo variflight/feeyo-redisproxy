@@ -45,11 +45,9 @@ public abstract class AbstractCommandHandler {
 			commonHandle( rrs );
 		} catch (IOException e1) {
 			LOGGER.error("front handle err:", e1);
-			try {
-				String error = "-ERR " + e1.getMessage() + ".\r\n";
-				frontCon.write(error.getBytes());
-			} catch (IOException e) {
-			}
+			
+			String error = "-ERR " + e1.getMessage() + ".\r\n";
+			frontCon.write(error.getBytes());
 			return;
 		}
 	}
@@ -94,11 +92,8 @@ public abstract class AbstractCommandHandler {
 							}
 						}
 					} catch (IOException e) {
-						LOGGER.warn("onHandlerError():" + conn, e);
+						LOGGER.warn("writeToBackend handle err:" + conn, e);
 						frontCon.close( e.toString() );
-
-						if ( frontCon.getSession() != null)
-							frontCon.getSession().frontHandlerError(e);
 					}
 					
 				}
@@ -140,10 +135,8 @@ public abstract class AbstractCommandHandler {
 	public void backendConnectionError(Exception e) {
 		frontCon.releaseLock();
 	}
+	
 	public void backendConnectionClose(String reason) {
-		frontCon.releaseLock();
-	}
-	public void backendHandlerError(Exception e) {
 		frontCon.releaseLock();
 	}
 

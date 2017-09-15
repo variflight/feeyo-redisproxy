@@ -1,19 +1,9 @@
 package com.feeyo.redis.config.loader.zk;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.feeyo.redis.config.ConfigLoader;
+import com.feeyo.redis.config.ZkCfg;
+import com.feeyo.redis.engine.RedisEngineCtx;
+import com.feeyo.util.Log4jInitializer;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.CuratorWatcher;
@@ -24,14 +14,22 @@ import org.apache.curator.utils.CloseableUtils;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.Stat;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.config.ConfigLoader;
-import com.feeyo.redis.config.ZkCfg;
-import com.feeyo.util.Log4jInitializer;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 
 /**
  * zookeeper client for redis proxy
@@ -39,7 +37,7 @@ import com.feeyo.util.Log4jInitializer;
  * <p> For the very first connection, download if zk has the configs already otherwise upload the local config file to zk
  *
  * @author Tr!bf wangyamin@variflight.com
- * TODO rt
+ *
  */
 public class ZkClient implements ConnectionStateListener {
     private static Logger LOGGER = LoggerFactory.getLogger( ZkClient.class );
@@ -62,7 +60,12 @@ public class ZkClient implements ConnectionStateListener {
         return instance;
     }
 
-    public void init(ZkCfg zkCfg) {
+    public void init() {
+        ZkCfg zkCfg = ConfigLoader.loadZkCfg( ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE) );
+        init(zkCfg);
+    }
+
+    private void init(ZkCfg zkCfg) {
         this.zkCfg = zkCfg;
 
         if (zkCfg==null || !zkCfg.isUsingZk())
@@ -70,7 +73,8 @@ public class ZkClient implements ConnectionStateListener {
 
         for (String cfgName : zkCfg.getLocCfgNames()) {
             String locFilePath = ConfigLoader.buidCfgAbsPathFor(cfgName);
-            ConfigFileListener configFileListener = new ConfigFileListener(locFilePath, zkCfg.isAutoAct());
+            String backupPath = zkCfg.buildCfgBackupPathFor(cfgName);
+            ConfigFileListener configFileListener = new ConfigFileListener(locFilePath, backupPath, zkCfg.isAutoAct());
             allDataListeners.put(locFilePath, configFileListener);
         }
 
@@ -103,14 +107,9 @@ public class ZkClient implements ConnectionStateListener {
         }
     }
 
-    public void init() {
-        zkCfg = ConfigLoader.loadZkCfg( ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE) );
-        init(zkCfg);
-    }
-
     public void reloadZkCfg() {
         ZkCfg newZkCfg = ConfigLoader.loadZkCfg( ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE) );
-        if ( !newZkCfg.equals(this.zkCfg) ) {
+        if ( newZkCfg != null && !newZkCfg.equals(this.zkCfg) ) {
             this.close();
             this.init(newZkCfg);
         }
@@ -125,11 +124,11 @@ public class ZkClient implements ConnectionStateListener {
             if (curator.checkExists().forPath(path) != null)
                 return;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.warn("",e);
         }
 
         int i = path.lastIndexOf('/');
-        if (i>0) {
+        if (i > 0) {
             createZkNode(path.substring(0,i), false);
         }
 
@@ -144,7 +143,7 @@ public class ZkClient implements ConnectionStateListener {
         try {
             curator.create().forPath(path);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.warn("",e);
         }
     }
 
@@ -214,31 +213,58 @@ public class ZkClient implements ConnectionStateListener {
         }
     }
 
-    public void download2file(String zkNodePath, String locFilePath) {
+    public static void saveAndBackupCfgData(byte[] data, String locFilePath, String backupPath) {
+        BufferedWriter bw = null;
+        FileWriter fw = null;
+
         try {
-            byte[] data = curator.getData().forPath(zkNodePath);
             File tmp = new File(locFilePath+".tmp");
-            FileWriter fw = new FileWriter(tmp);
-            BufferedWriter bw = new BufferedWriter(fw);
+            fw = new FileWriter(tmp);
+            bw = new BufferedWriter(fw);
             bw.write(new String(data));
             bw.flush();
             bw.close();
+            bw = null;
+            fw.close();
+            fw = null;
 
             // backup the original configure file
-            File targetFile =new File(locFilePath);
-            File targetFileBak = new File(locFilePath+".bak");
-            if (targetFileBak.exists()) {
-                targetFileBak.delete();
+            File targetFile = new File(locFilePath);
+            File backupFile = new File(backupPath);
+            if (!backupFile.getParentFile().exists()) {
+                if (!backupFile.getParentFile().mkdirs()) {
+                    LOGGER.info("failed to mkdir: " + backupFile.getParent());
+                }
             }
-            targetFile.renameTo(targetFileBak);
-            targetFile.delete();
 
-            tmp.renameTo(targetFile);
-            tmp.delete();
+            if (backupFile.exists()) {
+                if (!backupFile.delete()) {
+                    LOGGER.info("failed to delete: " + backupPath);
+                }
+            }
+
+            try {
+                Files.move(targetFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                Files.move(tmp.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                LOGGER.info("failed to move file: ",e);
+            }
+
         } catch (IOException e) {
             LOGGER.warn("",e);
-        } catch (Exception e) {
-            LOGGER.warn("",e);
+        } finally {
+            try {
+                if (bw != null) {
+                    bw.flush();
+                    bw.close();
+                }
+
+                if (fw != null) {
+                    fw.close();
+                }
+            } catch (IOException e) {
+                LOGGER.warn("",e);
+            }
         }
     }
 
@@ -261,7 +287,7 @@ public class ZkClient implements ConnectionStateListener {
         return false;
     }
 
-    public void upload2zk(String locFilePath, String zkNodePath) {
+    private void upload2zk(String locFilePath, String zkNodePath) {
         BufferedReader br = null;
         try {
             br = new BufferedReader(new InputStreamReader(new FileInputStream(locFilePath), Charset.forName("utf-8")));
@@ -285,7 +311,18 @@ public class ZkClient implements ConnectionStateListener {
                 if (br != null)
                     br.close();
             } catch (IOException e) {
+                LOGGER.warn("",e);
             }
+        }
+    }
+
+    public void createZkInstanceIdByIpPort(String ipAndPort) {
+        if (zkConnected.get()) {
+            zkCfg.setInstanceIdPath(ipAndPort);
+            createZkNode(zkCfg.getInstanceIdPath(),true);
+            LOGGER.info("create redis-proxy instance id: {}", new Object[] {zkCfg.getInstanceIdPath()});
+        } else {
+            LOGGER.info("ZkClient is offline");
         }
     }
 
@@ -293,17 +330,33 @@ public class ZkClient implements ConnectionStateListener {
     public void stateChanged(CuratorFramework client, ConnectionState state) {
         switch (state) {
             case CONNECTED:
-                LOGGER.info("connected to zookeeper, create redis-proxy instance id: {}", new Object[] {zkCfg.getInstanceIdPath()});
-                zkCfg.setInstanceIdPath("/root/redis-proxy/instance/"+getSessionId());
-                createZkNode(zkCfg.getInstanceIdPath(),true);
+                LOGGER.info("connected to zookeeper");
                 try {
                     for (String cfgName : zkCfg.getLocCfgNames()) {
                         String locFilePath = ConfigLoader.buidCfgAbsPathFor(cfgName);
                         String zkNodePath = zkCfg.buildZkPathFor(cfgName);
+                        String backupPath = zkCfg.buildCfgBackupPathFor(cfgName);
 
                         if (curator.checkExists().forPath(zkNodePath) != null) {
                             LOGGER.info("download configure file: {} to {}", new Object[] {zkNodePath, locFilePath});
-                            download2file(zkNodePath, locFilePath);
+                            byte[] data = curator.getData().forPath(zkNodePath);
+                            saveAndBackupCfgData(data, locFilePath, backupPath);
+
+                            if (zkCfg.isAutoAct()) {
+                                switch (cfgName) {
+                                    case "user.xml":
+                                        RedisEngineCtx.INSTANCE().reloadUser();
+                                        break;
+                                    case "pool.xml":
+                                        RedisEngineCtx.INSTANCE().reloadPool();
+                                        break;
+                                    case "server.xml":
+                                        RedisEngineCtx.INSTANCE().reloadServer();
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
                         } else {
                             LOGGER.info("zookeeper is not initialized. upload configure file: {} to {}", new Object[] {locFilePath, zkNodePath});
                             upload2zk(locFilePath, zkNodePath);
@@ -314,6 +367,9 @@ public class ZkClient implements ConnectionStateListener {
 
                     synchronized (this) {
                         zkConnected.set(true);
+                        if (zkCfg.getInstanceIdPath() != null) {
+                            createZkNode(zkCfg.getInstanceIdPath(),true);
+                        }
                         this.notifyAll();
                     }
                 } catch (Exception e) {
@@ -337,17 +393,6 @@ public class ZkClient implements ConnectionStateListener {
         }
     }
 
-    private String getSessionId() {
-        String sessionID = "";
-        try {
-            sessionID = curator.getZookeeperClient().getZooKeeper().getSessionId()+"";
-        } catch (Exception e) {
-            LOGGER.warn("Failed to get session id, make sure already connected to the zk server");
-        }
-
-        return sessionID;
-    }
-
     private class CuratorWatcherImpl implements CuratorWatcher {
 
         private volatile ZkDataListener listener;
@@ -362,8 +407,10 @@ public class ZkClient implements ConnectionStateListener {
 
         @Override
         public void process(WatchedEvent event) throws Exception {
-            if (listener != null) {
-                listener.zkDataChanged(curator.getData().usingWatcher(this).forPath(event.getPath()));
+            if (event.getType() == Watcher.Event.EventType.NodeDataChanged) {
+                if (listener != null) {
+                    listener.zkDataChanged(curator.getData().usingWatcher(this).forPath(event.getPath()));
+                }
             }
         }
     }
@@ -383,7 +430,7 @@ public class ZkClient implements ConnectionStateListener {
             while(true) {
                 Thread.sleep(100);
                 if (ZkClient.INSTANCE().isOnline()) {
-                    ZkClient.INSTANCE().upload2zk(ConfigLoader.buidCfgAbsPathFor("server.xml.bak.bak"), zkCfg.buildZkPathFor("server.xml"));
+                    ZkClient.INSTANCE().upload2zk(ConfigLoader.buidCfgAbsPathFor("pool.xml"), zkCfg.buildZkPathFor("pool.xml"));
                     break;
                 }
             }

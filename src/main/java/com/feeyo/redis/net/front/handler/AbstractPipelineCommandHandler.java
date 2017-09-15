@@ -309,16 +309,4 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
         markBrokenRespAsConusmed();
     }
 
-    @Override
-    public void backendHandlerError(Exception e) {
-        super.backendHandlerError(e);
-        
-        removeAllBackendConnection();
-        
-        if( frontCon != null && !frontCon.isClosed() ) {
-            frontCon.writeErrMessage(e.toString());
-        }
-        
-        markBrokenRespAsConusmed();
-    }
 }

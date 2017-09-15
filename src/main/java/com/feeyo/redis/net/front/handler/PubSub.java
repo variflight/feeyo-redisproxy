@@ -52,8 +52,7 @@ public class PubSub  {
 	}
 	
 	// 写入至后端
-	private void writeToBackend(final RedisRequest request)
-			throws IOException {
+	private void writeToBackend(final RedisRequest request) throws IOException {
 
 		if ( backendCon == null ) {
 			
@@ -62,11 +61,7 @@ public class PubSub  {
 				// pubsub 与 select database 应该无关
 				@Override
 				public void connectionAcquired(RedisBackendConnection backendCon) {
-					try {
-						backendCon.write( request.encode()  );
-					} catch (IOException e) {
-						frontCon.close( e.toString() );	
-					}
+					backendCon.write( request.encode()  );
 				}
 				
 				@Override
@@ -100,12 +95,6 @@ public class PubSub  {
 					frontCon.close( reason );	
 					unsubscribeAll();
 					
-				}
-				
-				@Override
-				public void handlerError(Exception e, RedisBackendConnection conn) {
-					frontCon.close( e.toString() );	
-					unsubscribeAll();
 				}
 			};
 
