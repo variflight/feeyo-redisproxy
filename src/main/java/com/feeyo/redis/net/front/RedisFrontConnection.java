@@ -107,7 +107,7 @@ public class RedisFrontConnection extends RedisConnection {
 		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp( lastWriteTime ) );
 		
 		//sbuffer.append(", todoWriteTime=").append( todoWriteTime );
-		//sbuffer.append(", isClosed=").append( isClosed );
+		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}
