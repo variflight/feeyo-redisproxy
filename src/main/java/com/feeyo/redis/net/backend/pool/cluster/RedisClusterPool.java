@@ -513,8 +513,8 @@ public class RedisClusterPool extends AbstractPool {
 		int minCons = poolCfg.getMinCon();
 		int maxCons = poolCfg.getMaxCon();
 		
-		//if ( LOGGER.isDebugEnabled() )
-			LOGGER.info( "ClusterHeartbeat: host={}, idle={}, active={}, min={}, max={}, lasttime={}", 
+		if ( LOGGER.isDebugEnabled() )
+			LOGGER.debug( "ClusterHeartbeat: host={}, idle={}, active={}, min={}, max={}, lasttime={}", 
 					new Object[] { physicalNode.getHost() + ":" + physicalNode.getPort(),  
 					idleCons, activeCons, minCons, maxCons, System.currentTimeMillis() } );
 

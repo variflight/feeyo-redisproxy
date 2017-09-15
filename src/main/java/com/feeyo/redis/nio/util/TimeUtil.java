@@ -37,15 +37,13 @@ public class TimeUtil {
 	public static String formatTimestamp(long mills) {
 		Calendar cal = Calendar.getInstance();
 		cal.setTimeInMillis( mills );
-		
-		int date = cal.get( Calendar.DATE );
+
 		int hour = cal.get( Calendar.HOUR_OF_DAY );
 		int minute = cal.get( Calendar.MINUTE );
 		int second = cal.get( Calendar.SECOND );
 		int millsecond = cal.get( Calendar.MILLISECOND );
 		
 		StringBuffer sb = new StringBuffer();
-		sb.append("(").append( date ).append(")");
 		sb.append( hour ).append(":");
 		
 		if ( minute >= 10)	
