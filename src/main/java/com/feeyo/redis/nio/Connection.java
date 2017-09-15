@@ -68,6 +68,8 @@ public abstract class Connection implements ClosableConnection {
 	
 	protected long lastReadTime;
 	protected long lastWriteTime;
+	protected long closeTime;											// debug
+	protected String closeReason = null;
 	
 	protected int netInBytes;
 	protected int netOutBytes;
@@ -186,7 +188,11 @@ public abstract class Connection implements ClosableConnection {
 			
 			closeSocket();
 			isClosed.set(true);
-
+			
+			this.closeTime = TimeUtil.currentTimeMillis();
+			if ( reason != null ) 
+				this.closeReason = reason;
+			
 			this.cleanup();		
 			NetSystem.getInstance().removeConnection(this);
 			

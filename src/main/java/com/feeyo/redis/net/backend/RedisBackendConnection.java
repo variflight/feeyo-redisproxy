@@ -202,6 +202,10 @@ public class RedisBackendConnection extends RedisConnection {
 		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp(startupTime) );
 		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp(lastReadTime) );
 		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp(lastWriteTime) );
+		if ( isClosed.get() ) {
+			sbuffer.append(", closedTime=").append( TimeUtil.formatTimestamp( closeTime) );
+			sbuffer.append(", closeReason=").append( closeReason );
+		}
 		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();
