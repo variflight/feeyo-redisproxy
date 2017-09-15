@@ -829,24 +829,15 @@ public class Manage {
 				}
 				
 				try {
-					
-					// 回调
-					DirectTransTofrontCallBack callback = new DirectTransTofrontCallBack() {
-						@Override
-						public void connectionAcquired(RedisBackendConnection backendCon) {
-							backendCon.setBorrowed( true );
-							backendCon.write(request.encode());
-						}
-					};
-					
-					RedisBackendConnection backendCon = pysicalNode.getConnection(callback, frontCon);
+				
+					RedisBackendConnection backendCon = pysicalNode.getConnection(new DirectTransTofrontCallBack(), frontCon);
 					if (backendCon == null) {
-						backendCon = pysicalNode.createNewConnection(callback, frontCon);
+						frontCon.writeErrMessage("not idle backend connection, pls wait !!!");
 					} else {
-						backendCon.write(request.encode());
+						backendCon.write( request.encode() );
 					}
 					
-					return null;
+					return null;	// null, not write
 				} catch (IOException e) {
 					LOGGER.error("", e);
 				}

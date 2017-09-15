@@ -15,7 +15,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  *
  */
 public class RedisFrontConnection extends RedisConnection {
-
+	
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
 	// 用户配置
@@ -31,7 +31,7 @@ public class RedisFrontConnection extends RedisConnection {
 		this.session = new RedisFrontSession( this );
 		this.setIdleTimeout( NetSystem.getInstance().getNetConfig().getFrontIdleTimeout() );
 	}
-
+	
 	public RedisFrontSession getSession() {
 		return this.session;
 	}

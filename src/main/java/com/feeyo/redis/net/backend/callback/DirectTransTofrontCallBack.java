@@ -20,7 +20,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * @author zhuam
  *
  */
-public class DirectTransTofrontCallBack implements BackendCallback {
+public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 	
 	protected RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
 	
@@ -73,11 +73,6 @@ public class DirectTransTofrontCallBack implements BackendCallback {
 		return tmpSize;
 	}
 	
-	// 获取后端连接
-	protected RedisFrontConnection getFrontCon(RedisBackendConnection backendCon) {
-		return (RedisFrontConnection) backendCon.getAttachement();
-	}
-	
 	@Override
 	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
@@ -123,32 +118,6 @@ public class DirectTransTofrontCallBack implements BackendCallback {
 				throw e2;
 			}
 		}	
-	}
-	
-	@Override
-	public void connectionAcquired(RedisBackendConnection backendCon) {
-	}
-	
-	// 后端连接异常
-	// ===================================================
-	@Override
-	public void connectionError(Exception e, RedisBackendConnection backendCon) {		
-		RedisFrontConnection frontCon = getFrontCon( backendCon );	
-		if ( frontCon != null && frontCon.getSession() != null ) {
-			frontCon.getSession().backendConnectionError(e);
-		}
-	}
-
-	@Override
-	public void connectionClose(RedisBackendConnection backendCon, String reason) {		
-
-		RedisFrontConnection frontCon = getFrontCon( backendCon );	
-		if ( frontCon != null && frontCon.getSession() != null ) {
-			frontCon.getSession().backendConnectionClose( reason );
-		}
-		
-		// 后端连接关闭, 清理连接池内的 connection
-		backendCon.getPhysicalNode().removeConnection( backendCon );
 	}
 	
 }
