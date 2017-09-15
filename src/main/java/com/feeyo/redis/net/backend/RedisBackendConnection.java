@@ -2,12 +2,12 @@ package com.feeyo.redis.net.backend;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.Calendar;
 
 import com.feeyo.redis.net.RedisConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
+import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
  * REDIS 后端连接
@@ -193,33 +193,6 @@ public class RedisBackendConnection extends RedisConnection {
 		write( sBuffer.toString().getBytes() );			
 	}
 	
-	private String toDate(long mills) {
-		Calendar cal = Calendar.getInstance();
-		cal.setTimeInMillis( mills );
-		
-		int date = cal.get( Calendar.DATE );
-		int hour = cal.get( Calendar.HOUR_OF_DAY );
-		int minute = cal.get( Calendar.MINUTE );
-		int second = cal.get( Calendar.SECOND );
-		
-		StringBuffer sb = new StringBuffer();
-		sb.append("(").append( date ).append(")");
-		sb.append( hour ).append(":");
-		
-		if ( minute >= 10)	
-			sb.append( minute).append(":");
-		else 
-			sb.append("0").append( minute).append(":");
-		
-		if ( second >= 10 ) 
-			sb.append( second );
-		else
-			sb.append("0").append( second );
-		
-		return sb.toString();
-		
-	}
-	
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
@@ -229,9 +202,9 @@ public class RedisBackendConnection extends RedisConnection {
 		sbuffer.append(", port=").append( port );
 		sbuffer.append(", id=").append( id );
 		sbuffer.append(", borrowed=").append( borrowed );
-		sbuffer.append(", startupTime=").append( toDate(startupTime) );
-		sbuffer.append(", lastReadTime=").append( toDate(lastReadTime) );
-		sbuffer.append(", lastWriteTime=").append( toDate(lastWriteTime) );
+		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp(startupTime) );
+		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp(lastReadTime) );
+		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp(lastWriteTime) );
 		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();

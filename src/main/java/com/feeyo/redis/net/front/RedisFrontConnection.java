@@ -24,7 +24,7 @@ public class RedisFrontConnection extends RedisConnection {
 	private boolean isAuthenticated;
 	
 	private RedisFrontSession session;
-	private AtomicBoolean lock = new AtomicBoolean(false);
+	private AtomicBoolean _readLock = new AtomicBoolean(false);
 	
 	public RedisFrontConnection(SocketChannel channel) {
 		super(channel);
@@ -39,7 +39,7 @@ public class RedisFrontConnection extends RedisConnection {
 	@Override
 	protected void asynRead() throws IOException {
 		
-		if (lock.compareAndSet(false, true)) {
+		if (_readLock.compareAndSet(false, true)) {
 			super.asynRead();
 		}
 		
@@ -101,9 +101,11 @@ public class RedisFrontConnection extends RedisConnection {
 			sbuffer.append(", key=").append( session.getRequestKey() != null ? new String( session.getRequestKey() ) : "" );
 		}
 		
-		sbuffer.append(", startupTime=").append( startupTime );
-		sbuffer.append(", lastReadTime=").append( lastReadTime );
-		sbuffer.append(", lastWriteTime=").append( lastWriteTime );
+		sbuffer.append(", readLock=").append(  _readLock.get() );
+		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp( startupTime ) );
+		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp( lastReadTime ) );
+		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp( lastWriteTime ) );
+		
 		//sbuffer.append(", todoWriteTime=").append( todoWriteTime );
 		//sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
@@ -111,6 +113,6 @@ public class RedisFrontConnection extends RedisConnection {
 	}
 	
 	public void releaseLock() {
-		lock.set(false);
+		_readLock.set(false);
 	}
 }
