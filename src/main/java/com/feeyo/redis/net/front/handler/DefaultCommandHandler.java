@@ -40,11 +40,6 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		super.frontConnectionClose(reason);
 	}
 	
-	@Override
-	public void frontHandlerError(Exception e) {
-		super.frontHandlerError(e);
-	}
-	
 	
 	@Override
     public void backendConnectionError(Exception e) {
@@ -63,16 +58,6 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 
 		if( frontCon != null && !frontCon.isClosed() ) {
 			frontCon.writeErrMessage( reason );
-		}
-	}
-
-	@Override
-	public void backendHandlerError(Exception e) {
-
-		super.backendHandlerError(e);
-
-		if( frontCon != null && !frontCon.isClosed() ) {
-			frontCon.writeErrMessage(e.toString());
 		}
 	}
 	

@@ -39,6 +39,6 @@ public interface NIOHandler<T extends Connection> {
 	 * @param con
 	 * @param e
 	 */
-	void onHandlerError(T con,Exception e);
+	//void onHandlerError(T con,Exception e);
 
 }

@@ -101,12 +101,6 @@ public class PubSub  {
 					unsubscribeAll();
 					
 				}
-				
-				@Override
-				public void handlerError(Exception e, RedisBackendConnection conn) {
-					frontCon.close( e.toString() );	
-					unsubscribeAll();
-				}
 			};
 
 			// 创建新连接

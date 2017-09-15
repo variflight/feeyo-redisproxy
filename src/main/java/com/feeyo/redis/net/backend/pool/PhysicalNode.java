@@ -76,10 +76,6 @@ public class PhysicalNode {
 				//ignore
 			}
 
-			@Override
-			public void handlerError(Exception e, RedisBackendConnection conn) {
-				//ignore
-			}
 		}, null);
 	}
 	

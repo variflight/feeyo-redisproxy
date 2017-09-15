@@ -120,16 +120,6 @@ public class ConHeartBeatHandler implements BackendCallback {
 			LOGGER.debug("connection closed " + conn + " reason:" + reason);
 		}
 	}
-
-	@Override
-	public void handlerError(Exception e, RedisBackendConnection conn) {
-		removeFinished(conn);
-		//conn.release();
-		
-		LOGGER.error("handlerError: ", e);
-		conn.close( "handle err:" + e );
-		
-	}
 }
 
 

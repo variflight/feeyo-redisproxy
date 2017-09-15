@@ -33,9 +33,6 @@ public class RedisBackendConnection extends RedisConnection {
 
 		@Override
 		public void connectionClose(RedisBackendConnection conn, String reason) {}
-
-		@Override
-		public void handlerError(Exception e, RedisBackendConnection conn) {}
     };
     
     private volatile int db = 0;				//REDIS select database, default 0

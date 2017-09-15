@@ -509,8 +509,6 @@ public class RedisFrontSession {
 					public void connectionError(Exception e, RedisBackendConnection conn) {}
 					@Override
 					public void connectionClose(RedisBackendConnection conn, String reason) {}
-					@Override
-					public void handlerError(Exception e, RedisBackendConnection conn) {}
 				});
 				pubsub.subscribe(request, node.getPhysicalNode());
 			}
@@ -554,17 +552,6 @@ public class RedisFrontSession {
 		this.cleanup();
 	}
 	
-	public void frontHandlerError(Exception e) {
-		
-		if ( pubsub != null ) 
-			pubsub.unsubscribeAll();
-		
-		if ( currentCommandHandler != null )
-			currentCommandHandler.frontHandlerError(e);
-		
-		this.cleanup();
-	}
-	
 	// BACKEND CONNECTION EVENT 
 	// ---------------------------------------------------------------------------------------
 	public void backendConnectionError(Exception e) {
@@ -585,14 +572,6 @@ public class RedisFrontSession {
 			frontCon.writeErrMessage(reason);
 		
 		frontCon.close("backend connectionClose");
-	}
-	
-	public void backendHandlerError(Exception e) {
-		
-		if ( currentCommandHandler != null )
-			currentCommandHandler.backendHandlerError(e);
-		else
-			frontCon.writeErrMessage(e.toString());
 	}
 	
 }
