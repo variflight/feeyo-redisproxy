@@ -27,7 +27,7 @@ public class RedisConnection extends Connection {
 			errorBuffer.append( msg );
 			errorBuffer.append("\r\n");
 			
-			writeOkMessage( errorBuffer.toString().getBytes() );
+			write( errorBuffer.toString().getBytes() );
 		} catch (final IOException e) {
 			this.close( e.toString() );
 		}
