@@ -91,8 +91,8 @@ public class RedisFrontConnection extends RedisConnection {
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(200);
-		sbuffer.append( "Connection [host=" ).append( host );
-		sbuffer.append(", port=").append( port );
+		sbuffer.append( "Connection [reactor=").append( reactor );
+		sbuffer.append(", host=").append( host ).append("/").append( port );
 		sbuffer.append(", password=").append( userCfg != null ? userCfg.getPassword() : "no auth!" );	
 		sbuffer.append(", id=").append( id );
 		

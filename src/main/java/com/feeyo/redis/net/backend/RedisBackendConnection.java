@@ -193,10 +193,8 @@ public class RedisBackendConnection extends RedisConnection {
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Connection [" );
-		sbuffer.append("reactor=").append( reactor );
-		sbuffer.append(", host=").append( host );
-		sbuffer.append(", port=").append( port );
+		sbuffer.append( "Connection [reactor=").append( reactor );
+		sbuffer.append(", host=").append( host ).append("/").append( port );
 		sbuffer.append(", id=").append( id );
 		sbuffer.append(", borrowed=").append( borrowed );
 		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp(startupTime) );
