@@ -828,12 +828,8 @@ public class Manage {
 					DirectTransTofrontCallBack callback = new DirectTransTofrontCallBack() {
 						@Override
 						public void connectionAcquired(RedisBackendConnection backendCon) {
-							try {
-								backendCon.setBorrowed( true );
-								backendCon.write(request.encode());
-							} catch (IOException e) {
-								backendCon.close("cluster cmd write err:" + e.toString());
-							}
+							backendCon.setBorrowed( true );
+							backendCon.write(request.encode());
 						}
 					};
 					

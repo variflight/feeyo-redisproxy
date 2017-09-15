@@ -247,16 +247,10 @@ public class RedisFrontSession {
 			
 		} catch (RedisRequestUnknowException e0) {
 			frontCon.close("unknow redis client .");
-			return;
 
 		} catch (IOException e1) {
-			LOGGER.error("front handle err:", e1);
-			try {
-				String error = "-ERR " + e1.getMessage() + ".\r\n";
-				frontCon.write(error.getBytes());
-			} catch (IOException e) {
-			}
-			return;
+			String error = "-ERR " + e1.getMessage() + ".\r\n";
+			frontCon.write(error.getBytes());
 			
 		} finally {
 			
@@ -319,7 +313,7 @@ public class RedisFrontSession {
 	}
 	
 	// Auth
-	private boolean auth(RedisRequest request) throws IOException {
+	private boolean auth(RedisRequest request) {
 
 		if (request.getArgs().length < 2) {
 			frontCon.write(ERR_NO_AUTH_NO_PASSWORD);
@@ -341,7 +335,7 @@ public class RedisFrontSession {
 	}
 	
 	// Echo
-	protected void echo(RedisRequest request) throws IOException {	
+	protected void echo(RedisRequest request) {	
 		if ( request.getArgs().length != 2 ) {
 			StringBuffer error = new StringBuffer();
 			error.append("-");
@@ -360,7 +354,7 @@ public class RedisFrontSession {
 	}
 	
 	// Select
-	protected void select(RedisRequest request) throws IOException {	
+	protected void select(RedisRequest request) {	
 		if ( request.getArgs().length != 2 ) {
 			StringBuffer error = new StringBuffer();
 			error.append("-");

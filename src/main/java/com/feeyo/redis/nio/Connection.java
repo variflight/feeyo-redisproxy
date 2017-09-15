@@ -34,7 +34,7 @@ public abstract class Connection implements ClosableConnection {
 	protected int localPort;
 	protected long id;
 	protected String reactor;
-	private Object attachement;
+	protected Object attachement;
 	protected int state = STATE_CONNECTING;
 
 	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
@@ -68,7 +68,6 @@ public abstract class Connection implements ClosableConnection {
 	
 	protected long lastReadTime;
 	protected long lastWriteTime;
-	protected long todoWriteTime;
 	
 	protected int netInBytes;
 	protected int netOutBytes;
@@ -87,7 +86,6 @@ public abstract class Connection implements ClosableConnection {
 		this.startupTime = TimeUtil.currentTimeMillis();
 		this.lastReadTime = startupTime;
 		this.lastWriteTime = startupTime;
-		this.todoWriteTime = startupTime;
 		this.id = ConnectIdGenerator.getINSTNCE().getId();
 	}
 
@@ -159,10 +157,6 @@ public abstract class Connection implements ClosableConnection {
 		return lastWriteTime;
 	}
 	
-	public long getTodoWriteTime() {
-		return todoWriteTime;
-	}
-
 	public long getNetInBytes() {
 		return netInBytes;
 	}
@@ -192,8 +186,7 @@ public abstract class Connection implements ClosableConnection {
 			
 			closeSocket();
 			isClosed.set(true);
-			
-//			this.attachement = null; //help GC
+
 			this.cleanup();		
 			NetSystem.getInstance().removeConnection(this);
 			
@@ -204,6 +197,8 @@ public abstract class Connection implements ClosableConnection {
 			if (handler != null) {
 				handler.onClosed(this, reason);
 			}
+			
+			this.attachement = null; //help GC
 			
 		} else {
 		    this.cleanup();
@@ -220,18 +215,6 @@ public abstract class Connection implements ClosableConnection {
 				LOGGER.debug(toString() + " idle timeout");
 			}
 			close("idle timeout ");
-		} else {
-			todoWriteCheck();
-		}
-	}
-	
-	/**
-	 * 回写检测，如果太慢，此处kill
-	 */
-	private void todoWriteCheck() {	
-		if ( (todoWriteTime - lastWriteTime) > 20000 ) {
-			LOGGER.warn(toString() + " warning, too slow.");
-			close("warning, too slow.");
 		}
 	}
 
@@ -309,25 +292,12 @@ public abstract class Connection implements ClosableConnection {
 			return;
 		}
 		
-		try {	
-			
-			if ( processKey == null ) {
-				
-				LOGGER.warn( " processKey is null , Thread:" + Thread.currentThread().getName() 
-							+ ", \r\n backend: " + this.toSampleString()  + ",  " + System.nanoTime()
-							+ ", \r\n front:" +  (this.attachement != null ? ((com.feeyo.redis.net.front.RedisFrontConnection) this.attachement).toSampleString() : null)
-							+ "  \r\n");
-				return;
-			}
-			
-			//if ( processKey == null ) {
-			//	return;
-			//}
+		try {
 			
 			//利用缓存队列和写缓冲记录保证写的可靠性，返回true则为全部写入成功
 			boolean noMoreData = write0();	
 				
-			lastWriteTime = TimeUtil.currentTimeMillis();
+			//lastWriteTime = TimeUtil.currentTimeMillis();
 			
 		    //如果全部写入成功而且写入队列为空（有可能在写入过程中又有新的Bytebuffer加入到队列），则取消注册写事件
             //否则，继续注册写事件
@@ -379,7 +349,7 @@ public abstract class Connection implements ClosableConnection {
 		 writeQueue.offer(buffer);
 	}
 
-	public void write(byte[] data) throws IOException {
+	public void write(byte[] data) {
 		if (data == null)
 			return;
 		
@@ -400,22 +370,17 @@ public abstract class Connection implements ClosableConnection {
 	}
 
 	
-	public void write(ByteBuffer buffer) throws IOException {
+	public void write(ByteBuffer buffer) {
 		
-		/**
-		 *  TODO: 防护，避免前端SMEMBERS key，接收延迟严重，造成writeQueue 过大，引起OOM，  
-		 *  当发生这种问题后，交由idle 检测服务 kill 前端连接， 起到回收 buffer 的作用
-		 */
-		this.todoWriteTime = TimeUtil.currentTimeMillis();
 		this.writeQueue.offer(buffer);
 		
 		try {
 			this.doNextWriteCheck();
 			
 		} catch (Exception e) {
-			//LOGGER.warn("write err:", e);
-			//this.close("write err:" + e);
-			throw new IOException( e );
+			LOGGER.warn("write err:", e);
+			this.close("write err:" + e);
+			//throw new IOException( e );
 		}
 	}
 	
@@ -665,7 +630,7 @@ public abstract class Connection implements ClosableConnection {
 
 	}
 
-	private void closeSocket() {
+	protected void closeSocket() {
 		if ( channel != null ) {		
 			
 			if (channel instanceof SocketChannel) {

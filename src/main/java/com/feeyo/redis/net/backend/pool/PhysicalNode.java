@@ -75,7 +75,6 @@ public class PhysicalNode {
 			public void connectionError(Exception e, RedisBackendConnection conn) {
 				//ignore
 			}
-
 		}, null);
 	}
 	

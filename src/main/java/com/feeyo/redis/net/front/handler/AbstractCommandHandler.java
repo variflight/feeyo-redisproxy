@@ -45,11 +45,9 @@ public abstract class AbstractCommandHandler {
 			commonHandle( rrs );
 		} catch (IOException e1) {
 			LOGGER.error("front handle err:", e1);
-			try {
-				String error = "-ERR " + e1.getMessage() + ".\r\n";
-				frontCon.write(error.getBytes());
-			} catch (IOException e) {
-			}
+			
+			String error = "-ERR " + e1.getMessage() + ".\r\n";
+			frontCon.write(error.getBytes());
 			return;
 		}
 	}

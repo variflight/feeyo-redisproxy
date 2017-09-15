@@ -20,17 +20,12 @@ public class RedisConnection extends Connection {
 	}
 	
 	public void writeErrMessage(String msg) {
+		StringBuffer errorBuffer = new StringBuffer();
+		errorBuffer.append("-ERR ");
+		errorBuffer.append( msg );
+		errorBuffer.append("\r\n");
 		
-		try {
-			StringBuffer errorBuffer = new StringBuffer();
-			errorBuffer.append("-ERR ");
-			errorBuffer.append( msg );
-			errorBuffer.append("\r\n");
-			
-			write( errorBuffer.toString().getBytes() );
-		} catch (final IOException e) {
-			this.close( e.toString() );
-		}
+		write( errorBuffer.toString().getBytes() );
 	}
 	
 	public String getPassword() {
