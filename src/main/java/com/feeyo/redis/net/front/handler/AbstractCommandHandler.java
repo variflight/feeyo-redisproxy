@@ -1,11 +1,10 @@
 package com.feeyo.redis.net.front.handler;
 
+import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.net.backend.callback.BackendCallback;
-import com.feeyo.redis.net.backend.callback.DelegateCallback;
+import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 
@@ -45,9 +44,7 @@ public abstract class AbstractCommandHandler {
 			commonHandle( rrs );
 		} catch (IOException e1) {
 			LOGGER.error("front handle err:", e1);
-			
-			String error = "-ERR " + e1.getMessage() + ".\r\n";
-			frontCon.write(error.getBytes());
+			frontCon.writeErrMessage( e1.getMessage() );
 			return;
 		}
 	}
@@ -60,49 +57,39 @@ public abstract class AbstractCommandHandler {
 	 * 2、新建及闲置连接都需要考虑 非集群情况下的自动 select database 问题
 	 */
 	protected RedisBackendConnection writeToBackend(PhysicalNode node, final ByteBuffer buffer, 
-			BackendCallback callback) throws IOException {
+			AbstractBackendCallback callback) throws IOException {
 		
 		//选择后端连接
 		final int poolType = node.getPoolType();
 		RedisBackendConnection backendCon = node.getConnection(callback, frontCon);
 		if ( backendCon == null ) {
 			
-			// 新建连接，通过代理callback 处理 select database 
-			DelegateCallback delegateCallback = new DelegateCallback( callback ) {
+			TodoTask task = new TodoTask() {				
 				@Override
-				public void connectionAcquired(RedisBackendConnection conn) {
-					
-					try {
-						conn.setBorrowed(true);
-						
-						// 集群不需要处理 select database
-						if ( poolType == 1) {
-							conn.write( buffer );
-				
+				public void execute(RedisBackendConnection backendCon) throws Exception {	
+					// 集群不需要处理 select database
+					if ( poolType == 1) {
+						backendCon.write( buffer );
+					} else {
+						// 执行 SELECT 指令
+						int db = frontCon.getUserCfg().getSelectDb();
+						if (backendCon.needSelectIf(db)) {
+							SelectDbCallback selectDbCallback = new SelectDbCallback(db, backendCon.getCallback(), buffer);
+							backendCon.select(db, selectDbCallback);
+			
 						} else {
-							// 执行 SELECT 指令
-							int db = frontCon.getUserCfg().getSelectDb();
-							if (conn.needSelectIf(db)) {
-								
-								SelectDbCallback selectDbCallback = new SelectDbCallback(db, conn.getCallback(), buffer);
-								conn.select(db, selectDbCallback);
-				
-							} else {
-								conn.write( buffer );
-							}
+							backendCon.write( buffer );
 						}
-					} catch (IOException e) {
-						LOGGER.warn("writeToBackend handle err:" + conn, e);
-						frontCon.close( e.toString() );
 					}
 					
 				}
 			};
-			backendCon = node.createNewConnection(delegateCallback, frontCon);
+			callback.addTodoTask(task);
+			backendCon = node.createNewConnection(callback, frontCon);
 			
 		} else {
 			
-			// 集群不需要处理 select index
+			// 集群不需要处理 select database
 			if ( poolType == 1) {
 				backendCon.write( buffer );
 
@@ -126,6 +113,7 @@ public abstract class AbstractCommandHandler {
 	public void frontConnectionClose(String reason) {
 		frontCon.releaseLock();
 	}
+	
 	public void frontHandlerError(Exception e) {
 		frontCon.releaseLock();
 	}

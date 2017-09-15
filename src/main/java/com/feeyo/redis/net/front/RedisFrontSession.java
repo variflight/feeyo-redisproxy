@@ -15,8 +15,10 @@ import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.codec.RedisRequestUnknowException;
 import com.feeyo.redis.engine.manage.Manage;
+
 import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.net.backend.callback.BackendCallback;
+import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
+
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
 import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.DelMultiKeyCommandHandler;
@@ -484,8 +486,7 @@ public class RedisFrontSession {
 			} else {
 
 				// PUBSUB
-				pubsub = new PubSub(frontCon, new BackendCallback() {
-					
+				pubsub = new PubSub(frontCon, new AbstractBackendCallback() {
 					@Override
 					public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
 						if (frontCon != null && !frontCon.isClosed()) {
@@ -497,12 +498,6 @@ public class RedisFrontSession {
 							pubsub = null;
 						}
 					}
-					@Override
-					public void connectionAcquired(RedisBackendConnection conn) {}
-					@Override
-					public void connectionError(Exception e, RedisBackendConnection conn) {}
-					@Override
-					public void connectionClose(RedisBackendConnection conn, String reason) {}
 				});
 				pubsub.subscribe(request, node.getPhysicalNode());
 			}

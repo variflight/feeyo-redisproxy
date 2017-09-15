@@ -384,7 +384,7 @@ public abstract class Connection implements ClosableConnection {
 			this.doNextWriteCheck();
 			
 		} catch (Exception e) {
-			LOGGER.warn("write err:", e);
+			LOGGER.error("write err:", e);
 			this.close("write err:" + e);
 			//throw new IOException( e );
 		}

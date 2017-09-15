@@ -671,11 +671,13 @@ public class Manage {
 					Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
 					StringBuffer titleLine = new StringBuffer();
 					titleLine.append("  PoolId").append("   ");
-					titleLine.append("PoolName").append("   ");
+					titleLine.append("PoolName").append("    ");
 					titleLine.append("PoolType").append("    ");
 					titleLine.append("Address").append("               ");
-					titleLine.append("MinCom").append("   ");
+					titleLine.append("MinCom").append("    ");
 					titleLine.append("MaxCon").append("   ");
+					titleLine.append("IdlCon").append("   ");
+					titleLine.append("ActiveCon").append("   ");
 					titleLine.append("ClusterNodeState");
 					list.add(titleLine.toString());
 					
@@ -693,7 +695,9 @@ public class Manage {
 							sb.append("Standalone").append("  ");
 							sb.append(physicalNode.getName()).append("       ");
 							sb.append(physicalNode.getMinCon()).append("       ");
-							sb.append(physicalNode.getMaxCon());
+							sb.append(physicalNode.getMaxCon()).append("       ");
+							sb.append(physicalNode.getIdleCount()).append("          ");
+							sb.append(physicalNode.getActiveCount());
 							list.add(sb.toString());
 							
 						} else if ( pool instanceof RedisClusterPool ) {
@@ -708,7 +712,9 @@ public class Manage {
 								sb.append("cluster").append("     ");
 								sb.append(physicalNode.getName()).append("       ");
 								sb.append(physicalNode.getMinCon()).append("       ");
-								sb.append(physicalNode.getMaxCon()).append("  ");
+								sb.append(physicalNode.getMaxCon()).append("       ");
+								sb.append(physicalNode.getIdleCount()).append("       ");
+								sb.append(physicalNode.getActiveCount()).append("          ");;
 								sb.append(!clusterNode.isFail());
 								clusterInfo.add(sb.toString());
 								sb.append(clusterNode.getConnectInfo());
@@ -823,24 +829,15 @@ public class Manage {
 				}
 				
 				try {
-					
-					// 回调
-					DirectTransTofrontCallBack callback = new DirectTransTofrontCallBack() {
-						@Override
-						public void connectionAcquired(RedisBackendConnection backendCon) {
-							backendCon.setBorrowed( true );
-							backendCon.write(request.encode());
-						}
-					};
-					
-					RedisBackendConnection backendCon = pysicalNode.getConnection(callback, frontCon);
+				
+					RedisBackendConnection backendCon = pysicalNode.getConnection(new DirectTransTofrontCallBack(), frontCon);
 					if (backendCon == null) {
-						backendCon = pysicalNode.createNewConnection(callback, frontCon);
+						frontCon.writeErrMessage("not idle backend connection, pls wait !!!");
 					} else {
-						backendCon.write(request.encode());
+						backendCon.write( request.encode() );
 					}
 					
-					return null;
+					return null;	// null, not write
 				} catch (IOException e) {
 					LOGGER.error("", e);
 				}

@@ -59,6 +59,7 @@ public class RedisBackendConnection extends RedisConnection {
 	}
 	
 	public void release() {
+		this.setBorrowed( false );
 		this.setCallback( NULL );
 		this.physicalNode.releaseConnection(this);
 	}
