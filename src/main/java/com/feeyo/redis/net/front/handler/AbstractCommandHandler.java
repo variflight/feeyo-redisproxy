@@ -42,7 +42,6 @@ public abstract class AbstractCommandHandler {
 	public void handle(RouteResult rrs) {
 		try {
 			commonHandle( rrs );
-			
 		} catch (IOException e1) {
 			LOGGER.error("front handle err:", e1);
 			frontCon.writeErrMessage( e1.getMessage() );
@@ -114,6 +113,7 @@ public abstract class AbstractCommandHandler {
 	public void frontConnectionClose(String reason) {
 		frontCon.releaseLock();
 	}
+	
 	public void frontHandlerError(Exception e) {
 		frontCon.releaseLock();
 	}
