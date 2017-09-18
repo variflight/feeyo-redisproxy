@@ -19,9 +19,12 @@ public abstract class AbstractBackendCallback implements BackendCallback {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractBackendCallback.class );
 	
-	private ArrayList<TodoTask> todoTasks = new ArrayList<TodoTask>(2);
+	private ArrayList<TodoTask> todoTasks = null;
 	  
 	public void addTodoTask(TodoTask task) {
+		if ( todoTasks == null ) {
+			todoTasks = new ArrayList<TodoTask>(2);
+		}
 		this.todoTasks.add(task);
 	}
 	
@@ -36,7 +39,7 @@ public abstract class AbstractBackendCallback implements BackendCallback {
 	public void connectionAcquired(RedisBackendConnection backendCon) {
 		
 		// 执行挂起的任务
-		if (this.todoTasks.isEmpty()) {
+		if ( todoTasks == null || todoTasks.isEmpty()) {
 			return;
 		}
 		

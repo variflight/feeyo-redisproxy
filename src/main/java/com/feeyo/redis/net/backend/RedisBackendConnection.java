@@ -19,21 +19,6 @@ public class RedisBackendConnection extends RedisConnection {
 	
     private BackendCallback callback;
     private PhysicalNode physicalNode;
-
-    //
-    private BackendCallback NULL = new BackendCallback() {
-		@Override
-		public void connectionAcquired(RedisBackendConnection conn) {}
-
-		@Override
-		public void connectionError(Exception e, RedisBackendConnection conn) {}
-
-		@Override
-		public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {}
-
-		@Override
-		public void connectionClose(RedisBackendConnection conn, String reason) {}
-    };
     
     private volatile int db = 0;				//REDIS select database, default 0
     private volatile boolean borrowed = false;
@@ -60,7 +45,6 @@ public class RedisBackendConnection extends RedisConnection {
 	
 	public void release() {
 		this.setBorrowed( false );
-		this.setCallback( NULL );
 		this.physicalNode.releaseConnection(this);
 	}
 
