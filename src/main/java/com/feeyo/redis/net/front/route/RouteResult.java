@@ -20,10 +20,6 @@ public class RouteResult {
 	
 	private final List<Integer> autoResponseIndexs;			// 需要自动应答的 request index 集合
 	private final List<RouteResultNode> nodes;				// 封装后的路由请求，包含路由到的节点和 分组后的请求 index 集合
-	
-    private final int requestCount;							// 请求数
-    private final int transCount;							// 透传数
-    private final int autoRespCount;						// 自动应答数
     
     
 	public RouteResult(RedisRequestType requestType, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
@@ -35,10 +31,6 @@ public class RouteResult {
 		
 		this.nodes = nodes;
 		this.autoResponseIndexs = autoResponseIndexs;
-		
-		this.requestCount = requests.size();
-		this.autoRespCount = autoResponseIndexs.size();
-		this.transCount =  requestCount - autoRespCount;
 	}
 
 	public RedisRequestType getRequestType() {
@@ -61,19 +53,23 @@ public class RouteResult {
 		return nodes;
 	}
 
+	// 请求数
 	public int getRequestCount() {
-		return requestCount;
+		return  requests.size();				
 	}
 
+	// 透传数
 	public int getTransCount() {
-		return transCount;
+		return requests.size() - autoResponseIndexs.size();	
 	}
 
-	public int getAutoRespCount() {
-		return autoRespCount;
+	// 自动应答数
+	public int getAutoRespCount() {				
+		return  autoResponseIndexs.size();		
 	}
 	
-	public int getRequestSize() {
+	// 请求字节数
+	public int getRequestSize() {				
 		int size = 0;
 		for(RedisRequest req: requests ) {
 			size += req.getSize();

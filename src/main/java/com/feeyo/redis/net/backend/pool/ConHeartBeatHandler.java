@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
+import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
  * check for redis connections
@@ -107,6 +108,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 		
 		// +PONG\r\n
 		if ( byteBuff.length == 7 &&  byteBuff[0] == '+' &&  byteBuff[1] == 'P' &&  byteBuff[2] == 'O' &&  byteBuff[3] == 'N' &&  byteBuff[4] == 'G'  ) {
+			conn.setHeartbeatTime( TimeUtil.currentTimeMillis() );
 			conn.release();		
 		} else {
 			conn.close("heartbeat err");
