@@ -46,7 +46,7 @@ public class NetSystem {
 	private final ConcurrentHashMap<Long, Connection> allConnections;
 	private SystemConfig netConfig;
 	private NIOConnector connector;
-	private ConcurrentLinkedQueue<Long> timeOutBackendConnectionId;
+	private ConcurrentLinkedQueue<Long> timeoutConnectionIds;
 
 	public static NetSystem getInstance() {
 		return INSTANCE;
@@ -58,7 +58,7 @@ public class NetSystem {
 		this.businessExecutor = businessExecutor;
 		this.timerExecutor = timerExecutor;
 		this.allConnections = new ConcurrentHashMap<Long, Connection>();
-		this.timeOutBackendConnectionId = new ConcurrentLinkedQueue<Long>();
+		this.timeoutConnectionIds = new ConcurrentLinkedQueue<Long>();
 		INSTANCE = this;
 	}
 
@@ -90,8 +90,8 @@ public class NetSystem {
 		return timerExecutor;
 	}
 	
-	public ConcurrentLinkedQueue<Long> getTimeOutBackendConnectionId() {
-		return timeOutBackendConnectionId;
+	public void addTimeoutConnection(long id) {
+		timeoutConnectionIds.offer( id );
 	}
 
 	/**
@@ -168,8 +168,8 @@ public class NetSystem {
 	
 	// 前段链接关闭，但是后端链接未回收的链接检查。
 	public void checkTimeOutBackendConnection() {
-		if (!timeOutBackendConnectionId.isEmpty()) {
-			long id = timeOutBackendConnectionId.poll();
+		if (!timeoutConnectionIds.isEmpty()) {
+			long id = timeoutConnectionIds.poll();
 			RedisBackendConnection conn = (RedisBackendConnection) allConnections.get(id);
 			
 			if (conn != null && !conn.isClosed() && conn.isBorrowed()) {
