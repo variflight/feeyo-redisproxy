@@ -1,17 +1,20 @@
 package com.feeyo.redis.nio;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.nio.buffer.BufferPool;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -43,6 +46,7 @@ public class NetSystem {
 	private final ConcurrentHashMap<Long, Connection> allConnections;
 	private SystemConfig netConfig;
 	private NIOConnector connector;
+	private ConcurrentLinkedQueue<Long> timeOutBackendConnectionId;
 
 	public static NetSystem getInstance() {
 		return INSTANCE;
@@ -54,6 +58,7 @@ public class NetSystem {
 		this.businessExecutor = businessExecutor;
 		this.timerExecutor = timerExecutor;
 		this.allConnections = new ConcurrentHashMap<Long, Connection>();
+		this.timeOutBackendConnectionId = new ConcurrentLinkedQueue<Long>();
 		INSTANCE = this;
 	}
 
@@ -83,6 +88,10 @@ public class NetSystem {
 
 	public NameableExecutor getTimerExecutor() {
 		return timerExecutor;
+	}
+	
+	public ConcurrentLinkedQueue<Long> getTimeOutBackendConnectionId() {
+		return timeOutBackendConnectionId;
 	}
 
 	/**
@@ -153,6 +162,52 @@ public class NetSystem {
 				}
 
 				c.idleCheck();
+			}
+		}
+	}
+	
+	// 前段链接关闭，但是后端链接未回收的链接检查。
+	public void checkTimeOutBackendConnection() {
+		if (!timeOutBackendConnectionId.isEmpty()) {
+			long id = timeOutBackendConnectionId.poll();
+			RedisBackendConnection conn = (RedisBackendConnection) allConnections.get(id);
+			
+			if (conn != null && !conn.isClosed() && conn.isBorrowed()) {
+				final StringBuffer errBuffer = new StringBuffer(200);
+				errBuffer.append("front closed, close it " ).append( conn );
+				errBuffer.append(" , revice: ");
+				if ( conn.getAttachement() != null ) {
+					errBuffer.append(" , and attach it " ).append( conn.getAttachement() );
+				}
+				
+				conn.setCallback(new DirectTransTofrontCallBack() {
+					
+					@Override
+					public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+						errBuffer.append(",  ").append(new String(byteBuff));
+						
+						LOGGER.warn( errBuffer.toString() );
+						
+						backendCon.close("front closed");
+					}
+					@Override
+					public void connectionError(Exception e, RedisBackendConnection backendCon) {
+						super.connectionError(e, backendCon);
+						LOGGER.warn( errBuffer.toString(), e );
+						backendCon.close("front closed");
+					}
+					@Override
+					public void connectionClose(RedisBackendConnection backendCon, String reason) {
+						super.connectionClose(backendCon, reason);
+					}
+				});
+				try {
+					conn.getChannel().socket().setSoTimeout(2000);
+				} catch (SocketException e1) {
+					LOGGER.warn("front closed SocketException :", e1);
+				}
+				
+				conn.write("*1\r\n$4\r\nPING\r\n".getBytes());
 			}
 		}
 	}

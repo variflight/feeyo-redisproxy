@@ -3,13 +3,16 @@ package com.feeyo.redis.net.front.handler;
 import java.io.IOException;
 
 import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class DefaultCommandHandler extends AbstractCommandHandler {
+	private RedisBackendConnection redisBackendConnection;
 	
 	public DefaultCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -31,13 +34,17 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestSize(request.getSize());
 		
 		// 透传
-		writeToBackend(node.getPhysicalNode(), request.encode(), new DirectTransTofrontCallBack());
+		redisBackendConnection = writeToBackend(node.getPhysicalNode(), request.encode(), new DirectTransTofrontCallBack());
 
 	}
 
 	@Override
 	public void frontConnectionClose(String reason) {
 		super.frontConnectionClose(reason);
+		if ("stream closed".equals(reason) && redisBackendConnection != null && !redisBackendConnection.isClosed()
+				&& redisBackendConnection.isBorrowed()) {
+			NetSystem.getInstance().getTimeOutBackendConnectionId().offer(redisBackendConnection.getId());
+		}
 	}
 	
 	
