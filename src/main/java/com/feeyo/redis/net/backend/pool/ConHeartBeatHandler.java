@@ -69,7 +69,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 			for (RedisBackendConnection con : abandCons) {
 				try {
 					// if(con.isBorrowed())
-					con.close("physical node check timeout ");
+					con.close("heartbeat check, backend conn is timeout !!! ");
 				} catch (Exception e) {
 					LOGGER.error("close err:", e);
 				}
@@ -132,7 +132,7 @@ class HeartbeatCon {
 
 	public HeartbeatCon(RedisBackendConnection conn) {
 		super();
-		this.timeoutTimestamp = System.currentTimeMillis() + 20 * 1000L;
+		this.timeoutTimestamp = TimeUtil.currentTimeMillis() + ( 20 * 1000L );
 		this.conn = conn;
 	}
 }
