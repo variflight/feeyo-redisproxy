@@ -38,6 +38,7 @@ public final class NIOReactor {
 	}
 
 	final void postRegister(Connection c) {
+		c.setReactor( this.name );
 		reactorR.registerQueue.offer(c);
 		reactorR.selector.wakeup();
 	}
