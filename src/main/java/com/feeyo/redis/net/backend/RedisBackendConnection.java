@@ -50,6 +50,7 @@ public class RedisBackendConnection extends RedisConnection {
 	}
 	
 	public void release() {
+		this.markBrokenRespAsConusmed();
 		this.setBorrowed( false );
 		this.physicalNode.releaseConnection(this);
 	}
@@ -74,7 +75,7 @@ public class RedisBackendConnection extends RedisConnection {
 		this.sendData = sendData;
 	}
 	
-	public void markBrokenRespAsConusmed() {
+	private void markBrokenRespAsConusmed() {
 		if ( sendData != null ) {
 			AppendMessageResult amr = sendData.getAppendMessageResult();
 			// 标记该消息已经被消费
@@ -85,7 +86,7 @@ public class RedisBackendConnection extends RedisConnection {
 	
 	@Override
 	public void close(String reason) {
-		markBrokenRespAsConusmed();
+		this.markBrokenRespAsConusmed();
 		super.close(reason);
 	}
 
