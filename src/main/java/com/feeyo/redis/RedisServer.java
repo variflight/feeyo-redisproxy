@@ -77,22 +77,6 @@ public class RedisServer {
 		}, 0L, 1 * 1000L, TimeUnit.MILLISECONDS);	
 		
 		/**
-		 *  前段链接关闭，但是后端链接未回收的链接检查。
-		 */
-		scheduler.scheduleAtFixedRate(new Runnable(){
-			@Override
-			public void run() {		
-				NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
-					@Override
-					public void run() {
-						NetSystem.getInstance().checkTimeOutBackendConnection();
-					}
-				});
-			}			
-		}, 0L, 30 * 1000L, TimeUnit.MILLISECONDS);	
-		
-		
-		/**
 		 *  连接池有效性
 		 */
 		heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
