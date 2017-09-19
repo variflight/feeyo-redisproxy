@@ -103,7 +103,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				
 				// 后段链接释放
 				backendCon.release();	
-				
+				backendCon.markBrokenRespAsConusmed();
 				// 数据收集
 				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
 				

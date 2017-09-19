@@ -3,11 +3,14 @@ package com.feeyo.redis.net.backend;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.RedisConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.util.TimeUtil;
+import com.feeyo.redis.virtualmemory.AppendMessageResult;
+import com.feeyo.redis.virtualmemory.PutMessageResult;
 
 /**
  * REDIS 后端连接
@@ -19,6 +22,7 @@ public class RedisBackendConnection extends RedisConnection {
 	
     private BackendCallback callback;
     private PhysicalNode physicalNode;
+    private PutMessageResult sendData;
     
     private volatile int db = 0;				//REDIS select database, default 0
     private volatile boolean borrowed = false;
@@ -62,6 +66,29 @@ public class RedisBackendConnection extends RedisConnection {
 		this.db = db;
 	}
 	
+	public PutMessageResult getSendData() {
+		return sendData;
+	}
+
+	public void setSendData(PutMessageResult sendData) {
+		this.sendData = sendData;
+	}
+	
+	public void markBrokenRespAsConusmed() {
+		if ( sendData != null ) {
+			AppendMessageResult amr = sendData.getAppendMessageResult();
+			// 标记该消息已经被消费
+			RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
+			sendData = null;
+		}
+	}
+	
+	@Override
+	public void close(String reason) {
+		markBrokenRespAsConusmed();
+		super.close(reason);
+	}
+
 	public boolean needSelectIf(int db) {
 		if ( db == -1 && this.db == 0 ) {
 			return false;			

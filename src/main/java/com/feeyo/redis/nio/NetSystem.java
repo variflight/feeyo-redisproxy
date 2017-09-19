@@ -1,7 +1,6 @@
 package com.feeyo.redis.nio;
 
 import java.io.IOException;
-import java.net.SocketException;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 import java.util.Iterator;
@@ -13,10 +12,15 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
+import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.buffer.BufferPool;
 import com.feeyo.redis.nio.util.TimeUtil;
+import com.feeyo.redis.virtualmemory.AppendMessageResult;
+import com.feeyo.redis.virtualmemory.Message;
+import com.feeyo.redis.virtualmemory.PutMessageResult;
 
 
 /**
@@ -139,11 +143,25 @@ public class NetSystem {
 				RedisBackendConnection backendCon = (RedisBackendConnection)c;
 				if (backendCon.isBorrowed() && backendCon.getLastTime() < TimeUtil.currentTimeMillis() - TIMEOUT ) {
 					
-					StringBuffer errBuffer = new StringBuffer(200);
+					StringBuffer errBuffer = new StringBuffer();
 					errBuffer.append("backend timeout, close it " ).append( c );
 					if ( c.getAttachement() != null ) {
 						errBuffer.append(" , and attach it " ).append( c.getAttachement() );
 					}
+					errBuffer.append( " , channel isConnected: " ).append(backendCon.getChannel().isConnected());
+			        errBuffer.append( " , channel isBlocking: " ).append(backendCon.getChannel().isBlocking());
+			        errBuffer.append( " , channel isOpen: " ).append(backendCon.getChannel().isOpen());
+			        errBuffer.append( " , socket isConnected: " ).append(backendCon.getChannel().socket().isConnected());
+			        errBuffer.append( " , socket isClosed: " ).append(backendCon.getChannel().socket().isClosed());
+			        PutMessageResult pmr = backendCon.getSendData();
+					if ( pmr != null ) {
+						AppendMessageResult amr = pmr.getAppendMessageResult();
+						Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
+						// 通知该消息已经被消费
+						RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
+						errBuffer.append(",  send: ").append( new String(msg.getBody()) );
+					}
+			        
 					LOGGER.warn( errBuffer.toString() );
 					
 					
@@ -168,23 +186,47 @@ public class NetSystem {
 	
 	// 前段链接关闭，但是后端链接未回收的链接检查。
 	public void checkTimeOutBackendConnection() {
-		if (!timeoutConnectionIds.isEmpty()) {
+		while (!timeoutConnectionIds.isEmpty()) {
 			long id = timeoutConnectionIds.poll();
 			RedisBackendConnection conn = (RedisBackendConnection) allConnections.get(id);
 			
+			if (conn.getAttachement() == null || !((RedisFrontConnection) conn.getAttachement()).isClosed()
+					|| System.currentTimeMillis() - conn.lastReadTime < 3000
+					|| System.currentTimeMillis() - conn.lastWriteTime < 3000 ) {
+				continue;
+			}
+			
 			if (conn != null && !conn.isClosed() && conn.isBorrowed()) {
+				
+				LOGGER.warn("checkTimeOutBackendConnection ID:" + conn.getId());
+				
 				final StringBuffer errBuffer = new StringBuffer(200);
 				errBuffer.append("front closed, close it " ).append( conn );
-				errBuffer.append(" , revice: ");
+				errBuffer.append( " , channel isConnected: " ).append(conn.getChannel().isConnected());
+		        errBuffer.append( " , channel isBlocking: " ).append(conn.getChannel().isBlocking());
+		        errBuffer.append( " , channel isOpen: " ).append(conn.getChannel().isOpen());
+		        errBuffer.append( " , socket isConnected: " ).append(conn.getChannel().socket().isConnected());
+		        errBuffer.append( " , socket isClosed: " ).append(conn.getChannel().socket().isClosed());
 				if ( conn.getAttachement() != null ) {
 					errBuffer.append(" , and attach it " ).append( conn.getAttachement() );
 				}
+				errBuffer.append(" , revice: ");
 				
 				conn.setCallback(new DirectTransTofrontCallBack() {
 					
 					@Override
 					public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 						errBuffer.append(",  ").append(new String(byteBuff));
+						
+						PutMessageResult pmr = backendCon.getSendData();
+						if ( pmr != null ) {
+							AppendMessageResult amr = pmr.getAppendMessageResult();
+							Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
+							// 通知该消息已经被消费
+							RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
+							errBuffer.append(",  send: ").append( new String(msg.getBody()) );
+						}
+						
 						
 						LOGGER.warn( errBuffer.toString() );
 						
@@ -201,11 +243,6 @@ public class NetSystem {
 						super.connectionClose(backendCon, reason);
 					}
 				});
-				try {
-					conn.getChannel().socket().setSoTimeout(2000);
-				} catch (SocketException e1) {
-					LOGGER.warn("front closed SocketException :", e1);
-				}
 				
 				conn.write("*1\r\n$4\r\nPING\r\n".getBytes());
 			}
