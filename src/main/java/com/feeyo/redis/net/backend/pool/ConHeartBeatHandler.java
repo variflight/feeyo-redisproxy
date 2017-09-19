@@ -132,7 +132,7 @@ class HeartbeatCon {
 
 	public HeartbeatCon(RedisBackendConnection conn) {
 		super();
-		this.timeoutTimestamp = TimeUtil.currentTimeMillis() + ( 20 * 1000L );
+		this.timeoutTimestamp = System.currentTimeMillis() + ( 20 * 1000L );
 		this.conn = conn;
 	}
 }
