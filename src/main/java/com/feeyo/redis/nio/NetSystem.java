@@ -130,13 +130,18 @@ public class NetSystem {
 				RedisBackendConnection backendCon = (RedisBackendConnection)c;
 				if (backendCon.isBorrowed() && backendCon.getLastTime() < TimeUtil.currentTimeMillis() - TIMEOUT ) {
 					
-					StringBuffer errBuffer = new StringBuffer(200);
+					StringBuffer errBuffer = new StringBuffer();
 					errBuffer.append("backend timeout, close it " ).append( c );
 					if ( c.getAttachement() != null ) {
 						errBuffer.append(" , and attach it " ).append( c.getAttachement() );
 					}
+					errBuffer.append( " , channel isConnected: " ).append(backendCon.getChannel().isConnected());
+			        errBuffer.append( " , channel isBlocking: " ).append(backendCon.getChannel().isBlocking());
+			        errBuffer.append( " , channel isOpen: " ).append(backendCon.getChannel().isOpen());
+			        errBuffer.append( " , socket isConnected: " ).append(backendCon.getChannel().socket().isConnected());
+			        errBuffer.append( " , socket isClosed: " ).append(backendCon.getChannel().socket().isClosed());
+			        
 					LOGGER.warn( errBuffer.toString() );
-					
 					
 					c.close("backend timeout");
 				}
@@ -157,7 +162,6 @@ public class NetSystem {
 		}
 	}
 	
-
 	public void setSocketParams(Connection con, boolean isFrontChannel) throws IOException {
 		int sorcvbuf = 0;
 		int sosndbuf = 0;

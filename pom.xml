@@ -5,7 +5,7 @@
 
   <groupId>feeyo-redisproxy</groupId>
   <artifactId>feeyo-redisproxy</artifactId>
-  <version>1.8</version>
+  <version>1.9</version>
   <packaging>jar</packaging>
 
   <dependencies>
@@ -32,6 +32,12 @@
 		    <groupId>net.java.dev.jna</groupId>
 		    <artifactId>jna</artifactId>
 		    <version>4.2.2</version>
+		</dependency>
+		
+		<dependency>
+		    <groupId>com.google.guava</groupId>
+		    <artifactId>guava</artifactId>
+		    <version>22.0</version>
 		</dependency>
 
 		<dependency>

@@ -299,7 +299,6 @@ public abstract class Connection implements ClosableConnection {
 		}
 		
 		try {
-			
 			//利用缓存队列和写缓冲记录保证写的可靠性，返回true则为全部写入成功
 			boolean noMoreData = write0();	
 				

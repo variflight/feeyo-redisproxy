@@ -31,6 +31,10 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 		
 		int tmpSize = size;		
 		
+		if ( frontCon.isClosed() ) {
+			throw new IOException("front conn is closed!"); 
+		}
+		
 		if ( response.type() == '+' 
 				|| response.type() == '-'
 				|| response.type() == ':'
@@ -82,11 +86,8 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 		
 			// 获取前端 connection
 			// --------------------------------------------------------------
-			
-			RedisFrontConnection frontCon = null;
+			RedisFrontConnection frontCon = getFrontCon( backendCon );
 			try {
-				
-				frontCon = getFrontCon( backendCon );
 				String password = frontCon.getPassword();
 				String cmd = frontCon.getSession().getRequestCmd();
 				byte[] key = frontCon.getSession().getRequestKey();
@@ -103,7 +104,6 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				
 				// 后段链接释放
 				backendCon.release();	
-				
 				// 数据收集
 				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
 				

@@ -19,24 +19,11 @@ public class RedisBackendConnection extends RedisConnection {
 	
     private BackendCallback callback;
     private PhysicalNode physicalNode;
-
-    //
-    private BackendCallback NULL = new BackendCallback() {
-		@Override
-		public void connectionAcquired(RedisBackendConnection conn) {}
-
-		@Override
-		public void connectionError(Exception e, RedisBackendConnection conn) {}
-
-		@Override
-		public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {}
-
-		@Override
-		public void connectionClose(RedisBackendConnection conn, String reason) {}
-    };
     
     private volatile int db = 0;				//REDIS select database, default 0
     private volatile boolean borrowed = false;
+    
+    private volatile long heartbeatTime = 0;	//心跳应答时间
     
 	public RedisBackendConnection(SocketChannel channel) {
 		super(channel);
@@ -60,7 +47,6 @@ public class RedisBackendConnection extends RedisConnection {
 	
 	public void release() {
 		this.setBorrowed( false );
-		this.setCallback( NULL );
 		this.physicalNode.releaseConnection(this);
 	}
 
@@ -76,6 +62,11 @@ public class RedisBackendConnection extends RedisConnection {
 		this.db = db;
 	}
 	
+	@Override
+	public void close(String reason) {
+		super.close(reason);
+	}
+
 	public boolean needSelectIf(int db) {
 		if ( db == -1 && this.db == 0 ) {
 			return false;			
@@ -85,23 +76,6 @@ public class RedisBackendConnection extends RedisConnection {
 			return true;
 		}
 	}
-	
-	
-//	public void multi(BackendCallback callback) throws IOException {
-//		/*
-//		  2a 31 0d 0a 24 35 0d 0a     * 1 . . $ 5 . . 
-//		  4d 55 4c 54 49 0d 0a        M U L T I . . 
-//		 */
-//		
-//		this.callback = callback;
-//		
-//		StringBuffer sBuffer = new StringBuffer(34);
-//		sBuffer.append("*1\r\n");
-//		sBuffer.append("$5\r\n");
-//		sBuffer.append("MULTI\r\n");
-//		
-//		write( sBuffer.toString().getBytes() );
-//	}
 	
 	public void unwatch(BackendCallback callback) throws IOException {
 		/*
@@ -191,6 +165,14 @@ public class RedisBackendConnection extends RedisConnection {
 		write( sBuffer.toString().getBytes() );			
 	}
 	
+	public long getHeartbeatTime() {
+		return heartbeatTime;
+	}
+
+	public void setHeartbeatTime(long heartbeatTime) {
+		this.heartbeatTime = heartbeatTime;
+	}
+
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
@@ -201,11 +183,16 @@ public class RedisBackendConnection extends RedisConnection {
 		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp(startupTime) );
 		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp(lastReadTime) );
 		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp(lastWriteTime) );
+		if ( heartbeatTime > 0 ) {
+			sbuffer.append(", heartbeatTime=").append( TimeUtil.formatTimestamp(heartbeatTime) );
+		}
+		
 		if ( isClosed.get() ) {
+			sbuffer.append(", isClosed=").append( isClosed );
 			sbuffer.append(", closedTime=").append( TimeUtil.formatTimestamp( closeTime) );
 			sbuffer.append(", closeReason=").append( closeReason );
 		}
-		sbuffer.append(", isClosed=").append( isClosed );
+		
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}

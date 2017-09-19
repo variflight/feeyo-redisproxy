@@ -14,7 +14,7 @@ import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-
+import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
@@ -494,8 +494,8 @@ public class RedisClusterPool extends AbstractPool {
 		
 		// 心跳检测, 超时抛弃 
 		// --------------------------------------------------------------------------
-		long heartbeatTime = System.currentTimeMillis() - timeout;		
-		long closeTime = System.currentTimeMillis() - timeout * 2;
+		long heartbeatTime = TimeUtil.currentTimeMillis() - timeout;		
+		long closeTime = TimeUtil.currentTimeMillis() - (timeout * 2);
 		
 		LinkedList<RedisBackendConnection> heartBeatCons = getNeedHeartbeatCons(physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
 		if ( !heartBeatCons.isEmpty() ) { 			

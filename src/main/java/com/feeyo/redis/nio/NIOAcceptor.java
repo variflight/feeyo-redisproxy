@@ -13,8 +13,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.nio.util.SelectorUtil;
-
 /**
  * @author wuzh
  */
@@ -23,7 +21,7 @@ public final class NIOAcceptor extends Thread {
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOAcceptor.class );
 	
 	private final int port;
-	private volatile Selector selector;
+	private final Selector selector;
 	private final ServerSocketChannel serverChannel;
 	private final ConnectionFactory factory;
 	private long acceptCount;
@@ -40,7 +38,7 @@ public final class NIOAcceptor extends Thread {
 		
 		/** 设置TCP属性 */
 		this.serverChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-		this.serverChannel.setOption(StandardSocketOptions.SO_RCVBUF, 1024 * 16 * 2);
+		this.serverChannel.setOption(StandardSocketOptions.SO_RCVBUF, 1024 * 32); // 32K
 		
 		// backlog=200
 		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 200);
@@ -59,47 +57,27 @@ public final class NIOAcceptor extends Thread {
 
 	@Override
 	public void run() {
-		int invalidSelectCount = 0;
+		final Selector selector = this.selector;
 		for (;;) {
-			final Selector tSelector = this.selector;
 			++acceptCount;
 			try {
-				
-				long start = System.nanoTime();
-				tSelector.select(1000L);
-				long end = System.nanoTime();
-				
-				Set<SelectionKey> keys = tSelector.selectedKeys();
-				if (keys.size() == 0 && (end - start) < SelectorUtil.MIN_SELECT_TIME_IN_NANO_SECONDS) {
-					invalidSelectCount++;
-				} else {
-					
-					try {
-						for (SelectionKey key : keys) {
-							if (key.isValid() && key.isAcceptable()) {
-								accept();
-							} else {
-								key.cancel();
-							}
+				selector.select( 1000L );
+				Set<SelectionKey> keys = selector.selectedKeys();
+				try {
+					for (SelectionKey key : keys) {
+						if (key.isValid() && key.isAcceptable()) {
+							accept();							
+						} else {
+							key.cancel();
 						}
-					} finally {
-						keys.clear();
-						invalidSelectCount = 0;
 					}
-				}
-				if (invalidSelectCount > SelectorUtil.REBUILD_COUNT_THRESHOLD) {
-					final Selector rebuildSelector = SelectorUtil.rebuildSelector(this.selector);
-					if (rebuildSelector != null) {
-						this.selector = rebuildSelector;
-					}
-					invalidSelectCount = 0;
+				} finally {
+					keys.clear();
 				}
 			} catch (Throwable e) {
 				LOGGER.warn(getName(), e);
 			}
-
 		}
-				
 	}
 
 	/**

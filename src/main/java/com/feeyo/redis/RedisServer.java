@@ -76,7 +76,6 @@ public class RedisServer {
 			}			
 		}, 0L, 1 * 1000L, TimeUnit.MILLISECONDS);	
 		
-		
 		/**
 		 *  连接池有效性
 		 */
@@ -105,7 +104,7 @@ public class RedisServer {
 		 * 2、连接池过大、过小的动态调整
 		 */
 		heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
-			static final long TIMEOUT = 5 * 60 * 1000L;
+			static final long TIMEOUT = 2 * 60 * 1000L;
 			
 			@Override
 			public void run() {
@@ -120,7 +119,7 @@ public class RedisServer {
 					}
 				});
 			}			
-		}, 120L, 120L, TimeUnit.SECONDS);
+		}, 30L, 30L, TimeUnit.SECONDS);
 		
 		// CONSOLE 
 		System.out.println("Home directory=" + System.getProperty("FEEYO_HOME") + ", startup=" + System.currentTimeMillis());

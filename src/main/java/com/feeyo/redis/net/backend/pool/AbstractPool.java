@@ -97,14 +97,13 @@ public abstract class AbstractPool {
 				checkListItor.remove();
 				con.close("heartbeate idle close ");
 				continue;
-				
-			} else {	
-				// 提取需要做心跳检测的 connection
-				if (con.getLastTime() < heartbeatTime && heartbeatCons.size() < maxConsInOneCheck) {
-					checkListItor.remove();
-					con.setBorrowed(true);
-					heartbeatCons.add(con);
-				} 
+			}
+			
+			// 提取需要做心跳检测的 connection
+			if (con.getLastTime() < heartbeatTime && heartbeatCons.size() < maxConsInOneCheck) {
+				checkListItor.remove();
+				con.setBorrowed(true);
+				heartbeatCons.add(con);
 			} 
 		}
 		

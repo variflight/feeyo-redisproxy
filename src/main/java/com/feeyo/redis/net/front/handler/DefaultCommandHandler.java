@@ -32,7 +32,6 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		
 		// 透传
 		writeToBackend(node.getPhysicalNode(), request.encode(), new DirectTransTofrontCallBack());
-
 	}
 
 	@Override
