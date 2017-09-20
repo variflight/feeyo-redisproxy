@@ -77,6 +77,24 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 		return tmpSize;
 	}
 	
+	// 写入到前端
+	protected int writeToFront(RedisFrontConnection frontCon, byte[] response, int size) throws IOException {	
+		
+		int tmpSize = size;
+
+		if (frontCon.isClosed()) {
+			throw new IOException("front conn is closed!");
+		}
+
+		tmpSize += response.length;
+		frontCon.write(response);
+
+		// fast GC
+		response = null;
+
+		return tmpSize;
+	}
+	
 	@Override
 	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 

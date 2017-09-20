@@ -7,7 +7,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
+import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
 import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
@@ -16,6 +18,9 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.nio.util.TimeUtil;
+import com.feeyo.redis.virtualmemory.AppendMessageResult;
+import com.feeyo.redis.virtualmemory.Message;
+import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.util.ProtoUtils;
 
 /**
@@ -30,6 +35,8 @@ import com.feeyo.util.ProtoUtils;
 public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( DelMultiKeyCommandHandler.class );
+	
+	private RedisResponseDecoderV4 responseDecoder = new RedisResponseDecoderV4();
 	
 	public final static String MULTI_DEL_CMD = "MULTI_DEL";
 	public final static byte[] MULTI_DEL_KEY = MULTI_DEL_CMD.getBytes();
@@ -109,13 +116,12 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 			}
 
 			String address = backendCon.getPhysicalNode().getName();
-			byte[] data = decoder.getBuffer();
-			decoder.clearBuffer();
+			byte[][] responses = decoder.getResponses();
 			
-			ResponseStatusCode state = recvResponse(address, count, data);
+			ResponseStatusCode state = recvResponse(address, count, responses);
 			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
 				
-				List<RedisResponseV3> resps = margeResponses();
+				List<Object> resps = mergeResponses();
 				if (resps != null) {
 					try {
 						String password = frontCon.getPassword();
@@ -126,13 +132,22 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 						long responseTimeMills = TimeUtil.currentTimeMillis();
 						
 						int okCount = 0;
-						for (RedisResponseV3 resp : resps) {
-							if ( resp.is( (byte)':') ) {
-								byte[] _buf1 = (byte[])resp.data();
-								byte[] buf2 = new byte[ _buf1.length - 1 ];  // type+data+\r\n  ->  data+\r\n
-								System.arraycopy(_buf1, 1, buf2, 0, buf2.length);
-								int c = readInt( buf2 );
-								okCount += c;
+						
+						for (Object resp : resps) {
+							if (resp instanceof PutMessageResult) {
+								PutMessageResult pmr = (PutMessageResult) resp;
+								AppendMessageResult amr = pmr.getAppendMessageResult();
+								Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
+								// 通知该消息已经被消费
+								RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
+								RedisResponseV3 response = responseDecoder.decode( msg.getBody() ).get(0);
+								if ( response.is( (byte)':') ) {
+									byte[] _buf1 = (byte[])response.data();
+									byte[] buf2 = new byte[ _buf1.length - 1 ];  // type+data+\r\n  ->  data+\r\n
+									System.arraycopy(_buf1, 1, buf2, 0, buf2.length);
+									int c = readInt( buf2 );
+									okCount += c;
+								}
 							}
 						}
 						

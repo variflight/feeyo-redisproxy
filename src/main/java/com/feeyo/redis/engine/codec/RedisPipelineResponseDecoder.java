@@ -1,10 +1,14 @@
 package com.feeyo.redis.engine.codec;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class RedisPipelineResponseDecoder {
 
 	// TODO 缓存的数据在解析完成之后，并不清理，一并写入文件之后再清理
 	private byte[] _buffer;
 	private int _offset;
+	private List<Integer> index = new ArrayList<Integer>();
 
 	/**
 	 * 解析返回数据条数
@@ -34,6 +38,7 @@ public class RedisPipelineResponseDecoder {
 					// 解析，只要不抛出异常，就是完整的一条数据返回
 					parseResponse(type);
 					result ++;
+					index.add(_offset);
 				}
 
 				if (_buffer.length < _offset) {
@@ -48,6 +53,7 @@ public class RedisPipelineResponseDecoder {
 		} catch (IndexOutOfBoundsException e1) {
 			// 捕获这个错误（没有足够的数据），等待下一个数据包
 			_offset = 0;
+			index.clear();
 			return 0;
 		}
 	}
@@ -194,14 +200,29 @@ public class RedisPipelineResponseDecoder {
 
 		_buffer = largeBuffer;
 		_offset = 0;
+		index.clear();
 	}
 
-	public byte[] getBuffer() {
-		return _buffer;
-	}
-	
-	public void clearBuffer() {
+	// 获取分段后的response
+	public byte[][] getResponses() {
+		byte[][] result = new byte[index.size()][];
+		
+		for (int i = 0; i < index.size(); i++) {
+			int start;
+			if (i == 0) {
+				start = 0;
+			} else {
+				start = index.get(i - 1); 
+			}
+			int end = index.get(i);
+			
+			result[i] = new byte[end - start];
+			System.arraycopy(_buffer, start, result[i], 0, result[i].length);
+		}
+		
+		index.clear();
 		_buffer = null;
+		return result;
 	}
 
 	public static void main(String[] args) {

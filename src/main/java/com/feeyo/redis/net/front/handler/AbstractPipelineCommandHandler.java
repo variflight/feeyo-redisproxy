@@ -17,8 +17,6 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestEncoderV2;
-import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
-import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
@@ -52,7 +50,6 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		
 		private int responseCount = 0;
 		private ConcurrentLinkedQueue<PutMessageResult> bufferQueue = new ConcurrentLinkedQueue<PutMessageResult>();
-		private ConcurrentLinkedQueue<RedisResponseV3> responseQueue = new ConcurrentLinkedQueue<RedisResponseV3>();
 		
 		public ResponseNode(RouteResultNode node) {
 			super();
@@ -79,10 +76,6 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		public ConcurrentLinkedQueue<PutMessageResult> getBufferQueue() {
 			return bufferQueue;
 		}
-
-		public ConcurrentLinkedQueue<RedisResponseV3> getResponseQueue() {
-			return responseQueue;
-		}
 	}
 	
 	
@@ -91,7 +84,6 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	public final static String RESPONSE_APPEND_ERROR = "Response append error .";
 	
 	protected RedisRequestEncoderV2 encoder = new RedisRequestEncoderV2();
-	protected RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
 	
 	protected RouteResult rrs;
 	
@@ -146,28 +138,41 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	}
 
 	//
-	protected synchronized ResponseStatusCode recvResponse(String address, int count, byte[] resps) {
+	protected synchronized ResponseStatusCode recvResponse(String address, int count, byte[][] resps) {
 		
-		Message msg = new Message();
-        msg.setBody( resps );
-        msg.setBodyCRC( Util.crc32(msg.getBody()) );			// body CRC 
-        msg.setQueueId( 0 );									// queue id 后期可考虑利用
-        msg.setSysFlag( 0 );
-        msg.setBornTimestamp( System.currentTimeMillis() );
-      
-        
-        ResponseNode responseNode = responseNodeMap.get( address );
-        PutMessageResult pmr = RedisEngineCtx.INSTANCE().getVirtualMemoryService().putMessage( msg );
-        if ( pmr.isOk() ) {
-	    	responseNode.getBufferQueue().offer( pmr );
-	        responseNode.addResponseCount(count);
-	        
-		    allResponseCount.addAndGet(count);
-		    
-		    // 判断所有节点是否全部返回
- 			if ( allResponseCount.get()  == rrs.getTransCount() ) {
- 				return ResponseStatusCode.ALL_NODE_COMPLETED;
- 			} 
+		ResponseNode responseNode = responseNodeMap.get( address );
+		
+		if ( resps != null && resps.length > 0) {
+			for (byte[] resp : resps) {
+				
+				Message msg = new Message();
+				msg.setBody( resp );
+				msg.setBodyCRC( Util.crc32(msg.getBody()) );			// body CRC 
+				msg.setQueueId( 0 );									// queue id 后期可考虑利用
+				msg.setSysFlag( 0 );
+				msg.setBornTimestamp( System.currentTimeMillis() );
+				
+				
+				PutMessageResult pmr = RedisEngineCtx.INSTANCE().getVirtualMemoryService().putMessage( msg );
+				if ( pmr.isOk() ) {
+					responseNode.getBufferQueue().offer( pmr );
+					
+				} else {
+					LOGGER.warn("response append error: appendMessageResult={}, conn={}",
+							new Object[] { pmr.getAppendMessageResult(), frontCon });
+					
+					return ResponseStatusCode.ERROR;
+				}
+			}
+			
+			responseNode.addResponseCount(count);
+			
+			allResponseCount.addAndGet(count);
+			
+			// 判断所有节点是否全部返回
+			if ( allResponseCount.get()  == rrs.getTransCount() ) {
+				return ResponseStatusCode.ALL_NODE_COMPLETED;
+			} 
 			
 			// 判断当前节点是否全部返回
 			if ( responseNode.getNode().getRequestIndexs().size() == responseNode.getResponseCount() ) {
@@ -175,60 +180,32 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			}
 			
 			return  ResponseStatusCode.INCOMPLETE;
-        }
-        
-		LOGGER.warn("response append error: appendMessageResult={}, conn={}",
-				new Object[] { pmr.getAppendMessageResult(), frontCon });
+		}
+		
         return ResponseStatusCode.ERROR;
 	}
 	
 	
 	// marge
-	protected List<RedisResponseV3> margeResponses() {
+	protected List<Object> mergeResponses() {
 		
 		if ( isMarged.compareAndSet(false, true) ) {
 			
-			// 合并应答
-			for(ResponseNode responseNode: responseNodeMap.values()) {
-				
-				while( !responseNode.getBufferQueue().isEmpty() ) {
-					
-					PutMessageResult pmr = responseNode.getBufferQueue().poll();
-					if ( pmr == null )
-						continue;
-					
-					AppendMessageResult amr = pmr.getAppendMessageResult();
-					Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
-					
-					// 通知该消息已经被消费
-					RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
-					
-					List<RedisResponseV3> resps = decoder.decode( msg.getBody() ); // 解析返回值
-					if (resps != null) {
-						// 循环解析结果，添加到返回集合中
-						for (RedisResponseV3 resp : resps) {
-							responseNode.getResponseQueue().offer( resp );
-						}
-					}
-				}
-			}
-			
-			RedisResponseV3[] responses = new RedisResponseV3[ rrs.getRequestCount() ];
+			Object[] responses = new Object[ rrs.getRequestCount() ];
 			
 			// 后端节点应答
 			for(ResponseNode responseNode: responseNodeMap.values()) {
 				RouteResultNode node = responseNode.getNode();
 				List<Integer> idxs = node.getRequestIndexs();
 				for (int index : idxs) {
-					responses[index] = responseNode.responseQueue.poll();
+					responses[index] = responseNode.bufferQueue.poll();
 				}
 			}
 			
 			// 自动应答
 			if ( !rrs.getAutoResponseIndexs().isEmpty() ) {
-				RedisResponseV3 defaultResponse =  decoder.decode( "+OK\r\n".getBytes() ).get(0);		// 这种方式有问题
 				for (int index : rrs.getAutoResponseIndexs()) {
-					responses[index] = defaultResponse;
+					responses[index] = "+OK\r\n".getBytes();
 				}
 			}
 			return Arrays.asList(responses);

@@ -7,9 +7,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
@@ -17,6 +17,9 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.nio.util.TimeUtil;
+import com.feeyo.redis.virtualmemory.AppendMessageResult;
+import com.feeyo.redis.virtualmemory.Message;
+import com.feeyo.redis.virtualmemory.PutMessageResult;
 
 public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	
@@ -51,7 +54,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	private class PipelineDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
 
 		private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
-
+		
 		@Override
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
@@ -63,17 +66,14 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 			
 			// 这里缓存进文件的是 pipelienDecoder中缓存的数据。 防止断包之后丢数据
 			String address = backendCon.getPhysicalNode().getName();
-			byte[] data = decoder.getBuffer();
-			ResponseStatusCode state = recvResponse(address, count, data);
+			byte[][] responses = decoder.getResponses();
+			ResponseStatusCode state = recvResponse(address, count, responses);
 			
-			// 清理解析器中缓存
-			decoder.clearBuffer();
-
 			// 如果所有请求，应答都已经返回
 			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
 				
 				// 获取所有应答
-				List<RedisResponseV3> resps = margeResponses();
+				List<Object> resps = mergeResponses();
 				if (resps != null) {
 
 					try {
@@ -83,8 +83,19 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						long responseTimeMills = TimeUtil.currentTimeMillis();
 						int responseSize = 0;
 
-						for (RedisResponseV3 resp : resps)
-							responseSize += this.writeToFront(frontCon, resp, 0);
+						for (Object resp : resps) {
+							if (resp instanceof PutMessageResult) {
+								PutMessageResult pmr = (PutMessageResult) resp;
+								AppendMessageResult amr = pmr.getAppendMessageResult();
+								Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
+								// 通知该消息已经被消费
+								RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
+								
+								responseSize += this.writeToFront(frontCon, msg.getBody(), 0);
+							} else if (resp instanceof byte[]) {
+								responseSize += this.writeToFront(frontCon, (byte[])resp, 0);
+							}
+						}
 
 						// resps.clear(); // help GC
 						resps = null;
