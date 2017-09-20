@@ -1,7 +1,6 @@
 # Feeyo-RedisProxy
 
-## 关于
- 	一个分布式 Redis 解决方案, 上层应用可以像使用单机的 Redis 一样使用, RedisProxy 底层会处理请求的分发，一切对你无感 ～
+一个分布式 Redis 解决方案, 上层应用可以像使用单机的 Redis 一样使用, RedisProxy 底层会处理请求的分发，一切对你无感 ～
 
 ## 目前已实现的特性：
 *  支持 redis standalone 、 redis cluster 代理
