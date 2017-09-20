@@ -52,48 +52,48 @@
 
 ### 配置
 
-- server.xml, 网络及堆外内存池的相关配置
+server.xml, 网络及堆外内存池的相关配置
   
-  	| 节点        | 属性      	 | 属性值 		  	 |  描述 						 		|
-	| :--------  | :----------   | :-------------    | :---------------------------  		|
-	| property   | name	    	 | port  		  	 |  服务端口号      				 		|
-	| property   | name	    	 | reactorSize    	 |  reactor 用于调度nio，设置为内核大小即可  	|
-	| property   | name	    	 | maxBufferSize  	 |  堆外内存，可利用的最大空间      			|
-	| property   | name	    	 | minBufferSize  	 |  对外内存，可利用的最小空间，初始化就会建立   |
-	| property   | name	    	 | minChunkSize   	 |  最小的 chunk      					|
-	| property   | name	    	 | increment  	  	 |  minChunkSize 到 maxChunkSize 步长		|
-	| property   | name	    	 | maxChunkSize	     |  最大的 chunk       					|
-	| property   | name	    	 | bossSize  	  	 |  工作任务的线程数      					|
-	| property   | name	    	 | timerSize  	  	 |  定时任务的线程数      			    	|
-	| property   | name	    	 | frontIdleTimeout	 |  前端连接闲置时间	      				|
-	| property   | name	    	 | backendIdleTimeout|  后端连接闲置时间      					|
+| 节点        | 属性      	 | 属性值 		  	 |  描述 						 		|
+| :--------  | :----------   | :-------------    | :---------------------------  		|
+| property   | name	    	 | port  		  	 |  服务端口号      				 		|
+| property   | name	    	 | reactorSize    	 |  reactor 用于调度nio，设置为内核大小即可  	|
+| property   | name	    	 | maxBufferSize  	 |  堆外内存，可利用的最大空间      			|
+| property   | name	    	 | minBufferSize  	 |  对外内存，可利用的最小空间，初始化就会建立   |
+| property   | name	    	 | minChunkSize   	 |  最小的 chunk      					|
+| property   | name	    	 | increment  	  	 |  minChunkSize 到 maxChunkSize 步长		|
+| property   | name	    	 | maxChunkSize	     |  最大的 chunk       					|
+| property   | name	    	 | bossSize  	  	 |  工作任务的线程数      					|
+| property   | name	    	 | timerSize  	  	 |  定时任务的线程数      			    	|
+| property   | name	    	 | frontIdleTimeout	 |  前端连接闲置时间	      				|
+| property   | name	    	 | backendIdleTimeout|  后端连接闲置时间      					|
 	
 
-  - zookeeper 配置 （待续）
+zookeeper 配置 （待续）
 
 
-- pool.xml, 连接池配置信息
+pool.xml, 连接池配置信息
 	
-  	| 节点        | 属性    	|  描述 |
-	| :--------  | :-----   | :-------------------------------------------------------- |
-	| pool       | id      	|   唯一编号    												|
-	| pool       | name     |   名称    													|
-	| pool       | type    	|   类型，0 表示 redis standalone， 1 表示redis cluster    		|
-	| pool       | maxCon   |   最大的连接数，超过拒绝透传    								|
-	| pool       | minCon   |   最小的连接数   										 	|
-	| node       | ip      	|   实际redis node ip   										|
-	| node       | port     |   实际redis node port    									|
+| 节点        | 属性    	|  描述 |
+| :--------  | :-----   | :-------------------------------------------------------- |
+| pool       | id      	|   唯一编号    												|
+| pool       | name     |   名称    													|
+| pool       | type    	|   类型，0 表示 redis standalone， 1 表示redis cluster    		|
+| pool       | maxCon   |   最大的连接数，超过拒绝透传    								|
+| pool       | minCon   |   最小的连接数   										 	|
+| node       | ip      	|   实际redis node ip   										|
+| node       | port     |   实际redis node port    									|
   
-- user.xml, 用户配置信息
-  
-  	| 节点        | 属性    	|  描述 |
-	| :--------  | :-----   | :-------------------------------------------- |
-	| user       | password |   auth 登录密码    								|
-	| user       | poolId   |   通过该id 连接后端连接池    						|
-	| user       | prefix  	|   自动前缀前缀    								|
-	| user       | selectDb |   非集群情况下，支持强制读写的 redis db， 默认0    	|
-	| user       | readonly |   是否只读账户，默认非只读账户   					|
-	| user       | isAdmin  |   是否管理员，默认非管理员   						|
+user.xml, 用户配置信息
+
+| 节点        | 属性    	|  描述 |
+| :--------  | :-----   | :-------------------------------------------- |
+| user       | password |   auth 登录密码    								|
+| user       | poolId   |   通过该id 连接后端连接池    						|
+| user       | prefix  	|   自动前缀前缀    								|
+| user       | selectDb |   非集群情况下，支持强制读写的 redis db， 默认0    	|
+| user       | readonly |   是否只读账户，默认非只读账户   					|
+| user       | isAdmin  |   是否管理员，默认非管理员   						|
   
 ### 运行
 	run.sh start
