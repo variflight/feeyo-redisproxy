@@ -43,9 +43,7 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
     private static Logger LOGGER = LoggerFactory.getLogger(MGetSetCommandHandler.class);
     
 	public final static String MSET_CMD = "MSET";
-	public final static byte[] MSET_KEY = MSET_CMD.getBytes();
 	public final static String MGET_CMD = "MGET";
-	public final static byte[] MGET_KEY = MGET_CMD.getBytes();
 
     public MGetSetCommandHandler(RedisFrontConnection frontCon) {
         super(frontCon);
@@ -74,13 +72,13 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 		    }
 		    
 		    if ( backendConn != null )
-				this.addBackendConnection(backendConn);
+				this.holdBackendConnection(backendConn);
 		}
 		
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( rrs.getRequestType() == RedisRequestType.MSET ? MSET_CMD : MGET_CMD );
-		frontCon.getSession().setRequestKey( rrs.getRequestType() == RedisRequestType.MSET ? MSET_KEY : MGET_KEY );
+		frontCon.getSession().setRequestKey( rrs.getRequestType() == RedisRequestType.MSET ? MSET_CMD.getBytes() : MGET_CMD.getBytes() );
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
     }
     
@@ -140,7 +138,7 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
                         int responseSize = this.writeToFront(frontCon,res,0);
 
                         // 释放
-                        removeAndReleaseBackendConnection(backendCon);
+                        releaseBackendConnection(backendCon);
 
                         // 数据收集
                         StatUtil.collect(password, cmd, key, requestSize, responseSize,
@@ -164,7 +162,7 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 			} else if ( state == ResponseStatusCode.THE_NODE_COMPLETED  ) {
 				
                 // 如果此后端节点数据已经返回完毕，则释放链接
-				removeAndReleaseBackendConnection(backendCon);
+				releaseBackendConnection(backendCon);
 				
             } else if ( state == ResponseStatusCode.ERROR ) {
 				// 添加回复到虚拟内存中出错。
@@ -202,7 +200,7 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 						int responseSize = this.writeToFront(frontCon, "+OK\r\n".getBytes(), 0);
 
                         // 后段链接释放
-                        removeAndReleaseBackendConnection(backendCon);
+                        releaseBackendConnection(backendCon);
                         
                         // 数据收集
                         StatUtil.collect(password, cmd, key, requestSize, responseSize,
@@ -225,7 +223,7 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
                 
             } else if ( state == ResponseStatusCode.THE_NODE_COMPLETED  ) {
                 // 如果此后端节点数据已经返回完毕，则释放链接
-            	removeAndReleaseBackendConnection(backendCon);
+            	releaseBackendConnection(backendCon);
             	
             } else if ( state == ResponseStatusCode.ERROR ) {
 				// 添加回复到虚拟内存中出错。

@@ -41,6 +41,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		INCOMPLETE,				//未完整
 		ERROR					//错误
 	}
+
 	
 	// 应答节点
 	public class ResponseNode {
@@ -93,8 +94,6 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	private ConcurrentHashMap<String, ResponseNode> responseNodeMap =  new ConcurrentHashMap<String, ResponseNode>(); 
 	private AtomicInteger allResponseCount = new AtomicInteger(0); 					// 接收到返回数据的条数
 	private AtomicBoolean isMarged = new AtomicBoolean(false);
-	
-	protected final AtomicBoolean errorRepsponsed = new AtomicBoolean(false);		// 返回错误
 
 	public AbstractPipelineCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -106,7 +105,6 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		this.rrs = rrs;
 		this.allResponseCount.set(0);
 		this.isMarged.set( false );
-		this.errorRepsponsed.set( false );
 		
 		this.responseNodeMap.clear();
 		
@@ -215,7 +213,8 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		}
 	}
 	
-	private void markBrokenRespAsConusmed() {
+	// VM 资源清理
+	private void clearVirtualMemoryResource() {
         if ( isMarged.compareAndSet(false, true) ) {
             for(ResponseNode responseNode: responseNodeMap.values()) {
                 while( !responseNode.getBufferQueue().isEmpty() ) {
@@ -228,62 +227,67 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
         }
 	}
 	
-	// 释放所有后端链接
-	private void removeAllBackendConnection() {
+	// 后端链接清理  
+	// 持有连接、 处理（正确、异常）、释放连接
+	// ------------------------------------------------------------
+	private void clearBackendConnections() {
         for(Map.Entry<Long, RedisBackendConnection> entry: backendConnections.entrySet()) {
         	RedisBackendConnection backendConn = entry.getValue();
-        	if (backendConnections.remove(entry.getKey()) != null)
+        	if (backendConnections.remove(entry.getKey()) != null )
         		backendConn.release();
         } 
 		
         backendConnections.clear();
 	}
 	
-	protected void removeAndReleaseBackendConnection(RedisBackendConnection backendConn) {
+	
+	protected void holdBackendConnection(RedisBackendConnection backendConn) {
+		backendConnections.put(backendConn.getId(), backendConn);
+	}
+	
+	protected void releaseBackendConnection(RedisBackendConnection backendConn) {
 		if (backendConnections.remove(backendConn.getId()) != null) {
 			backendConn.release();
 		}
 	}
-    
-	protected void addBackendConnection(RedisBackendConnection backendConn) {
-		backendConnections.put(backendConn.getId(), backendConn);
-	}
+	// ------------------------------------------------------------
+	
 	
 	// 消息写入出错
 	protected void responseAppendError() {
-		removeAllBackendConnection();
+		clearBackendConnections();
         
         if( frontCon != null && !frontCon.isClosed() ) {
             frontCon.writeErrMessage(RESPONSE_APPEND_ERROR);
         }
         
-        markBrokenRespAsConusmed();
+        this.clearVirtualMemoryResource();
 	}
 	
     @Override
     public void backendConnectionError(Exception e) {
         super.backendConnectionError(e);
         
-        removeAllBackendConnection();
+        clearBackendConnections();
         
         if( frontCon != null && !frontCon.isClosed() ) {
             frontCon.writeErrMessage(e.toString());
         }
         
-        markBrokenRespAsConusmed();
+        this.clearVirtualMemoryResource();
     }
 
     @Override
     public void backendConnectionClose(String reason) {
         super.backendConnectionClose(reason);
         
-        removeAllBackendConnection();
+        clearBackendConnections();
         
         if( frontCon != null && !frontCon.isClosed() ) {
             frontCon.writeErrMessage( reason );
         }
         
-        markBrokenRespAsConusmed();
+        this.clearVirtualMemoryResource();
     }
 
 }
