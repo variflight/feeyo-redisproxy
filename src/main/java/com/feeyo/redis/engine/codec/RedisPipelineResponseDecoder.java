@@ -5,10 +5,38 @@ import java.util.List;
 
 public class RedisPipelineResponseDecoder {
 
-	// TODO 缓存的数据在解析完成之后，并不清理，一并写入文件之后再清理
 	private byte[] _buffer;
 	private int _offset;
 	private List<Integer> index = new ArrayList<Integer>();
+	
+	// 应答
+	public class PipelineResponse {
+		
+		public static final byte ERR = 0;	// 不全
+		public static final byte OK = 1;
+		
+		private byte status;
+		private int count;
+		private byte[][] resps;
+		
+		public PipelineResponse (byte status, int count, byte[][] resps) {
+			this.status = status;
+			this.count = count;
+			this.resps = resps;
+		}
+		
+		public int getCount() {
+			return count;
+		}
+		
+		public byte[][] getResps() {
+			return resps;
+		}
+		
+		public boolean isOK () {
+			return status == OK;
+		}
+	}
 
 	/**
 	 * 解析返回 数量、内容
@@ -247,35 +275,6 @@ public class RedisPipelineResponseDecoder {
 
 		PipelineResponse result  = decoder.parse(buffer1);
 		System.out.println( result );
-	}
-	
-	
-	public class PipelineResponse {
-		
-		public static final byte ERR = 0;	// 不全
-		public static final byte OK = 1;
-		
-		private byte status;
-		private int count;
-		private byte[][] resps;
-		
-		public PipelineResponse (byte status, int count, byte[][] resps) {
-			this.status = status;
-			this.count = count;
-			this.resps = resps;
-		}
-		
-		public int getCount() {
-			return count;
-		}
-		
-		public byte[][] getResps() {
-			return resps;
-		}
-		
-		public boolean isOK () {
-			return status == OK;
-		}
 	}
 
 }
