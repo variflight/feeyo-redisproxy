@@ -11,12 +11,9 @@ public class RedisPipelineResponseDecoder {
 	private List<Integer> index = new ArrayList<Integer>();
 
 	/**
-	 * 解析返回数据条数
-	 * 
-	 * @param buffer
-	 * @return
+	 * 解析返回 数量、内容
 	 */
-	public ParsePipelineResponseResult parseResponseCount(byte[] buffer) {
+	public PipelineResponse parse(byte[] buffer) {
 		int result = 0;
 		append(buffer);
 		try {
@@ -25,7 +22,7 @@ public class RedisPipelineResponseDecoder {
 
 				// 至少4字节 :1\r\n
 				if (bytesRemaining() < 4) {
-					return new ParsePipelineResponseResult(ParsePipelineResponseStatus.BROKEN_PACKET, 0, null);
+					return new PipelineResponse(PipelineResponse.ERR, 0, null);
 				}
 
 				byte type = _buffer[_offset++];
@@ -46,7 +43,7 @@ public class RedisPipelineResponseDecoder {
 
 				} else if (_buffer.length == _offset) {
 					_offset = 0;
-					return new ParsePipelineResponseResult(ParsePipelineResponseStatus.PARSE_OK, result, getResponses());
+					return new PipelineResponse(PipelineResponse.OK, result, getResponses());
 				}
 			}
 
@@ -54,7 +51,7 @@ public class RedisPipelineResponseDecoder {
 			// 捕获这个错误（没有足够的数据），等待下一个数据包
 			_offset = 0;
 			index.clear();
-			return new ParsePipelineResponseResult(ParsePipelineResponseStatus.BROKEN_PACKET, 0, null);
+			return new PipelineResponse(PipelineResponse.ERR, 0, null);
 		}
 	}
 
@@ -248,36 +245,37 @@ public class RedisPipelineResponseDecoder {
 		RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
 		// List<RedisResponseV3> resps = decoder.decode(buffer);
 
-		ParsePipelineResponseResult parsePipelineResponseResult  = decoder.parseResponseCount(buffer1);
-		System.out.println( parsePipelineResponseResult );
+		PipelineResponse result  = decoder.parse(buffer1);
+		System.out.println( result );
 	}
 	
-	public class ParsePipelineResponseResult {
-		private ParsePipelineResponseStatus status;
-		private int responseCount;
-		private byte[][] responses;
+	
+	public class PipelineResponse {
 		
-		public ParsePipelineResponseResult (ParsePipelineResponseStatus status, int responseCount, byte[][] responses) {
+		public static final byte ERR = 0;	// 不全
+		public static final byte OK = 1;
+		
+		private byte status;
+		private int count;
+		private byte[][] resps;
+		
+		public PipelineResponse (byte status, int count, byte[][] resps) {
 			this.status = status;
-			this.responseCount = responseCount;
-			this.responses = responses;
+			this.count = count;
+			this.resps = resps;
 		}
 		
-		public int getResponseCount() {
-			return responseCount;
-		}
-		public byte[][] getResponses() {
-			return responses;
+		public int getCount() {
+			return count;
 		}
 		
-		public boolean isCompletePackage () {
-			return status == ParsePipelineResponseStatus.PARSE_OK;
+		public byte[][] getResps() {
+			return resps;
 		}
-	}
-	
-	public enum ParsePipelineResponseStatus {
-		PARSE_OK,
-		BROKEN_PACKET
+		
+		public boolean isOK () {
+			return status == OK;
+		}
 	}
 
 }

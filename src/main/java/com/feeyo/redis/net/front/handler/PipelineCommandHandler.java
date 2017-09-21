@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
-import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.ParsePipelineResponseResult;
+import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineResponse;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
@@ -60,13 +60,13 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 			// 解析此次返回的数据条数
-			ParsePipelineResponseResult parsePipelineResponseResult = decoder.parseResponseCount( byteBuff );
-			if ( !parsePipelineResponseResult.isCompletePackage() )
+			PipelineResponse pipelineResponse = decoder.parse( byteBuff );
+			if ( !pipelineResponse.isOK() )
 				return;
 			
 			// 这里缓存进文件的是 pipelienDecoder中缓存的数据。 防止断包之后丢数据
 			String address = backendCon.getPhysicalNode().getName();
-			ResponseStatusCode state = recvResponse(address, parsePipelineResponseResult.getResponseCount(), parsePipelineResponseResult.getResponses());
+			ResponseStatusCode state = recvResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
 			
 			// 如果所有请求，应答都已经返回
 			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
