@@ -82,7 +82,6 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	
 	public final static String PIPELINE_CMD = "pipeline";
 	public final static byte[] PIPELINE_KEY = PIPELINE_CMD.getBytes();
-	public final static String RESPONSE_APPEND_ERROR = "Response append error .";
 	
 	protected RedisRequestEncoderV2 encoder = new RedisRequestEncoderV2();
 	
@@ -255,10 +254,11 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	
 	// 消息写入出错
 	protected void responseAppendError() {
-		clearBackendConnections();
+		
+		this.clearBackendConnections();
         
         if( frontCon != null && !frontCon.isClosed() ) {
-            frontCon.writeErrMessage(RESPONSE_APPEND_ERROR);
+            frontCon.writeErrMessage("response append to vm is error");
         }
         
         this.clearVirtualMemoryResource();
