@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
+import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.ParsePipelineResponseResult;
 import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
 import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
@@ -110,15 +111,14 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 		@Override
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
-			int count = decoder.parseResponseCount(byteBuff);
-			if (count <= 0) {
+			ParsePipelineResponseResult parsePipelineResponseResult = decoder.parseResponseCount(byteBuff);
+			if ( !parsePipelineResponseResult.isCompletePackage() ) 
 				return;
-			}
 
 			String address = backendCon.getPhysicalNode().getName();
-			byte[][] responses = decoder.getResponses();
 			
-			ResponseStatusCode state = recvResponse(address, count, responses);
+			ResponseStatusCode state = recvResponse(address, parsePipelineResponseResult.getResponseCount(),
+					parsePipelineResponseResult.getResponses());
 			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
 				
 				List<Object> resps = mergeResponses();

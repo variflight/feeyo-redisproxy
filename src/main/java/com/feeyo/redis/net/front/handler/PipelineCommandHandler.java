@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
+import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.ParsePipelineResponseResult;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
@@ -59,15 +60,13 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 			// 解析此次返回的数据条数
-			int count = decoder.parseResponseCount( byteBuff );
-			if (count <= 0) {
+			ParsePipelineResponseResult parsePipelineResponseResult = decoder.parseResponseCount( byteBuff );
+			if ( !parsePipelineResponseResult.isCompletePackage() )
 				return;
-			}
 			
 			// 这里缓存进文件的是 pipelienDecoder中缓存的数据。 防止断包之后丢数据
 			String address = backendCon.getPhysicalNode().getName();
-			byte[][] responses = decoder.getResponses();
-			ResponseStatusCode state = recvResponse(address, count, responses);
+			ResponseStatusCode state = recvResponse(address, parsePipelineResponseResult.getResponseCount(), parsePipelineResponseResult.getResponses());
 			
 			// 如果所有请求，应答都已经返回
 			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {

@@ -16,7 +16,7 @@ public class RedisPipelineResponseDecoder {
 	 * @param buffer
 	 * @return
 	 */
-	public int parseResponseCount(byte[] buffer) {
+	public ParsePipelineResponseResult parseResponseCount(byte[] buffer) {
 		int result = 0;
 		append(buffer);
 		try {
@@ -25,7 +25,7 @@ public class RedisPipelineResponseDecoder {
 
 				// 至少4字节 :1\r\n
 				if (bytesRemaining() < 4) {
-					return 0;
+					return new ParsePipelineResponseResult(ParsePipelineResponseStatus.BROKEN_PACKET, 0, null);
 				}
 
 				byte type = _buffer[_offset++];
@@ -46,7 +46,7 @@ public class RedisPipelineResponseDecoder {
 
 				} else if (_buffer.length == _offset) {
 					_offset = 0;
-					return result;
+					return new ParsePipelineResponseResult(ParsePipelineResponseStatus.PARSE_OK, result, getResponses());
 				}
 			}
 
@@ -54,7 +54,7 @@ public class RedisPipelineResponseDecoder {
 			// 捕获这个错误（没有足够的数据），等待下一个数据包
 			_offset = 0;
 			index.clear();
-			return 0;
+			return new ParsePipelineResponseResult(ParsePipelineResponseStatus.BROKEN_PACKET, 0, null);
 		}
 	}
 
@@ -204,7 +204,7 @@ public class RedisPipelineResponseDecoder {
 	}
 
 	// 获取分段后的response
-	public byte[][] getResponses() {
+	private byte[][] getResponses() {
 		byte[][] result = new byte[index.size()][];
 		
 		for (int i = 0; i < index.size(); i++) {
@@ -248,11 +248,36 @@ public class RedisPipelineResponseDecoder {
 		RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
 		// List<RedisResponseV3> resps = decoder.decode(buffer);
 
-		int i = decoder.parseResponseCount(buffer1);
-		System.out.println(i);
-		i = decoder.parseResponseCount(buffer2);
-		System.out.println(i);
-		// System.out.println( resps );
+		ParsePipelineResponseResult parsePipelineResponseResult  = decoder.parseResponseCount(buffer1);
+		System.out.println( parsePipelineResponseResult );
+	}
+	
+	public class ParsePipelineResponseResult {
+		private ParsePipelineResponseStatus status;
+		private int responseCount;
+		private byte[][] responses;
+		
+		public ParsePipelineResponseResult (ParsePipelineResponseStatus status, int responseCount, byte[][] responses) {
+			this.status = status;
+			this.responseCount = responseCount;
+			this.responses = responses;
+		}
+		
+		public int getResponseCount() {
+			return responseCount;
+		}
+		public byte[][] getResponses() {
+			return responses;
+		}
+		
+		public boolean isCompletePackage () {
+			return status == ParsePipelineResponseStatus.PARSE_OK;
+		}
+	}
+	
+	public enum ParsePipelineResponseStatus {
+		PARSE_OK,
+		BROKEN_PACKET
 	}
 
 }
