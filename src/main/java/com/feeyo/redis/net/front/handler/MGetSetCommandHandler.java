@@ -20,9 +20,6 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.nio.util.TimeUtil;
-import com.feeyo.redis.virtualmemory.AppendMessageResult;
-import com.feeyo.redis.virtualmemory.Message;
-import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.util.ProtoUtils;
 
 /**
@@ -97,8 +94,8 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
             
 			ResponseStatusCode state = recvResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
 			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
-                List<Object> resps = mergeResponses();
-                if (resps != null) {
+				List<ResponseDataIndex> dataIndexs = getAndMargeResponseDataIndexs();
+				if (dataIndexs != null) {
                     try {
                         String password = frontCon.getPassword();
         				String cmd = frontCon.getSession().getRequestCmd();
@@ -110,16 +107,14 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
                         // 长度
                         int len = 0;
                         // 数据
-                        List<Message> newResponses = new ArrayList<Message>();
-                        for (Object resp : resps) {
-                        	if (resp instanceof PutMessageResult) {
-                        		PutMessageResult pmr = (PutMessageResult) resp;
-                        		AppendMessageResult amr = pmr.getAppendMessageResult();
-                        		Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
-                        		// 通知该消息已经被消费
-                        		RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
-                        		newResponses.add(msg);
-                        		len += msg.getBody().length;
+                        List<byte[]> newResponses = new ArrayList<byte[]>();
+                    	for (ResponseDataIndex dataIndex : dataIndexs) {
+							if ( dataIndex.isVirtualMemory() ) {
+								
+								byte[] data = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessageBodyAndMarkAsConsumed( dataIndex.getOffset(), dataIndex.getSize() );
+                        		newResponses.add( data );
+                        		
+                        		len += data.length;
                         	}
                         }
 
@@ -130,8 +125,8 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
                         buffer.put(respCountInByte);
                         buffer.put("\r\n".getBytes());
 
-                        for (Message resp : newResponses) {
-                            buffer.put(resp.getBody());
+                        for (byte[] respData : newResponses) {
+                            buffer.put( respData );
                         }
                         
                         RedisResponseV3 res = new RedisResponseV3((byte)'*', buffer.array());
@@ -187,9 +182,18 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 
             if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
             	
-                List<Object> resps = mergeResponses();
-                if (resps != null) {
+            	List<ResponseDataIndex> dataIndexs = getAndMargeResponseDataIndexs();
+				if (dataIndexs != null) {
+					
                     try {
+                    	// 通知该消息已经被消费
+                    	for (ResponseDataIndex dataIndex : dataIndexs) {
+							if ( dataIndex.isVirtualMemory() ) {
+								RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed( 
+										dataIndex.getOffset(), dataIndex.getSize());
+							}
+                    	}
+                    	
                         String password = frontCon.getPassword();
                         String cmd = frontCon.getSession().getRequestCmd();
                         byte[] key = frontCon.getSession().getRequestKey();

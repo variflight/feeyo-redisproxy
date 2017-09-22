@@ -18,14 +18,12 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.nio.util.TimeUtil;
-import com.feeyo.redis.virtualmemory.AppendMessageResult;
-import com.feeyo.redis.virtualmemory.Message;
-import com.feeyo.redis.virtualmemory.PutMessageResult;
 
 public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger(PipelineCommandHandler.class);
 	
+	public final static String PIPELINE_CMD = "pipeline";
 
 	public PipelineCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -47,7 +45,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( PIPELINE_CMD );
-		frontCon.getSession().setRequestKey( PIPELINE_KEY );
+		frontCon.getSession().setRequestKey( PIPELINE_CMD.getBytes() );
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
 	}
 	
@@ -72,8 +70,8 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
 				
 				// 获取所有应答
-				List<Object> resps = mergeResponses();
-				if (resps != null) {
+				List<ResponseDataIndex> dataIndexs = getAndMargeResponseDataIndexs();
+				if (dataIndexs != null) {
 
 					try {
 						String password = frontCon.getPassword();
@@ -82,34 +80,27 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						long responseTimeMills = TimeUtil.currentTimeMillis();
 						int responseSize = 0;
 
-						for (Object resp : resps) {
-							if (resp instanceof PutMessageResult) {
-								PutMessageResult pmr = (PutMessageResult) resp;
-								AppendMessageResult amr = pmr.getAppendMessageResult();
-								Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
-								// 通知该消息已经被消费
-								RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
-								
-								responseSize += this.writeToFront(frontCon, msg.getBody(), 0);
-							} else if (resp instanceof byte[]) {
-								responseSize += this.writeToFront(frontCon, (byte[])resp, 0);
+						for (ResponseDataIndex dataIndex : dataIndexs) {
+							if ( dataIndex.isVirtualMemory() ) {
+								byte[] data = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessageBodyAndMarkAsConsumed( 
+										dataIndex.getOffset(), dataIndex.getSize() );
+								responseSize += this.writeToFront(frontCon, data, 0);
+							} else {
+								responseSize += this.writeToFront(frontCon, dataIndex.getData(), 0);
 							}
 						}
-
-						// resps.clear(); // help GC
-						resps = null;
 
 						// 后段链接释放
 						releaseBackendConnection(backendCon);
 
 						// 数据收集
-						StatUtil.collect(password, PIPELINE_CMD, PIPELINE_KEY, requestSize, responseSize,
+						StatUtil.collect(password, PIPELINE_CMD, PIPELINE_CMD.getBytes(), requestSize, responseSize,
 								(int) (responseTimeMills - requestTimeMills), false);
 
 						// child 收集
 						for (RedisRequest req : rrs.getRequests()) {
 							String childCmd = new String( req.getArgs()[0] );
-							StatUtil.collect(password, childCmd, PIPELINE_KEY, requestSize, responseSize,
+							StatUtil.collect(password, childCmd, PIPELINE_CMD.getBytes(), requestSize, responseSize,
 									(int) (responseTimeMills - requestTimeMills), true);
 						}
 						

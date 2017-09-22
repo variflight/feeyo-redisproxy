@@ -19,9 +19,6 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.nio.util.TimeUtil;
-import com.feeyo.redis.virtualmemory.AppendMessageResult;
-import com.feeyo.redis.virtualmemory.Message;
-import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.util.ProtoUtils;
 
 /**
@@ -120,8 +117,8 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 			ResponseStatusCode state = recvResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
 			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
 				
-				List<Object> resps = mergeResponses();
-				if (resps != null) {
+				List<ResponseDataIndex> dataIndexs = getAndMargeResponseDataIndexs();
+				if (dataIndexs != null) {
 					try {
 						String password = frontCon.getPassword();
 						String cmd = frontCon.getSession().getRequestCmd();
@@ -132,14 +129,12 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 						
 						int okCount = 0;
 						
-						for (Object resp : resps) {
-							if (resp instanceof PutMessageResult) {
-								PutMessageResult pmr = (PutMessageResult) resp;
-								AppendMessageResult amr = pmr.getAppendMessageResult();
-								Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
-								// 通知该消息已经被消费
-								RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
-								RedisResponseV3 response = responseDecoder.decode( msg.getBody() ).get(0);
+						for (ResponseDataIndex dataIndex : dataIndexs) {
+							if ( dataIndex.isVirtualMemory() ) {
+								// 提取消息且设置已消费
+								byte[] data = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessageBodyAndMarkAsConsumed( 
+										dataIndex.getOffset(), dataIndex.getSize());
+								RedisResponseV3 response = responseDecoder.decode( data ).get(0);
 								if ( response.is( (byte)':') ) {
 									byte[] _buf1 = (byte[])response.data();
 									byte[] buf2 = new byte[ _buf1.length - 1 ];  // type+data+\r\n  ->  data+\r\n

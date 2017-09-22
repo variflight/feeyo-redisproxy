@@ -21,7 +21,7 @@ import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
-import com.feeyo.redis.virtualmemory.AppendMessageResult;
+
 import com.feeyo.redis.virtualmemory.Message;
 import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.redis.virtualmemory.Util;
@@ -41,47 +41,64 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		INCOMPLETE,				//未完整
 		ERROR					//错误
 	}
+	
+	// 应答 数据索引
+	public class ResponseDataIndex {
+		
+		public static final byte VirtualMemory = 0;		// 虚拟内存
+		public static final byte HeapMemory = 1;		// 堆内存
+		
+		private byte type;
+		
+		private long offset;
+		private int size;
+		private byte[] data;
+		
+		public ResponseDataIndex(long offset, int size) {
+			super();
+			this.type = VirtualMemory;
+			this.offset = offset;
+			this.size = size;
+		}
+
+		public ResponseDataIndex( byte[] data) {
+			super();
+			this.type = HeapMemory;
+			this.data = data;
+		}
+		
+		public boolean isVirtualMemory() {
+			return type == VirtualMemory;
+		}
+
+		public long getOffset() {
+			return offset;
+		}
+
+		public int getSize() {
+			return size;
+		}
+
+		public byte[] getData() {
+			return data;
+		}
+	}
 
 	
 	// 应答节点
-	public class ResponseNode {
-		
-		private String address;
+	public class RouteResultNodeResponse {
+
 		private RouteResultNode node;
 		
-		private int responseCount = 0;
-		private ConcurrentLinkedQueue<PutMessageResult> bufferQueue = new ConcurrentLinkedQueue<PutMessageResult>();
+		private int count = 0;		//应答数
+		private ConcurrentLinkedQueue<ResponseDataIndex> dataIndexQueue = new ConcurrentLinkedQueue<ResponseDataIndex>();
 		
-		public ResponseNode(RouteResultNode node) {
-			super();
+		public RouteResultNodeResponse(RouteResultNode node) {
 			this.node = node;
-			this.address = node.getPhysicalNode().getName();
-		}
-		
-		public String getAddress() {
-			return address;
-		}
-
-		public RouteResultNode getNode() {
-			return node;
-		}
-		
-		public void addResponseCount(int count) {
-			this.responseCount += count;
-		}
-
-		public int getResponseCount() {
-			return responseCount;
-		}
-
-		public ConcurrentLinkedQueue<PutMessageResult> getBufferQueue() {
-			return bufferQueue;
 		}
 	}
 	
-	
-	public final static String PIPELINE_CMD = "pipeline";
-	public final static byte[] PIPELINE_KEY = PIPELINE_CMD.getBytes();
+
 	
 	protected RedisRequestEncoderV2 encoder = new RedisRequestEncoderV2();
 	
@@ -90,7 +107,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	
 	private ConcurrentHashMap<Long, RedisBackendConnection> backendConnections = new ConcurrentHashMap<Long, RedisBackendConnection>();
 	
-	private ConcurrentHashMap<String, ResponseNode> responseNodeMap =  new ConcurrentHashMap<String, ResponseNode>(); 
+	private ConcurrentHashMap<String, RouteResultNodeResponse> responseMap =  new ConcurrentHashMap<String, RouteResultNodeResponse>(); 
 	private AtomicInteger allResponseCount = new AtomicInteger(0); 					// 接收到返回数据的条数
 	private AtomicBoolean isMarged = new AtomicBoolean(false);
 
@@ -105,12 +122,13 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		this.allResponseCount.set(0);
 		this.isMarged.set( false );
 		
-		this.responseNodeMap.clear();
+		this.responseMap.clear();
 		
+		//
 		for(RouteResultNode node: rrs.getRouteResultNodes()) {
 			String address = node.getPhysicalNode().getName();
-			ResponseNode reponseNode = new ResponseNode( node );
-			responseNodeMap.put( address, reponseNode );
+			RouteResultNodeResponse reponseNode = new RouteResultNodeResponse( node );
+			responseMap.put( address, reponseNode );
 		}
 	}
 	
@@ -137,7 +155,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	//
 	protected synchronized ResponseStatusCode recvResponse(String address, int count, byte[][] resps) {
 		
-		ResponseNode responseNode = responseNodeMap.get( address );
+		RouteResultNodeResponse nodeResponse = responseMap.get( address );
 		
 		if ( resps != null && resps.length > 0) {
 			for (byte[] resp : resps) {
@@ -152,17 +170,17 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 				
 				PutMessageResult pmr = RedisEngineCtx.INSTANCE().getVirtualMemoryService().putMessage( msg );
 				if ( pmr.isOk() ) {
-					responseNode.getBufferQueue().offer( pmr );
+					ResponseDataIndex tmpIdx = new ResponseDataIndex( pmr.getAppendMessageResult().getWroteOffset(), pmr.getAppendMessageResult().getWroteBytes());
+					nodeResponse.dataIndexQueue.offer( tmpIdx );
 					
 				} else {
 					LOGGER.warn("response append error: appendMessageResult={}, conn={}",
 							new Object[] { pmr.getAppendMessageResult(), frontCon });
-					
 					return ResponseStatusCode.ERROR;
 				}
 			}
 			
-			responseNode.addResponseCount(count);
+			nodeResponse.count += count;
 			
 			allResponseCount.addAndGet(count);
 			
@@ -172,7 +190,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			} 
 			
 			// 判断当前节点是否全部返回
-			if ( responseNode.getNode().getRequestIndexs().size() == responseNode.getResponseCount() ) {
+			if ( nodeResponse.node.getRequestIndexs().size() == nodeResponse.count ) {
 				return ResponseStatusCode.THE_NODE_COMPLETED;
 			}
 			
@@ -183,29 +201,28 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	}
 	
 	
-	// marge
-	protected List<Object> mergeResponses() {
+	// get & marge
+	protected List<ResponseDataIndex> getAndMargeResponseDataIndexs() {
 		
 		if ( isMarged.compareAndSet(false, true) ) {
 			
-			Object[] responses = new Object[ rrs.getRequestCount() ];
+			ResponseDataIndex[] responseDataIndexs = new ResponseDataIndex[ rrs.getRequestCount() ];
 			
 			// 后端节点应答
-			for(ResponseNode responseNode: responseNodeMap.values()) {
-				RouteResultNode node = responseNode.getNode();
-				List<Integer> idxs = node.getRequestIndexs();
+			for(RouteResultNodeResponse responseNode: responseMap.values()) {
+				List<Integer> idxs = responseNode.node.getRequestIndexs();
 				for (int index : idxs) {
-					responses[index] = responseNode.bufferQueue.poll();
+					responseDataIndexs[index] = responseNode.dataIndexQueue.poll();
 				}
 			}
 			
 			// 自动应答
 			if ( !rrs.getAutoResponseIndexs().isEmpty() ) {
 				for (int index : rrs.getAutoResponseIndexs()) {
-					responses[index] = "+OK\r\n".getBytes();
+					responseDataIndexs[index] = new ResponseDataIndex( "+OK\r\n".getBytes() );
 				}
 			}
-			return Arrays.asList(responses);
+			return Arrays.asList(responseDataIndexs);
 			
 		} else {
 			return null;
@@ -215,12 +232,11 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	// VM 资源清理
 	private void clearVirtualMemoryResource() {
         if ( isMarged.compareAndSet(false, true) ) {
-            for(ResponseNode responseNode: responseNodeMap.values()) {
-                while( !responseNode.getBufferQueue().isEmpty() ) {
-                    PutMessageResult pmr = responseNode.getBufferQueue().poll();
-                    AppendMessageResult amr = pmr.getAppendMessageResult();
+            for(RouteResultNodeResponse responseNode: responseMap.values()) {
+                while( !responseNode.dataIndexQueue.isEmpty() ) {
                     // 标记该消息已经被消费
-                    RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
+                    ResponseDataIndex dataIdx = responseNode.dataIndexQueue.poll();
+                    RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(dataIdx.getOffset(), dataIdx.getSize());
                 }
             }
         }
