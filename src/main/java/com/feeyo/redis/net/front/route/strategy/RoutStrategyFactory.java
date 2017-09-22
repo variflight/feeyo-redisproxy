@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.front.route.strategy;
 
 import com.feeyo.redis.engine.codec.RedisRequestPolicy;
+import com.feeyo.redis.net.front.handler.CommandParse;
 
 /**
  * route strategy factory
@@ -18,10 +19,10 @@ public class RoutStrategyFactory {
     	
     	// 集群情况下，需要对 Mset、Mget、Del mulitKey 分片
     	if ( poolType == 1 ) {
-    		if ( firstRequestPolicy.getLevel() == RedisRequestPolicy.MGETSET_CMD ) {
+    		if ( firstRequestPolicy.getLevel() == CommandParse.MGETSET_CMD ) {
     			 return _MGETSET;
     			 
-    		} else if ( firstRequestPolicy.getLevel() == RedisRequestPolicy.DEL_CMD ) {
+    		} else if ( firstRequestPolicy.getLevel() == CommandParse.DEL_CMD ) {
     			 return _DEL;
     		}
     	}

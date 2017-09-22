@@ -20,6 +20,7 @@ import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
+import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.DelMultiKeyCommandHandler;
 import com.feeyo.redis.net.front.handler.MGetSetCommandHandler;
@@ -377,27 +378,27 @@ public class RedisFrontSession {
 		String result = null;
 		
 		switch( policy.getLevel() ) {
-		case RedisRequestPolicy.NO_CLUSTER_CMD:
+		case CommandParse.NO_CLUSTER_CMD:
 			if ( frontCon.getUserCfg().getPoolType() == 1 ) 
 				result = NOT_SUPPORTED;
 			break;
-		case RedisRequestPolicy.CLUSTER_CMD:
+		case CommandParse.CLUSTER_CMD:
 			if ( frontCon.getUserCfg().getPoolType() == 0 )
 				result = NOT_SUPPORTED;
 			break;
-		case RedisRequestPolicy.DISABLED_CMD:
-		case RedisRequestPolicy.PUBSUB_CMD:
-		case RedisRequestPolicy.MGETSET_CMD:
+		case CommandParse.DISABLED_CMD:
+		case CommandParse.PUBSUB_CMD:
+		case CommandParse.MGETSET_CMD:
 			result = NOT_SUPPORTED;
 			break;
-		case RedisRequestPolicy.MANAGE_CMD:
+		case CommandParse.MANAGE_CMD:
 			if (isAdmin) {
 				result = NOT_SUPPORTED;
 			} else {
 				result = NOT_ADMIN_USER;
 			}
 			break;
-		case RedisRequestPolicy.UNKNOW_CMD:
+		case CommandParse.UNKNOW_CMD:
 			result = UNKNOW_COMMAND;
 			break;
 		default:

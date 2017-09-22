@@ -8,6 +8,7 @@ import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterCRC16Util;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
+import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
@@ -51,7 +52,7 @@ public abstract class AbstractRouteStrategy {
 			RedisClusterPool clusterPool =  (RedisClusterPool) pool;
 			for (int i = 0; i < requests.size(); i++) {
 				
-				if ( requestPolicys.get(i).getLevel() == RedisRequestPolicy.AUTO_RESP_CMD )  {
+				if ( requestPolicys.get(i).getLevel() == CommandParse.AUTO_RESP_CMD )  {
 					continue;
 				}
 				

@@ -89,7 +89,7 @@ user.xml, 用户配置信息
 | :--------  | :-----   | :-------------------------------------------- |
 | user       | password |   auth 登录密码    								|
 | user       | poolId   |   通过该id 连接后端连接池    						|
-| user       | prefix  	|   自动前缀前缀    								|
+| user       | prefix  	|   自动前缀  									|
 | user       | selectDb |   非集群情况下，支持强制读写的 redis db， 默认0    	|
 | user       | readonly |   是否只读账户，默认非只读账户   					|
 | user       | isAdmin  |   是否管理员，默认非管理员   						|

@@ -46,7 +46,7 @@ public class RouteService {
 			requestPolicys.add( requestPolicy );
 			
 			// 如果是管理指令，且非pipeline,且是管理员用户      提取跳出
-			if ( !isPipeline && requestPolicy.getLevel() == RedisRequestPolicy.MANAGE_CMD && isAdmin) {
+			if ( !isPipeline && requestPolicy.getLevel() == CommandParse.MANAGE_CMD && isAdmin) {
 				throw new ManageRespNotTransException("manage cmd exist", requests, requestPolicys);
 			}
 			
@@ -56,8 +56,8 @@ public class RouteService {
 			}
 					
 			// 不需要透传，中间件自动回复
-			if ( requestPolicy.getLevel() == RedisRequestPolicy.AUTO_RESP_CMD 
-					|| requestPolicy.getLevel() == RedisRequestPolicy.MANAGE_CMD ) {
+			if ( requestPolicy.getLevel() == CommandParse.AUTO_RESP_CMD 
+					|| requestPolicy.getLevel() == CommandParse.MANAGE_CMD ) {
 				autoResponseIndexs.add(i);
 				continue;
 			} 
@@ -99,29 +99,29 @@ public class RouteService {
 		
 		boolean result = false;
 		switch( requestPolicy.getLevel()  ) {
-		case RedisRequestPolicy.DISABLED_CMD :
+		case CommandParse.DISABLED_CMD :
 			result = true;
 			break;
-		case RedisRequestPolicy.NO_CLUSTER_CMD:
+		case CommandParse.NO_CLUSTER_CMD:
 			if ( poolType == 1 ) //集群
 				result = true;
 			break;
-		case RedisRequestPolicy.CLUSTER_CMD:
+		case CommandParse.CLUSTER_CMD:
 			if ( poolType == 0 ) //非集群
 				result = true; 
 			break;
-		case RedisRequestPolicy.PUBSUB_CMD:
-		case RedisRequestPolicy.MGETSET_CMD:
+		case CommandParse.PUBSUB_CMD:
+		case CommandParse.MGETSET_CMD:
 			if ( isPipeline )	// pipeline 不支持 mset/mget/pubsub
 				result = true;
 			break;
-		case RedisRequestPolicy.MANAGE_CMD:
+		case CommandParse.MANAGE_CMD:
 			if ( isPipeline )
 				result = true;
 			if ( !isAdmin )
 				result = true;
 			break;
-		case RedisRequestPolicy.UNKNOW_CMD:
+		case CommandParse.UNKNOW_CMD:
 			result = true;
 			break;
 		}
