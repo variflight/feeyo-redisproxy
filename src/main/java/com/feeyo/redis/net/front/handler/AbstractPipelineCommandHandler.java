@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -34,19 +33,11 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractPipelineCommandHandler.class );
 	
-	// 应答状态码
-	public enum ResponseStatusCode {
-		ALL_NODE_COMPLETED,		//所有节点都完成
-		THE_NODE_COMPLETED,		//当前节点完成
-		INCOMPLETE,				//未完整
-		ERROR					//错误
-	}
-	
-	// 应答 数据索引
-	public class ResponseDataIndex {
+	// VM数据偏移
+	public class DataOffset {
 		
-		public static final byte VirtualMemory = 0;		// 虚拟内存
-		public static final byte HeapMemory = 1;		// 堆内存
+		public static final byte VIRTUAL_MEMORY = 0;	// 虚拟内存
+		public static final byte HEAP_MEMORY = 1;		// 堆内存
 		
 		private byte type;
 		
@@ -54,21 +45,17 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		private int size;
 		private byte[] data;
 		
-		public ResponseDataIndex(long offset, int size) {
+		public DataOffset(long offset, int size) {
 			super();
-			this.type = VirtualMemory;
+			this.type = VIRTUAL_MEMORY;
 			this.offset = offset;
 			this.size = size;
 		}
 
-		public ResponseDataIndex( byte[] data) {
+		public DataOffset( byte[] data) {
 			super();
-			this.type = HeapMemory;
+			this.type = HEAP_MEMORY;
 			this.data = data;
-		}
-		
-		public boolean isVirtualMemory() {
-			return type == VirtualMemory;
 		}
 
 		public long getOffset() {
@@ -80,29 +67,71 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		}
 
 		public byte[] getData() {
+			if ( type == VIRTUAL_MEMORY ) {
+				return RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessageBodyAndMarkAsConsumed( offset, size );
+			}
 			return data;
+		}
+		
+		public void clearData() {
+			if ( type == VIRTUAL_MEMORY ) {
+				RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed( offset, size );
+			}
 		}
 	}
 	
-	// 应答节点
-	public class RouteResultNodeResponse {
+	// 应答合并结果
+	public class ResponseMargeResult {
 
-		private RouteResultNode node;
+		public static final byte ERROR =  0;					//错误
+		public static final byte INCOMPLETE = 1;				//未完整
+		public static final byte THE_NODE_COMPLETED = 2;		//当前节点完成
+		public static final byte ALL_NODE_COMPLETED = 9; 		//所有节点都完成
+		
+		
+		private byte status;
+		private List<DataOffset> offsets = null;
+		
+		public ResponseMargeResult(byte status) {
+			super();
+			this.status = status;
+		}
+
+		public ResponseMargeResult(byte status, List<DataOffset> offsets) {
+			super();
+			this.status = status;
+			this.offsets = offsets;
+		}
+
+		public byte getStatus() {
+			return status;
+		}
+
+		public List<DataOffset> getDataOffsets() {
+			return offsets;
+		}
+		
+	}
+	
+	
+	// 应答节点
+	public class ResponseNode {
+
+		private RouteResultNode sourceNode;
 		
 		private int count = 0;		//应答数
-		private ConcurrentLinkedQueue<ResponseDataIndex> dataIndexQueue = new ConcurrentLinkedQueue<ResponseDataIndex>();
+		private ConcurrentLinkedQueue<DataOffset> dataOffsetQueue = new ConcurrentLinkedQueue<DataOffset>();
 		
-		public RouteResultNodeResponse(RouteResultNode node) {
-			this.node = node;
+		public ResponseNode(RouteResultNode node) {
+			this.sourceNode = node;
 		}
 	}
 
 	protected RedisRequestEncoderV2 encoder = new RedisRequestEncoderV2();
 	protected RouteResult rrs;
 	
-	private ConcurrentHashMap<String, RouteResultNodeResponse> responseMap =  new ConcurrentHashMap<String, RouteResultNodeResponse>(); 
+	private ConcurrentHashMap<String, ResponseNode> allResponseNode =  new ConcurrentHashMap<String, ResponseNode>(); 
 	private AtomicInteger allResponseCount = new AtomicInteger(0); 					// 接收到返回数据的条数
-	private AtomicBoolean isMarged = new AtomicBoolean(false);
 	
 	private ConcurrentHashMap<Long, RedisBackendConnection> backendConnections = new ConcurrentHashMap<Long, RedisBackendConnection>();
 	
@@ -117,15 +146,13 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		
 		this.rrs = rrs;
 		this.allResponseCount.set(0);
-		this.isMarged.set( false );
-		
-		this.responseMap.clear();
+		this.allResponseNode.clear();
 		
 		//
 		for(RouteResultNode node: rrs.getRouteResultNodes()) {
 			String address = node.getPhysicalNode().getName();
-			RouteResultNodeResponse reponseNode = new RouteResultNodeResponse( node );
-			responseMap.put( address, reponseNode );
+			ResponseNode reponseNode = new ResponseNode( node );
+			allResponseNode.put( address, reponseNode );
 		}
 	}
 	
@@ -150,9 +177,9 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	}
 
 	//
-	protected synchronized ResponseStatusCode recvResponse(String address, int count, byte[][] resps) {
+	protected synchronized ResponseMargeResult addAndMargeResponse(String address, int count, byte[][] resps) {
 		
-		RouteResultNodeResponse nodeResponse = responseMap.get( address );
+		ResponseNode node = allResponseNode.get( address );
 		
 		if ( resps != null && resps.length > 0) {
 			for (byte[] resp : resps) {
@@ -167,73 +194,59 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 				
 				PutMessageResult pmr = RedisEngineCtx.INSTANCE().getVirtualMemoryService().putMessage( msg );
 				if ( pmr.isOk() ) {
-					ResponseDataIndex tmpIdx = new ResponseDataIndex( pmr.getAppendMessageResult().getWroteOffset(), pmr.getAppendMessageResult().getWroteBytes());
-					nodeResponse.dataIndexQueue.offer( tmpIdx );
+					DataOffset dataOffset = new DataOffset( pmr.getAppendMessageResult().getWroteOffset(), pmr.getAppendMessageResult().getWroteBytes());
+					node.dataOffsetQueue.offer( dataOffset );
 					
 				} else {
 					LOGGER.warn("response append error: appendMessageResult={}, conn={}",
 							new Object[] { pmr.getAppendMessageResult(), frontCon });
-					return ResponseStatusCode.ERROR;
+					return new ResponseMargeResult( ResponseMargeResult.ERROR );
 				}
 			}
 			
-			nodeResponse.count += count;
+			node.count += count;
 			
 			allResponseCount.addAndGet(count);
 			
 			// 判断所有节点是否全部返回
 			if ( allResponseCount.get()  == rrs.getTransCount() ) {
-				return ResponseStatusCode.ALL_NODE_COMPLETED;
+				
+				//合并结果
+				DataOffset[] offsets = new DataOffset[ rrs.getRequestCount() ];
+				for(ResponseNode responseNode: allResponseNode.values()) {							//
+					List<Integer> idxs = responseNode.sourceNode.getRequestIndexs();
+					for (int index : idxs) {
+						offsets[index] = responseNode.dataOffsetQueue.poll();
+					}
+				}
+				
+				if ( !rrs.getAutoResponseIndexs().isEmpty() ) {
+					for (int index : rrs.getAutoResponseIndexs()) {
+						offsets[index] = new DataOffset( "+OK\r\n".getBytes() );
+					}
+				}
+				return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, Arrays.asList(offsets) );
 			} 
 			
 			// 判断当前节点是否全部返回
-			if ( nodeResponse.node.getRequestIndexs().size() == nodeResponse.count ) {
-				return ResponseStatusCode.THE_NODE_COMPLETED;
+			if ( node.sourceNode.getRequestIndexs().size() == node.count ) {
+				return new ResponseMargeResult( ResponseMargeResult.THE_NODE_COMPLETED );
 			}
 			
-			return  ResponseStatusCode.INCOMPLETE;
+			return new ResponseMargeResult( ResponseMargeResult.INCOMPLETE );
 		}
 		
-        return ResponseStatusCode.ERROR;
-	}
-	
-	
-	// get & marge
-	protected List<ResponseDataIndex> getAndMargeResponseDataIndexs() {
-		
-		if ( isMarged.compareAndSet(false, true) ) {
-			
-			ResponseDataIndex[] responseDataIndexs = new ResponseDataIndex[ rrs.getRequestCount() ];
-			
-			// 后端节点应答
-			for(RouteResultNodeResponse responseNode: responseMap.values()) {
-				List<Integer> idxs = responseNode.node.getRequestIndexs();
-				for (int index : idxs) {
-					responseDataIndexs[index] = responseNode.dataIndexQueue.poll();
-				}
-			}
-			
-			// 自动应答
-			if ( !rrs.getAutoResponseIndexs().isEmpty() ) {
-				for (int index : rrs.getAutoResponseIndexs()) {
-					responseDataIndexs[index] = new ResponseDataIndex( "+OK\r\n".getBytes() );
-				}
-			}
-			return Arrays.asList(responseDataIndexs);
-			
-		} else {
-			return null;
-		}
+        return new ResponseMargeResult( ResponseMargeResult.ERROR );
 	}
 	
 	// VM 资源清理
-	private void clearVirtualMemoryResource() {
-        if ( isMarged.compareAndSet(false, true) ) {
-            for(RouteResultNodeResponse responseNode: responseMap.values()) {
-                while( !responseNode.dataIndexQueue.isEmpty() ) {
-                    // 标记该消息已经被消费
-                    ResponseDataIndex dataIdx = responseNode.dataIndexQueue.poll();
-                    RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(dataIdx.getOffset(), dataIdx.getSize());
+	private synchronized void clearVirtualMemoryResource() {
+		for(ResponseNode node: allResponseNode.values()) {
+            while( !node.dataOffsetQueue.isEmpty() ) {
+                // 标记该消息已经被消费
+                DataOffset dataOffset = node.dataOffsetQueue.poll();
+                if ( dataOffset != null ) {
+                	dataOffset.clearData();
                 }
             }
         }

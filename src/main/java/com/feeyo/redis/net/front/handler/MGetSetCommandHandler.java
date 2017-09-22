@@ -8,7 +8,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineResponse;
 import com.feeyo.redis.engine.codec.RedisRequestType;
@@ -92,10 +91,10 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 
             String address = backendCon.getPhysicalNode().getName();
             
-			ResponseStatusCode state = recvResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
-			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
-				List<ResponseDataIndex> dataIndexs = getAndMargeResponseDataIndexs();
-				if (dataIndexs != null) {
+            ResponseMargeResult result = addAndMargeResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
+			if ( result.getStatus() == ResponseMargeResult.ALL_NODE_COMPLETED ) {
+				List<DataOffset> offsets = result.getDataOffsets();
+				if (offsets != null) {
                     try {
                         String password = frontCon.getPassword();
         				String cmd = frontCon.getSession().getRequestCmd();
@@ -108,14 +107,11 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
                         int len = 0;
                         // 数据
                         List<byte[]> newResponses = new ArrayList<byte[]>();
-                    	for (ResponseDataIndex dataIndex : dataIndexs) {
-							if ( dataIndex.isVirtualMemory() ) {
-								
-								byte[] data = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessageBodyAndMarkAsConsumed( dataIndex.getOffset(), dataIndex.getSize() );
-                        		newResponses.add( data );
-                        		
-                        		len += data.length;
-                        	}
+                    	for (DataOffset offset : offsets) {
+                    		byte[] data = offset.getData();
+                    		newResponses.add( data );
+                    		
+                    		len += data.length;
                         }
 
                         byte[] respCountInByte = ProtoUtils.convertIntToByteArray( rrs.getRequestCount() );
@@ -154,12 +150,12 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 					}
                 }
                 
-			} else if ( state == ResponseStatusCode.THE_NODE_COMPLETED  ) {
+			} else if ( result.getStatus() == ResponseMargeResult.THE_NODE_COMPLETED  ) {
 				
                 // 如果此后端节点数据已经返回完毕，则释放链接
 				releaseBackendConnection(backendCon);
 				
-            } else if ( state == ResponseStatusCode.ERROR ) {
+            } else if ( result.getStatus() == ResponseMargeResult.ERROR ) {
 				// 添加回复到虚拟内存中出错。
 				responseAppendError();
 			}
@@ -178,20 +174,17 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
                 return;
 
             String address = backendCon.getPhysicalNode().getName();
-            ResponseStatusCode state = recvResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
+            ResponseMargeResult result = addAndMargeResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
 
-            if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
+            if ( result.getStatus() == ResponseMargeResult.ALL_NODE_COMPLETED ) {
             	
-            	List<ResponseDataIndex> dataIndexs = getAndMargeResponseDataIndexs();
-				if (dataIndexs != null) {
+            	List<DataOffset> offsets = result.getDataOffsets();
+				if (offsets != null) {
 					
                     try {
                     	// 通知该消息已经被消费
-                    	for (ResponseDataIndex dataIndex : dataIndexs) {
-							if ( dataIndex.isVirtualMemory() ) {
-								RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed( 
-										dataIndex.getOffset(), dataIndex.getSize());
-							}
+                    	for (DataOffset offset : offsets) {
+							offset.clearData();
                     	}
                     	
                         String password = frontCon.getPassword();
@@ -225,11 +218,11 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 					}
                 }
                 
-            } else if ( state == ResponseStatusCode.THE_NODE_COMPLETED  ) {
+            } else if ( result.getStatus() == ResponseMargeResult.THE_NODE_COMPLETED  ) {
                 // 如果此后端节点数据已经返回完毕，则释放链接
             	releaseBackendConnection(backendCon);
             	
-            } else if ( state == ResponseStatusCode.ERROR ) {
+            } else if ( result.getStatus() == ResponseMargeResult.ERROR ) {
 				// 添加回复到虚拟内存中出错。
 				responseAppendError();
 			}

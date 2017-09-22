@@ -7,7 +7,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineResponse;
 import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
@@ -114,11 +113,11 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 
 			String address = backendCon.getPhysicalNode().getName();
 			
-			ResponseStatusCode state = recvResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
-			if ( state == ResponseStatusCode.ALL_NODE_COMPLETED ) {
+			ResponseMargeResult result = addAndMargeResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
+			if ( result.getStatus() == ResponseMargeResult.ALL_NODE_COMPLETED ) {
 				
-				List<ResponseDataIndex> dataIndexs = getAndMargeResponseDataIndexs();
-				if (dataIndexs != null) {
+				List<DataOffset> offsets = result.getDataOffsets();
+				if (offsets != null) {
 					try {
 						String password = frontCon.getPassword();
 						String cmd = frontCon.getSession().getRequestCmd();
@@ -129,19 +128,15 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 						
 						int okCount = 0;
 						
-						for (ResponseDataIndex dataIndex : dataIndexs) {
-							if ( dataIndex.isVirtualMemory() ) {
-								// 提取消息且设置已消费
-								byte[] data = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessageBodyAndMarkAsConsumed( 
-										dataIndex.getOffset(), dataIndex.getSize());
-								RedisResponseV3 response = responseDecoder.decode( data ).get(0);
-								if ( response.is( (byte)':') ) {
-									byte[] _buf1 = (byte[])response.data();
-									byte[] buf2 = new byte[ _buf1.length - 1 ];  // type+data+\r\n  ->  data+\r\n
-									System.arraycopy(_buf1, 1, buf2, 0, buf2.length);
-									int c = readInt( buf2 );
-									okCount += c;
-								}
+						for (DataOffset offset : offsets) {
+							byte[] data = offset.getData();
+							RedisResponseV3 response = responseDecoder.decode( data ).get(0);
+							if ( response.is( (byte)':') ) {
+								byte[] _buf1 = (byte[])response.data();
+								byte[] buf2 = new byte[ _buf1.length - 1 ];  // type+data+\r\n  ->  data+\r\n
+								System.arraycopy(_buf1, 1, buf2, 0, buf2.length);
+								int c = readInt( buf2 );
+								okCount += c;
 							}
 						}
 						
@@ -170,12 +165,12 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 					}
 				}
 
-			} else if ( state == ResponseStatusCode.THE_NODE_COMPLETED  ) {
+			} else if ( result.getStatus() == ResponseMargeResult.THE_NODE_COMPLETED  ) {
 				
 				// 如果此后端节点数据已经返回完毕，则释放链接
 				releaseBackendConnection(backendCon);
 				
-			} else if ( state == ResponseStatusCode.ERROR ) {
+			} else if ( result.getStatus() == ResponseMargeResult.ERROR ) {
 				// 添加回复到虚拟内存中出错。
 				responseAppendError();
 			}
