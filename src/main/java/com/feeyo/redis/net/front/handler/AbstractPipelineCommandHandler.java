@@ -83,7 +83,6 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			return data;
 		}
 	}
-
 	
 	// 应答节点
 	public class RouteResultNodeResponse {
@@ -97,19 +96,17 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			this.node = node;
 		}
 	}
-	
 
-	
 	protected RedisRequestEncoderV2 encoder = new RedisRequestEncoderV2();
-	
 	protected RouteResult rrs;
-	
-	
-	private ConcurrentHashMap<Long, RedisBackendConnection> backendConnections = new ConcurrentHashMap<Long, RedisBackendConnection>();
 	
 	private ConcurrentHashMap<String, RouteResultNodeResponse> responseMap =  new ConcurrentHashMap<String, RouteResultNodeResponse>(); 
 	private AtomicInteger allResponseCount = new AtomicInteger(0); 					// 接收到返回数据的条数
 	private AtomicBoolean isMarged = new AtomicBoolean(false);
+	
+	private ConcurrentHashMap<Long, RedisBackendConnection> backendConnections = new ConcurrentHashMap<Long, RedisBackendConnection>();
+	
+
 
 	public AbstractPipelineCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
