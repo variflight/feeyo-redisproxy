@@ -58,14 +58,14 @@ server.xml, 网络及堆外内存池的相关配置
 | property   | name	    	 | port  		  	 |  服务端口号      				 		|
 | property   | name	    	 | reactorSize    	 |  reactor 用于调度nio，设置为内核大小即可  	|
 | property   | name	    	 | maxBufferSize  	 |  堆外内存，可利用的最大空间      			|
-| property   | name	    	 | minBufferSize  	 |  对外内存，可利用的最小空间，初始化就会建立   |
+| property   | name	    	 | minBufferSize  	 |  堆外内存，可利用的最小空间，初始化就会建立   |
 | property   | name	    	 | minChunkSize   	 |  最小的 chunk      					|
 | property   | name	    	 | increment  	  	 |  minChunkSize 到 maxChunkSize 步长		|
 | property   | name	    	 | maxChunkSize	     |  最大的 chunk       					|
 | property   | name	    	 | bossSize  	  	 |  工作任务的线程数      					|
 | property   | name	    	 | timerSize  	  	 |  定时任务的线程数      			    	|
-| property   | name	    	 | frontIdleTimeout	 |  前端连接闲置时间	      				|
-| property   | name	    	 | backendIdleTimeout|  后端连接闲置时间      					|
+| property   | name	    	 | frontIdleTimeout	 |  前端连接闲置后的超时时间（毫秒）	      	|
+| property   | name	    	 | backendIdleTimeout|  后端连接闲置后的超时时间（毫秒）  			|
 	
 
 zookeeper 配置 （待续）
