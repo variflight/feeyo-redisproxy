@@ -7,6 +7,7 @@ import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterCRC16Util;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
+import com.feeyo.redis.net.backend.pool.customcluster.RedisCustomClusterPool;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
@@ -55,7 +56,7 @@ public abstract class AbstractRouteStrategy {
 				if ( requestPolicys.get(i).getLevel() == CommandParse.AUTO_RESP_CMD )  {
 					continue;
 				}
-				
+
 				// 计算key的slot值。
 				int slot = 0;
 				RedisRequest request = requests.get(i);
@@ -68,27 +69,42 @@ public abstract class AbstractRouteStrategy {
 				PhysicalNode physicalNode = clusterPool.getPhysicalNodeBySlot(slot) ;
 				if ( physicalNode == null )
 					throw new PhysicalNodeUnavailableException("node unavailable.");
-				
-				boolean isFind = false;
-				for (RouteResultNode node: nodes) {
-					if ( node.getPhysicalNode() == physicalNode ) {
-						node.addRequestIndex(i);
-						isFind = true;
-						break;
-					}
+
+				arrangePhyNode(nodes, i, physicalNode);
+			}
+		} else if ( pool.getType() == 2) {
+			RedisCustomClusterPool ccPool = (RedisCustomClusterPool) pool;
+			for (int i = 0; i < requests.size(); i++) {
+				if (requestPolicys.get(i).getLevel() == CommandParse.AUTO_RESP_CMD) {
+					continue;
 				}
-				
-				if ( !isFind ) {
-					RouteResultNode node = new RouteResultNode();
-					node.setPhysicalNode( physicalNode );
-					node.addRequestIndex(i);
-					nodes.add( node );
-				}
+
+				RedisRequest request = requests.get(i);
+				PhysicalNode physicalNode = ccPool.getPhysicalNode(request);
+				arrangePhyNode(nodes, i, physicalNode);
 			}
 		}
 		return nodes;
 	}
-	
+
+	private void arrangePhyNode(List<RouteResultNode> nodes, int requestIdx, PhysicalNode physicalNode) {
+		boolean isFind = false;
+		for (RouteResultNode node: nodes) {
+			if ( node.getPhysicalNode() == physicalNode ) {
+				node.addRequestIndex(requestIdx);
+				isFind = true;
+				break;
+			}
+		}
+
+		if ( !isFind ) {
+			RouteResultNode node = new RouteResultNode();
+			node.setPhysicalNode( physicalNode );
+			node.addRequestIndex(requestIdx);
+			nodes.add( node );
+		}
+	}
+
 	// 路由
     public abstract RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
     		List<Integer> autoResponseIndexs) throws InvalidRequestExistsException, PhysicalNodeUnavailableException;

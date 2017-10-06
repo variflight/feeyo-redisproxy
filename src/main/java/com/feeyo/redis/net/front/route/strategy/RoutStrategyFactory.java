@@ -18,7 +18,7 @@ public class RoutStrategyFactory {
     public static AbstractRouteStrategy getStrategy(int poolType, RedisRequestPolicy firstRequestPolicy) {
     	
     	// 集群情况下，需要对 Mset、Mget、Del mulitKey 分片
-    	if ( poolType == 1 ) {
+    	if ( poolType == 1 || poolType == 2) {
     		if ( firstRequestPolicy.getLevel() == CommandParse.MGETSET_CMD ) {
     			 return _MGETSET;
     			 

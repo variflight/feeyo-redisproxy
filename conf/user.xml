@@ -2,7 +2,8 @@
 <redis>
 	<user password="pwd01" poolId="1" prefix="pre1_" selectDb="1" isAdmin="1"/>
 	<user password="pwd02" poolId="1" prefix="pre2_" selectDb="-1" readonly="true"/>
-	
+
 	<user password="pwd03" poolId="2" prefix="pre_fy_" selectDb="1" />
 
+	<user password="pwd04" poolId="3" prefix="pre4_" selectDb="-1" isAdmin="1"/>
 </redis>

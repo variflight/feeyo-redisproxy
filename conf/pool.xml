@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <redis>
-	<!-- type 0非集群， 1集群 -->
+	<!-- type 0:非集群; 1:集群; 2:自定义集群 -->
 	<pool id="1" name="pool1" type="0" maxCon="2000" minCon="1">
-	      <node ip="127.0.0.1" port="6379" />
+	      <node ip="192.168.1.101" port="7007" />
 	</pool>	 
 	
 	
 	<pool id="2" name="pool2" type="1" maxCon="200" minCon="1">
-	      <node ip="192.168.14.38" port="7000" />
-	      <node ip="192.168.14.38" port="7001" />
-	      <node ip="192.168.14.38" port="7002" />
+	      <node ip="192.168.1.101" port="7000" />
+	      <node ip="192.168.1.101" port="7001" />
+	      <node ip="192.168.1.101" port="7002" />
 	</pool>
-		
-</redis>	
+
+	<!-- suffix_hint user add the suffix behind the key (key#1#) -->
+	<pool id="3" name="pool3" type="2" maxCon="200" minCon="1" rule="suffix_hint">
+		<node ip="192.168.1.101" port="7006" />
+		<node ip="192.168.1.101" port="7007" />
+	</pool>
+</redis>

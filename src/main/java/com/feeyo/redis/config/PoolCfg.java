@@ -16,15 +16,17 @@ public class PoolCfg {
 	
 	private final int maxCon;
 	private final int minCon;
-	
+	private final String rule;
+
 	private List<String> nodes = new ArrayList<String>();
 
-	public PoolCfg(int id, String name, int type, int minCon, int maxCon) {
+	public PoolCfg(int id, String name, int type, int minCon, int maxCon, String rule) {
 		this.id = id;
 		this.name = name;
 		this.type = type;
 		this.minCon = minCon;
 		this.maxCon = maxCon;
+		this.rule = rule;
 	}
 
 	public int getId() {
@@ -45,6 +47,10 @@ public class PoolCfg {
 
 	public int getMinCon() {
 		return minCon;
+	}
+
+	public String getRule() {
+		return rule;
 	}
 
 	public List<String> getNodes() {

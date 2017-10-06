@@ -75,8 +75,9 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-				
-				PoolCfg poolCfg = new PoolCfg(id, name, type, minCon, maxCon);				
+				String rule = getAttribute(nameNodeMap, "rule", null);
+
+				PoolCfg poolCfg = new PoolCfg(id, name, type, minCon, maxCon, rule);
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
 				for(int j = 0; j < nodeList.size(); j++) {
 					Node node = nodeList.get(j);					
