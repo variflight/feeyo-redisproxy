@@ -261,7 +261,7 @@ public class RedisClusterPool extends AbstractPool {
 	public PhysicalNode getPhysicalNode(String cmd, String key) {
 		int slot = 0;
 		if( key != null ) {
-			 slot = ClusterCRC16Util.getSlot( key, false);
+			 slot = ClusterCRC16Util.getSlot( key );
 		}
 		return getPhysicalNodeBySlot( slot );
 	}
@@ -270,7 +270,7 @@ public class RedisClusterPool extends AbstractPool {
 	public PhysicalNode getPhysicalNode(String cmd, byte[] key) {
 		int slot = 0;
 		if( key != null ) {
-			 slot = ClusterCRC16Util.getSlot( key, false);
+			 slot = ClusterCRC16Util.getSlot( key );
 		}
 		PhysicalNode node = getPhysicalNodeBySlot( slot );
 		return node;

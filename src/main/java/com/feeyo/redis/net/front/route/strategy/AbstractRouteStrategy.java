@@ -62,7 +62,7 @@ public abstract class AbstractRouteStrategy {
 				RedisRequest request = requests.get(i);
 				byte[] requestKey = request.getNumArgs() > 1 ? request.getArgs()[1] : null;
 				if (requestKey != null) {
-					slot = ClusterCRC16Util.getSlot(requestKey, false);
+					slot = ClusterCRC16Util.getSlot( requestKey );
 				}
 				
 				// 根据 slot 获取 redis物理节点
