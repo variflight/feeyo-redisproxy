@@ -28,12 +28,14 @@ public class RouteService {
 		boolean isReadOnly = frontCon.getUserCfg().isReadonly();
 		boolean isAdmin = frontCon.getUserCfg().isAdmin();
 		boolean isPipeline = requests.size() > 1;
+		RedisRequestPolicy accuralRequestPolicy = null;
 
 		List<RedisRequestPolicy> requestPolicys = new ArrayList<RedisRequestPolicy>( requests.size() );		// 指令策略
 		List<Integer> autoResponseIndexs = new ArrayList<Integer>();										// 直接返回指令索引
 		
 		// 请求是否存在不合法
 		boolean invalidPolicyExist = false;
+		boolean isMGetSetExist = false;
 		for(int i = 0; i < requests.size(); i++) {
 			
 			RedisRequest request = requests.get(i);
@@ -43,6 +45,12 @@ public class RouteService {
 			
 			String cmd = new String( request.getArgs()[0] ).toUpperCase();
 			RedisRequestPolicy requestPolicy = CommandParse.getPolicy( cmd );
+			
+			//在集群下，且pipeline，且包含MGETSET命令，则采用PIPELINE_MGETSET路由策略
+			if(!isMGetSetExist && (1 == poolType || 2 == poolType) && ("MGET".equals(cmd) || "MSET".equals(cmd))) {
+				accuralRequestPolicy = requestPolicy;
+				isMGetSetExist = true;
+			}
 			requestPolicys.add( requestPolicy );
 			
 			// 如果是管理指令，且非pipeline,且是管理员用户      提取跳出
@@ -81,8 +89,9 @@ public class RouteService {
 		}
 		
 		// 根据路由策略对查询请求做路由
-		RedisRequestPolicy firstRequestPolicy = requestPolicys.get(0);
-		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, firstRequestPolicy);
+		if(null == accuralRequestPolicy)
+			accuralRequestPolicy = requestPolicys.get(0);
+		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType,isPipeline, accuralRequestPolicy);
 		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys, autoResponseIndexs);
 		return routeResult;
 	}
@@ -111,8 +120,7 @@ public class RouteService {
 				result = true; 
 			break;
 		case CommandParse.PUBSUB_CMD:
-		case CommandParse.MGETSET_CMD:
-			if ( isPipeline )	// pipeline 不支持 mset/mget/pubsub
+			if ( isPipeline )	// pipeline 不支持 pubsub
 				result = true;
 			break;
 		case CommandParse.MANAGE_CMD:

@@ -13,13 +13,18 @@ public class RoutStrategyFactory {
 	private static DefaultRouteStrategy _DEFAULT = new DefaultRouteStrategy();
 	
 	private static MGetSetRoutStrategy _MGETSET = new MGetSetRoutStrategy();
+	
 	private static DelMultiKeyRoutStrategy _DEL = new DelMultiKeyRoutStrategy();
 	
-    public static AbstractRouteStrategy getStrategy(int poolType, RedisRequestPolicy firstRequestPolicy) {
+	private static MGetSetRoutStrategy _PIPELINE_MGETSET = new PipelineMGetSetRoutStrategy();
+	
+    public static AbstractRouteStrategy getStrategy(int poolType, boolean isPipeline, RedisRequestPolicy firstRequestPolicy) {
     	
     	// 集群情况下，需要对 Mset、Mget、Del mulitKey 分片
     	if ( poolType == 1 || poolType == 2) {
     		if ( firstRequestPolicy.getLevel() == CommandParse.MGETSET_CMD ) {
+    			if(isPipeline)
+    				return _PIPELINE_MGETSET;
     			 return _MGETSET;
     			 
     		} else if ( firstRequestPolicy.getLevel() == CommandParse.DEL_CMD ) {

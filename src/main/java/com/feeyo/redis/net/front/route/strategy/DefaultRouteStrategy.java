@@ -25,7 +25,7 @@ public class DefaultRouteStrategy extends AbstractRouteStrategy {
         List<RouteResultNode> nodes = doSharding(poolId, requests, requestPolicys);
         
         RedisRequestType requestType = requests.size() == 1 ? RedisRequestType.DEFAULT : RedisRequestType.PIPELINE;
-        RouteResult routeResult = new RouteResult(requestType, requests, requestPolicys, nodes, autoResponseIndexs);
+        RouteResult routeResult = new RouteResult(requestType, requests, requestPolicys, nodes, autoResponseIndexs,null);
         return routeResult;
     }
 

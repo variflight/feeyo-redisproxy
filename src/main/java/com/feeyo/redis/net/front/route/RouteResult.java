@@ -13,6 +13,14 @@ import java.util.List;
  */
 public class RouteResult {
 	
+	public enum PIPELINE_COMMAND_TYPE{
+		MGET_OP_COMMAND,  //由pipeline中MGET拆分出来的命令标志
+		MSET_OP_COMMAND,  //由pipeline中MSET拆分出来的命令标志
+		DEFAULT_OP_COMMAND  //pipeline中的其他命令（非批量操作命令）
+	}
+	
+	private final List<RequestIndexCombination> requestIndexCombinations;
+	
 	private final RedisRequestType requestType;
 	
 	private final List<RedisRequest> requests;
@@ -23,7 +31,7 @@ public class RouteResult {
     
     
 	public RouteResult(RedisRequestType requestType, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
-			List<RouteResultNode> nodes, List<Integer> autoResponseIndexs) {
+			List<RouteResultNode> nodes, List<Integer> autoResponseIndexs, List<RequestIndexCombination>  requestIndexCombinations) {
 		
 		this.requestType = requestType;
 		this.requests = requests;
@@ -31,6 +39,7 @@ public class RouteResult {
 		
 		this.nodes = nodes;
 		this.autoResponseIndexs = autoResponseIndexs;
+		this.requestIndexCombinations = requestIndexCombinations;
 	}
 
 	public RedisRequestType getRequestType() {
@@ -51,6 +60,10 @@ public class RouteResult {
 	
 	public List<RouteResultNode> getRouteResultNodes() {
 		return nodes;
+	}
+	
+	public  List<RequestIndexCombination> getRequestIndexCombinations() {
+		return requestIndexCombinations;
 	}
 
 	// 请求数
