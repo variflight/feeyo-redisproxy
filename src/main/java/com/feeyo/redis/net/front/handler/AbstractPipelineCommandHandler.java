@@ -18,12 +18,14 @@ import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestEncoderV2;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+import com.feeyo.redis.net.front.route.RequestIndexCombination;
 import com.feeyo.redis.net.front.route.RouteResult;
+import com.feeyo.redis.net.front.route.RouteResult.PIPELINE_COMMAND_TYPE;
 import com.feeyo.redis.net.front.route.RouteResultNode;
-
 import com.feeyo.redis.virtualmemory.Message;
 import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.redis.virtualmemory.Util;
+import com.feeyo.util.ProtoUtils;
 
 /**
  * 抽象 pipeline 处理
@@ -225,7 +227,12 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 						offsets[index] = new DataOffset( "+OK\r\n".getBytes() );
 					}
 				}
-				return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, Arrays.asList(offsets) );
+				if(null != rrs.getRequestIndexCombinations() && !rrs.getRequestIndexCombinations().isEmpty()) {
+					List<DataOffset> offsetsCopy = new ArrayList<DataOffset>();
+					transformCombineDataOffsets( Arrays.asList(offsets), offsetsCopy);
+					return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, offsetsCopy);
+				}
+				return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, Arrays.asList(offsets));
 			} 
 			
 			// 判断当前节点是否全部返回
@@ -238,6 +245,50 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		
         return new ResponseMargeResult( ResponseMargeResult.ERROR );
 	}
+	
+	private void transformCombineDataOffsets(List<DataOffset> offsets, List<DataOffset> offsetsCopy) {
+		List<RequestIndexCombination> requestIndexCombinations = rrs.getRequestIndexCombinations();
+		for (RequestIndexCombination requestIndexCombination : requestIndexCombinations) {
+			int[] indexs = requestIndexCombination.getIndexCombinations();
+			PIPELINE_COMMAND_TYPE type = requestIndexCombination.getType();
+			combineDataOffset(offsets, offsetsCopy, type, indexs);
+		}
+	}
+	
+	private void combineDataOffset(List<DataOffset> offsets, List<DataOffset> offsetsCopy, PIPELINE_COMMAND_TYPE type,
+			int[] indexs) {
+		switch (type) {
+		case MGET_OP_COMMAND:
+			int len = 0;
+			List<byte[]> newResponses = new ArrayList<byte[]>();
+			for (int index : indexs) {
+				DataOffset offset = offsets.get(index);
+				byte[] data = offset.getData();
+				newResponses.add(data);
+				len += data.length;
+			}
+			byte[] respCountInByte = ProtoUtils.convertIntToByteArray(indexs.length);
+			ByteBuffer buffer = ByteBuffer.allocate(len + 1 + 2 + respCountInByte.length);
+
+			buffer.put((byte) '*');
+			buffer.put(respCountInByte);
+			buffer.put("\r\n".getBytes());
+
+			for (byte[] respData : newResponses) {
+				buffer.put(respData);
+			}
+			offsetsCopy.add(new DataOffset(buffer.array()));
+			break;
+		case MSET_OP_COMMAND:
+			offsetsCopy.add(new DataOffset("+OK\r\n".getBytes()));
+			break;
+		case DEFAULT_OP_COMMAND:
+			offsetsCopy.add(offsets.get(indexs[0]));
+			break;
+		}
+	}
+	
+	
 	
 	// VM 资源清理
 	private synchronized void clearVirtualMemoryResource() {

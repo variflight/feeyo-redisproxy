@@ -57,14 +57,14 @@ public class DelMultiKeyRoutStrategy extends AbstractRouteStrategy {
     		    	
         	// 请求分片
             List<RouteResultNode> nodes = doSharding(poolId, newRequests, newRequestPolicys);
-            RouteResult routeResult = new RouteResult(RedisRequestType.DEL_MULTIKEY, newRequests, newRequestPolicys, nodes, autoResponseIndexs);
+            RouteResult routeResult = new RouteResult(RedisRequestType.DEL_MULTIKEY, newRequests, newRequestPolicys, nodes, autoResponseIndexs,null);
             return routeResult;
         } 
         
         
         List<RouteResultNode> nodes = doSharding(poolId, requests, requestPolicys);
         RedisRequestType requestType = requests.size() == 1 ? RedisRequestType.DEFAULT : RedisRequestType.PIPELINE;
-        RouteResult routeResult = new RouteResult(requestType, requests, requestPolicys, nodes, autoResponseIndexs);
+        RouteResult routeResult = new RouteResult(requestType, requests, requestPolicys, nodes, autoResponseIndexs,null);
         return routeResult;
 	}
 
