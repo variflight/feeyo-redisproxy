@@ -608,9 +608,55 @@ public class Manage {
 						}
 					}
 					return encode(lines);
+				
+				//SHOW USER_DAY_NET_IO
+				} else if ( arg2.equalsIgnoreCase("USER_DAY_NET_IO") ) {
+					
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("User").append(",  ");
+					titleLine.append("NetIn/NetOut").append(",  ");
+					titleLine.append("total").append(",  ");
+					titleLine.append("max").append(",  ");
+					titleLine.append("min").append(",  ");
+					titleLine.append("avg");
+					lines.add(titleLine.toString());
+					
+					for (Map.Entry<String, AccessStatInfoResult> entry : StatUtil.getTotalDayAccessStatInfo().entrySet()) { 
+						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
+							AccessStatInfoResult result = entry.getValue();
+
+							StringBuffer line1 = new StringBuffer();
+							line1.append(result.key).append(", ");
+							line1.append("NetIn").append(", ");
+							line1.append(result.netInBytes[0]).append(", ");
+							line1.append(result.netInBytes[1]).append(", ");
+							line1.append(result.netInBytes[2]).append(", ");
+							line1.append(result.netInBytes[3]);
+
+							StringBuffer line2 = new StringBuffer();
+							line2.append(result.key).append(", ");
+							line2.append("NetOut").append(", ");
+							line2.append(result.netOutBytes[0]).append(", ");
+							line2.append(result.netOutBytes[1]).append(", ");
+							line2.append(result.netOutBytes[2]).append(", ");
+							line2.append(result.netOutBytes[3]);
+
+							StringBuffer line3 = new StringBuffer();
+							line3.append(result.created);
+
+							lines.add(line1.toString());
+							lines.add(line2.toString());
+							lines.add(line3.toString());
+						
+						}
+					}
+					return encode(lines);
 					
 				//	SHOW LOG_ERROR
-				} else if ( arg2.equalsIgnoreCase("LOG_ERROR") ) {
+				} 
+				
+				else if ( arg2.equalsIgnoreCase("LOG_ERROR") ) {
 					List<String> lines = showLog(request, "error.log");
 					
 					return encode2( lines );
