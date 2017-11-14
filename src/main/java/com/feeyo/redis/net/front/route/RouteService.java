@@ -46,8 +46,8 @@ public class RouteService {
 			String cmd = new String( request.getArgs()[0] ).toUpperCase();
 			RedisRequestPolicy requestPolicy = CommandParse.getPolicy( cmd );
 			
-			//在集群下，且pipeline，且包含MGETSET命令，则采用PIPELINE_MGETSET路由策略
-			if(!isMGetSetExist && (1 == poolType || 2 == poolType) && ("MGET".equals(cmd) || "MSET".equals(cmd))) {
+			// 包含MGETSET命令，则采用_MGETSET路由策略
+			if(!isMGetSetExist && (requestPolicy.getLevel() == CommandParse.MGETSET_CMD)) {
 				accuralRequestPolicy = requestPolicy;
 				isMGetSetExist = true;
 			}
@@ -91,7 +91,7 @@ public class RouteService {
 		// 根据路由策略对查询请求做路由
 		if(null == accuralRequestPolicy)
 			accuralRequestPolicy = requestPolicys.get(0);
-		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType,isPipeline, accuralRequestPolicy);
+		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, accuralRequestPolicy);
 		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys, autoResponseIndexs);
 		return routeResult;
 	}

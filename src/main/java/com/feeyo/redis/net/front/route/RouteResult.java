@@ -12,8 +12,8 @@ import java.util.List;
  *
  */
 public class RouteResult {
-	
-	public enum PIPELINE_COMMAND_TYPE{
+	 
+	public enum PipelineCommandType {
 		MGET_OP_COMMAND,  //由pipeline中MGET拆分出来的命令标志
 		MSET_OP_COMMAND,  //由pipeline中MSET拆分出来的命令标志
 		DEFAULT_OP_COMMAND  //pipeline中的其他命令（非批量操作命令）

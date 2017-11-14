@@ -20,7 +20,7 @@ import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RequestIndexCombination;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResult.PIPELINE_COMMAND_TYPE;
+import com.feeyo.redis.net.front.route.RouteResult.PipelineCommandType;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.virtualmemory.Message;
 import com.feeyo.redis.virtualmemory.PutMessageResult;
@@ -250,12 +250,12 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		List<RequestIndexCombination> requestIndexCombinations = rrs.getRequestIndexCombinations();
 		for (RequestIndexCombination requestIndexCombination : requestIndexCombinations) {
 			int[] indexs = requestIndexCombination.getIndexCombinations();
-			PIPELINE_COMMAND_TYPE type = requestIndexCombination.getType();
+			PipelineCommandType type = requestIndexCombination.getType();
 			combineDataOffset(offsets, offsetsCopy, type, indexs);
 		}
 	}
 	
-	private void combineDataOffset(List<DataOffset> offsets, List<DataOffset> offsetsCopy, PIPELINE_COMMAND_TYPE type,
+	private void combineDataOffset(List<DataOffset> offsets, List<DataOffset> offsetsCopy, PipelineCommandType type,
 			int[] indexs) {
 		switch (type) {
 		case MGET_OP_COMMAND:
@@ -281,6 +281,9 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			break;
 		case MSET_OP_COMMAND:
 			offsetsCopy.add(new DataOffset("+OK\r\n".getBytes()));
+			for (int i : indexs) {
+				offsets.get(i).clearData();
+			}
 			break;
 		case DEFAULT_OP_COMMAND:
 			offsetsCopy.add(offsets.get(indexs[0]));
