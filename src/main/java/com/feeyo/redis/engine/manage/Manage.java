@@ -28,6 +28,7 @@ import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
 import com.feeyo.redis.engine.manage.stat.StatUtil.BigKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil.Command;
+import com.feeyo.redis.engine.manage.stat.StatUtil.UserNetIo;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -107,6 +108,7 @@ public class Manage {
 	 *  SHOW VM
 	 *  SHOW POOL
 	 *  SHOW COST
+	 *  SHOW USER_DAY_NET_IO
 	 *  
 	 *  SHOW LOG_ERROR
 	 *  SHOW LOG_WARN
@@ -614,43 +616,31 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					StringBuffer titleLine = new StringBuffer();
-					titleLine.append("User").append(",  ");
-					titleLine.append("NetIn/NetOut").append(",  ");
-					titleLine.append("total").append(",  ");
-					titleLine.append("max").append(",  ");
-					titleLine.append("min").append(",  ");
-					titleLine.append("avg");
+					titleLine.append("User").append("         ");
+					titleLine.append("NetIn").append("         ");
+					titleLine.append("NetOut");
 					lines.add(titleLine.toString());
 					
-					for (Map.Entry<String, AccessStatInfoResult> entry : StatUtil.getTotalDayAccessStatInfo().entrySet()) { 
+					long totalNetIn = 0;
+					long totalNetOut = 0;
+					for (Map.Entry<String, UserNetIo> entry : StatUtil.getUserNetIoStats()) { 
 						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
-							AccessStatInfoResult result = entry.getValue();
-
-							StringBuffer line1 = new StringBuffer();
-							line1.append(result.key).append(", ");
-							line1.append("NetIn").append(", ");
-							line1.append(result.netInBytes[0]).append(", ");
-							line1.append(result.netInBytes[1]).append(", ");
-							line1.append(result.netInBytes[2]).append(", ");
-							line1.append(result.netInBytes[3]);
-
-							StringBuffer line2 = new StringBuffer();
-							line2.append(result.key).append(", ");
-							line2.append("NetOut").append(", ");
-							line2.append(result.netOutBytes[0]).append(", ");
-							line2.append(result.netOutBytes[1]).append(", ");
-							line2.append(result.netOutBytes[2]).append(", ");
-							line2.append(result.netOutBytes[3]);
-
-							StringBuffer line3 = new StringBuffer();
-							line3.append(result.created);
-
-							lines.add(line1.toString());
-							lines.add(line2.toString());
-							lines.add(line3.toString());
-						
+							StringBuffer sb = new StringBuffer();
+							UserNetIo userNetIo = entry.getValue();
+							sb.append(userNetIo.user).append("  ");
+							sb.append(userNetIo.netIn.get()).append("  ");
+							sb.append(userNetIo.netOut.get());
+							totalNetIn = totalNetIn + userNetIo.netIn.get();
+							totalNetOut = totalNetOut + userNetIo.netOut.get();
+							lines.add(sb.toString());
 						}
 					}
+					
+					StringBuffer total = new StringBuffer();
+					total.append("total").append("    ");
+					total.append(totalNetIn).append("    ");
+					total.append(totalNetOut);
+					lines.add(total.toString());
 					return encode(lines);
 					
 				//	SHOW LOG_ERROR
