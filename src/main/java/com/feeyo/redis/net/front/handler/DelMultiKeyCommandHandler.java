@@ -12,6 +12,7 @@ import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineRespons
 import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
 import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
+import com.feeyo.redis.engine.manage.stat.TopHundredCollectMsg;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -146,9 +147,12 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 						// 释放
 						releaseBackendConnection(backendCon);
 
+						boolean isWrongType = new String(byteBuff).contains("WRONGTYPE");
+						TopHundredCollectMsg collectMsg = new TopHundredCollectMsg(isWrongType, backendCon.getPhysicalNode());
+						
 						// 数据收集
 						StatUtil.collect(password, cmd, key, requestSize, responseSize,
-								(int) (responseTimeMills - requestTimeMills), false);
+								(int) (responseTimeMills - requestTimeMills), false, collectMsg);
 
 					} catch (IOException e2) {
 						if (frontCon != null) {
