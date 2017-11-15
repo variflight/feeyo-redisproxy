@@ -1,6 +1,11 @@
 package com.feeyo.redis.engine.manage.stat;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -15,6 +20,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.engine.manage.stat.KeyUnit.KeyType;
+import com.feeyo.redis.net.backend.callback.TopHundredCallback;
+import com.feeyo.redis.net.backend.pool.PhysicalNode;
+import com.feeyo.redis.net.front.RedisFrontConnection;
+import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -30,7 +40,7 @@ public class StatUtil {
 	
 	public static final String STAT_KEY = "RedisProxyStat";
 	private final static String PIPELINE_CMD = "pipeline";
-	
+	private final static int LIMIT_HANDLE_KEY = 500;
 	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	
 	public static final int SLOW_COST = 50; 			  			// 50秒	
@@ -45,6 +55,8 @@ public class StatUtil {
 	// ACCESS
 	private static ConcurrentHashMap<String, AccessStatInfo> accessStats = new ConcurrentHashMap<>();
 	private static ConcurrentHashMap<String, AccessStatInfoResult> totalResults = new ConcurrentHashMap<>();
+	private static List<KeyUnit> keyList = Collections.synchronizedList(new ArrayList<KeyUnit>(LIMIT_HANDLE_KEY));
+	private static TopHundredSet topHundredSet = new TopHundredSet();
 	
 	public static ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 	public static ScheduledFuture<?> scheduledFuture;
@@ -55,6 +67,12 @@ public class StatUtil {
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {		
+				//记录top 100
+				final List<KeyUnit> keyListCopy = Collections.synchronizedList(new ArrayList<KeyUnit>(keyList));
+				keyList.clear();
+				if(!keyListCopy.isEmpty())
+					NetSystem.getInstance().getBusinessExecutor().execute(new CalculatorTopHundredThread(keyListCopy));
+				
 				// 定时计算
 				long currentTimeMillis = System.currentTimeMillis();
 		        for (Map.Entry<String, AccessStatInfo> entry : accessStats.entrySet()) {     
@@ -108,7 +126,7 @@ public class StatUtil {
 	 * @param isCommandOnly 用于判断此次收集是否只用于command（pipeline指令的子指令）收集。
 	 */
 	public static void collect(final String password, final String cmd, final byte[] key, 
-			final int requestSize, final int responseSize, final int procTimeMills, final boolean isCommandOnly) {
+			final int requestSize, final int responseSize, final int procTimeMills, final boolean isCommandOnly, final TopHundredCollectMsg collectMsg) {
 		
 		if ( cmd == null ) {
 			return;
@@ -210,10 +228,76 @@ public class StatUtil {
 						bigkeyStats.put(bigkey.key, bigkey);
 					}
 				}
+				
+				if(!collectMsg.isWrongType()) {
+					String keyStr = new String(key);
+					KeyUnit keyUnit = new KeyUnit(cmd, keyStr, TopHundredProcessUtil.transformCommandToType(cmd),collectMsg);
+					packageKeys2Deal(keyUnit);
+				}
 			}
 		});
 	}
-    
+	
+	private static void packageKeys2Deal(KeyUnit keyUnit) {
+		synchronized (keyList) {
+			keyList.add(keyUnit);
+			if(LIMIT_HANDLE_KEY == keyList.size()) {
+				final List<KeyUnit> keyListCopy = Collections.synchronizedList(new ArrayList<KeyUnit>(keyList));
+				keyList.clear();
+				NetSystem.getInstance().getBusinessExecutor().execute(new CalculatorTopHundredThread(keyListCopy));
+			}
+		}
+	}
+	
+	public static class CalculatorTopHundredThread implements Runnable{
+		List<KeyUnit> keyUnits;
+		
+		public CalculatorTopHundredThread(List<KeyUnit> keyUnits) {
+			this.keyUnits = keyUnits;
+		}
+
+		@Override
+		public void run() {
+			handlKeysTopHundred();
+		}
+		
+		private void handlKeysTopHundred() {
+			for(KeyUnit keyUnit : keyUnits) {
+				synchronized (topHundredSet) {
+					final KeyUnit keyUnitCopy = keyUnit;
+					final String key = keyUnitCopy.getKey();
+					final KeyType type = keyUnitCopy.getType();
+					if(topHundredSet.contains(key)) {
+						if(TopHundredProcessUtil.isAddCommand(keyUnit.getCmd())) {
+							KeyUnit keyUnit2 = topHundredSet.find(key);
+							if(keyUnit2 != null) {
+								keyUnit2.getLength().incrementAndGet();
+								return;
+							}
+						}
+					}
+					//启动线程处理单个Key
+					NetSystem.getInstance().getBusinessExecutor().submit(new Runnable() {
+						public void run() {
+							PhysicalNode physicalNode = keyUnitCopy.getCollectMsg().getPhysicalNode();
+							ByteBuffer buffer = TopHundredProcessUtil.getRequestByteBuffer(key,type);
+							//埋点
+							RedisFrontConnection frontCon = new RedisFrontConnection(null);
+							frontCon.getSession().setRequestCmd(keyUnitCopy.getCmd());
+							frontCon.getSession().setRequestKey(key.getBytes());
+							try {
+								new DefaultCommandHandler(frontCon).writeToCustomerBackend(physicalNode, buffer, new TopHundredCallback());
+							} catch (IOException e) {
+								return;
+							}
+						}
+					});
+				}
+			}
+		}
+	
+	}
+	
     private static AccessStatInfo getAccessStatInfo(String key, long currentTime) {
         AccessStatInfo item = accessStats.get(key);
         if (item == null) {
@@ -244,6 +328,10 @@ public class StatUtil {
     		count.incrementAndGet();
     	}
     	
+    }
+    
+    public static TopHundredSet getTopHundredSet() {
+    	return topHundredSet;
     }
     
     public static ConcurrentHashMap<String, AccessStatInfoResult> getTotalAccessStatInfo() {

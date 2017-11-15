@@ -24,11 +24,13 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.engine.manage.stat.KeyUnit;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
 import com.feeyo.redis.engine.manage.stat.StatUtil.BigKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil.Command;
 import com.feeyo.redis.engine.manage.stat.StatUtil.UserNetIo;
+import com.feeyo.redis.engine.manage.stat.TopHundredSet;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -94,6 +96,7 @@ public class Manage {
 	 * 
 	 *  SHOW USER
 	 *  SHOW USER_NET_IO 
+	 *  SHOW TOP_HUNDRED
 	 *  SHOW CPU
 	 *  SHOW MEM
 	 *  
@@ -769,6 +772,26 @@ public class Manage {
 						StringBuffer sBuffer = new StringBuffer();
 						sBuffer.append(entry.getKey()).append(": ").append(entry.getValue().get());
 						lines.add(sBuffer.toString());
+					}
+					return encode(lines);
+				} else  if(arg2.equalsIgnoreCase("TOP_HUNDRED")) {
+					TopHundredSet topHundredSet = StatUtil.getTopHundredSet();
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("key").append(",  ");
+					titleLine.append("type").append(",  ");
+					titleLine.append("length").append(",  ");
+					titleLine.append("count_1k").append(",  ");
+					titleLine.append("count_10k").append(",  ");
+					lines.add(titleLine.toString());
+					for (KeyUnit keyUnit : topHundredSet.getKeyUnits()) { 
+						StringBuffer line1 = new StringBuffer();
+						line1.append(keyUnit.getKey()).append(", ");
+						line1.append(keyUnit.getType()).append(", ");
+						line1.append(keyUnit.getLength()).append(", ");
+						line1.append(keyUnit.getCount_1k()).append(", ");
+						line1.append(keyUnit.getCount_10k()).append(", ");
+						lines.add(line1.toString());
 					}
 					return encode(lines);
 				}
