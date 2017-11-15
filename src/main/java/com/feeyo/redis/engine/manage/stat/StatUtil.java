@@ -30,7 +30,6 @@ public class StatUtil {
 	
 	public static final String STAT_KEY = "RedisProxyStat";
 	private final static String PIPELINE_CMD = "pipeline";
-	private final static long DAY_MILLIS = 24*60*60*1000;
 	
 	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	
@@ -40,52 +39,24 @@ public class StatUtil {
 	// COMMAND、KEY
 	private static ConcurrentHashMap<String, Command> commandStats = new ConcurrentHashMap<String, Command>();
 	private static ConcurrentHashMap<String, BigKey> bigkeyStats = new ConcurrentHashMap<String, BigKey>();
+	private static ConcurrentHashMap<String, UserNetIo> userNetIoStats = new ConcurrentHashMap<String, UserNetIo>();
 	private static ConcurrentHashMap<String, AtomicLong> procTimeMillsDistribution = new ConcurrentHashMap<String, AtomicLong>();
 	
 	// ACCESS
 	private static ConcurrentHashMap<String, AccessStatInfo> accessStats = new ConcurrentHashMap<>();
 	private static ConcurrentHashMap<String, AccessStatInfoResult> totalResults = new ConcurrentHashMap<>();
 	
-	private static ConcurrentHashMap<String, AccessDayStatInfo> accessDayStats = new ConcurrentHashMap<>();
-	private static ConcurrentHashMap<String, AccessStatInfoResult> totalDayResults = new ConcurrentHashMap<>();
-	
-	
 	public static ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 	public static ScheduledFuture<?> scheduledFuture;
 	
 	public static long zeroTimeMillis = 0;
-	public static long preZoreTimeMillis = 0; //当天零点零分
 	
 	static {
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {		
-				//记录用户每天的流量
-		        long currentTimeMillis = System.currentTimeMillis();
-		        if( 0 == preZoreTimeMillis || currentTimeMillis - preZoreTimeMillis > DAY_MILLIS) {
-		        	Calendar cal = Calendar.getInstance();
-			        cal.set(Calendar.HOUR_OF_DAY, 0);
-					cal.set(Calendar.MINUTE, 0);
-					cal.set(Calendar.SECOND, 0); 
-					cal.set(Calendar.MILLISECOND, 0); 	
-					preZoreTimeMillis = cal.getTimeInMillis();
-		        }
-				long timeMillis = (currentTimeMillis -preZoreTimeMillis)/1000;
-				int hour = (int)(timeMillis/3600%24);
-				int minute = (int)(timeMillis%3600/60);
-				
-				for(Map.Entry<String, AccessDayStatInfo> entry : accessDayStats.entrySet()) {
-		        	AccessDayStatInfo info = entry.getValue();
-		        	if(minute != info.getCurrentHour().getMinute().get()) {
-		        		info.getCurrentHour().addMinuteStatInfo(entry.getKey(),currentTimeMillis,minute);
-		        		info.addHoursStatInfo(entry.getKey(),currentTimeMillis,hour);
-			        	AccessStatInfoResult result = info.calculate(currentTimeMillis);
-						totalDayResults.put(result.key, result);
-		        	}
-		        }
-				
 				// 定时计算
-				currentTimeMillis = System.currentTimeMillis();
+				long currentTimeMillis = System.currentTimeMillis();
 		        for (Map.Entry<String, AccessStatInfo> entry : accessStats.entrySet()) {     
 					AccessStatInfo info = entry.getValue();
 					AccessStatInfoResult result = info.calculate(currentTimeMillis, STATISTIC_PEROID);
@@ -116,10 +87,10 @@ public class StatUtil {
 						
 						LOGGER.info("Through cmd count:" + sum);
 						
-						totalDayResults.clear();
 						commandStats.clear();
 						bigkeyStats.clear();
 						procTimeMillsDistribution.clear();
+						userNetIoStats.clear();
 						//setkeyStats.clear();
 					}
 					
@@ -181,6 +152,15 @@ public class StatUtil {
 					commandStats.put(cmd, command);	
 				}			
 		        
+				UserNetIo userNetIo = userNetIoStats.get(password);
+				if ( userNetIo == null ) {
+					userNetIo = new UserNetIo();
+					userNetIo.user = password;
+					userNetIoStats.put(password, userNetIo);
+				}
+				userNetIo.netIn.addAndGet(requestSize);
+				userNetIo.netOut.addAndGet(responseSize);
+				
 				
 				long currentTimeMillis = TimeUtil.currentTimeMillis();
 				
@@ -193,10 +173,6 @@ public class StatUtil {
 		            // all
 		            AccessStatInfo stat2 = getAccessStatInfo(STAT_KEY, currentTimeMillis);
 		            stat2.collect(currentTimeMillis, procTimeMills, requestSize, responseSize);
-		            
-		            //user day net_io
-		            AccessDayStatInfo stat3 = getAccessDayStatInfo(password, currentTimeMillis);
-		            stat3.collect(currentTimeMillis, procTimeMills, requestSize, responseSize);
 		            
 		        } catch (Exception e) {
 		        }
@@ -247,15 +223,6 @@ public class StatUtil {
         return item;
     }
     
-    private static AccessDayStatInfo getAccessDayStatInfo(String key, long currentTime) {
-        AccessDayStatInfo item = accessDayStats.get(key);
-        if (item == null) {
-        	accessDayStats.putIfAbsent(key, new AccessDayStatInfo(key, currentTime));
-            item = accessDayStats.get(key);
-        }
-        return item;
-    }
-    
     private static void collectProcTimeMillsDistribution(int procTimeMills) {
     	String key = null;
     	if ( procTimeMills < 5 ) {
@@ -279,10 +246,6 @@ public class StatUtil {
     	
     }
     
-    public static ConcurrentHashMap<String, AccessStatInfoResult> getTotalDayAccessStatInfo() {
-		return totalDayResults;
-	}
-    
     public static ConcurrentHashMap<String, AccessStatInfoResult> getTotalAccessStatInfo() {
         return totalResults;
     }
@@ -299,6 +262,161 @@ public class StatUtil {
     	return commandStats.entrySet();
     }
     
+    public static Set<Entry<String, UserNetIo>> getUserNetIoStats() {
+    	return userNetIoStats.entrySet();
+    }
+    
+	public static class AccessStatInfo  {
+		
+		private String key;
+	    private int currentIndex;
+	    private AtomicInteger[] procTimes = null;
+	    private AtomicInteger[] totalCounter = null;
+	    private AtomicInteger[] slowCounter = null;
+	    private AtomicLong[] netInBytes = null;
+	    private AtomicLong[] netOutBytes = null;
+	    
+	    private int length;
+	    
+	    public AccessStatInfo(String key, long currentTimeMillis) {
+	        this(key, currentTimeMillis, STATISTIC_PEROID * 2);
+	    }
+	    
+	    public AccessStatInfo(String key, long currentTimeMillis, int length) {
+	    	this.key = key;
+	        this.procTimes = initAtomicIntegerArr(length);
+	        this.totalCounter = initAtomicIntegerArr(length);
+	        this.slowCounter = initAtomicIntegerArr(length);
+	        this.netInBytes = initAtomicLongArr(length);
+	        this.netOutBytes = initAtomicLongArr(length);        
+	        this.length = length;
+	        this.currentIndex = getIndex(currentTimeMillis, length);
+	    }
+	    
+	    private AtomicInteger[] initAtomicIntegerArr(int size) {
+	        AtomicInteger[] arrs = new AtomicInteger[size];
+	        for (int i = 0; i < arrs.length; i++) {
+	            arrs[i] = new AtomicInteger(0);
+	        }
+	        return arrs;
+	    }
+	    
+	    private AtomicLong[] initAtomicLongArr(int size) {
+	    	AtomicLong[] arrs = new AtomicLong[size];
+	        for (int i = 0; i < arrs.length; i++) {
+	            arrs[i] = new AtomicLong(0);
+	        }
+	        return arrs;
+	    }
+	    
+	    private int getIndex(long currentTimeMillis, int periodSecond) {
+	    	int index = (int) ((currentTimeMillis / 1000) % periodSecond);
+	        return index;
+	    }
+	    
+	    /**
+	     * 收集
+	     * @param currentTimeMillis
+	     * @param procTimeMills
+	     */
+	    public void collect(long currentTimeMillis, long procTimeMills, int requestSize, int responseSize) {
+	    	
+	        int tempIndex = getIndex(currentTimeMillis, length);
+	        if (currentIndex != tempIndex) {
+	            synchronized (this) {
+	                // 这一秒的第一条统计，把对应的存储位的数据置0
+	                if (currentIndex != tempIndex) {
+	                    reset(tempIndex);
+	                    currentIndex = tempIndex;
+	                }
+	            }
+	        }
+	        
+	        procTimes[currentIndex].addAndGet((int) procTimeMills);
+	        totalCounter[currentIndex].incrementAndGet();
+	        netInBytes[currentIndex].addAndGet( requestSize );
+	        netOutBytes[currentIndex].addAndGet( responseSize );
+	        
+	        if (procTimeMills >= SLOW_COST) {
+	            slowCounter[currentIndex].incrementAndGet();
+	        }	        
+	    }
+	    
+		/**
+		 * 计算结果
+		 * @param currentTimeMillis
+		 * @param peroidSecond
+		 */
+		public AccessStatInfoResult calculate(long currentTimeMillis, int peroidSecond) {
+
+			AccessStatInfoResult result = new AccessStatInfoResult();
+			result.key = this.key;
+			result.created = currentTimeMillis;
+
+			long currentTimeSecond = currentTimeMillis / 1000;
+			currentTimeSecond--; // 当前这秒还没完全结束，因此数据不全，统计从上一秒开始，往前推移peroidSecond
+
+			int startIndex = getIndex(currentTimeSecond * 1000, length);
+			for (int i = 0; i < peroidSecond; i++) {
+				int currentIndex = (startIndex - i + length) % length;
+				result.totalCount += totalCounter[currentIndex].get();
+				result.slowCount += slowCounter[currentIndex].get();
+				result.procTime += procTimes[currentIndex].get();
+
+				if (totalCounter[currentIndex].get() > result.maxCount) {
+					result.maxCount = totalCounter[currentIndex].get();
+				} else if (totalCounter[currentIndex].get() < result.minCount || result.minCount == -1) {
+					result.minCount = totalCounter[currentIndex].get();
+				}
+				
+				// 计算 NetIN/NetOut 流量
+				result.netInBytes[0] += netInBytes[currentIndex].get();
+				result.netOutBytes[0] += netOutBytes[currentIndex].get();
+				
+				//max min net/in bytes
+				if (netInBytes[currentIndex].get() > result.netInBytes[1]) {
+					result.netInBytes[1] = netInBytes[currentIndex].get();
+				} else if (netInBytes[currentIndex].get() < result.netInBytes[2] || result.netInBytes[2] == -1) {
+					result.netInBytes[2] = netInBytes[currentIndex].get();
+				}
+				
+				// max min net/out bytes
+				if (netOutBytes[currentIndex].get() > result.netOutBytes[1]) {
+					result.netOutBytes[1] = netOutBytes[currentIndex].get();
+				} else if (netOutBytes[currentIndex].get() < result.netOutBytes[2] || result.netOutBytes[2] == -1) {
+					result.netOutBytes[2] = netOutBytes[currentIndex].get();
+				}
+				
+			}			
+			result.avgCount = ( result.totalCount / peroidSecond);
+			
+			// avg net in/out bytes
+			result.netInBytes[3] = ( result.netInBytes[0] / peroidSecond );
+			result.netOutBytes[3] =  ( result.netOutBytes[0] / peroidSecond );
+
+			return result;
+		}
+
+		private void clear(long currentTimeMillis, int peroidSecond) {
+			long currentTimeSecond = currentTimeMillis / 1000;
+			currentTimeSecond--; // 当前这秒还没完全结束，因此数据不全，统计从上一秒开始，往前推移peroidSecond
+
+			int startIndex = getIndex(currentTimeSecond * 1000, length);
+			for (int i = 0; i < peroidSecond; i++) {
+				int currentIndex = (startIndex - i + length) % length;
+				reset(currentIndex);
+			}
+		}
+
+		private void reset(int index) {
+			procTimes[index].set(0);
+			totalCounter[index].set(0);
+			slowCounter[index].set(0);
+			netInBytes[index].set(0);
+			netOutBytes[index].set(0);
+		}    
+	}
+	
 	public static class AccessStatInfoResult {
 		public String key;
 		public int  totalCount  = 0;
@@ -335,6 +453,12 @@ public class StatUtil {
 		public void addChild(Command command) {
 			childs.put(command.cmd, command);
 		}
+	}
+	
+	public static class UserNetIo {
+		public String user;
+		public AtomicLong netIn = new AtomicLong(0);
+		public AtomicLong netOut = new AtomicLong(0);
 	}
 	
 }
