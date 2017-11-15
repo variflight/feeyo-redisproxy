@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
 import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.engine.manage.stat.TopHundredCollectMsg;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -123,10 +122,8 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				
 				// 后段链接释放
 				backendCon.release();	
-				boolean isWrongType = new String(byteBuff).contains("WRONGTYPE");
-				TopHundredCollectMsg collectMsg = new TopHundredCollectMsg(isWrongType, backendCon.getPhysicalNode());
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false, collectMsg);
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
 				
 			} catch(IOException e2) {
 				

@@ -107,7 +107,7 @@ public class NetworkUtil {
 				ip = ShellUtils.execCommand("bash", "-c", "IF=`route -n | grep '^0.0.0.0' | awk 'NR==1 {print $8}'` && ifconfig $IF | grep -P \"\\d+(\\.\\d+){3}\" -o | head -n1 | tr -d '\\n'" );
 			}
 
-			if (ip.equals(""))
+			if (ip == null || ip.equals(""))
 				return null;
 		} catch (IOException e) {
 			LOGGER.error("Failed to obtain default route ip", e);
