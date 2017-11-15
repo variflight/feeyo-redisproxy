@@ -11,7 +11,7 @@ import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RequestIndexCombination;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResult.PIPELINE_COMMAND_TYPE;
+import com.feeyo.redis.net.front.route.RouteResult.PipelineCommandType;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 
 /**
@@ -19,9 +19,9 @@ import com.feeyo.redis.net.front.route.RouteResultNode;
  *
  * @author xuwenfeng
  */
-public class PipelineMGetSetRoutStrategy extends MGetSetRoutStrategy {
+public class MGetSetRoutStrategyV2 extends AbstractRouteStrategy {
 	
-	private void rewrite(RedisRequest firstRequest, RedisRequestPolicy firstRequestPolicy, 
+	private RedisRequestType rewrite(RedisRequest firstRequest, RedisRequestPolicy firstRequestPolicy, 
 			List<RedisRequest> newRequests, List<RedisRequestPolicy> newRequestPolicys, List<RequestIndexCombination> requestIndexCombinations) throws InvalidRequestExistsException {
 		
 		byte[][] args = firstRequest.getArgs();
@@ -39,9 +39,9 @@ public class PipelineMGetSetRoutStrategy extends MGetSetRoutStrategy {
                 newRequestPolicys.add( firstRequestPolicy );
                 indexs[j-1] = newRequests.size()-1;
             }
-			RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PIPELINE_COMMAND_TYPE.MGET_OP_COMMAND, indexs);
+			RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PipelineCommandType.MGET_OP_COMMAND, indexs);
 			requestIndexCombinations.add(requestIndexCombination);
-            
+            return RedisRequestType.MGET;
         } else {
         	
             if (args.length == 1 || (args.length & 0x01) == 0) {
@@ -55,8 +55,9 @@ public class PipelineMGetSetRoutStrategy extends MGetSetRoutStrategy {
                 newRequestPolicys.add( firstRequestPolicy );
                 indexs[(j-1)/2] = newRequests.size()-1;
             }
-			RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PIPELINE_COMMAND_TYPE.MSET_OP_COMMAND, indexs);
+			RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PipelineCommandType.MSET_OP_COMMAND, indexs);
 			requestIndexCombinations.add(requestIndexCombination);
+			return RedisRequestType.MSET;
         }
 	}
    
@@ -65,21 +66,23 @@ public class PipelineMGetSetRoutStrategy extends MGetSetRoutStrategy {
     		List<Integer> autoResponseIndexs) throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
 		List<RequestIndexCombination> requestIndexCombinations = new ArrayList<RequestIndexCombination>();
 		ArrayList<RedisRequest> newRequests = new ArrayList<RedisRequest>(); 
-		ArrayList<RedisRequestPolicy> newRequestPolicys = new ArrayList<RedisRequestPolicy>(); 
+		ArrayList<RedisRequestPolicy> newRequestPolicys = new ArrayList<RedisRequestPolicy>();
+		RedisRequestType requestType = null;
 		for(int i = 0; i<requests.size(); i++) {
 			 RedisRequest request = requests.get(i);
 			 RedisRequestPolicy requestPolicy = requestPolicys.get(i);
 			 if(CommandParse.MGETSET_CMD == requestPolicy.getLevel()) {
-				 rewrite( request, requestPolicy, newRequests, newRequestPolicys,requestIndexCombinations);
+				 requestType = rewrite( request, requestPolicy, newRequests, newRequestPolicys,requestIndexCombinations);
 			 }else {
 				 newRequests.add(request);
 				 newRequestPolicys.add(requestPolicy);
 				 int[] indexs = {newRequests.size()-1};
-				 RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PIPELINE_COMMAND_TYPE.DEFAULT_OP_COMMAND, indexs);
+				 RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PipelineCommandType.DEFAULT_OP_COMMAND, indexs);
 				 requestIndexCombinations.add(requestIndexCombination);
 			 }
 		}
 		List<RouteResultNode> nodes = doSharding(poolId, newRequests, newRequestPolicys);
-		return new RouteResult(RedisRequestType.PIPELINE, newRequests, newRequestPolicys, nodes, new ArrayList<Integer>(),requestIndexCombinations);
+		requestType = requests.size() > 1 ? RedisRequestType.PIPELINE : requestType;
+		return new RouteResult(requestType, newRequests, newRequestPolicys, nodes, autoResponseIndexs,requestIndexCombinations);
     }
 }
