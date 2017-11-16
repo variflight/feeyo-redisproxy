@@ -28,13 +28,9 @@ public class MailUtil {
 	
 	static {
 		 props = new Properties();
-		 props.setProperty("mail.transport.protocol", "smtp");
-		 props.setProperty("mail.smtp.host", "smtp.exmail.qq.com");
-		 props.setProperty("mail.smtp.port", "25");
-		 props.setProperty("mail.smtp.auth", "true");
 		 
-		 userName =  "monitor@feeyo.com";
-		 password = "CTv-LIvhV%1";
+		 userName =  "";
+		 password = "";
 		 
 		 try {
 			fromAddr = new InternetAddress( userName );
