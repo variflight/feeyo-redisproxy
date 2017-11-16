@@ -30,8 +30,8 @@ public class RedisProxyMailService {
 	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	
 	//收件人
-	private static final String[] addrs = new String[] { "yangtao@variflight.com",  "wangyamin@variflight.com", "zhuaming@variflight.com","xuwenfeng@variflight.com" };
-	private static final String[] fileNames = new String[] {sdf.format(new Date())+"_big_key.txt", sdf.format(new Date())+"_top_hundred.txt"};
+	private static final String[] addrs = new String[] {};
+	private static final String[] fileNames = new String[] {"big_key.txt", "top_hundred.txt"};
 	private static final String filePath = System.getProperty("FEEYO_HOME")+"\\store\\";
 	
 	public void startUp() {
@@ -46,7 +46,7 @@ public class RedisProxyMailService {
 					cal.set(Calendar.SECOND, 59); 
 					cal.set(Calendar.MILLISECOND, 59); 	
 					
-					if(twentyThreeMillis > 0) {
+					if(System.currentTimeMillis() - twentyThreeMillis <= 300 ) {
 						
 						ConcurrentHashMap<String, BigKey> bigkeyStats = StatUtil.getBigKeyStats();
 						StringBuffer tableBuffer = new StringBuffer();
@@ -141,7 +141,7 @@ public class RedisProxyMailService {
 	private String[] transFilePathName(String[] filenames) {
 		String[] attachementNames = new String[filenames.length];
 		for(int index = 0 ;index< filenames.length; index++) {
-			attachementNames[index] = filePath + filenames[index];
+			attachementNames[index] = filePath + sdf.format(new Date())+"_"+filenames[index];
 		}
 		return attachementNames;
 	}
