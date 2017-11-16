@@ -59,7 +59,7 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 		}
 		
 		// 埋点
-		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
+		frontCon.getSession().setRequestTimeMills(System.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( rrs.getRequestType() == RedisRequestType.MSET ? MSET_CMD : MGET_CMD );
 		frontCon.getSession().setRequestKey( rrs.getRequestType() == RedisRequestType.MSET ? MSET_CMD.getBytes() : MGET_CMD.getBytes() );
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
@@ -88,7 +88,7 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
         				byte[] key = frontCon.getSession().getRequestKey();
                         int requestSize = frontCon.getSession().getRequestSize();
                         long requestTimeMills = frontCon.getSession().getRequestTimeMills();
-                        long responseTimeMills = TimeUtil.currentTimeMillis();
+                        long responseTimeMills = System.currentTimeMillis();
 
                         int responseSize = 0;
                         for (DataOffset offset : offsets) {

@@ -28,7 +28,7 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		byte[] requestKey = request.getNumArgs() > 1 ? request.getArgs()[1] : null;
 		
 		// 埋点
-		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
+		frontCon.getSession().setRequestTimeMills(System.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( cmd );
 		frontCon.getSession().setRequestKey(requestKey);
 		frontCon.getSession().setRequestSize(request.getSize());
