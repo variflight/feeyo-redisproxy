@@ -56,7 +56,7 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 		}
 		
 		// 埋点
-		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
+		frontCon.getSession().setRequestTimeMills(System.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( MULTI_DEL_CMD );
 		frontCon.getSession().setRequestKey( MULTI_DEL_KEY );
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
@@ -124,7 +124,7 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 						byte[] key = frontCon.getSession().getRequestKey();
 						int requestSize = frontCon.getSession().getRequestSize();
 						long requestTimeMills = frontCon.getSession().getRequestTimeMills();
-						long responseTimeMills = TimeUtil.currentTimeMillis();
+						long responseTimeMills = System.currentTimeMillis();
 						
 						int okCount = 0;
 						

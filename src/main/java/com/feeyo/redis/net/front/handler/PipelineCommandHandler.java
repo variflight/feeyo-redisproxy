@@ -42,7 +42,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		}
 		
 		// 埋点
-		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
+		frontCon.getSession().setRequestTimeMills(System.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( PIPELINE_CMD );
 		frontCon.getSession().setRequestKey( PIPELINE_CMD.getBytes() );
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
@@ -76,7 +76,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						String password = frontCon.getPassword();
 						int requestSize = frontCon.getSession().getRequestSize();
 						long requestTimeMills = frontCon.getSession().getRequestTimeMills();
-						long responseTimeMills = TimeUtil.currentTimeMillis();
+						long responseTimeMills = System.currentTimeMillis();
 						int responseSize = 0;
 
 						for (DataOffset offset : offsets) {
