@@ -109,7 +109,7 @@ public class CollectionKeysHandler {
 			sb.append(ZCARD_COMMAND);
 			session.setRequestCmd(ZCARD);
 		}
-		sb.append("$").append(key.length()).append("\r\n").append(key).append("\r\n");
+		sb.append("$").append(key.getBytes().length).append("\r\n").append(key).append("\r\n");
 		
 		return sb.toString().getBytes();
 	}
