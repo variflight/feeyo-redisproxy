@@ -30,7 +30,10 @@ public abstract class AbstractBackendCallback implements BackendCallback {
 	
 	// 获取前端连接
 	protected RedisFrontConnection getFrontCon(RedisBackendConnection backendCon) {
-		return (RedisFrontConnection) backendCon.getAttachement();
+		if (backendCon.getAttachement() instanceof RedisFrontConnection)
+			return (RedisFrontConnection) backendCon.getAttachement();
+		else 
+			return null;
 	}
 
 	// 后端连接异常 & 错误
@@ -52,7 +55,8 @@ public abstract class AbstractBackendCallback implements BackendCallback {
 			LOGGER.error("exec pending task err:" + this, e);
 			
 			RedisFrontConnection frontCon = getFrontCon(backendCon);
-			frontCon.close( e.toString() );
+			if (frontCon != null)
+				frontCon.close( e.toString() );
 		}
 	}
 
