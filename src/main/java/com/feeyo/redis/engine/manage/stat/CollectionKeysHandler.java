@@ -60,13 +60,14 @@ public class CollectionKeysHandler {
 					// 根据 slot 获取 redis物理节点
 					physicalNode = clusterPool.getPhysicalNodeBySlot(slot);
 				}
+				RedisFrontConnection frontCon = new RedisFrontConnection(null);
+				RedisFrontSession session = frontCon.getSession();
+				final byte[] buffer = getRequestCommand(collectionKey, session);
+				session.setRequestKey( collectionKey.key.getBytes() );
+				AbstractBackendCallback callback = new CollectionKeyCallback();
+				RedisBackendConnection backendCon = null;
 				try {
-					RedisFrontConnection frontCon = new RedisFrontConnection(null);
-					RedisFrontSession session = frontCon.getSession();
-					final byte[] buffer = getRequestCommand(collectionKey, session);
-					session.setRequestKey( collectionKey.key.getBytes() );
-					AbstractBackendCallback callback = new CollectionKeyCallback();
-					RedisBackendConnection backendCon = physicalNode.getConnection(callback, session);
+					backendCon = physicalNode.getConnection(callback, frontCon);
 					if ( backendCon == null ) {
 						// 连接建立成功后需要处理的任务
 						TodoTask task = new TodoTask() {				
@@ -77,11 +78,13 @@ public class CollectionKeysHandler {
 						};
 						callback.addTodoTask(task);
 						// 创建新连接
-						backendCon = physicalNode.createNewConnection(callback, session);
+						backendCon = physicalNode.createNewConnection(callback, frontCon);
 					} else {
 						backendCon.write(buffer);
 					}
 				} catch (Exception e) {
+					if (backendCon != null)
+						backendCon.close(e.getMessage());
 					LOGGER.error("", e);
 				}
 			}
