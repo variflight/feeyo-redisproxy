@@ -194,8 +194,17 @@ public class StatUtil {
 				// 大key
 				if ( key != null && ( requestSize > BIGKEY_SIZE || responseSize > BIGKEY_SIZE ) ) {	
 					
-					if ( bigkeyStats.size() > 300 ) {
-						bigkeyStats.clear();
+					if ( bigkeyStats.size() > 500 ) {
+						for (Entry<String, BigKey> entry : bigkeyStats.entrySet()) {
+							BigKey bigKey = entry.getValue();
+							// TODO 后序优化
+							// 清除： 最近5分钟没有使用过 && 使用总次数小于5 && 小于1M
+							if (TimeUtil.currentTimeMillis() - bigKey.lastUseTime > 5 * 60 * 1000
+									&& bigKey.count.get() < 5 && bigKey.size < 1 * 1024 * 1024) {
+								bigkeyStats.remove(entry.getKey());
+							}
+						}
+						LOGGER.info("bigkey clear. after clear bigkey length is :" + bigkeyStats.size());
 					}
 						
 					String keyStr = new String(key);
@@ -205,6 +214,7 @@ public class StatUtil {
 						bigkey.cmd = cmd;
 						bigkey.key = keyStr;
 						bigkey.size = requestSize > responseSize ? requestSize : responseSize;
+						bigkey.lastUseTime = TimeUtil.currentTimeMillis();
 						
 						bigkeyStats.put(bigkey.key, bigkey);
 						
@@ -216,6 +226,7 @@ public class StatUtil {
 						bigkey.cmd = cmd;
 						bigkey.size = requestSize > responseSize ? requestSize : responseSize;
 						bigkey.count.incrementAndGet();
+						bigkey.lastUseTime = TimeUtil.currentTimeMillis();
 						
 						bigkeyStats.put(bigkey.key, bigkey);
 					}
@@ -233,15 +244,15 @@ public class StatUtil {
 					if (policy.getRw() == CommandParse.WRITE_CMD) {
 						CollectionKey ck = collectionKeyTop100OfLength.get(keyStr);
 						if (ck != null) {
-							if (requestSize >  200) {
+							if (requestSize > 10 * 1024) {
 								ck.count_10k.incrementAndGet();
-							} else if (requestSize > 10) {
+							} else if (requestSize > 1024) {
 								ck.count_1k.incrementAndGet();
 							}
 						}
 					}
 					
-					CollectionKey collectionKey = collectionKeyBuffer.get(key);
+					CollectionKey collectionKey = collectionKeyBuffer.get(keyStr);
 					if (collectionKey == null) {
 						collectionKey = new CollectionKey();
 						collectionKey.key = keyStr;
@@ -517,6 +528,7 @@ public class StatUtil {
 		public String key;
 		public int size;
 		public AtomicInteger count = new AtomicInteger(1);
+		public long lastUseTime;
 	}
 	
 	public static class Command {

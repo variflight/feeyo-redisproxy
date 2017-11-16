@@ -14,6 +14,7 @@ import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
 import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.engine.manage.stat.StatUtil.CollectionKey;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
@@ -29,8 +30,7 @@ public class CollectionKeysHandler {
 	private final static String LLEN_COMMAND = "*2\r\n$4\r\nLLEN\r\n"; 
 	private final static String SCARD_COMMAND = "*2\r\n$5\r\nSCARD\r\n";
 	private final static String ZCARD_COMMAND  = "*2\r\n$5\r\nZCARD\r\n"; 
-	private final static int COLLECTION_KEY_LENGTH_THRESHOLD = 10; 
-	
+	private final static int COLLECTION_KEY_LENGTH_THRESHOLD = 10000;
 	
 	public void Handle(ConcurrentHashMap<String, CollectionKey> collectionKeys) {
 		for (Entry<String, CollectionKey> entry : collectionKeys.entrySet()) {
@@ -54,8 +54,22 @@ public class CollectionKeysHandler {
 					physicalNode = clusterPool.getPhysicalNodeBySlot(slot);
 				}
 				try {
-					RedisBackendConnection backendCon = physicalNode.getConnection(new CollectionKeyCallback(), collectionKey);
-					backendCon.write(buffer);
+					AbstractBackendCallback callback = new CollectionKeyCallback();
+					RedisBackendConnection backendCon = physicalNode.getConnection(callback, collectionKey);
+					if ( backendCon == null ) {
+						// 连接建立成功后需要处理的任务
+						TodoTask task = new TodoTask() {				
+							@Override
+							public void execute(RedisBackendConnection backendCon) throws Exception {	
+								backendCon.write( buffer );
+							}
+						};
+						callback.addTodoTask(task);
+						// 创建新连接
+						backendCon = physicalNode.createNewConnection(callback, collectionKey);
+					} else {
+						backendCon.write(buffer);
+					}
 				} catch (Exception e) {
 					LOGGER.error("", e);
 				}
@@ -83,14 +97,14 @@ public class CollectionKeysHandler {
 	}
 	
 	
-	private class CollectionKeyCallback extends AbstractBackendCallback{
+	private class CollectionKeyCallback extends AbstractBackendCallback {
 		private RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
 		@Override
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 			List<RedisResponseV3> resps = decoder.decode( byteBuff );
 			if (resps!= null && resps.size() == 1) {
 				RedisResponseV3 response = resps.get(0);
-				 if (response.type() == ':') {
+				if (response.type() == ':') {
 					int len = getIntValue((byte[]) response.data());
 					CollectionKey collectionKey = (CollectionKey)backendCon.getAttachement();
 					if (len > COLLECTION_KEY_LENGTH_THRESHOLD) {
@@ -99,7 +113,9 @@ public class CollectionKeysHandler {
 					} else {
 						StatUtil.removeCollectionKeyFromTop100(collectionKey);
 					}
-				 }
+				}
+				// 后段链接释放
+				backendCon.release();	
 			}
 		}
 	}
