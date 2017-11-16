@@ -20,6 +20,8 @@ import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterCRC16Util;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
+import com.feeyo.redis.net.front.RedisFrontConnection;
+import com.feeyo.redis.net.front.RedisFrontSession;
 import com.feeyo.redis.net.front.handler.CommandParse;
 
 public class CollectionKeysHandler {
@@ -30,6 +32,11 @@ public class CollectionKeysHandler {
 	private final static String LLEN_COMMAND = "*2\r\n$4\r\nLLEN\r\n"; 
 	private final static String SCARD_COMMAND = "*2\r\n$5\r\nSCARD\r\n";
 	private final static String ZCARD_COMMAND  = "*2\r\n$5\r\nZCARD\r\n"; 
+	
+	private static final String HLEN = "HLEN";
+	private final static String LLEN = "LLEN"; 
+	private final static String SCARD = "SCARD";
+	private final static String ZCARD = "ZCARD"; 
 	private final static int COLLECTION_KEY_LENGTH_THRESHOLD = 10000;
 	
 	public void Handle(ConcurrentHashMap<String, CollectionKey> collectionKeys) {
@@ -37,7 +44,7 @@ public class CollectionKeysHandler {
 			CollectionKey collectionKey = entry.getValue();
 			String user = collectionKey.user;
 			UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
-			final byte[] buffer = getRequestCommand(collectionKey);
+			
 			if (userCfg != null) {
 				PhysicalNode physicalNode = null;
 				AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get( userCfg.getPoolId() );
@@ -54,8 +61,12 @@ public class CollectionKeysHandler {
 					physicalNode = clusterPool.getPhysicalNodeBySlot(slot);
 				}
 				try {
+					RedisFrontConnection frontCon = new RedisFrontConnection(null);
+					RedisFrontSession session = frontCon.getSession();
+					final byte[] buffer = getRequestCommand(collectionKey, session);
+					session.setRequestKey( collectionKey.key.getBytes() );
 					AbstractBackendCallback callback = new CollectionKeyCallback();
-					RedisBackendConnection backendCon = physicalNode.getConnection(callback, collectionKey);
+					RedisBackendConnection backendCon = physicalNode.getConnection(callback, session);
 					if ( backendCon == null ) {
 						// 连接建立成功后需要处理的任务
 						TodoTask task = new TodoTask() {				
@@ -66,7 +77,7 @@ public class CollectionKeysHandler {
 						};
 						callback.addTodoTask(task);
 						// 创建新连接
-						backendCon = physicalNode.createNewConnection(callback, collectionKey);
+						backendCon = physicalNode.createNewConnection(callback, session);
 					} else {
 						backendCon.write(buffer);
 					}
@@ -78,18 +89,22 @@ public class CollectionKeysHandler {
 		}
 	}
 	
-	private byte[] getRequestCommand(CollectionKey collectionKey) {
+	private byte[] getRequestCommand(CollectionKey collectionKey, RedisFrontSession session) {
 		StringBuffer sb = new StringBuffer();
 		String key  = collectionKey.key;
 		byte type = collectionKey.type;
 		if (type == CommandParse.TYPE_HASH_CMD) {
 			sb.append(HLEN_COMMAND);
+			session.setRequestCmd(HLEN);
 		} else if (type == CommandParse.TYPE_LIST_CMD) {
 			sb.append(LLEN_COMMAND);
+			session.setRequestCmd(LLEN);
 		} else if (type == CommandParse.TYPE_SET_CMD) {
 			sb.append(SCARD_COMMAND);
+			session.setRequestCmd(SCARD);
 		} else if (type == CommandParse.TYPE_SORTEDSET_CMD) {
 			sb.append(ZCARD_COMMAND);
+			session.setRequestCmd(ZCARD);
 		}
 		sb.append("$").append(key.length()).append("\r\n").append(key).append("\r\n");
 		
@@ -102,11 +117,18 @@ public class CollectionKeysHandler {
 		@Override
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 			List<RedisResponseV3> resps = decoder.decode( byteBuff );
+			
 			if (resps!= null && resps.size() == 1) {
 				RedisResponseV3 response = resps.get(0);
 				if (response.type() == ':') {
 					int len = getIntValue((byte[]) response.data());
-					CollectionKey collectionKey = (CollectionKey)backendCon.getAttachement();
+					
+					RedisFrontConnection frontCon = getFrontCon( backendCon );
+					RedisFrontSession session = frontCon.getSession();
+					CollectionKey collectionKey = new CollectionKey();
+					collectionKey.key = new String(session.getRequestKey());
+					collectionKey.type = CommandParse.getPolicy(session.getRequestCmd()).getType();
+					
 					if (len > COLLECTION_KEY_LENGTH_THRESHOLD) {
 						collectionKey.length.set(len);
 						StatUtil.addCollectionKeyToTop100(collectionKey);
