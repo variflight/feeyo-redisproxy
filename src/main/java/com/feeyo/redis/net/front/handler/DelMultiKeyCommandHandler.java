@@ -145,7 +145,7 @@ public class DelMultiKeyCommandHandler extends AbstractPipelineCommandHandler {
 
 						// 释放
 						releaseBackendConnection(backendCon);
-
+						
 						// 数据收集
 						StatUtil.collect(password, cmd, key, requestSize, responseSize,
 								(int) (responseTimeMills - requestTimeMills), false);
