@@ -6,9 +6,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,11 +18,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.mail.internet.AddressException;
+
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.BigKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil.CollectionKey;
 import com.feeyo.redis.net.front.handler.CommandParse;
-import com.feeyo.util.MailUtil;
 
 public class RedisProxyMailService {
 	
@@ -29,16 +32,15 @@ public class RedisProxyMailService {
 	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	
-	//收件人
-	private static final String[] addrs = new String[] {};
 	private static final String[] fileNames = new String[] {"big_key.txt", "top_hundred.txt"};
-	private static final String filePath = System.getProperty("FEEYO_HOME")+"\\store\\";
+	private static final String filePath = System.getProperty("FEEYO_HOME")+File.separator+"store"+File.separator;
 	
 	public void startUp() {
 		
 		scheduler.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
+				
 				if(System.currentTimeMillis() > twentyThreeMillis) {
 					Calendar cal = Calendar.getInstance();
 			        cal.set(Calendar.HOUR_OF_DAY, 22);
@@ -50,56 +52,83 @@ public class RedisProxyMailService {
 						
 						ConcurrentHashMap<String, BigKey> bigkeyStats = StatUtil.getBigKeyStats();
 						StringBuffer tableBuffer = new StringBuffer();
-            			tableBuffer.append("#############   bigkey status   #################\n");
-            			tableBuffer.append("|    cmd    |     key     |    size    |    count    |");
-            			//获取bigkey的数据信息
-            			Collection<Entry<String, BigKey>> entrys = bigkeyStats.entrySet();
-    					for(Entry<String, BigKey> entry : entrys) {
-    						BigKey bigkey = entry.getValue();
-    						tableBuffer.append("\n");
-    						tableBuffer.append("|    ");
-    						tableBuffer.append(bigkey.cmd).append("    |    ");
-    						tableBuffer.append(bigkey.key).append("    |    ");
-    						tableBuffer.append(bigkey.size).append("    |    ");
-    						tableBuffer.append(bigkey.count).append("    |");
-    					}
-    					String[] attachmentsNames = transFilePathName(fileNames);
-    					createFile(attachmentsNames[0],tableBuffer.toString());
-    					tableBuffer.setLength(0);
+						String[] attachmentsNames = new String[fileNames.length];
+						Collection<Entry<String, BigKey>> entrys = bigkeyStats.entrySet();
+						if(!entrys.isEmpty()) {
+	            			tableBuffer.append("#############   bigkey status   #################\n");
+	            			tableBuffer.append("|    cmd    |     key     |    size    |    count    |");
+	            			//获取bigkey的数据信息
+	    					for(Entry<String, BigKey> entry : entrys) {
+	    						BigKey bigkey = entry.getValue();
+	    						tableBuffer.append("\n");
+	    						tableBuffer.append("|    ");
+	    						tableBuffer.append(bigkey.cmd).append("    |    ");
+	    						tableBuffer.append(bigkey.key).append("    |    ");
+	    						tableBuffer.append(bigkey.size).append("    |    ");
+	    						tableBuffer.append(bigkey.count).append("    |");
+	    					}
+	    					attachmentsNames = transFilePathName(attachmentsNames,0);
+	    					createFile(attachmentsNames[0],tableBuffer.toString());
+	    					tableBuffer.setLength(0);
+						}
 						
 						Set<Entry<String, CollectionKey>> collectionKeySet =  StatUtil.getCollectionKeyTop100OfLength();
-            			tableBuffer.append("#############   top  hundred   #################\n");
-            			tableBuffer.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
-						for(Entry<String, CollectionKey> entry : collectionKeySet) {
-							CollectionKey collectionKey = entry.getValue();
-							tableBuffer.append("\n");
-							tableBuffer.append("|    ");
-    						tableBuffer.append(collectionKey.key).append("    |    ");
-    						String type = null;
-    						if (collectionKey.type == CommandParse.TYPE_HASH_CMD) {
-    							type = "hash";
-    						} else if (collectionKey.type == CommandParse.TYPE_LIST_CMD) {
-    							type = "list";
-    						} else if (collectionKey.type == CommandParse.TYPE_SET_CMD) {
-    							type = "set";
-    						} else if (collectionKey.type == CommandParse.TYPE_SORTEDSET_CMD) {
-    							type = "sortedset";
-    						}
-    						tableBuffer.append(type).append("    |    ");
-    						tableBuffer.append(collectionKey.length).append("    |    ");
-    						tableBuffer.append(collectionKey.count_1k).append("    |    ");
-    						tableBuffer.append(collectionKey.count_10k).append("    |    ");
+						if(!collectionKeySet.isEmpty()) {
+	            			tableBuffer.append("#############   top  hundred   #################\n");
+	            			tableBuffer.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
+							for(Entry<String, CollectionKey> entry : collectionKeySet) {
+								CollectionKey collectionKey = entry.getValue();
+								tableBuffer.append("\n");
+								tableBuffer.append("|    ");
+	    						tableBuffer.append(collectionKey.key).append("    |    ");
+	    						String type = null;
+	    						if (collectionKey.type == CommandParse.TYPE_HASH_CMD) {
+	    							type = "hash";
+	    						} else if (collectionKey.type == CommandParse.TYPE_LIST_CMD) {
+	    							type = "list";
+	    						} else if (collectionKey.type == CommandParse.TYPE_SET_CMD) {
+	    							type = "set";
+	    						} else if (collectionKey.type == CommandParse.TYPE_SORTEDSET_CMD) {
+	    							type = "sortedset";
+	    						}
+	    						tableBuffer.append(type).append("    |    ");
+	    						tableBuffer.append(collectionKey.length).append("    |    ");
+	    						tableBuffer.append(collectionKey.count_1k).append("    |    ");
+	    						tableBuffer.append(collectionKey.count_10k).append("    |    ");
+							}
+							attachmentsNames = transFilePathName(attachmentsNames,1);
+							createFile(attachmentsNames[1],tableBuffer.toString());
 						}
-						createFile(attachmentsNames[1],tableBuffer.toString());
-            			MailUtil.send( addrs, " ## REDIS PROXY STATUS ##", "Please check the attachments", attachmentsNames);
-            			clearFiles(attachmentsNames);
+						
+						String[]  names = trimAttachement(attachmentsNames);
+						if(names.length > 0) {
+							MailClient mailClient = null;
+							try {
+								mailClient = new MailClient();
+							}catch (IOException | AddressException e) {
+							}
+							if(null != mailClient) {
+								String[] addrs = mailClient.getProperty().getProperty("mail.to.addrs").split(";");
+								mailClient.send(addrs, " ## REDIS PROXY STATUS ##", "Please check the attachments", names);
+								clearFiles(names);
+							}
+						}
 					}
 					twentyThreeMillis = cal.getTimeInMillis();
 				}
 			}
-		}, 10 * 60,  5 * 60, TimeUnit.SECONDS);
+		}, 10 * 60, 5 * 60, TimeUnit.SECONDS);
 	}
 	
+	private String[] trimAttachement(String[] attachmentsNames) {
+		List<String> list = new ArrayList<String>();
+		for(String attachmentsName : attachmentsNames) {
+			if(null != attachmentsName && !attachmentsName.trim().isEmpty())
+				list.add(attachmentsName);
+		}
+		return list.toArray(new String[0]);
+	}
+
 	private void createFile(String fileName, String content) {
 		FileOutputStream fos = null;
 		OutputStreamWriter out = null;
@@ -138,11 +167,8 @@ public class RedisProxyMailService {
 		}
 	}
 	
-	private String[] transFilePathName(String[] filenames) {
-		String[] attachementNames = new String[filenames.length];
-		for(int index = 0 ;index< filenames.length; index++) {
-			attachementNames[index] = filePath + sdf.format(new Date())+"_"+filenames[index];
-		}
+	private String[] transFilePathName(String[] attachementNames, int index) {
+		attachementNames[index] = filePath + sdf.format(new Date())+"_"+fileNames[index];
 		return attachementNames;
 	}
 	
