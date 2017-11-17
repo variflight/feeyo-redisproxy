@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.feeyo.util.NetworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +13,7 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.loader.zk.ZkClient;
+import com.feeyo.redis.engine.mail.RedisProxyMailService;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.RedisPoolFactory;
@@ -28,6 +28,7 @@ import com.feeyo.redis.nio.buffer.BufferPool;
 import com.feeyo.redis.nio.buffer.bucket.ByteBufferBucketPool;
 import com.feeyo.redis.virtualmemory.VirtualMemoryService;
 import com.feeyo.util.ExecutorUtil;
+import com.feeyo.util.NetworkUtil;
 import com.feeyo.util.keepalived.KeepAlived;
 
 public class RedisEngineCtx {
@@ -160,6 +161,10 @@ public class RedisEngineCtx {
 		// 7, zk startup
 		ZkClient.INSTANCE().init();
 		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
+		
+		// 8、邮件服务
+		RedisProxyMailService mailService = new RedisProxyMailService();
+		mailService.startUp();
 	}
 	
 	public byte[] reloadAll() {

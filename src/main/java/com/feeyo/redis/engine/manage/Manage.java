@@ -27,6 +27,7 @@ import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
 import com.feeyo.redis.engine.manage.stat.StatUtil.BigKey;
+import com.feeyo.redis.engine.manage.stat.StatUtil.CollectionKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil.Command;
 import com.feeyo.redis.engine.manage.stat.StatUtil.UserNetIo;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
@@ -37,6 +38,7 @@ import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.nio.Connection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.buffer.BufferPool;
@@ -94,6 +96,7 @@ public class Manage {
 	 * 
 	 *  SHOW USER
 	 *  SHOW USER_NET_IO 
+	 *  SHOW COLLECTION_BIGKEY
 	 *  SHOW CPU
 	 *  SHOW MEM
 	 *  
@@ -644,9 +647,7 @@ public class Manage {
 					return encode(lines);
 					
 				//	SHOW LOG_ERROR
-				} 
-				
-				else if ( arg2.equalsIgnoreCase("LOG_ERROR") ) {
+				}  else if ( arg2.equalsIgnoreCase("LOG_ERROR") ) {
 					List<String> lines = showLog(request, "error.log");
 					
 					return encode2( lines );
@@ -769,6 +770,36 @@ public class Manage {
 						StringBuffer sBuffer = new StringBuffer();
 						sBuffer.append(entry.getKey()).append(": ").append(entry.getValue().get());
 						lines.add(sBuffer.toString());
+					}
+					return encode(lines);
+				} else  if(arg2.equalsIgnoreCase("COLLECTION_BIGKEY")) {
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("key").append(",  ");
+					titleLine.append("type").append(",  ");
+					titleLine.append("length").append(",  ");
+					titleLine.append("count_1k").append(",  ");
+					titleLine.append("count_10k");
+					lines.add(titleLine.toString());
+					for (Entry<String, CollectionKey> entry : StatUtil.getCollectionKeyTop100OfLength()) { 
+						CollectionKey collectionKey = entry.getValue();
+						StringBuffer line1 = new StringBuffer();
+						line1.append(collectionKey.key).append(", ");
+						String type = null;
+						if (collectionKey.type == CommandParse.TYPE_HASH_CMD) {
+							type = "hash";
+						} else if (collectionKey.type == CommandParse.TYPE_LIST_CMD) {
+							type = "list";
+						} else if (collectionKey.type == CommandParse.TYPE_SET_CMD) {
+							type = "set";
+						} else if (collectionKey.type == CommandParse.TYPE_SORTEDSET_CMD) {
+							type = "sortedset";
+						}
+						line1.append(type).append(", ");
+						line1.append(collectionKey.length.get()).append(", ");
+						line1.append(collectionKey.count_1k.get()).append(", ");
+						line1.append(collectionKey.count_10k.get());
+						lines.add(line1.toString());
 					}
 					return encode(lines);
 				}

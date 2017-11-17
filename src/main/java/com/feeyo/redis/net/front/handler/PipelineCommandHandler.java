@@ -94,7 +94,8 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						// child 收集
 						for (RedisRequest req : rrs.getRequests()) {
 							String childCmd = new String( req.getArgs()[0] );
-							StatUtil.collect(password, childCmd, PIPELINE_CMD.getBytes(), requestSize, responseSize,
+							byte[] requestKey = req.getNumArgs() > 1 ? req.getArgs()[1] : null;
+							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize,
 									(int) (responseTimeMills - requestTimeMills), true);
 						}
 						
