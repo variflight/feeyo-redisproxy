@@ -29,16 +29,16 @@ public class RedisProxyMailService {
 	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	
-	//收件人
-	private static final String[] addrs = new String[] {};
 	private static final String[] fileNames = new String[] {"big_key.txt", "top_hundred.txt"};
-	private static final String filePath = System.getProperty("FEEYO_HOME")+"\\store\\";
+	private static final String filePath = System.getProperty("FEEYO_HOME")+File.separator+"store"+File.separator;
 	
 	public void startUp() {
 		
 		scheduler.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
+				MailProperty mailProperty = MailProperty.updateProperty();
+				
 				if(System.currentTimeMillis() > twentyThreeMillis) {
 					Calendar cal = Calendar.getInstance();
 			        cal.set(Calendar.HOUR_OF_DAY, 22);
@@ -91,7 +91,7 @@ public class RedisProxyMailService {
     						tableBuffer.append(collectionKey.count_10k).append("    |    ");
 						}
 						createFile(attachmentsNames[1],tableBuffer.toString());
-            			MailUtil.send( addrs, " ## REDIS PROXY STATUS ##", "Please check the attachments", attachmentsNames);
+            			MailUtil.send(mailProperty ," ## REDIS PROXY STATUS ##", "Please check the attachments", attachmentsNames);
             			clearFiles(attachmentsNames);
 					}
 					twentyThreeMillis = cal.getTimeInMillis();

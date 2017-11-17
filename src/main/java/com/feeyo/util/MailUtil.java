@@ -1,7 +1,6 @@
 package com.feeyo.util;
 
 import java.util.Date;
-import java.util.Properties;
 
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
@@ -11,51 +10,32 @@ import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
-import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import com.feeyo.redis.engine.mail.MailProperty;
 
 public class MailUtil {
 	
-	private static Properties props = null;
-	
-	private static String userName = "";
-	private static String password = "";
-	
-	private static InternetAddress fromAddr;
-	
-	static {
-		 props = new Properties();
-		 
-		 userName =  "";
-		 password = "";
-		 
-		 try {
-			fromAddr = new InternetAddress( userName );
-		} catch (AddressException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public static boolean send(String[] addrs, String subject, String body,String[] fileNames) {
+	public static boolean send(final MailProperty mailProperty, String subject, String body,String[] fileNames) {
 
-	 	Session session = Session.getDefaultInstance(props, new Authenticator() {
+	 	Session session = Session.getDefaultInstance(mailProperty.getProperty(), new Authenticator() {
             //身份认证
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(userName, password);
+                return new PasswordAuthentication(mailProperty.getUsername(), mailProperty.getPassword());
             }
         });
 	 	
         try {
         	
-        	InternetAddress[] toAddrs = new InternetAddress[ addrs.length ];
-			for(int i =0; i < addrs.length; i++) {
-				toAddrs[i]= new InternetAddress( addrs[i] );
+        	InternetAddress[] toAddrs = new InternetAddress[ mailProperty.getAddrs().length ];
+			for(int i =0; i < mailProperty.getAddrs().length; i++) {
+				toAddrs[i]= new InternetAddress( mailProperty.getAddrs()[i] );
 			}
 			
 			MimeMessage message = new MimeMessage(session);
+			InternetAddress fromAddr = new InternetAddress( mailProperty.getUsername() );
 	        message.setFrom( fromAddr );
 	        message.setRecipients(MimeMessage.RecipientType.TO, toAddrs);
 			
