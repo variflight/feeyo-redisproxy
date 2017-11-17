@@ -1,5 +1,8 @@
-package com.feeyo.util;
+package com.feeyo.redis.engine.mail;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Date;
 import java.util.Properties;
 
@@ -17,34 +20,28 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
-public class MailUtil {
+public class MailClient {
 	
-	private static Properties props = null;
+	private Properties property = null;
+	private String username = null;
+	private String password = null;
+	private InternetAddress fromAddr = null;
 	
-	private static String userName = "";
-	private static String password = "";
-	
-	private static InternetAddress fromAddr;
-	
-	static {
-		 props = new Properties();
-		 
-		 userName =  "";
-		 password = "";
-		 
-		 try {
-			fromAddr = new InternetAddress( userName );
-		} catch (AddressException e) {
-			e.printStackTrace();
-		}
+	public MailClient() throws IOException, AddressException {
+		this.property = new Properties();
+		this.property.load(new FileInputStream(System.getProperty("FEEYO_HOME")+File.separator+"mail.properties"));
+		this.username = property.getProperty("mail.from.username");
+		this.password = property.getProperty("mail.from.password");
+		
+		this.fromAddr = new InternetAddress( this.username );
 	}
 	
-	public static boolean send(String[] addrs, String subject, String body,String[] fileNames) {
+	public boolean send(String[] addrs, String subject, String body,String[] fileNames) {
 
-	 	Session session = Session.getDefaultInstance(props, new Authenticator() {
+	 	Session session = Session.getDefaultInstance(property, new Authenticator() {
             //身份认证
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(userName, password);
+                return new PasswordAuthentication(username, password);
             }
         });
 	 	
@@ -95,5 +92,9 @@ public class MailUtil {
 
         return true;
     }
+	
+	public Properties getProperty(){
+		return property;
+	}
 	 
 }
