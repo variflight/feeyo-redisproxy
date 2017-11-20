@@ -83,7 +83,5 @@ public class BigKey implements StatListener {
 
 	@Override
 	public void onSchedulePeroid(int peroid) {
-		// TODO Auto-generated method stub
-		
 	}
 }

@@ -155,6 +155,5 @@ public class MailNotification implements StatListener {
 
 
 	@Override
-	public void onSchedulePeroid(int peroid) {
-	}
+	public void onSchedulePeroid(int peroid) {}
 }

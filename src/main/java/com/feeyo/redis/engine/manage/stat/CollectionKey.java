@@ -95,7 +95,8 @@ public class CollectionKey implements StatListener {
 							collectionKey.length.set((int) length);
 							addCollectionKeyToTop100(collectionKey);
 						} else {
-							removeCollectionKeyFromTop100(collectionKey);
+
+							collectionKeyTop100OfLength.remove(collectionKey.key);
 						}
 					} catch (JedisDataException e1) {
 					}
@@ -124,10 +125,7 @@ public class CollectionKey implements StatListener {
 			isCollectionKeysProcessing.set(false);
 		}
 	}
-	
-	  public  void removeCollectionKeyFromTop100 (CollectionKey collectionKey) {
-	    	collectionKeyTop100OfLength.remove(collectionKey.key);
-	    }
+
 	    
 	    public  void addCollectionKeyToTop100 (CollectionKey collectionKey) {
 	    	if (collectionKeyTop100OfLength.get(collectionKey.key) != null) {

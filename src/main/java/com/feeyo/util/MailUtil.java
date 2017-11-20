@@ -1,5 +1,6 @@
 package com.feeyo.util;
 
+import java.io.FileInputStream;
 import java.util.Date;
 import java.util.Properties;
 
@@ -11,7 +12,6 @@ import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
-import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
@@ -20,26 +20,34 @@ import javax.mail.internet.MimeMultipart;
 public class MailUtil {
 	
 	private static Properties props = null;
-	
-	private static String userName = "";
-	private static String password = "";
+	private static String userName = null;
+	private static String password = null;
 	
 	private static InternetAddress fromAddr;
 	
-	static {
-		 props = new Properties();
-		 
-		 userName =  "";
-		 password = "";
-		 
-		 try {
-			fromAddr = new InternetAddress( userName );
-		} catch (AddressException e) {
-			e.printStackTrace();
-		}
-	}
+	private static Object _lock = new Object();
+	
 	
 	public static boolean send(String[] addrs, String subject, String body,String[] fileNames) {
+		
+		//
+		if (props == null) {
+			synchronized ( _lock ) {	
+				if ( props == null ) {
+					try {
+						props = new Properties();
+						props.load(new FileInputStream(System.getProperty("FEEYO_HOME") + "/conf/mail.properties"));
+						
+						userName = props.getProperty("mail.from.userName");
+						password = props.getProperty("mail.from.password");
+						fromAddr = new InternetAddress(userName);
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+				}
+				
+			}
+		}
 
 	 	Session session = Session.getDefaultInstance(props, new Authenticator() {
             //身份认证
