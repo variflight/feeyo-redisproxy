@@ -1,15 +1,16 @@
 package com.feeyo.redis.engine.manage.stat;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -32,22 +33,22 @@ public class StatUtil {
 	private static Logger LOGGER = LoggerFactory.getLogger( StatUtil.class );
 	
 	public static final String STAT_KEY = "RedisProxyStat";
+	
 	private final static String PIPELINE_CMD = "pipeline";
-	private final static int MAX_LIMIT_COLLECTION_KEY_BUFFER_SIZE = 1000;
-	private final static int MIN_LIMIT_COLLECTION_KEY_BUFFER_SIZE = 500;
+
 	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	
 	public static final int SLOW_COST = 50; 			  			// 50秒	
 	public static final int STATISTIC_PEROID = 30; 		  			// 30秒
+	
+
 
 	// COMMAND、KEY
 	private static ConcurrentHashMap<String, Command> commandStats = new ConcurrentHashMap<String, Command>();
-	private static ConcurrentHashMap<String, BigKey> bigkeyStats = new ConcurrentHashMap<String, BigKey>();
+	
 	private static ConcurrentHashMap<String, UserNetIo> userNetIoStats = new ConcurrentHashMap<String, UserNetIo>();
 	private static ConcurrentHashMap<String, AtomicLong> procTimeMillsDistribution = new ConcurrentHashMap<String, AtomicLong>();
-	// 缓存最近出现过的集合类型key
-	private static ConcurrentHashMap<String, CollectionKey> collectionKeyBuffer = new ConcurrentHashMap<String, CollectionKey>();
-	private static ConcurrentHashMap<String, CollectionKey> collectionKeyTop100OfLength = new ConcurrentHashMap<String, CollectionKey>();
+	
 	
 	// ACCESS
 	private static ConcurrentHashMap<String, AccessStatInfo> accessStats = new ConcurrentHashMap<>();
@@ -57,11 +58,20 @@ public class StatUtil {
 	public static ScheduledFuture<?> scheduledFuture;
 	
 	public static long zeroTimeMillis = 0;
-	public static long lastProcessCollectionKeysTimeMillis = TimeUtil.currentTimeMillis();
-	private static CollectionKeysHandler collectionKeysHandler = new CollectionKeysHandler();
-	private static AtomicBoolean isCollectionKeysProcessing = new AtomicBoolean(false);
+	
+	
+	private static List<StatListener> listeners = new CopyOnWriteArrayList<>();
+	
+	private static BigKey bigkey = new BigKey();
+	private static CollectionKey collectionKey = new CollectionKey();
+	private static MailNotification mailNotification = new MailNotification();
 	
 	static {
+		
+		addListener( mailNotification );
+		addListener( bigkey );
+		addListener( collectionKey );
+		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {		
@@ -98,21 +108,49 @@ public class StatUtil {
 						LOGGER.info("Through cmd count:" + sum);
 						
 						commandStats.clear();
-						bigkeyStats.clear();
+						
 						procTimeMillsDistribution.clear();
 						userNetIoStats.clear();
-						//setkeyStats.clear();
+						
+						//
+						for(StatListener listener: listeners) {
+							try {
+								listener.onScheduleToZore();
+							} catch(Exception e) {
+								LOGGER.error("error:",e);
+							}
+						}
+						
 					}
 					
 					zeroTimeMillis = cal.getTimeInMillis();
-		        }		
-		        
-				if (TimeUtil.currentTimeMillis() - lastProcessCollectionKeysTimeMillis >= STATISTIC_PEROID * 1000
-						&& isCollectionKeysProcessing.compareAndSet(false, true)) {
-					processCollectionKeyBuffer();
+					
+					
 		        }
+		        
+		        for(StatListener listener: listeners) {
+					try {
+						listener.onSchedulePeroid( STATISTIC_PEROID );
+					} catch(Exception e) {
+						LOGGER.error("error:",e);
+					}
+				}
+		        
+				
 			}
 		}, STATISTIC_PEROID, STATISTIC_PEROID, TimeUnit.SECONDS);
+	}
+	
+	
+	public static void addListener(StatListener listener) {
+		if (listener == null) {
+			throw new NullPointerException();
+		}
+		listeners.add(listener);
+	}
+	
+	public static void removeListener(StatListener listener) {
+		listeners.remove(listener);
 	}
 	
 	
@@ -198,96 +236,40 @@ public class StatUtil {
 				// 大key
 				if ( key != null && ( requestSize > BIGKEY_SIZE || responseSize > BIGKEY_SIZE ) ) {	
 					
-					if ( bigkeyStats.size() > 500 ) {
-						for (Entry<String, BigKey> entry : bigkeyStats.entrySet()) {
-							BigKey bigKey = entry.getValue();
-							// TODO 后序优化
-							// 清除： 最近5分钟没有使用过 && 使用总次数小于5 && 小于1M
-							if (TimeUtil.currentTimeMillis() - bigKey.lastUseTime > 5 * 60 * 1000
-									&& bigKey.count.get() < 5 && bigKey.size < 1 * 1024 * 1024) {
-								bigkeyStats.remove(entry.getKey());
-							}
-						}
-						LOGGER.info("bigkey clear. after clear bigkey length is :" + bigkeyStats.size());
-					}
-						
+					//
 					String keyStr = new String(key);
-					BigKey bigkey = bigkeyStats.get( keyStr );
-					if ( bigkey == null ) {
-						bigkey = new BigKey();
-						bigkey.cmd = cmd;
-						bigkey.key = keyStr;
-						bigkey.size = requestSize > responseSize ? requestSize : responseSize;
-						bigkey.lastUseTime = TimeUtil.currentTimeMillis();
-						
-						bigkeyStats.put(bigkey.key, bigkey);
-						
-					} else {
-						if ( bigkey.count.get() >= Integer.MAX_VALUE ) {
-							bigkey.count.set(1);
+					for(StatListener listener: listeners) {
+						try {
+							listener.onBigKey(password, cmd, keyStr, requestSize, responseSize);
+						} catch(Exception e) {
+							LOGGER.error("error:",e);
 						}
-						
-						bigkey.cmd = cmd;
-						bigkey.size = requestSize > responseSize ? requestSize : responseSize;
-						bigkey.count.incrementAndGet();
-						bigkey.lastUseTime = TimeUtil.currentTimeMillis();
-						
-						bigkeyStats.put(bigkey.key, bigkey);
-					}
+					}		
 				}
+				
 				
 				// 统计集合类型key
 				RedisRequestPolicy policy = CommandParse.getPolicy(cmd);
-				// 如果是集合类型key
-				if (policy.getType() == CommandParse.TYPE_HASH_CMD || policy.getType() == CommandParse.TYPE_LIST_CMD 
-						|| policy.getType() == CommandParse.TYPE_SET_CMD || policy.getType() == CommandParse.TYPE_SORTEDSET_CMD) 
-				{
+				if  (policy.getWatchType() == CommandParse.HASH_WATCH 
+						|| policy.getWatchType() == CommandParse.LIST_WATCH 
+						|| policy.getWatchType() == CommandParse.SET_WATCH 
+						|| policy.getWatchType() == CommandParse.SORTED_SET_WATCH) {
+					
 					String keyStr = new String(key);
-					
-					// 如果是写入指令，并且此数据是集合类key长度top100中。判断此次请求的数据大小，记录，用于估算大长度key的数据大小。
-					if (policy.getRw() == CommandParse.WRITE_CMD) {
-						CollectionKey ck = collectionKeyTop100OfLength.get(keyStr);
-						if (ck != null) {
-							if (requestSize > 10 * 1024) {
-								ck.count_10k.incrementAndGet();
-							} else if (requestSize > 1024) {
-								ck.count_1k.incrementAndGet();
-							}
+					for(StatListener listener: listeners) {
+						try {
+							listener.onWatchType(password, policy, keyStr, requestSize);
+						} catch(Exception e) {
+							LOGGER.error("error:",e);
 						}
-					}
-					
-					CollectionKey collectionKey = collectionKeyBuffer.get(keyStr);
-					if (collectionKey == null) {
-						if (collectionKeyBuffer.size() < MAX_LIMIT_COLLECTION_KEY_BUFFER_SIZE) {
-							collectionKey = new CollectionKey();
-							collectionKey.key = keyStr;
-							collectionKey.type = policy.getType();
-							collectionKey.user = password;
-							collectionKeyBuffer.put(keyStr, collectionKey);
-						}
-						if (collectionKeyBuffer.size() >= MIN_LIMIT_COLLECTION_KEY_BUFFER_SIZE 
-								&& isCollectionKeysProcessing.compareAndSet(false, true)) 
-							processCollectionKeyBuffer();
-					}
+					}	
 				}
 				
 			}
 		});
 	}
 	
-	/**
-	 * 集中处理收集到集合类型的key
-	 */
-	private static void processCollectionKeyBuffer() {
-		try {
-			ConcurrentHashMap<String, CollectionKey> collectionKeys = collectionKeyBuffer;
-			collectionKeyBuffer = new ConcurrentHashMap<String, CollectionKey>();
-			lastProcessCollectionKeysTimeMillis = TimeUtil.currentTimeMillis();
-			collectionKeysHandler.Handle(collectionKeys);
-		} finally {
-			isCollectionKeysProcessing.set(false);
-		}
-	}
+	
 	
     private static AccessStatInfo getAccessStatInfo(String key, long currentTime) {
         AccessStatInfo item = accessStats.get(key);
@@ -325,8 +307,12 @@ public class StatUtil {
         return totalResults;
     }
     
-    public static ConcurrentHashMap<String, BigKey> getBigKeyStats() {
-    	return bigkeyStats;
+    public static ConcurrentHashMap<String, BigKey> getBigKeyMap() {
+    	return bigkey.getBigkeyMap();
+    }
+    
+    public static Set<Entry<String, CollectionKey>> getCollectionKeySet() {
+    	return collectionKey.getCollectionKeyTop100OfLength();
     }
     
     public static ConcurrentHashMap<String, AtomicLong> getProcTimeMillsDistribution() {
@@ -341,33 +327,7 @@ public class StatUtil {
     	return userNetIoStats.entrySet();
     }
     
-    public static void removeCollectionKeyFromTop100 (CollectionKey collectionKey) {
-    	collectionKeyTop100OfLength.remove(collectionKey.key);
-    }
-    
-    public static void addCollectionKeyToTop100 (CollectionKey collectionKey) {
-    	if (collectionKeyTop100OfLength.get(collectionKey.key) != null) {
-    		CollectionKey ck = collectionKeyTop100OfLength.get(collectionKey.key);
-    		ck.length = collectionKey.length;
-    	} else if (collectionKeyTop100OfLength.size() > 100) {
-    		CollectionKey currentCollectionKey = collectionKey;
-    		for (Entry<String, CollectionKey> entry : collectionKeyTop100OfLength.entrySet()) {
-    			CollectionKey ck = entry.getValue();
-    			if (ck.length.get() < currentCollectionKey.length.get()) {
-    				currentCollectionKey = ck;
-    			}
-    		}
-    		if (collectionKeyTop100OfLength.remove(currentCollectionKey.key) != null)
-    			collectionKeyTop100OfLength.put(collectionKey.key, collectionKey);
-    	} else {
-    		collectionKeyTop100OfLength.put(collectionKey.key, collectionKey);
-    	}
-    }
-    
-    public static Set<Entry<String, CollectionKey>> getCollectionKeyTop100OfLength() {
-    	return collectionKeyTop100OfLength.entrySet();
-    }
-    
+  
 	public static class AccessStatInfo  {
 		
 		private String key;
@@ -534,14 +494,6 @@ public class StatUtil {
 		public long created;
 	}
 	
-	public static class BigKey {
-		public String cmd;
-		public String key;
-		public int size;
-		public AtomicInteger count = new AtomicInteger(1);
-		public long lastUseTime;
-	}
-	
 	public static class Command {
 		
 		public String cmd;
@@ -563,14 +515,6 @@ public class StatUtil {
 		public AtomicLong netIn = new AtomicLong(0);
 		public AtomicLong netOut = new AtomicLong(0);
 	}
-	
-	public static class CollectionKey {
-		public String user;
-		public String key;
-		public byte type;
-		public AtomicInteger length = new AtomicInteger(0);
-		public AtomicInteger count_1k = new AtomicInteger(0);
-		public AtomicInteger count_10k = new AtomicInteger(0);
-	}
+
 	
 }

@@ -24,10 +24,10 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.engine.manage.stat.BigKey;
+import com.feeyo.redis.engine.manage.stat.CollectionKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
-import com.feeyo.redis.engine.manage.stat.StatUtil.BigKey;
-import com.feeyo.redis.engine.manage.stat.StatUtil.CollectionKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil.Command;
 import com.feeyo.redis.engine.manage.stat.StatUtil.UserNetIo;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
@@ -489,7 +489,7 @@ public class Manage {
 				} else if ( arg2.equalsIgnoreCase("BIGKEY") ) {
 					
 					List<String> lines = new ArrayList<String>();						
-					Collection<Entry<String, BigKey>> entrys = StatUtil.getBigKeyStats().entrySet();
+					Collection<Entry<String, BigKey>> entrys = StatUtil.getBigKeyMap().entrySet();
 					for(Entry<String, BigKey> e : entrys) {
 						BigKey bigkey = e.getValue();
 						StringBuffer sBuffer = new StringBuffer();
@@ -781,18 +781,19 @@ public class Manage {
 					titleLine.append("count_1k").append(",  ");
 					titleLine.append("count_10k");
 					lines.add(titleLine.toString());
-					for (Entry<String, CollectionKey> entry : StatUtil.getCollectionKeyTop100OfLength()) { 
+					for (Entry<String, CollectionKey> entry : StatUtil.getCollectionKeySet()) { 
 						CollectionKey collectionKey = entry.getValue();
 						StringBuffer line1 = new StringBuffer();
 						line1.append(collectionKey.key).append(", ");
+						
 						String type = null;
-						if (collectionKey.type == CommandParse.TYPE_HASH_CMD) {
+						if (collectionKey.type == CommandParse.HASH_WATCH) {
 							type = "hash";
-						} else if (collectionKey.type == CommandParse.TYPE_LIST_CMD) {
+						} else if (collectionKey.type == CommandParse.LIST_WATCH) {
 							type = "list";
-						} else if (collectionKey.type == CommandParse.TYPE_SET_CMD) {
+						} else if (collectionKey.type == CommandParse.SET_WATCH) {
 							type = "set";
-						} else if (collectionKey.type == CommandParse.TYPE_SORTEDSET_CMD) {
+						} else if (collectionKey.type == CommandParse.SORTED_SET_WATCH) {
 							type = "sortedset";
 						}
 						line1.append(type).append(", ");
