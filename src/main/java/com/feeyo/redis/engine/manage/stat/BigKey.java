@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class BigKey implements StatListener {
@@ -69,8 +68,9 @@ public class BigKey implements StatListener {
 		}
 		
 	}
+	
 	@Override
-	public void onWatchType(String password, RedisRequestPolicy policy, String key, int requestSize) {
+	public void onCollectionKey(String password, String cmd, String key, int requestSize ) {
 		// TODO Auto-generated method stub
 		
 	}

@@ -11,12 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterCRC16Util;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
-import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
@@ -37,8 +35,8 @@ public class CollectionKey implements StatListener {
 	private static ConcurrentHashMap<String, CollectionKey> collectionKeyTop100OfLength = new ConcurrentHashMap<String, CollectionKey>();
 	
 	public String user;
+	public String cmd;
 	public String key;
-	public byte type;
 	public AtomicInteger length = new AtomicInteger(0);
 	public AtomicInteger count_1k = new AtomicInteger(0);
 	public AtomicInteger count_10k = new AtomicInteger(0);
@@ -79,16 +77,33 @@ public class CollectionKey implements StatListener {
 					
 					conn = new JedisConnection(host, port, 1000, 0);
 					
-					byte type = collectionKey.type;
-					if (type == CommandParse.HASH_WATCH) {
+					if ( cmd.equals("HMSET") 	
+							|| cmd.equals("HSET") 	
+							|| cmd.equals("HSETNX") 	
+							|| cmd.equals("HINCRBY") 	
+							|| cmd.equals("HINCRBYFLOAT") 	) { // hash
+						
 						conn.sendCommand( RedisCommand.HLEN, collectionKey.key );
-					} else if (type == CommandParse.LIST_WATCH) {
+						
+					} else if (cmd.equals("LPUSH") 	
+							|| cmd.equals("LPUSHX") 
+							|| cmd.equals("RPUSH") 
+							|| cmd.equals("RPUSHX") ) { // list
+						
 						conn.sendCommand( RedisCommand.LLEN, collectionKey.key );
-					} else if (type == CommandParse.SET_WATCH) {
-						conn.sendCommand( RedisCommand.SCARD, collectionKey.key );
-					} else if (type == CommandParse.SORTED_SET_WATCH) {
+						
+					} else if(  cmd.equals("SADD") ) {  // set
+							
+							conn.sendCommand( RedisCommand.SCARD, collectionKey.key );
+						
+					} else if ( cmd.equals("ZADD")  
+							|| cmd.equals("ZINCRBY") 
+							|| cmd.equals("ZREMRANGEBYLEX")) { // sortedset
+						
 						conn.sendCommand( RedisCommand.ZCARD, collectionKey.key );
 					}
+					
+	
 					try {
 						long length = conn.getIntegerReply();
 						if ( length > COLLECTION_KEY_LENGTH_THRESHOLD ) {
@@ -159,17 +174,15 @@ public class CollectionKey implements StatListener {
 	}
 	
 	@Override
-	public void onWatchType(String password, RedisRequestPolicy policy, String key, int requestSize) {
+	public void onCollectionKey(String password, String cmd, String key, int requestSize) {
 	
 		// 如果是写入指令，并且此数据是集合类key长度top100中。判断此次请求的数据大小，记录，用于估算大长度key的数据大小。
-		if (policy.getRw() == CommandParse.WRITE_CMD) {
-			CollectionKey ck = collectionKeyTop100OfLength.get(key);
-			if (ck != null) {
-				if (requestSize > 10 * 1024) {
-					ck.count_10k.incrementAndGet();
-				} else if (requestSize > 1024) {
-					ck.count_1k.incrementAndGet();
-				}
+		CollectionKey ck = collectionKeyTop100OfLength.get(key);
+		if (ck != null) {
+			if (requestSize > 10 * 1024) {
+				ck.count_10k.incrementAndGet();
+			} else if (requestSize > 1024) {
+				ck.count_1k.incrementAndGet();
 			}
 		}
 		
@@ -177,8 +190,8 @@ public class CollectionKey implements StatListener {
 		if (collectionKey == null) {
 			if (collectionKeyBuffer.size() < MAX_WATCH_LEN) {
 				collectionKey = new CollectionKey();
+				collectionKey.cmd = cmd;
 				collectionKey.key = key;
-				collectionKey.type = policy.getWatchType();
 				collectionKey.user = password;
 				collectionKeyBuffer.put(key, collectionKey);
 			}

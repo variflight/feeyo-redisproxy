@@ -38,7 +38,6 @@ import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.nio.Connection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.buffer.BufferPool;
@@ -785,18 +784,7 @@ public class Manage {
 						CollectionKey collectionKey = entry.getValue();
 						StringBuffer line1 = new StringBuffer();
 						line1.append(collectionKey.key).append(", ");
-						
-						String type = null;
-						if (collectionKey.type == CommandParse.HASH_WATCH) {
-							type = "hash";
-						} else if (collectionKey.type == CommandParse.LIST_WATCH) {
-							type = "list";
-						} else if (collectionKey.type == CommandParse.SET_WATCH) {
-							type = "set";
-						} else if (collectionKey.type == CommandParse.SORTED_SET_WATCH) {
-							type = "sortedset";
-						}
-						line1.append(type).append(", ");
+						line1.append(collectionKey.cmd).append(", ");
 						line1.append(collectionKey.length.get()).append(", ");
 						line1.append(collectionKey.count_1k.get()).append(", ");
 						line1.append(collectionKey.count_10k.get());

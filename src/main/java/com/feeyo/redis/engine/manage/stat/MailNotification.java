@@ -12,8 +12,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
-import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.util.MailUtil;
 
 public class MailNotification implements StatListener {
@@ -88,7 +86,7 @@ public class MailNotification implements StatListener {
 
 
 	@Override
-	public void onWatchType(String password, RedisRequestPolicy policy, String key, int requestSize) {
+	public void onCollectionKey(String password, String cmd, String key, int requestSize ) {
 	}
 
 
@@ -126,17 +124,7 @@ public class MailNotification implements StatListener {
 				tableBuffer.append("\n");
 				tableBuffer.append("|    ");
 				tableBuffer.append(collectionKey.key).append("    |    ");
-				String type = null;
-				if (collectionKey.type == CommandParse.HASH_WATCH) {
-					type = "hash";
-				} else if (collectionKey.type == CommandParse.LIST_WATCH) {
-					type = "list";
-				} else if (collectionKey.type == CommandParse.SET_WATCH) {
-					type = "set";
-				} else if (collectionKey.type == CommandParse.SORTED_SET_WATCH) {
-					type = "sortedset";
-				}
-				tableBuffer.append(type).append("    |    ");
+				tableBuffer.append(collectionKey.cmd).append("    |    ");
 				tableBuffer.append(collectionKey.length).append("    |    ");
 				tableBuffer.append(collectionKey.count_1k).append("    |    ");
 				tableBuffer.append(collectionKey.count_10k).append("    |    ");

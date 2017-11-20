@@ -17,8 +17,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
-import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -249,16 +247,27 @@ public class StatUtil {
 				
 				
 				// 统计集合类型key
-				RedisRequestPolicy policy = CommandParse.getPolicy(cmd);
-				if  (policy.getWatchType() == CommandParse.HASH_WATCH 
-						|| policy.getWatchType() == CommandParse.LIST_WATCH 
-						|| policy.getWatchType() == CommandParse.SET_WATCH 
-						|| policy.getWatchType() == CommandParse.SORTED_SET_WATCH) {
+				if (  	cmd.equals("HMSET") 	// hash
+						|| cmd.equals("HSET") 	
+						|| cmd.equals("HSETNX") 	
+						|| cmd.equals("HINCRBY") 	
+						|| cmd.equals("HINCRBYFLOAT") 	
+						
+						|| cmd.equals("LPUSH") 	// list
+						|| cmd.equals("LPUSHX") 
+						|| cmd.equals("RPUSH") 
+						|| cmd.equals("RPUSHX") 
+						
+						|| cmd.equals("SADD") // set
+						
+						|| cmd.equals("ZADD")  // sortedset
+						|| cmd.equals("ZINCRBY") 
+						|| cmd.equals("ZREMRANGEBYLEX") ) {
 					
 					String keyStr = new String(key);
 					for(StatListener listener: listeners) {
 						try {
-							listener.onWatchType(password, policy, keyStr, requestSize);
+							listener.onCollectionKey(password, cmd, keyStr, requestSize);
 						} catch(Exception e) {
 							LOGGER.error("error:",e);
 						}
