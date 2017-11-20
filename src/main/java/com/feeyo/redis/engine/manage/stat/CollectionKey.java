@@ -41,70 +41,81 @@ public class CollectionKey implements StatListener {
 	public AtomicInteger count_1k = new AtomicInteger(0);
 	public AtomicInteger count_10k = new AtomicInteger(0);
 	
-	public static long lastProcessCollectionKeysTimeMillis = TimeUtil.currentTimeMillis();
-	private static AtomicBoolean isCollectionKeysProcessing = new AtomicBoolean(false);
+	private static long lastCheckTime = TimeUtil.currentTimeMillis();
+	private static AtomicBoolean isChecking = new AtomicBoolean(false);
 	
 	
-	
-	public void handle(ConcurrentHashMap<String, CollectionKey> collectionKeys) {
+
+	/**
+	 * 检查 redis key
+	 */
+	private void checkRedisCollectionKey() {
 		
-		for (Entry<String, CollectionKey> entry : collectionKeys.entrySet()) {
-			CollectionKey collectionKey = entry.getValue();
-			String user = collectionKey.user;
-			UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
+		if ( !isChecking.compareAndSet(false, true) ) {
+			return;
+		}
+		
+		try {
+
+			lastCheckTime = TimeUtil.currentTimeMillis();
 			
-			if (userCfg != null) {
-				PhysicalNode physicalNode = null;
-				AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get( userCfg.getPoolId() );
-				// 单节点
-				if (pool.getType() == 0) {
-					physicalNode = pool.getPhysicalNode();
-					
-				// 集群池
-				} else if (pool.getType() == 1) {
-					RedisClusterPool clusterPool = (RedisClusterPool) pool;
-					// 计算key的slot值。
-					int slot = ClusterCRC16Util.getSlot(collectionKey.key);
-					// 根据 slot 获取 redis物理节点
-					physicalNode = clusterPool.getPhysicalNodeBySlot(slot);
-				}
+			for (Entry<String, CollectionKey> entry : collectionKeyBuffer.entrySet()) {
 				
-				JedisConnection conn = null;		
-				try {
-					
-					String host = physicalNode.getHost();
-					int port = physicalNode.getPort();	
-					
-					conn = new JedisConnection(host, port, 1000, 0);
-					
-					if ( cmd.equals("HMSET") 	
-							|| cmd.equals("HSET") 	
-							|| cmd.equals("HSETNX") 	
-							|| cmd.equals("HINCRBY") 	
-							|| cmd.equals("HINCRBYFLOAT") 	) { // hash
+				CollectionKey collectionKey = entry.getValue();
+				String user = collectionKey.user;
+				UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
+				
+				if (userCfg != null) {
+					PhysicalNode physicalNode = null;
+					AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get( userCfg.getPoolId() );
+					// 单节点
+					if (pool.getType() == 0) {
+						physicalNode = pool.getPhysicalNode();
 						
-						conn.sendCommand( RedisCommand.HLEN, collectionKey.key );
-						
-					} else if (cmd.equals("LPUSH") 	
-							|| cmd.equals("LPUSHX") 
-							|| cmd.equals("RPUSH") 
-							|| cmd.equals("RPUSHX") ) { // list
-						
-						conn.sendCommand( RedisCommand.LLEN, collectionKey.key );
-						
-					} else if(  cmd.equals("SADD") ) {  // set
-							
-							conn.sendCommand( RedisCommand.SCARD, collectionKey.key );
-						
-					} else if ( cmd.equals("ZADD")  
-							|| cmd.equals("ZINCRBY") 
-							|| cmd.equals("ZREMRANGEBYLEX")) { // sortedset
-						
-						conn.sendCommand( RedisCommand.ZCARD, collectionKey.key );
+					// 集群池
+					} else if (pool.getType() == 1) {
+						RedisClusterPool clusterPool = (RedisClusterPool) pool;
+						// 计算key的slot值。
+						int slot = ClusterCRC16Util.getSlot(collectionKey.key);
+						// 根据 slot 获取 redis物理节点
+						physicalNode = clusterPool.getPhysicalNodeBySlot(slot);
 					}
 					
-	
+					JedisConnection conn = null;		
 					try {
+						
+						String host = physicalNode.getHost();
+						int port = physicalNode.getPort();	
+						
+						conn = new JedisConnection(host, port, 1000, 0);
+						
+						if ( cmd.equals("HMSET") 	
+								|| cmd.equals("HSET") 	
+								|| cmd.equals("HSETNX") 	
+								|| cmd.equals("HINCRBY") 	
+								|| cmd.equals("HINCRBYFLOAT") 	) { // hash
+							
+							conn.sendCommand( RedisCommand.HLEN, collectionKey.key );
+							
+						} else if (cmd.equals("LPUSH") 	
+								|| cmd.equals("LPUSHX") 
+								|| cmd.equals("RPUSH") 
+								|| cmd.equals("RPUSHX") ) { // list
+							
+							conn.sendCommand( RedisCommand.LLEN, collectionKey.key );
+							
+						} else if(  cmd.equals("SADD") ) {  // set
+								
+								conn.sendCommand( RedisCommand.SCARD, collectionKey.key );
+							
+						} else if ( cmd.equals("ZADD")  
+								|| cmd.equals("ZINCRBY") 
+								|| cmd.equals("ZREMRANGEBYLEX")) { // sortedset
+							
+							conn.sendCommand( RedisCommand.ZCARD, collectionKey.key );
+						}
+						
+		
 						long length = conn.getIntegerReply();
 						if ( length > COLLECTION_KEY_LENGTH_THRESHOLD ) {
 							collectionKey.length.set((int) length);
@@ -113,31 +124,21 @@ public class CollectionKey implements StatListener {
 
 							collectionKeyTop100OfLength.remove(collectionKey.key);
 						}
+						
 					} catch (JedisDataException e1) {
+					} catch (JedisConnectionException e2) {
+						LOGGER.error("", e2);	
+					} finally {
+						if ( conn != null ) {
+							conn.disconnect();
+						}
 					}
-				} catch (JedisConnectionException e) {
-					LOGGER.error("", e);	
-				} finally {
-					if ( conn != null ) {
-						conn.disconnect();
-					}
+					
 				}
-				
 			}
-		}
-	}
-	
-	/**
-	 * 集中处理收集到集合类型的key
-	 */
-	private  void processCollectionKeyBuffer() {
-		try {
-			ConcurrentHashMap<String, CollectionKey> collectionKeys = collectionKeyBuffer;
-			collectionKeyBuffer = new ConcurrentHashMap<String, CollectionKey>();
-			lastProcessCollectionKeysTimeMillis = TimeUtil.currentTimeMillis();
-			handle(collectionKeys);
+			
 		} finally {
-			isCollectionKeysProcessing.set(false);
+			isChecking.set(false);
 		}
 	}
 
@@ -169,8 +170,6 @@ public class CollectionKey implements StatListener {
 	
 	@Override
 	public void onBigKey(String user, String cmd, String key, int requestSize, int responseSize) {
-		// TODO Auto-generated method stub
-		
 	}
 	
 	@Override
@@ -186,18 +185,18 @@ public class CollectionKey implements StatListener {
 			}
 		}
 		
-		CollectionKey collectionKey = collectionKeyBuffer.get(key);
-		if (collectionKey == null) {
+		CollectionKey cKey = collectionKeyBuffer.get(key);
+		if (cKey == null) {
 			if (collectionKeyBuffer.size() < MAX_WATCH_LEN) {
-				collectionKey = new CollectionKey();
-				collectionKey.cmd = cmd;
-				collectionKey.key = key;
-				collectionKey.user = password;
-				collectionKeyBuffer.put(key, collectionKey);
+				cKey = new CollectionKey();
+				cKey.cmd = cmd;
+				cKey.key = key;
+				cKey.user = password;
+				collectionKeyBuffer.put(key, cKey);
 			}
 			if (collectionKeyBuffer.size() >= MIN_WATCH_LEN 
-					&& isCollectionKeysProcessing.compareAndSet(false, true)) 
-				processCollectionKeyBuffer();
+					&& isChecking.compareAndSet(false, true)) 
+				checkRedisCollectionKey();
 		}
 		
 	}
@@ -205,15 +204,13 @@ public class CollectionKey implements StatListener {
 	
 	@Override
 	public void onScheduleToZore() {
-		// TODO Auto-generated method stub
-		
 	}
+	
 	@Override
 	public void onSchedulePeroid(int peroid) {
 		
-		if (TimeUtil.currentTimeMillis() - lastProcessCollectionKeysTimeMillis >= peroid * 1000
-				&& isCollectionKeysProcessing.compareAndSet(false, true)) {
-			processCollectionKeyBuffer();
+		if (TimeUtil.currentTimeMillis() - lastCheckTime >= peroid * 1000 ) {
+			checkRedisCollectionKey();
         }
 	}
 }
