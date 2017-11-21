@@ -19,7 +19,7 @@ import com.feeyo.redis.net.front.route.RouteResultNode;
  *
  * @author xuwenfeng
  */
-public class MGetSetRoutStrategyV2 extends AbstractRouteStrategy {
+public class MultiOperatorRoutStrategy extends AbstractRouteStrategy {
 	
 	private RedisRequestType rewrite(RedisRequest firstRequest, RedisRequestPolicy firstRequestPolicy, 
 			List<RedisRequest> newRequests, List<RedisRequestPolicy> newRequestPolicys, List<RequestIndexCombination> requestIndexCombinations) throws InvalidRequestExistsException {
@@ -42,7 +42,7 @@ public class MGetSetRoutStrategyV2 extends AbstractRouteStrategy {
 			RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PipelineCommandType.MGET_OP_COMMAND, indexs);
 			requestIndexCombinations.add(requestIndexCombination);
             return RedisRequestType.MGET;
-        } else {
+        } else if(cmd.startsWith("MSET")){
         	
             if (args.length == 1 || (args.length & 0x01) == 0) {
                 throw new InvalidRequestExistsException("wrong number of arguments", null, null);
@@ -58,6 +58,22 @@ public class MGetSetRoutStrategyV2 extends AbstractRouteStrategy {
 			RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PipelineCommandType.MSET_OP_COMMAND, indexs);
 			requestIndexCombinations.add(requestIndexCombination);
 			return RedisRequestType.MSET;
+        }else {
+        	if (args.length < 3) {
+                throw new InvalidRequestExistsException("wrong number of arguments", null, null);
+            }
+        	int[] indexs = new int[args.length-1];
+            for (int j=1; j<args.length; j++) {
+                RedisRequest request = new RedisRequest();
+                request.setArgs(new byte[][] {"DEL".getBytes(), args[j] });
+                
+                newRequests.add( request );
+                newRequestPolicys.add( firstRequestPolicy );
+                indexs[j-1] = newRequests.size()-1;
+            }
+            RequestIndexCombination requestIndexCombination = new RequestIndexCombination(PipelineCommandType.MDEL_OP_COMMAND, indexs);
+			requestIndexCombinations.add(requestIndexCombination);
+        	return RedisRequestType.DEL_MULTIKEY;
         }
 	}
    
@@ -71,7 +87,7 @@ public class MGetSetRoutStrategyV2 extends AbstractRouteStrategy {
 		for(int i = 0; i<requests.size(); i++) {
 			 RedisRequest request = requests.get(i);
 			 RedisRequestPolicy requestPolicy = requestPolicys.get(i);
-			 if(CommandParse.MGETSET_CMD == requestPolicy.getLevel()) {
+			 if(CommandParse.MGETSET_CMD == requestPolicy.getLevel() || (CommandParse.DEL_CMD  ==  requestPolicy.getLevel() && request.getArgs().length > 2)) {
 				 requestType = rewrite( request, requestPolicy, newRequests, newRequestPolicys,requestIndexCombinations);
 			 }else {
 				 newRequests.add(request);

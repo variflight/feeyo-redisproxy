@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineResponse;
-import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
@@ -31,14 +30,11 @@ import com.feeyo.redis.nio.util.TimeUtil;
  *   
  * @author Tr!bf wangyamin@variflight.com
  */
-public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
+public class MultiOperatorCommandHandler extends AbstractPipelineCommandHandler {
 	
-    private static Logger LOGGER = LoggerFactory.getLogger(MGetSetCommandHandler.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(MultiOperatorCommandHandler.class);
     
-	public final static String MSET_CMD = "MSET";
-	public final static String MGET_CMD = "MGET";
-
-    public MGetSetCommandHandler(RedisFrontConnection frontCon) {
+    public MultiOperatorCommandHandler(RedisFrontConnection frontCon) {
         super(frontCon);
     }
 
@@ -52,7 +48,7 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 			
 			ByteBuffer buffer = getRequestBufferByRRN(rrn);
 			
-		    RedisBackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new MSetGetCallBack()); 
+		    RedisBackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new MultiOperatorCallBack()); 
 		    
 		    if ( backendConn != null )
 				this.holdBackendConnection(backendConn);
@@ -60,12 +56,12 @@ public class MGetSetCommandHandler extends AbstractPipelineCommandHandler {
 		
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
-		frontCon.getSession().setRequestCmd( rrs.getRequestType() == RedisRequestType.MSET ? MSET_CMD : MGET_CMD );
-		frontCon.getSession().setRequestKey( rrs.getRequestType() == RedisRequestType.MSET ? MSET_CMD.getBytes() : MGET_CMD.getBytes() );
+		frontCon.getSession().setRequestCmd( rrs.getRequestType().getCmd());
+		frontCon.getSession().setRequestKey( rrs.getRequestType().getCmd().getBytes());
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
     }
     
-    private class MSetGetCallBack extends DirectTransTofrontCallBack {
+    private class MultiOperatorCallBack extends DirectTransTofrontCallBack {
 
         private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
 

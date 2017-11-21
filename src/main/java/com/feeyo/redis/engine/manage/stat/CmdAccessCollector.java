@@ -6,9 +6,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.feeyo.redis.engine.codec.RedisRequestType;
+
 public class CmdAccessCollector implements StatCollector {
-	
-	private final static String PIPELINE_CMD = "pipeline";
 	
 	// COMMAND、KEY
 	private static ConcurrentHashMap<String, Command> commandCountMap = new ConcurrentHashMap<String, Command>();
@@ -20,12 +20,12 @@ public class CmdAccessCollector implements StatCollector {
 	
 		// 只有pipeline的子命令 是这种只收集指令数据的情况。
 		if ( isCommandOnly ) {
-			
-			Command parent = commandCountMap.get(PIPELINE_CMD);
+			String pipelineCmd = RedisRequestType.PIPELINE.getCmd();
+			Command parent = commandCountMap.get(pipelineCmd);
 			if (parent == null) {
 				parent = new Command();
-				parent.cmd = PIPELINE_CMD;
-				commandCountMap.put(PIPELINE_CMD, parent);
+				parent.cmd = pipelineCmd;
+				commandCountMap.put(pipelineCmd, parent);
 			}
 			
 			Command child = parent.getChild( cmd);

@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
 import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineResponse;
 import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
@@ -22,8 +23,6 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger(PipelineCommandHandler.class);
 	
-	public final static String PIPELINE_CMD = "pipeline";
-
 	public PipelineCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
 	}
@@ -43,8 +42,8 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
-		frontCon.getSession().setRequestCmd( PIPELINE_CMD );
-		frontCon.getSession().setRequestKey( PIPELINE_CMD.getBytes() );
+		frontCon.getSession().setRequestCmd( RedisRequestType.PIPELINE.getCmd() );
+		frontCon.getSession().setRequestKey( RedisRequestType.PIPELINE.getCmd().getBytes() );
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
 	}
 	
@@ -88,7 +87,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						releaseBackendConnection(backendCon);
 
 						// 数据收集
-						StatUtil.collect(password, PIPELINE_CMD, PIPELINE_CMD.getBytes(), requestSize, responseSize,
+						StatUtil.collect(password, RedisRequestType.PIPELINE.getCmd(), RedisRequestType.PIPELINE.getCmd().getBytes(), requestSize, responseSize,
 								(int) (responseTimeMills - requestTimeMills), false);
 
 						// child 收集

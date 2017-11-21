@@ -16,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestEncoderV2;
+import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
+import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RequestIndexCombination;
@@ -285,12 +287,62 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 				offsets.get(i).clearData();
 			}
 			break;
+		case MDEL_OP_COMMAND:
+			RedisResponseDecoderV4 responseDecoder = new RedisResponseDecoderV4();
+			int okCount = 0;
+			for (DataOffset offset : offsets) {
+				byte[] data = offset.getData();
+				RedisResponseV3 response = responseDecoder.decode( data ).get(0);
+				if ( response.is( (byte)':') ) {
+					byte[] _buf1 = (byte[])response.data();
+					byte[] buf2 = new byte[ _buf1.length - 1 ];
+					System.arraycopy(_buf1, 1, buf2, 0, buf2.length);
+					int c = readInt( buf2 );
+					okCount += c;
+				}
+			}
+			offsetsCopy.add(new DataOffset(encode(okCount)));
+			for( int i :indexs) {
+				offsets.get(i).clearData();
+			}
+			break;
 		case DEFAULT_OP_COMMAND:
 			offsetsCopy.add(offsets.get(indexs[0]));
 			break;
 		}
 	}
 	
+	private int readInt(byte[] buf) {
+		int idx = 0;
+		final boolean isNeg = buf[idx] == '-';
+		if (isNeg) {
+			++idx;
+		}
+		int value = 0;
+		while (true) {
+			final int b = buf[idx++];
+			if (b == '\r' && buf[idx++] == '\n') {
+				break;
+			} else {
+				value = value * 10 + b - '0';
+			}
+		}
+		return value;
+	}
+	
+	private byte[] encode(int count) {
+		// 编码
+		byte[] countBytes = ProtoUtils.convertIntToByteArray( count );
+        ByteBuffer buffer = ByteBuffer.allocate( 1 + 2 + countBytes.length); //   cmd length + \r\n length + count bytes length
+        buffer.put((byte)':');
+        buffer.put( countBytes );
+        buffer.put("\r\n".getBytes());
+        
+        buffer.flip();
+        byte[] data = new byte[ buffer.remaining() ];
+        buffer.get( data );
+        return data;
+	}
 	
 	
 	// VM 资源清理
