@@ -7,8 +7,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
@@ -20,7 +18,7 @@ public class StatNotification {
 	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	
 	//附件
-	private static final String[] attachmentFileNames = new String[] { "big_key.txt", "top_hundred.txt" };
+	private static final String[] attachmentFileNames = new String[] { "big_key.txt", "big_length.txt" };
 	
 	private void createFile(String fileName, String content) {
 		FileOutputStream fos = null;
@@ -82,48 +80,53 @@ public class StatNotification {
 
 	public void sendMail() { 
 
-		try {
-			
-			ConcurrentHashMap<String, BigKey> bigkeyStats = StatUtil.getBigKeyMap();
-			StringBuffer tableBuffer = new StringBuffer();
-			tableBuffer.append("#############   bigkey status   #################\n");
-			tableBuffer.append("|    cmd    |     key     |    size    |    count    |");
-			
-			//获取bigkey的数据信息
-			for(BigKey bigkey : bigkeyStats.values()) {
-				tableBuffer.append("\n");
-				tableBuffer.append("|    ");
-				tableBuffer.append(bigkey.cmd).append("    |    ");
-				tableBuffer.append(bigkey.key).append("    |    ");
-				tableBuffer.append(bigkey.size).append("    |    ");
-				tableBuffer.append(bigkey.count).append("    |");
-			}
-			
-			String[] attachmentsNames = transFilePathName(attachmentFileNames);
-			createFile(attachmentsNames[0],tableBuffer.toString());
-			tableBuffer.setLength(0);
-			
-			Set<Entry<String, BigLength>> collectionKeySet =  StatUtil.getCollectionKeySet();
-			tableBuffer.append("#############   top  hundred   #################\n");
-			tableBuffer.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
-			for(Entry<String, BigLength> entry : collectionKeySet) {
-				BigLength collectionKey = entry.getValue();
-				tableBuffer.append("\n");
-				tableBuffer.append("|    ");
-				tableBuffer.append(collectionKey.key).append("    |    ");
-				tableBuffer.append(collectionKey.cmd).append("    |    ");
-				tableBuffer.append(collectionKey.length).append("    |    ");
-				tableBuffer.append(collectionKey.count_1k).append("    |    ");
-				tableBuffer.append(collectionKey.count_10k).append("    |    ");
-			}
-			
-			createFile(attachmentsNames[1], tableBuffer.toString());
-			
-			MailUtil.send(" ## REDIS PROXY COLLECT ##", "Please check the attachments", attachmentsNames);
-			clearFiles(attachmentsNames);
-			
-		} catch(Exception e) {
+		ConcurrentHashMap<String, BigKey> bigkeyStats = StatUtil.getBigKeyMap();
+		StringBuffer tableBuffer = new StringBuffer();
+		tableBuffer.append("#############   bigkey status   #################\n");
+		tableBuffer.append("|    cmd    |     key     |    size    |    count    |");
+
+		// 获取bigkey的数据信息
+		for (BigKey bigkey : bigkeyStats.values()) {
+			tableBuffer.append("\n");
+			tableBuffer.append("|    ");
+			tableBuffer.append(bigkey.cmd).append("    |    ");
+			tableBuffer.append(bigkey.key).append("    |    ");
+			tableBuffer.append(bigkey.size).append("    |    ");
+			tableBuffer.append(bigkey.count).append("    |");
 		}
+
+		String[] attachmentsNames = transFilePathName(attachmentFileNames);
+		createFile(attachmentsNames[0], tableBuffer.toString());
+		tableBuffer.setLength(0);
+
+		tableBuffer.append("#############   top  hundred   #################\n");
+		tableBuffer.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
+		for (BigLength bigLength : StatUtil.getBigLengthMap().values()) {
+			tableBuffer.append("\n");
+			tableBuffer.append("|    ");
+			tableBuffer.append(bigLength.key).append("    |    ");
+			tableBuffer.append(bigLength.cmd).append("    |    ");
+			tableBuffer.append(bigLength.length).append("    |    ");
+			tableBuffer.append(bigLength.count_1k).append("    |    ");
+			tableBuffer.append(bigLength.count_10k).append("    |    ");
+		}
+
+		//
+		try {
+
+			createFile(attachmentsNames[1], tableBuffer.toString());
+
+			StringBuffer body = new StringBuffer();
+			body.append("");
+			body.append("");
+			body.append("");
+			body.append("");
+
+			MailUtil.send(" ## RedisProxy Report ##", body.toString(), attachmentsNames);
+		} finally {
+			clearFiles(attachmentsNames);
+		}
+
 	}
 
 }

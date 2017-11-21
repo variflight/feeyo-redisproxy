@@ -1,6 +1,5 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -149,8 +148,8 @@ public class BigLengthCollector implements StatCollector {
 	}
 
 	    
-	public Set<Entry<String, BigLength>> getCollectionKeyTop100OfLength() {
-		return ckeyTop100Map.entrySet();
+	public ConcurrentHashMap<String, BigLength> getBigLengthMap() {
+		return ckeyTop100Map;
 	}
 	
 	
