@@ -1,5 +1,7 @@
 package com.feeyo.redis.engine.manage.stat;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -73,8 +75,11 @@ public class CmdAccessCollector implements StatCollector {
 	}
 
 	@Override
-	public void onScheduleToZore() {
+	public void onScheduleToZore(long zeroTimeMillis) {
+		String version = new SimpleDateFormat("yyyy_MM_dd").format(new Date(zeroTimeMillis));
+		DataBackupHandler.storeCommandCountFile(commandCountMap, version);
 		commandCountMap.clear();
+		DataBackupHandler.storeCommandProcTimeFile(commandProcTimeMap, version);
 		commandProcTimeMap.clear();
 	}
 

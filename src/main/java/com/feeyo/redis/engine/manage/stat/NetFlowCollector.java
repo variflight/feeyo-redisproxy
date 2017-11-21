@@ -1,5 +1,7 @@
 package com.feeyo.redis.engine.manage.stat;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +28,9 @@ public class NetFlowCollector implements StatCollector {
 	}
 
 	@Override
-	public void onScheduleToZore() {
+	public void onScheduleToZore(long zeroTimeMillis) {
+		String version = new SimpleDateFormat("yyyy_MM_dd").format(new Date(zeroTimeMillis));
+		DataBackupHandler.storeUserNetFlowFile(userNetFlowMap, version);
 		userNetFlowMap.clear();
 	}
 

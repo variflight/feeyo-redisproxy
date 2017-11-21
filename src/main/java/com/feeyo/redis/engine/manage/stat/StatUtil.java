@@ -110,11 +110,13 @@ public class StatUtil {
 						// clear temp data
 						for(StatCollector listener: collectors) {
 							try {
-								listener.onScheduleToZore();
+								listener.onScheduleToZore(zeroTimeMillis);
 							} catch(Exception e) {
 								LOGGER.error("error:",e);
 							}
 						}
+						
+						DataBackupHandler.cleanDataBackupBeforeOneMonth();
 						
 					}
 					

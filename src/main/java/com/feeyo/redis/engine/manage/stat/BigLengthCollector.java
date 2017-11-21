@@ -203,7 +203,7 @@ public class BigLengthCollector implements StatCollector {
 	
 	
 	@Override
-	public void onScheduleToZore() {
+	public void onScheduleToZore(long zeroTimeMillis) {
 	}
 	
 	@Override
