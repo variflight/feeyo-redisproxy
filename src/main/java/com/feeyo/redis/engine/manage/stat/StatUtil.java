@@ -94,7 +94,7 @@ public class StatUtil {
 					if ( zeroTimeMillis > 0 ) {
 						
 						long sum = 0;
-						Set<Entry<String, Command>> entrys = StatUtil.getCommandStats();
+						Set<Entry<String, Command>> entrys = StatUtil.getCommandCountMap().entrySet();
 						for (Entry<String, Command> entry : entrys) {	
 							Long count = entry.getValue().count.get();			
 							if ( count != null )
@@ -224,16 +224,16 @@ public class StatUtil {
     	return bigKeyCollector.getBigkeyMap();
     }
     
-    public static Set<Entry<String, BigLength>> getCollectionKeySet() {
-    	return bigLengthCollector.getCollectionKeyTop100OfLength();
+    public static ConcurrentHashMap<String, BigLength> getBigLengthMap() {
+    	return bigLengthCollector.getBigLengthMap();
     }
     
-    public static ConcurrentHashMap<String, AtomicLong> getProcTimeMillsDistribution() {
-    	return cmdAccessCollector.getProcTimeMillsDistribution();
+    public static ConcurrentHashMap<String, AtomicLong> getCommandProcTimeMap() {
+    	return cmdAccessCollector.getCommandProcTimeMap();
     }
 
-    public static Set<Entry<String, Command>> getCommandStats() {
-    	return cmdAccessCollector.getCommandStats();
+    public static ConcurrentHashMap<String, Command> getCommandCountMap() {
+    	return cmdAccessCollector.getCommandCountMap();
     }
     
     public static Set<Entry<String, UserNetFlow>> getUserFlowSet() {

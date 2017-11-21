@@ -1,6 +1,5 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,7 +41,7 @@ public class BigLengthCollector implements StatCollector {
 	/**
 	 * 检查 redis key
 	 */
-	private void checkRedisCollectionKey() {
+	private void checkKeyLength() {
 		
 		if ( !isChecking.compareAndSet(false, true) ) {
 			return;
@@ -149,8 +148,8 @@ public class BigLengthCollector implements StatCollector {
 	}
 
 	    
-	public Set<Entry<String, BigLength>> getCollectionKeyTop100OfLength() {
-		return ckeyTop100Map.entrySet();
+	public ConcurrentHashMap<String, BigLength> getBigLengthMap() {
+		return ckeyTop100Map;
 	}
 	
 	
@@ -199,7 +198,7 @@ public class BigLengthCollector implements StatCollector {
 					}
 					if (ckeyMap.size() >= MIN_WATCH_LEN 
 							&& isChecking.compareAndSet(false, true)) 
-						checkRedisCollectionKey();
+						checkKeyLength();
 				}
 		}
 		
@@ -214,7 +213,7 @@ public class BigLengthCollector implements StatCollector {
 	public void onSchedulePeroid(int peroid) {
 		
 		if (TimeUtil.currentTimeMillis() - lastCheckTime >= peroid * 1000 ) {
-			checkRedisCollectionKey();
+			checkKeyLength();
         }
 	}
 	

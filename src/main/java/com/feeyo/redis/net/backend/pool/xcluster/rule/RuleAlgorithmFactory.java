@@ -1,4 +1,4 @@
-package com.feeyo.redis.net.backend.pool.customcluster.rule;
+package com.feeyo.redis.net.backend.pool.xcluster.rule;
 
 import java.util.Collections;
 import java.util.HashMap;

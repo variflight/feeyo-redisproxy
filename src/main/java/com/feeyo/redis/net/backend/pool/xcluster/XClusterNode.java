@@ -1,4 +1,4 @@
-package com.feeyo.redis.net.backend.pool.customcluster;
+package com.feeyo.redis.net.backend.pool.xcluster;
 
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -11,7 +11,7 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
  *
  * @author Tr!bf wangyamin@variflight.com
  */
-public class CustomClusterNode {
+public class XClusterNode {
     private PhysicalNode physicalNode = null;
 //    private PhysicalNode phyNodeFollow = null;
 

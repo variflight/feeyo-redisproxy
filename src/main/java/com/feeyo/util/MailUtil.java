@@ -24,11 +24,12 @@ public class MailUtil {
 	private static String password = null;
 	
 	private static InternetAddress fromAddr;
+	private static InternetAddress[] toAddrs;
 	
 	private static Object _lock = new Object();
 	
 	
-	public static boolean send(String[] addrs, String subject, String body,String[] fileNames) {
+	public static boolean send(String subject, String body, String[] fileNames) {
 		
 		//
 		if (props == null) {
@@ -41,6 +42,15 @@ public class MailUtil {
 						userName = props.getProperty("mail.from.userName");
 						password = props.getProperty("mail.from.password");
 						fromAddr = new InternetAddress(userName);
+						
+						String toAddrsStr = props.getProperty("mail.to.addrs");
+						String[] addrs = toAddrsStr.split(",");
+						
+						toAddrs = new InternetAddress[ addrs.length ];
+						for(int i =0; i < addrs.length; i++) {
+							toAddrs[i]= new InternetAddress( addrs[i] );
+						}
+						
 					} catch (Exception e1) {
 						e1.printStackTrace();
 					}
@@ -57,12 +67,7 @@ public class MailUtil {
         });
 	 	
         try {
-        	
-        	InternetAddress[] toAddrs = new InternetAddress[ addrs.length ];
-			for(int i =0; i < addrs.length; i++) {
-				toAddrs[i]= new InternetAddress( addrs[i] );
-			}
-			
+        
 			MimeMessage message = new MimeMessage(session);
 	        message.setFrom( fromAddr );
 	        message.setRecipients(MimeMessage.RecipientType.TO, toAddrs);

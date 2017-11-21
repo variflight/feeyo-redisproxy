@@ -95,7 +95,6 @@ public class Manage {
 	 * 
 	 *  SHOW USER
 	 *  SHOW USER_NET_IO 
-	 *  SHOW COLLECTION_BIGKEY
 	 *  SHOW CPU
 	 *  SHOW MEM
 	 *  
@@ -104,6 +103,7 @@ public class Manage {
 	 *  SHOW USER_CONN
 	 *  SHOW BUFFER
 	 *  SHOW BIGKEY
+	 *  SHOW BIGLENGTH
 	 *  SHOW CMD
 	 *  SHOW VER
 	 *  SHOW NET_IO 该指令兼容过去的 SHOW NETBYTES
@@ -239,7 +239,7 @@ public class Manage {
 					List<Object> lines = new ArrayList<Object>();		
 					
 					long sum = 0;
-					Set<Entry<String, Command>> entrys = StatUtil.getCommandStats();
+					Set<Entry<String, Command>> entrys = StatUtil.getCommandCountMap().entrySet();
 					for (Entry<String, Command> entry : entrys) {	
 						Command parent = entry.getValue();
 						StringBuffer sBuffer = new StringBuffer();	
@@ -762,7 +762,7 @@ public class Manage {
 
 				// SHOW COST
 				} else if (arg2.equalsIgnoreCase("COST")) {
-					Collection<Entry<String, AtomicLong>> entrys = StatUtil.getProcTimeMillsDistribution().entrySet();
+					Collection<Entry<String, AtomicLong>> entrys = StatUtil.getCommandProcTimeMap().entrySet();
 
 					List<String> lines = new ArrayList<String>();
 					for (Entry<String, AtomicLong> entry : entrys) {
@@ -771,23 +771,23 @@ public class Manage {
 						lines.add(sBuffer.toString());
 					}
 					return encode(lines);
-				} else  if(arg2.equalsIgnoreCase("COLLECTION_BIGKEY")) {
+					
+				} else  if(arg2.equalsIgnoreCase("BIGLENGTH")) {
 					List<String> lines = new ArrayList<String>();
 					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("cmd").append(",  ");
 					titleLine.append("key").append(",  ");
-					titleLine.append("type").append(",  ");
 					titleLine.append("length").append(",  ");
 					titleLine.append("count_1k").append(",  ");
 					titleLine.append("count_10k");
 					lines.add(titleLine.toString());
-					for (Entry<String, BigLength> entry : StatUtil.getCollectionKeySet()) { 
-						BigLength collectionKey = entry.getValue();
+					for (BigLength bigLength : StatUtil.getBigLengthMap().values()) { 
 						StringBuffer line1 = new StringBuffer();
-						line1.append(collectionKey.key).append(", ");
-						line1.append(collectionKey.cmd).append(", ");
-						line1.append(collectionKey.length.get()).append(", ");
-						line1.append(collectionKey.count_1k.get()).append(", ");
-						line1.append(collectionKey.count_10k.get());
+						line1.append(bigLength.cmd).append(", ");
+						line1.append(bigLength.key).append(", ");
+						line1.append(bigLength.length.get()).append(", ");
+						line1.append(bigLength.count_1k.get()).append(", ");
+						line1.append(bigLength.count_10k.get());
 						lines.add(line1.toString());
 					}
 					return encode(lines);

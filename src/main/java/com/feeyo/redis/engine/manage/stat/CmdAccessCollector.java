@@ -1,8 +1,6 @@
 package com.feeyo.redis.engine.manage.stat;
 
 import java.util.Map;
-import java.util.Set;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -11,8 +9,8 @@ public class CmdAccessCollector implements StatCollector {
 	private final static String PIPELINE_CMD = "pipeline";
 	
 	// COMMAND、KEY
-	private static ConcurrentHashMap<String, Command> commandStats = new ConcurrentHashMap<String, Command>();
-	private static ConcurrentHashMap<String, AtomicLong> procTimeMillsDistribution = new ConcurrentHashMap<String, AtomicLong>();
+	private static ConcurrentHashMap<String, Command> commandCountMap = new ConcurrentHashMap<String, Command>();
+	private static ConcurrentHashMap<String, AtomicLong> commandProcTimeMap = new ConcurrentHashMap<String, AtomicLong>();
 	
 
 	@Override
@@ -21,11 +19,11 @@ public class CmdAccessCollector implements StatCollector {
 		// 只有pipeline的子命令 是这种只收集指令数据的情况。
 		if ( isCommandOnly ) {
 			
-			Command parent = commandStats.get(PIPELINE_CMD);
+			Command parent = commandCountMap.get(PIPELINE_CMD);
 			if (parent == null) {
 				parent = new Command();
 				parent.cmd = PIPELINE_CMD;
-				commandStats.put(PIPELINE_CMD, parent);
+				commandCountMap.put(PIPELINE_CMD, parent);
 			}
 			
 			Command child = parent.getChild( cmd);
@@ -41,13 +39,13 @@ public class CmdAccessCollector implements StatCollector {
 		}
 		
 		// Command 
-		Command command = commandStats.get(cmd);
+		Command command = commandCountMap.get(cmd);
 		if ( command != null ) {
 			command.count.incrementAndGet();
 		} else {
 			command = new Command();
 			command.cmd = cmd;
-			commandStats.put(cmd, command);	
+			commandCountMap.put(cmd, command);	
 		}			
 		
 		
@@ -65,9 +63,9 @@ public class CmdAccessCollector implements StatCollector {
         	timeKey = ">50  ";
         }
     	
-    	AtomicLong count = procTimeMillsDistribution.get(timeKey);
+    	AtomicLong count = commandProcTimeMap.get(timeKey);
     	if (count == null) {
-    		procTimeMillsDistribution.put(timeKey, new AtomicLong(1));
+    		commandProcTimeMap.put(timeKey, new AtomicLong(1));
     	} else {
     		count.incrementAndGet();
     	}
@@ -76,22 +74,20 @@ public class CmdAccessCollector implements StatCollector {
 
 	@Override
 	public void onScheduleToZore() {
-		
-		commandStats.clear();
-		procTimeMillsDistribution.clear();
-		
+		commandCountMap.clear();
+		commandProcTimeMap.clear();
 	}
 
 	@Override
 	public void onSchedulePeroid(int peroid) {
 	}
 	
-	public ConcurrentHashMap<String, AtomicLong> getProcTimeMillsDistribution() {
-    	return procTimeMillsDistribution;
+	public ConcurrentHashMap<String, AtomicLong> getCommandProcTimeMap() {
+    	return commandProcTimeMap;
     }
 
-    public Set<Entry<String, Command>> getCommandStats() {
-    	return commandStats.entrySet();
+    public ConcurrentHashMap<String, Command> getCommandCountMap() {
+    	return commandCountMap;
     }
     
     
