@@ -6,13 +6,11 @@ public class RedisRequestPolicy {
 
 	private int level;
 	private byte rw = -1;
-	private byte type = -1;
 	
-	public RedisRequestPolicy(int level, byte rw, byte type) {
+	public RedisRequestPolicy(int level, byte rw) {
 		super();
 		this.level = level;
 		this.rw = rw;
-		this.type = type;
 	}
 
 	public int getLevel() {
@@ -21,10 +19,6 @@ public class RedisRequestPolicy {
 
 	public byte getRw() {
 		return rw;
-	}
-	
-	public byte getType() {
-		return type;
 	}
 	
 	public boolean isRead() {

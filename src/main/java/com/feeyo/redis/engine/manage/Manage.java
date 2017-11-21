@@ -24,12 +24,12 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
-import com.feeyo.redis.engine.manage.stat.StatUtil.BigKey;
-import com.feeyo.redis.engine.manage.stat.StatUtil.CollectionKey;
-import com.feeyo.redis.engine.manage.stat.StatUtil.Command;
-import com.feeyo.redis.engine.manage.stat.StatUtil.UserNetIo;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -38,7 +38,6 @@ import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.nio.Connection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.buffer.BufferPool;
@@ -489,7 +488,7 @@ public class Manage {
 				} else if ( arg2.equalsIgnoreCase("BIGKEY") ) {
 					
 					List<String> lines = new ArrayList<String>();						
-					Collection<Entry<String, BigKey>> entrys = StatUtil.getBigKeyStats().entrySet();
+					Collection<Entry<String, BigKey>> entrys = StatUtil.getBigKeyMap().entrySet();
 					for(Entry<String, BigKey> e : entrys) {
 						BigKey bigkey = e.getValue();
 						StringBuffer sBuffer = new StringBuffer();
@@ -626,11 +625,11 @@ public class Manage {
 					
 					long totalNetIn = 0;
 					long totalNetOut = 0;
-					for (Map.Entry<String, UserNetIo> entry : StatUtil.getUserNetIoStats()) { 
+					for (Map.Entry<String, UserNetFlow> entry : StatUtil.getUserFlowSet()) { 
 						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
 							StringBuffer sb = new StringBuffer();
-							UserNetIo userNetIo = entry.getValue();
-							sb.append(userNetIo.user).append("  ");
+							UserNetFlow userNetIo = entry.getValue();
+							sb.append(userNetIo.password).append("  ");
 							sb.append(userNetIo.netIn.get()).append("  ");
 							sb.append(userNetIo.netOut.get());
 							totalNetIn = totalNetIn + userNetIo.netIn.get();
@@ -781,21 +780,11 @@ public class Manage {
 					titleLine.append("count_1k").append(",  ");
 					titleLine.append("count_10k");
 					lines.add(titleLine.toString());
-					for (Entry<String, CollectionKey> entry : StatUtil.getCollectionKeyTop100OfLength()) { 
-						CollectionKey collectionKey = entry.getValue();
+					for (Entry<String, BigLength> entry : StatUtil.getCollectionKeySet()) { 
+						BigLength collectionKey = entry.getValue();
 						StringBuffer line1 = new StringBuffer();
 						line1.append(collectionKey.key).append(", ");
-						String type = null;
-						if (collectionKey.type == CommandParse.TYPE_HASH_CMD) {
-							type = "hash";
-						} else if (collectionKey.type == CommandParse.TYPE_LIST_CMD) {
-							type = "list";
-						} else if (collectionKey.type == CommandParse.TYPE_SET_CMD) {
-							type = "set";
-						} else if (collectionKey.type == CommandParse.TYPE_SORTEDSET_CMD) {
-							type = "sortedset";
-						}
-						line1.append(type).append(", ");
+						line1.append(collectionKey.cmd).append(", ");
 						line1.append(collectionKey.length.get()).append(", ");
 						line1.append(collectionKey.count_1k.get()).append(", ");
 						line1.append(collectionKey.count_10k.get());

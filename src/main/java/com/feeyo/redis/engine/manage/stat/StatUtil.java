@@ -1,23 +1,26 @@
 package com.feeyo.redis.engine.manage.stat;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
-import com.feeyo.redis.net.front.handler.CommandParse;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -32,22 +35,11 @@ public class StatUtil {
 	private static Logger LOGGER = LoggerFactory.getLogger( StatUtil.class );
 	
 	public static final String STAT_KEY = "RedisProxyStat";
-	private final static String PIPELINE_CMD = "pipeline";
-	private final static int MAX_LIMIT_COLLECTION_KEY_BUFFER_SIZE = 1000;
-	private final static int MIN_LIMIT_COLLECTION_KEY_BUFFER_SIZE = 500;
-	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
+
+
 	
 	public static final int SLOW_COST = 50; 			  			// 50秒	
 	public static final int STATISTIC_PEROID = 30; 		  			// 30秒
-
-	// COMMAND、KEY
-	private static ConcurrentHashMap<String, Command> commandStats = new ConcurrentHashMap<String, Command>();
-	private static ConcurrentHashMap<String, BigKey> bigkeyStats = new ConcurrentHashMap<String, BigKey>();
-	private static ConcurrentHashMap<String, UserNetIo> userNetIoStats = new ConcurrentHashMap<String, UserNetIo>();
-	private static ConcurrentHashMap<String, AtomicLong> procTimeMillsDistribution = new ConcurrentHashMap<String, AtomicLong>();
-	// 缓存最近出现过的集合类型key
-	private static ConcurrentHashMap<String, CollectionKey> collectionKeyBuffer = new ConcurrentHashMap<String, CollectionKey>();
-	private static ConcurrentHashMap<String, CollectionKey> collectionKeyTop100OfLength = new ConcurrentHashMap<String, CollectionKey>();
 	
 	// ACCESS
 	private static ConcurrentHashMap<String, AccessStatInfo> accessStats = new ConcurrentHashMap<>();
@@ -57,11 +49,25 @@ public class StatUtil {
 	public static ScheduledFuture<?> scheduledFuture;
 	
 	public static long zeroTimeMillis = 0;
-	public static long lastProcessCollectionKeysTimeMillis = TimeUtil.currentTimeMillis();
-	private static CollectionKeysHandler collectionKeysHandler = new CollectionKeysHandler();
-	private static AtomicBoolean isCollectionKeysProcessing = new AtomicBoolean(false);
+	
+	// 收集器
+	private static List<StatCollector> collectors = new CopyOnWriteArrayList<>();
+	
+	private static NetFlowCollector netflowCollector = new NetFlowCollector();
+	private static CmdAccessCollector cmdAccessCollector = new CmdAccessCollector();
+	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
+	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
+	
+	
+	private static StatNotification notification = new StatNotification();
 	
 	static {
+		
+		addCollector( netflowCollector );
+		addCollector( cmdAccessCollector );
+		addCollector( bigKeyCollector );
+		addCollector( bigLengthCollector );
+		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {		
@@ -97,22 +103,49 @@ public class StatUtil {
 						
 						LOGGER.info("Through cmd count:" + sum);
 						
-						commandStats.clear();
-						bigkeyStats.clear();
-						procTimeMillsDistribution.clear();
-						userNetIoStats.clear();
-						//setkeyStats.clear();
+						
+						// send mail
+						notification.sendMail();
+						
+						// clear temp data
+						for(StatCollector listener: collectors) {
+							try {
+								listener.onScheduleToZore();
+							} catch(Exception e) {
+								LOGGER.error("error:",e);
+							}
+						}
+						
 					}
 					
 					zeroTimeMillis = cal.getTimeInMillis();
-		        }		
-		        
-				if (TimeUtil.currentTimeMillis() - lastProcessCollectionKeysTimeMillis >= STATISTIC_PEROID * 1000
-						&& isCollectionKeysProcessing.compareAndSet(false, true)) {
-					processCollectionKeyBuffer();
+					
+					
 		        }
+		        
+		        for(StatCollector listener: collectors) {
+					try {
+						listener.onSchedulePeroid( STATISTIC_PEROID );
+					} catch(Exception e) {
+						LOGGER.error("error:",e);
+					}
+				}
+		        
+				
 			}
 		}, STATISTIC_PEROID, STATISTIC_PEROID, TimeUnit.SECONDS);
+	}
+	
+	
+	public static void addCollector(StatCollector collector) {
+		if (collector == null) {
+			throw new NullPointerException();
+		}
+		collectors.add(collector);
+	}
+	
+	public static void removeCollector(StatCollector collector) {
+		collectors.remove(collector);
 	}
 	
 	
@@ -135,46 +168,9 @@ public class StatUtil {
 			@Override
 			public void run() {
 				
-				// 只有pipeline的子命令 是这种只收集指令数据的情况。
-				if ( isCommandOnly ) {
-					
-					Command parent = commandStats.get(PIPELINE_CMD);
-					if (parent == null) {
-						parent = new Command();
-						parent.cmd = PIPELINE_CMD;
-						commandStats.put(PIPELINE_CMD, parent);
-					}
-					
-					Command child = parent.getChild( cmd);
-					if (child == null) {
-						child = new Command();
-						child.cmd = cmd;
-						parent.addChild( child );
-						
-					} else {
-						child.count.incrementAndGet();
-					}
-					return;
-				}
 				
-				// Command 
-				Command command = commandStats.get(cmd);
-				if ( command != null ) {
-					command.count.incrementAndGet();
-				} else {
-					command = new Command();
-					command.cmd = cmd;
-					commandStats.put(cmd, command);	
-				}			
 		        
-				UserNetIo userNetIo = userNetIoStats.get(password);
-				if ( userNetIo == null ) {
-					userNetIo = new UserNetIo();
-					userNetIo.user = password;
-					userNetIoStats.put(password, userNetIo);
-				}
-				userNetIo.netIn.addAndGet(requestSize);
-				userNetIo.netOut.addAndGet(responseSize);
+
 				
 				
 				long currentTimeMillis = TimeUtil.currentTimeMillis();
@@ -192,102 +188,24 @@ public class StatUtil {
 		        } catch (Exception e) {
 		        }
 		        
-		        // 计算指令消耗时间分布，5个档（小于5，小于10，小于20，小于50，大于50）
-		        collectProcTimeMillsDistribution( procTimeMills );
-		        	
-				// 大key
-				if ( key != null && ( requestSize > BIGKEY_SIZE || responseSize > BIGKEY_SIZE ) ) {	
-					
-					if ( bigkeyStats.size() > 500 ) {
-						for (Entry<String, BigKey> entry : bigkeyStats.entrySet()) {
-							BigKey bigKey = entry.getValue();
-							// TODO 后序优化
-							// 清除： 最近5分钟没有使用过 && 使用总次数小于5 && 小于1M
-							if (TimeUtil.currentTimeMillis() - bigKey.lastUseTime > 5 * 60 * 1000
-									&& bigKey.count.get() < 5 && bigKey.size < 1 * 1024 * 1024) {
-								bigkeyStats.remove(entry.getKey());
-							}
-						}
-						LOGGER.info("bigkey clear. after clear bigkey length is :" + bigkeyStats.size());
+		      
+		        
+
+		    	//
+				String keyStr = new String(key);
+				for(StatCollector listener: collectors) {
+					try {
+						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, isCommandOnly);
+					} catch(Exception e) {
+						LOGGER.error("error:",e);
 					}
-						
-					String keyStr = new String(key);
-					BigKey bigkey = bigkeyStats.get( keyStr );
-					if ( bigkey == null ) {
-						bigkey = new BigKey();
-						bigkey.cmd = cmd;
-						bigkey.key = keyStr;
-						bigkey.size = requestSize > responseSize ? requestSize : responseSize;
-						bigkey.lastUseTime = TimeUtil.currentTimeMillis();
-						
-						bigkeyStats.put(bigkey.key, bigkey);
-						
-					} else {
-						if ( bigkey.count.get() >= Integer.MAX_VALUE ) {
-							bigkey.count.set(1);
-						}
-						
-						bigkey.cmd = cmd;
-						bigkey.size = requestSize > responseSize ? requestSize : responseSize;
-						bigkey.count.incrementAndGet();
-						bigkey.lastUseTime = TimeUtil.currentTimeMillis();
-						
-						bigkeyStats.put(bigkey.key, bigkey);
-					}
-				}
-				
-				// 统计集合类型key
-				RedisRequestPolicy policy = CommandParse.getPolicy(cmd);
-				// 如果是集合类型key
-				if (policy.getType() == CommandParse.TYPE_HASH_CMD || policy.getType() == CommandParse.TYPE_LIST_CMD 
-						|| policy.getType() == CommandParse.TYPE_SET_CMD || policy.getType() == CommandParse.TYPE_SORTEDSET_CMD) 
-				{
-					String keyStr = new String(key);
-					
-					// 如果是写入指令，并且此数据是集合类key长度top100中。判断此次请求的数据大小，记录，用于估算大长度key的数据大小。
-					if (policy.getRw() == CommandParse.WRITE_CMD) {
-						CollectionKey ck = collectionKeyTop100OfLength.get(keyStr);
-						if (ck != null) {
-							if (requestSize > 10 * 1024) {
-								ck.count_10k.incrementAndGet();
-							} else if (requestSize > 1024) {
-								ck.count_1k.incrementAndGet();
-							}
-						}
-					}
-					
-					CollectionKey collectionKey = collectionKeyBuffer.get(keyStr);
-					if (collectionKey == null) {
-						if (collectionKeyBuffer.size() < MAX_LIMIT_COLLECTION_KEY_BUFFER_SIZE) {
-							collectionKey = new CollectionKey();
-							collectionKey.key = keyStr;
-							collectionKey.type = policy.getType();
-							collectionKey.user = password;
-							collectionKeyBuffer.put(keyStr, collectionKey);
-						}
-						if (collectionKeyBuffer.size() >= MIN_LIMIT_COLLECTION_KEY_BUFFER_SIZE 
-								&& isCollectionKeysProcessing.compareAndSet(false, true)) 
-							processCollectionKeyBuffer();
-					}
-				}
+				}	
 				
 			}
 		});
 	}
 	
-	/**
-	 * 集中处理收集到集合类型的key
-	 */
-	private static void processCollectionKeyBuffer() {
-		try {
-			ConcurrentHashMap<String, CollectionKey> collectionKeys = collectionKeyBuffer;
-			collectionKeyBuffer = new ConcurrentHashMap<String, CollectionKey>();
-			lastProcessCollectionKeysTimeMillis = TimeUtil.currentTimeMillis();
-			collectionKeysHandler.Handle(collectionKeys);
-		} finally {
-			isCollectionKeysProcessing.set(false);
-		}
-	}
+	
 	
     private static AccessStatInfo getAccessStatInfo(String key, long currentTime) {
         AccessStatInfo item = accessStats.get(key);
@@ -298,76 +216,31 @@ public class StatUtil {
         return item;
     }
     
-    private static void collectProcTimeMillsDistribution(int procTimeMills) {
-    	String key = null;
-    	if ( procTimeMills < 5 ) {
-    		key = "<5   ";
-        } else if ( procTimeMills < 10 ) {
-        	key = "5-10 ";
-        } else if ( procTimeMills < 20 ) {
-        	key = "10-20";
-        } else if ( procTimeMills < 50 ) {
-        	key = "20-50";
-        } else {
-        	key = ">50  ";
-        }
-    	
-    	AtomicLong count = procTimeMillsDistribution.get(key);
-    	if (count == null) {
-    		procTimeMillsDistribution.put(key, new AtomicLong(1));
-    	} else {
-    		count.incrementAndGet();
-    	}
-    	
-    }
-    
     public static ConcurrentHashMap<String, AccessStatInfoResult> getTotalAccessStatInfo() {
         return totalResults;
     }
     
-    public static ConcurrentHashMap<String, BigKey> getBigKeyStats() {
-    	return bigkeyStats;
+    public static ConcurrentHashMap<String, BigKey> getBigKeyMap() {
+    	return bigKeyCollector.getBigkeyMap();
+    }
+    
+    public static Set<Entry<String, BigLength>> getCollectionKeySet() {
+    	return bigLengthCollector.getCollectionKeyTop100OfLength();
     }
     
     public static ConcurrentHashMap<String, AtomicLong> getProcTimeMillsDistribution() {
-    	return procTimeMillsDistribution;
+    	return cmdAccessCollector.getProcTimeMillsDistribution();
     }
 
     public static Set<Entry<String, Command>> getCommandStats() {
-    	return commandStats.entrySet();
+    	return cmdAccessCollector.getCommandStats();
     }
     
-    public static Set<Entry<String, UserNetIo>> getUserNetIoStats() {
-    	return userNetIoStats.entrySet();
+    public static Set<Entry<String, UserNetFlow>> getUserFlowSet() {
+    	return netflowCollector.getUserFlowSet();
     }
     
-    public static void removeCollectionKeyFromTop100 (CollectionKey collectionKey) {
-    	collectionKeyTop100OfLength.remove(collectionKey.key);
-    }
-    
-    public static void addCollectionKeyToTop100 (CollectionKey collectionKey) {
-    	if (collectionKeyTop100OfLength.get(collectionKey.key) != null) {
-    		CollectionKey ck = collectionKeyTop100OfLength.get(collectionKey.key);
-    		ck.length = collectionKey.length;
-    	} else if (collectionKeyTop100OfLength.size() > 100) {
-    		CollectionKey currentCollectionKey = collectionKey;
-    		for (Entry<String, CollectionKey> entry : collectionKeyTop100OfLength.entrySet()) {
-    			CollectionKey ck = entry.getValue();
-    			if (ck.length.get() < currentCollectionKey.length.get()) {
-    				currentCollectionKey = ck;
-    			}
-    		}
-    		if (collectionKeyTop100OfLength.remove(currentCollectionKey.key) != null)
-    			collectionKeyTop100OfLength.put(collectionKey.key, collectionKey);
-    	} else {
-    		collectionKeyTop100OfLength.put(collectionKey.key, collectionKey);
-    	}
-    }
-    
-    public static Set<Entry<String, CollectionKey>> getCollectionKeyTop100OfLength() {
-    	return collectionKeyTop100OfLength.entrySet();
-    }
-    
+  
 	public static class AccessStatInfo  {
 		
 		private String key;
@@ -532,45 +405,6 @@ public class StatUtil {
 		public long[] netOutBytes = new long[]{0,0,-1,0};
 		
 		public long created;
-	}
-	
-	public static class BigKey {
-		public String cmd;
-		public String key;
-		public int size;
-		public AtomicInteger count = new AtomicInteger(1);
-		public long lastUseTime;
-	}
-	
-	public static class Command {
-		
-		public String cmd;
-		public AtomicLong count = new AtomicLong(1);
-		
-		public Map<String, Command> childs = new ConcurrentHashMap<>();
-		
-		public Command getChild(String cmd) {
-			return childs.get(cmd);
-		}
-		
-		public void addChild(Command command) {
-			childs.put(command.cmd, command);
-		}
-	}
-	
-	public static class UserNetIo {
-		public String user;
-		public AtomicLong netIn = new AtomicLong(0);
-		public AtomicLong netOut = new AtomicLong(0);
-	}
-	
-	public static class CollectionKey {
-		public String user;
-		public String key;
-		public byte type;
-		public AtomicInteger length = new AtomicInteger(0);
-		public AtomicInteger count_1k = new AtomicInteger(0);
-		public AtomicInteger count_10k = new AtomicInteger(0);
 	}
 	
 }

@@ -13,7 +13,6 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.loader.zk.ZkClient;
-import com.feeyo.redis.engine.mail.RedisProxyMailService;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.RedisPoolFactory;
@@ -158,13 +157,10 @@ public class RedisEngineCtx {
         Iterator<String> it = userMap.keySet().iterator();
         String authString  = it.hasNext() ? it.next() : "";
         KeepAlived.check(port, authString);
+        
 		// 7, zk startup
 		ZkClient.INSTANCE().init();
 		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
-		
-		// 8、邮件服务
-		RedisProxyMailService mailService = new RedisProxyMailService();
-		mailService.startUp();
 	}
 	
 	public byte[] reloadAll() {
