@@ -15,14 +15,14 @@ public class NetFlowCollector implements StatCollector {
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
 			boolean isCommandOnly) {
 		
-		UserNetFlow userNetIo = userNetFlowMap.get(password);
-		if ( userNetIo == null ) {
-			userNetIo = new UserNetFlow();
-			userNetIo.password = password;
-			userNetFlowMap.put(password, userNetIo);
+		UserNetFlow userNetFlow = userNetFlowMap.get(password);
+		if ( userNetFlow == null ) {
+			userNetFlow = new UserNetFlow();
+			userNetFlow.password = password;
+			userNetFlowMap.put(password, userNetFlow);
 		}
-		userNetIo.netIn.addAndGet(requestSize);
-		userNetIo.netOut.addAndGet(responseSize);
+		userNetFlow.netIn.addAndGet(requestSize);
+		userNetFlow.netOut.addAndGet(responseSize);
 	}
 
 	@Override
