@@ -9,17 +9,13 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.nio.util.TimeUtil;
 
-public class BigKey implements StatListener {
+public class BigKeyStat implements StatListener {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( BigKey.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( BigKeyStat.class );
+	
+	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	
 	private static ConcurrentHashMap<String, BigKey> bigkeyMap = new ConcurrentHashMap<String, BigKey>();
-	
-	public String cmd;
-	public String key;
-	public int size;
-	public AtomicInteger count = new AtomicInteger(1);
-	public long lastUseTime;
 	
 	
 	public ConcurrentHashMap<String, BigKey> getBigkeyMap() {
@@ -28,7 +24,14 @@ public class BigKey implements StatListener {
 
 	
 	@Override
-	public void onBigKey(String user, String cmd, String key, int requestSize, int responseSize) {
+	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
+			int procTimeMills, boolean isCommandOnly ) {
+		
+		// 大key 校验
+		if (  requestSize < BIGKEY_SIZE && responseSize < BIGKEY_SIZE  ) {	
+			return;
+		}
+		
 		
 		if ( bigkeyMap.size() > 500 ) {
 			for (Entry<String, BigKey> entry : bigkeyMap.entrySet()) {
@@ -68,12 +71,6 @@ public class BigKey implements StatListener {
 		}
 		
 	}
-	
-	@Override
-	public void onCollectionKey(String password, String cmd, String key, int requestSize ) {
-		// TODO Auto-generated method stub
-		
-	}
 
 	@Override
 	public void onScheduleToZore() {
@@ -83,5 +80,14 @@ public class BigKey implements StatListener {
 
 	@Override
 	public void onSchedulePeroid(int peroid) {
+	}
+	
+	
+	public static class BigKey {
+		public String cmd;
+		public String key;
+		public int size;
+		public AtomicInteger count = new AtomicInteger(1);
+		public long lastUseTime;
 	}
 }

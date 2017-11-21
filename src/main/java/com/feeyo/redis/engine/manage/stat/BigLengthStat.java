@@ -19,9 +19,9 @@ import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
 import com.feeyo.util.jedis.exception.JedisDataException;
 
-public class CollectionKey implements StatListener {
+public class BigLengthStat implements StatListener {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( CollectionKey.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( BigLengthStat.class );
 	
 	private final static int LENGTH_THRESHOLD = 10000;
 	
@@ -29,15 +29,10 @@ public class CollectionKey implements StatListener {
 	private final static int MAX_WATCH_LEN = 1000;
 	
 	// 缓存最近出现过的集合类型key
-	private static ConcurrentHashMap<String, CollectionKey> ckeyMap = new ConcurrentHashMap<String, CollectionKey>();
-	private static ConcurrentHashMap<String, CollectionKey> ckeyTop100Map = new ConcurrentHashMap<String, CollectionKey>();
+	private static ConcurrentHashMap<String, BigLength> ckeyMap = new ConcurrentHashMap<String, BigLength>();
+	private static ConcurrentHashMap<String, BigLength> ckeyTop100Map = new ConcurrentHashMap<String, BigLength>();
 	
-	public String user;
-	public String cmd;
-	public String key;
-	public AtomicInteger length = new AtomicInteger(0);
-	public AtomicInteger count_1k = new AtomicInteger(0);
-	public AtomicInteger count_10k = new AtomicInteger(0);
+
 	
 	private static long lastCheckTime = TimeUtil.currentTimeMillis();
 	private static AtomicBoolean isChecking = new AtomicBoolean(false);
@@ -57,11 +52,9 @@ public class CollectionKey implements StatListener {
 
 			lastCheckTime = TimeUtil.currentTimeMillis();
 			
-			for (Entry<String, CollectionKey> entry : ckeyMap.entrySet()) {
+			for (BigLength cKey : ckeyMap.values()) {
 				
-				CollectionKey cKey = entry.getValue();
-				String user = cKey.user;
-				UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
+				UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get( cKey.password );
 				
 				if (userCfg != null) {
 					AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get( userCfg.getPoolId() );
@@ -75,6 +68,7 @@ public class CollectionKey implements StatListener {
 						conn.sendCommand( RedisCommand.READONLY );
 						conn.getBulkReply();
 						
+						String cmd = cKey.cmd;
 						if ( cmd.equals("HMSET") 	
 								|| cmd.equals("HSET") 	
 								|| cmd.equals("HSETNX") 	
@@ -108,14 +102,14 @@ public class CollectionKey implements StatListener {
 							cKey.length.set((int) length);
 
 							if (ckeyTop100Map.get(cKey.key) != null) {
-								CollectionKey ck = ckeyTop100Map.get(cKey.key);
+								BigLength ck = ckeyTop100Map.get(cKey.key);
 								ck.length = cKey.length;
 								
 							} else if (ckeyTop100Map.size() > 100) {
 								
-								CollectionKey minCKey = null;
-								for (Entry<String, CollectionKey> entry1 : ckeyTop100Map.entrySet()) {
-									CollectionKey ck = entry1.getValue();
+								BigLength minCKey = null;
+								for (Entry<String, BigLength> entry1 : ckeyTop100Map.entrySet()) {
+									BigLength ck = entry1.getValue();
 									if ( minCKey == null ) {
 										minCKey = ck;
 									} else {
@@ -155,41 +149,58 @@ public class CollectionKey implements StatListener {
 	}
 
 	    
-	    public  Set<Entry<String, CollectionKey>> getCollectionKeyTop100OfLength() {
-	    	return ckeyTop100Map.entrySet();
-	    }
-	    
-	
-	
-	@Override
-	public void onBigKey(String user, String cmd, String key, int requestSize, int responseSize) {
+	public Set<Entry<String, BigLength>> getCollectionKeyTop100OfLength() {
+		return ckeyTop100Map.entrySet();
 	}
 	
-	@Override
-	public void onCollectionKey(String password, String cmd, String key, int requestSize) {
 	
-		// 如果是写入指令，并且此数据是集合类key长度top100中。判断此次请求的数据大小，记录，用于估算大长度key的数据大小。
-		CollectionKey ck = ckeyTop100Map.get(key);
-		if (ck != null) {
-			if (requestSize > 10 * 1024) {
-				ck.count_10k.incrementAndGet();
-			} else if (requestSize > 1024) {
-				ck.count_1k.incrementAndGet();
-			}
-		}
+	@Override
+	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
+			int procTimeMills, boolean isCommandOnly ) {
 		
-		CollectionKey cKey = ckeyMap.get(key);
-		if (cKey == null) {
-			if (ckeyMap.size() < MAX_WATCH_LEN) {
-				cKey = new CollectionKey();
-				cKey.cmd = cmd;
-				cKey.key = key;
-				cKey.user = password;
-				ckeyMap.put(key, cKey);
-			}
-			if (ckeyMap.size() >= MIN_WATCH_LEN 
-					&& isChecking.compareAndSet(false, true)) 
-				checkRedisCollectionKey();
+		// 统计集合类型key
+		if (  	cmd.equals("HMSET") 	// hash
+				|| cmd.equals("HSET") 	
+				|| cmd.equals("HSETNX") 	
+				|| cmd.equals("HINCRBY") 	
+				|| cmd.equals("HINCRBYFLOAT") 	
+				
+				|| cmd.equals("LPUSH") 	// list
+				|| cmd.equals("LPUSHX") 
+				|| cmd.equals("RPUSH") 
+				|| cmd.equals("RPUSHX") 
+				
+				|| cmd.equals("SADD") // set
+				
+				|| cmd.equals("ZADD")  // sortedset
+				|| cmd.equals("ZINCRBY") 
+				|| cmd.equals("ZREMRANGEBYLEX") ) {
+		
+		
+	
+				// 如果是写入指令，并且此数据是集合类key长度top100中。判断此次请求的数据大小，记录，用于估算大长度key的数据大小。
+				BigLength ck = ckeyTop100Map.get(key);
+				if (ck != null) {
+					if (requestSize > 10 * 1024) {
+						ck.count_10k.incrementAndGet();
+					} else if (requestSize > 1024) {
+						ck.count_1k.incrementAndGet();
+					}
+				}
+				
+				BigLength cKey = ckeyMap.get(key);
+				if (cKey == null) {
+					if (ckeyMap.size() < MAX_WATCH_LEN) {
+						cKey = new BigLength();
+						cKey.cmd = cmd;
+						cKey.key = key;
+						cKey.password = password;
+						ckeyMap.put(key, cKey);
+					}
+					if (ckeyMap.size() >= MIN_WATCH_LEN 
+							&& isChecking.compareAndSet(false, true)) 
+						checkRedisCollectionKey();
+				}
 		}
 		
 	}
@@ -205,5 +216,14 @@ public class CollectionKey implements StatListener {
 		if (TimeUtil.currentTimeMillis() - lastCheckTime >= peroid * 1000 ) {
 			checkRedisCollectionKey();
         }
+	}
+	
+	public static class BigLength {
+		public String password;
+		public String cmd;
+		public String key;
+		public AtomicInteger length = new AtomicInteger(0);
+		public AtomicInteger count_1k = new AtomicInteger(0);
+		public AtomicInteger count_10k = new AtomicInteger(0);
 	}
 }

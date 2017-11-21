@@ -17,6 +17,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.engine.manage.stat.CmdAccessStat.Command;
+import com.feeyo.redis.engine.manage.stat.BigKeyStat.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthStat.BigLength;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -31,23 +34,15 @@ public class StatUtil {
 	private static Logger LOGGER = LoggerFactory.getLogger( StatUtil.class );
 	
 	public static final String STAT_KEY = "RedisProxyStat";
-	
-	private final static String PIPELINE_CMD = "pipeline";
 
-	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
+
 	
 	public static final int SLOW_COST = 50; 			  			// 50秒	
 	public static final int STATISTIC_PEROID = 30; 		  			// 30秒
 	
 
-
-	// COMMAND、KEY
-	private static ConcurrentHashMap<String, Command> commandStats = new ConcurrentHashMap<String, Command>();
-	
 	private static ConcurrentHashMap<String, UserNetIo> userNetIoStats = new ConcurrentHashMap<String, UserNetIo>();
-	private static ConcurrentHashMap<String, AtomicLong> procTimeMillsDistribution = new ConcurrentHashMap<String, AtomicLong>();
-	
-	
+
 	// ACCESS
 	private static ConcurrentHashMap<String, AccessStatInfo> accessStats = new ConcurrentHashMap<>();
 	private static ConcurrentHashMap<String, AccessStatInfoResult> totalResults = new ConcurrentHashMap<>();
@@ -60,15 +55,19 @@ public class StatUtil {
 	
 	private static List<StatListener> listeners = new CopyOnWriteArrayList<>();
 	
-	private static BigKey bigkey = new BigKey();
-	private static CollectionKey collectionKey = new CollectionKey();
+	private static CmdAccessStat cmdAccessStat = new CmdAccessStat();
+	private static BigKeyStat bigKeyStat = new BigKeyStat();
+	private static BigLengthStat bigLengthStat = new BigLengthStat();
+	
 	private static MailNotification mailNotification = new MailNotification();
 	
 	static {
 		
 		addListener( mailNotification );
-		addListener( bigkey );
-		addListener( collectionKey );
+		
+		addListener( cmdAccessStat );
+		addListener( bigKeyStat );
+		addListener( bigLengthStat );
 		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
@@ -105,9 +104,7 @@ public class StatUtil {
 						
 						LOGGER.info("Through cmd count:" + sum);
 						
-						commandStats.clear();
-						
-						procTimeMillsDistribution.clear();
+					
 						userNetIoStats.clear();
 						
 						//
@@ -171,42 +168,12 @@ public class StatUtil {
 			@Override
 			public void run() {
 				
-				// 只有pipeline的子命令 是这种只收集指令数据的情况。
-				if ( isCommandOnly ) {
-					
-					Command parent = commandStats.get(PIPELINE_CMD);
-					if (parent == null) {
-						parent = new Command();
-						parent.cmd = PIPELINE_CMD;
-						commandStats.put(PIPELINE_CMD, parent);
-					}
-					
-					Command child = parent.getChild( cmd);
-					if (child == null) {
-						child = new Command();
-						child.cmd = cmd;
-						parent.addChild( child );
-						
-					} else {
-						child.count.incrementAndGet();
-					}
-					return;
-				}
 				
-				// Command 
-				Command command = commandStats.get(cmd);
-				if ( command != null ) {
-					command.count.incrementAndGet();
-				} else {
-					command = new Command();
-					command.cmd = cmd;
-					commandStats.put(cmd, command);	
-				}			
 		        
 				UserNetIo userNetIo = userNetIoStats.get(password);
 				if ( userNetIo == null ) {
 					userNetIo = new UserNetIo();
-					userNetIo.user = password;
+					userNetIo.password = password;
 					userNetIoStats.put(password, userNetIo);
 				}
 				userNetIo.netIn.addAndGet(requestSize);
@@ -228,51 +195,18 @@ public class StatUtil {
 		        } catch (Exception e) {
 		        }
 		        
-		        // 计算指令消耗时间分布，5个档（小于5，小于10，小于20，小于50，大于50）
-		        collectProcTimeMillsDistribution( procTimeMills );
-		        	
-				// 大key
-				if ( key != null && ( requestSize > BIGKEY_SIZE || responseSize > BIGKEY_SIZE ) ) {	
-					
-					//
-					String keyStr = new String(key);
-					for(StatListener listener: listeners) {
-						try {
-							listener.onBigKey(password, cmd, keyStr, requestSize, responseSize);
-						} catch(Exception e) {
-							LOGGER.error("error:",e);
-						}
-					}		
-				}
-				
-				
-				// 统计集合类型key
-				if (  	cmd.equals("HMSET") 	// hash
-						|| cmd.equals("HSET") 	
-						|| cmd.equals("HSETNX") 	
-						|| cmd.equals("HINCRBY") 	
-						|| cmd.equals("HINCRBYFLOAT") 	
-						
-						|| cmd.equals("LPUSH") 	// list
-						|| cmd.equals("LPUSHX") 
-						|| cmd.equals("RPUSH") 
-						|| cmd.equals("RPUSHX") 
-						
-						|| cmd.equals("SADD") // set
-						
-						|| cmd.equals("ZADD")  // sortedset
-						|| cmd.equals("ZINCRBY") 
-						|| cmd.equals("ZREMRANGEBYLEX") ) {
-					
-					String keyStr = new String(key);
-					for(StatListener listener: listeners) {
-						try {
-							listener.onCollectionKey(password, cmd, keyStr, requestSize);
-						} catch(Exception e) {
-							LOGGER.error("error:",e);
-						}
-					}	
-				}
+		      
+		        
+
+		    	//
+				String keyStr = new String(key);
+				for(StatListener listener: listeners) {
+					try {
+						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, isCommandOnly);
+					} catch(Exception e) {
+						LOGGER.error("error:",e);
+					}
+				}	
 				
 			}
 		});
@@ -289,47 +223,24 @@ public class StatUtil {
         return item;
     }
     
-    private static void collectProcTimeMillsDistribution(int procTimeMills) {
-    	String key = null;
-    	if ( procTimeMills < 5 ) {
-    		key = "<5   ";
-        } else if ( procTimeMills < 10 ) {
-        	key = "5-10 ";
-        } else if ( procTimeMills < 20 ) {
-        	key = "10-20";
-        } else if ( procTimeMills < 50 ) {
-        	key = "20-50";
-        } else {
-        	key = ">50  ";
-        }
-    	
-    	AtomicLong count = procTimeMillsDistribution.get(key);
-    	if (count == null) {
-    		procTimeMillsDistribution.put(key, new AtomicLong(1));
-    	} else {
-    		count.incrementAndGet();
-    	}
-    	
-    }
-    
     public static ConcurrentHashMap<String, AccessStatInfoResult> getTotalAccessStatInfo() {
         return totalResults;
     }
     
     public static ConcurrentHashMap<String, BigKey> getBigKeyMap() {
-    	return bigkey.getBigkeyMap();
+    	return bigKeyStat.getBigkeyMap();
     }
     
-    public static Set<Entry<String, CollectionKey>> getCollectionKeySet() {
-    	return collectionKey.getCollectionKeyTop100OfLength();
+    public static Set<Entry<String, BigLength>> getCollectionKeySet() {
+    	return bigLengthStat.getCollectionKeyTop100OfLength();
     }
     
     public static ConcurrentHashMap<String, AtomicLong> getProcTimeMillsDistribution() {
-    	return procTimeMillsDistribution;
+    	return cmdAccessStat.getProcTimeMillsDistribution();
     }
 
     public static Set<Entry<String, Command>> getCommandStats() {
-    	return commandStats.entrySet();
+    	return cmdAccessStat.getCommandStats();
     }
     
     public static Set<Entry<String, UserNetIo>> getUserNetIoStats() {
@@ -503,24 +414,10 @@ public class StatUtil {
 		public long created;
 	}
 	
-	public static class Command {
-		
-		public String cmd;
-		public AtomicLong count = new AtomicLong(1);
-		
-		public Map<String, Command> childs = new ConcurrentHashMap<>();
-		
-		public Command getChild(String cmd) {
-			return childs.get(cmd);
-		}
-		
-		public void addChild(Command command) {
-			childs.put(command.cmd, command);
-		}
-	}
+
 	
 	public static class UserNetIo {
-		public String user;
+		public String password;
 		public AtomicLong netIn = new AtomicLong(0);
 		public AtomicLong netOut = new AtomicLong(0);
 	}

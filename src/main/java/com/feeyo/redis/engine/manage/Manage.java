@@ -24,11 +24,11 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.manage.stat.BigKey;
-import com.feeyo.redis.engine.manage.stat.CollectionKey;
+import com.feeyo.redis.engine.manage.stat.CmdAccessStat.Command;
+import com.feeyo.redis.engine.manage.stat.BigKeyStat.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthStat.BigLength;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
-import com.feeyo.redis.engine.manage.stat.StatUtil.Command;
 import com.feeyo.redis.engine.manage.stat.StatUtil.UserNetIo;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
@@ -629,7 +629,7 @@ public class Manage {
 						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
 							StringBuffer sb = new StringBuffer();
 							UserNetIo userNetIo = entry.getValue();
-							sb.append(userNetIo.user).append("  ");
+							sb.append(userNetIo.password).append("  ");
 							sb.append(userNetIo.netIn.get()).append("  ");
 							sb.append(userNetIo.netOut.get());
 							totalNetIn = totalNetIn + userNetIo.netIn.get();
@@ -780,8 +780,8 @@ public class Manage {
 					titleLine.append("count_1k").append(",  ");
 					titleLine.append("count_10k");
 					lines.add(titleLine.toString());
-					for (Entry<String, CollectionKey> entry : StatUtil.getCollectionKeySet()) { 
-						CollectionKey collectionKey = entry.getValue();
+					for (Entry<String, BigLength> entry : StatUtil.getCollectionKeySet()) { 
+						BigLength collectionKey = entry.getValue();
 						StringBuffer line1 = new StringBuffer();
 						line1.append(collectionKey.key).append(", ");
 						line1.append(collectionKey.cmd).append(", ");

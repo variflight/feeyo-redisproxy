@@ -6,12 +6,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.feeyo.redis.engine.manage.stat.BigKeyStat.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthStat.BigLength;
 import com.feeyo.util.MailUtil;
 
 public class MailNotification implements StatListener {
@@ -20,10 +21,7 @@ public class MailNotification implements StatListener {
 	
 	//收件人
 	private static final String[] addrs = new String[] {};
-	private static final String[] fileNames = new String[] {"big_key.txt", "top_hundred.txt"};
-	private static final String filePath = System.getProperty("FEEYO_HOME")+"\\store\\";
-	
-	
+	private static final String[] fileNames = new String[] { "big_key.txt", "top_hundred.txt" };
 	
 	private void createFile(String fileName, String content) {
 		FileOutputStream fos = null;
@@ -64,6 +62,9 @@ public class MailNotification implements StatListener {
 	}
 	
 	private String[] transFilePathName(String[] filenames) {
+		
+		String filePath = System.getProperty("FEEYO_HOME") + "\\store\\";
+		
 		String[] attachementNames = new String[filenames.length];
 		for(int index = 0 ;index< filenames.length; index++) {
 			attachementNames[index] = filePath + sdf.format(new Date())+"_"+filenames[index];
@@ -81,12 +82,7 @@ public class MailNotification implements StatListener {
 
 
 	@Override
-	public void onBigKey(String password, String cmd, String key, int requestSize, int responseSize) {
-	}
-
-
-	@Override
-	public void onCollectionKey(String password, String cmd, String key, int requestSize ) {
+	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, boolean isCommandOnly ) {
 	}
 
 
@@ -101,9 +97,7 @@ public class MailNotification implements StatListener {
 			tableBuffer.append("|    cmd    |     key     |    size    |    count    |");
 			
 			//获取bigkey的数据信息
-			Collection<Entry<String, BigKey>> entrys = bigkeyStats.entrySet();
-			for(Entry<String, BigKey> entry : entrys) {
-				BigKey bigkey = entry.getValue();
+			for(BigKey bigkey : bigkeyStats.values()) {
 				tableBuffer.append("\n");
 				tableBuffer.append("|    ");
 				tableBuffer.append(bigkey.cmd).append("    |    ");
@@ -116,11 +110,11 @@ public class MailNotification implements StatListener {
 			createFile(attachmentsNames[0],tableBuffer.toString());
 			tableBuffer.setLength(0);
 			
-			Set<Entry<String, CollectionKey>> collectionKeySet =  StatUtil.getCollectionKeySet();
+			Set<Entry<String, BigLength>> collectionKeySet =  StatUtil.getCollectionKeySet();
 			tableBuffer.append("#############   top  hundred   #################\n");
 			tableBuffer.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
-			for(Entry<String, CollectionKey> entry : collectionKeySet) {
-				CollectionKey collectionKey = entry.getValue();
+			for(Entry<String, BigLength> entry : collectionKeySet) {
+				BigLength collectionKey = entry.getValue();
 				tableBuffer.append("\n");
 				tableBuffer.append("|    ");
 				tableBuffer.append(collectionKey.key).append("    |    ");
@@ -136,9 +130,7 @@ public class MailNotification implements StatListener {
 			clearFiles(attachmentsNames);
 			
 		} catch(Exception e) {
-			
 		}
-		
 	}
 
 
