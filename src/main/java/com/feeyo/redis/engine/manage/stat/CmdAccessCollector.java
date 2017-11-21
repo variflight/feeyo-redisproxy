@@ -6,7 +6,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class CmdAccessStat implements StatListener {
+public class CmdAccessCollector implements StatCollector {
 	
 	private final static String PIPELINE_CMD = "pipeline";
 	

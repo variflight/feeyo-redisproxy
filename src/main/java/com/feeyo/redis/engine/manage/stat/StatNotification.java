@@ -11,11 +11,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.feeyo.redis.engine.manage.stat.BigKeyStat.BigKey;
-import com.feeyo.redis.engine.manage.stat.BigLengthStat.BigLength;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.util.MailUtil;
 
-public class MailNotification implements StatListener {
+public class StatNotification {
 	
 	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	
@@ -81,13 +81,7 @@ public class MailNotification implements StatListener {
 	}
 
 
-	@Override
-	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, boolean isCommandOnly ) {
-	}
-
-
-	@Override
-	public void onScheduleToZore() { 
+	public void sendMail() { 
 
 		try {
 			
@@ -133,7 +127,4 @@ public class MailNotification implements StatListener {
 		}
 	}
 
-
-	@Override
-	public void onSchedulePeroid(int peroid) {}
 }

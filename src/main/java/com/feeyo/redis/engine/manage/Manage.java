@@ -24,12 +24,12 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.manage.stat.CmdAccessStat.Command;
-import com.feeyo.redis.engine.manage.stat.BigKeyStat.BigKey;
-import com.feeyo.redis.engine.manage.stat.BigLengthStat.BigLength;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
-import com.feeyo.redis.engine.manage.stat.StatUtil.UserNetIo;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -625,10 +625,10 @@ public class Manage {
 					
 					long totalNetIn = 0;
 					long totalNetOut = 0;
-					for (Map.Entry<String, UserNetIo> entry : StatUtil.getUserNetIoStats()) { 
+					for (Map.Entry<String, UserNetFlow> entry : StatUtil.getUserFlowSet()) { 
 						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
 							StringBuffer sb = new StringBuffer();
-							UserNetIo userNetIo = entry.getValue();
+							UserNetFlow userNetIo = entry.getValue();
 							sb.append(userNetIo.password).append("  ");
 							sb.append(userNetIo.netIn.get()).append("  ");
 							sb.append(userNetIo.netOut.get());

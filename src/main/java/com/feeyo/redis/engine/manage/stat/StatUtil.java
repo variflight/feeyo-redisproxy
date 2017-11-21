@@ -17,9 +17,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.manage.stat.CmdAccessStat.Command;
-import com.feeyo.redis.engine.manage.stat.BigKeyStat.BigKey;
-import com.feeyo.redis.engine.manage.stat.BigLengthStat.BigLength;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -40,9 +41,6 @@ public class StatUtil {
 	public static final int SLOW_COST = 50; 			  			// 50秒	
 	public static final int STATISTIC_PEROID = 30; 		  			// 30秒
 	
-
-	private static ConcurrentHashMap<String, UserNetIo> userNetIoStats = new ConcurrentHashMap<String, UserNetIo>();
-
 	// ACCESS
 	private static ConcurrentHashMap<String, AccessStatInfo> accessStats = new ConcurrentHashMap<>();
 	private static ConcurrentHashMap<String, AccessStatInfoResult> totalResults = new ConcurrentHashMap<>();
@@ -52,22 +50,23 @@ public class StatUtil {
 	
 	public static long zeroTimeMillis = 0;
 	
+	// 收集器
+	private static List<StatCollector> collectors = new CopyOnWriteArrayList<>();
 	
-	private static List<StatListener> listeners = new CopyOnWriteArrayList<>();
+	private static NetFlowCollector netflowCollector = new NetFlowCollector();
+	private static CmdAccessCollector cmdAccessCollector = new CmdAccessCollector();
+	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
+	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
 	
-	private static CmdAccessStat cmdAccessStat = new CmdAccessStat();
-	private static BigKeyStat bigKeyStat = new BigKeyStat();
-	private static BigLengthStat bigLengthStat = new BigLengthStat();
 	
-	private static MailNotification mailNotification = new MailNotification();
+	private static StatNotification notification = new StatNotification();
 	
 	static {
 		
-		addListener( mailNotification );
-		
-		addListener( cmdAccessStat );
-		addListener( bigKeyStat );
-		addListener( bigLengthStat );
+		addCollector( netflowCollector );
+		addCollector( cmdAccessCollector );
+		addCollector( bigKeyCollector );
+		addCollector( bigLengthCollector );
 		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
@@ -104,11 +103,12 @@ public class StatUtil {
 						
 						LOGGER.info("Through cmd count:" + sum);
 						
-					
-						userNetIoStats.clear();
 						
-						//
-						for(StatListener listener: listeners) {
+						// send mail
+						notification.sendMail();
+						
+						// clear temp data
+						for(StatCollector listener: collectors) {
 							try {
 								listener.onScheduleToZore();
 							} catch(Exception e) {
@@ -123,7 +123,7 @@ public class StatUtil {
 					
 		        }
 		        
-		        for(StatListener listener: listeners) {
+		        for(StatCollector listener: collectors) {
 					try {
 						listener.onSchedulePeroid( STATISTIC_PEROID );
 					} catch(Exception e) {
@@ -137,15 +137,15 @@ public class StatUtil {
 	}
 	
 	
-	public static void addListener(StatListener listener) {
-		if (listener == null) {
+	public static void addCollector(StatCollector collector) {
+		if (collector == null) {
 			throw new NullPointerException();
 		}
-		listeners.add(listener);
+		collectors.add(collector);
 	}
 	
-	public static void removeListener(StatListener listener) {
-		listeners.remove(listener);
+	public static void removeCollector(StatCollector collector) {
+		collectors.remove(collector);
 	}
 	
 	
@@ -170,14 +170,7 @@ public class StatUtil {
 				
 				
 		        
-				UserNetIo userNetIo = userNetIoStats.get(password);
-				if ( userNetIo == null ) {
-					userNetIo = new UserNetIo();
-					userNetIo.password = password;
-					userNetIoStats.put(password, userNetIo);
-				}
-				userNetIo.netIn.addAndGet(requestSize);
-				userNetIo.netOut.addAndGet(responseSize);
+
 				
 				
 				long currentTimeMillis = TimeUtil.currentTimeMillis();
@@ -200,7 +193,7 @@ public class StatUtil {
 
 		    	//
 				String keyStr = new String(key);
-				for(StatListener listener: listeners) {
+				for(StatCollector listener: collectors) {
 					try {
 						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, isCommandOnly);
 					} catch(Exception e) {
@@ -228,23 +221,23 @@ public class StatUtil {
     }
     
     public static ConcurrentHashMap<String, BigKey> getBigKeyMap() {
-    	return bigKeyStat.getBigkeyMap();
+    	return bigKeyCollector.getBigkeyMap();
     }
     
     public static Set<Entry<String, BigLength>> getCollectionKeySet() {
-    	return bigLengthStat.getCollectionKeyTop100OfLength();
+    	return bigLengthCollector.getCollectionKeyTop100OfLength();
     }
     
     public static ConcurrentHashMap<String, AtomicLong> getProcTimeMillsDistribution() {
-    	return cmdAccessStat.getProcTimeMillsDistribution();
+    	return cmdAccessCollector.getProcTimeMillsDistribution();
     }
 
     public static Set<Entry<String, Command>> getCommandStats() {
-    	return cmdAccessStat.getCommandStats();
+    	return cmdAccessCollector.getCommandStats();
     }
     
-    public static Set<Entry<String, UserNetIo>> getUserNetIoStats() {
-    	return userNetIoStats.entrySet();
+    public static Set<Entry<String, UserNetFlow>> getUserFlowSet() {
+    	return netflowCollector.getUserFlowSet();
     }
     
   
@@ -413,14 +406,5 @@ public class StatUtil {
 		
 		public long created;
 	}
-	
-
-	
-	public static class UserNetIo {
-		public String password;
-		public AtomicLong netIn = new AtomicLong(0);
-		public AtomicLong netOut = new AtomicLong(0);
-	}
-
 	
 }

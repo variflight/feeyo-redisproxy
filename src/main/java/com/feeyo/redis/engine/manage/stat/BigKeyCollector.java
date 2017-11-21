@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.nio.util.TimeUtil;
 
-public class BigKeyStat implements StatListener {
+public class BigKeyCollector implements StatCollector {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( BigKeyStat.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( BigKeyCollector.class );
 	
 	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	

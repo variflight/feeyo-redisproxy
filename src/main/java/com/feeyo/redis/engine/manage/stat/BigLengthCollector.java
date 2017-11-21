@@ -19,9 +19,9 @@ import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
 import com.feeyo.util.jedis.exception.JedisDataException;
 
-public class BigLengthStat implements StatListener {
+public class BigLengthCollector implements StatCollector {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( BigLengthStat.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( BigLengthCollector.class );
 	
 	private final static int LENGTH_THRESHOLD = 10000;
 	
