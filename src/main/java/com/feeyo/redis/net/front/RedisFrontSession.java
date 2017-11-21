@@ -15,21 +15,18 @@ import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.codec.RedisRequestUnknowException;
 import com.feeyo.redis.engine.manage.Manage;
-
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
-
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
-import com.feeyo.redis.net.front.handler.DelMultiKeyCommandHandler;
-import com.feeyo.redis.net.front.handler.MGetSetCommandHandler;
+import com.feeyo.redis.net.front.handler.MultiOperatorCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.route.AutoRespNotTransException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
-import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.ManageRespNotTransException;
+import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.net.front.route.RouteService;
@@ -64,8 +61,7 @@ public class RedisFrontSession {
 	private RedisRequestDecoderV5 requestDecoder = new RedisRequestDecoderV5();
 	
 	private AbstractCommandHandler defaultCommandHandler;
-	private AbstractCommandHandler delMultiKeyCommandHandler;
-	private AbstractCommandHandler mGetSetCommandHandler;
+	private AbstractCommandHandler multiOperatorCommandHandler;
 	private AbstractCommandHandler pipelineCommandHandler;
 	
 	private AbstractCommandHandler currentCommandHandler;
@@ -280,25 +276,16 @@ public class RedisFrontSession {
 			return defaultCommandHandler;
 			
 		case DEL_MULTIKEY:
-			if (delMultiKeyCommandHandler == null) {
-				synchronized (_lock) {
-					if (delMultiKeyCommandHandler == null) {
-						delMultiKeyCommandHandler = new DelMultiKeyCommandHandler( frontCon );
-					}
-				}
-			}
-			return delMultiKeyCommandHandler;
-			
 		case MGET:
 		case MSET:
-			if (mGetSetCommandHandler == null) {
+			if (multiOperatorCommandHandler == null) {
 				synchronized (_lock) {
-					if (mGetSetCommandHandler == null) {
-						mGetSetCommandHandler = new MGetSetCommandHandler( frontCon );
+					if (multiOperatorCommandHandler == null) {
+						multiOperatorCommandHandler = new MultiOperatorCommandHandler( frontCon );
 					}
 				}
 			}
-			return mGetSetCommandHandler;
+			return multiOperatorCommandHandler;
 			
 		case PIPELINE:
 			if (pipelineCommandHandler == null) {
@@ -523,8 +510,7 @@ public class RedisFrontSession {
 	
 	private void cleanup() {
 		defaultCommandHandler = null;
-		delMultiKeyCommandHandler = null;
-		mGetSetCommandHandler = null;
+		multiOperatorCommandHandler = null;
 		pipelineCommandHandler = null;
 		currentCommandHandler = null;
 	}

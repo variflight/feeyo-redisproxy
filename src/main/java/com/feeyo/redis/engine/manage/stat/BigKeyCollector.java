@@ -1,5 +1,7 @@
 package com.feeyo.redis.engine.manage.stat;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,7 +18,9 @@ public class BigKeyCollector implements StatCollector {
 	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	
 	private static ConcurrentHashMap<String, BigKey> bigkeyMap = new ConcurrentHashMap<String, BigKey>();
+	private static ConcurrentHashMap<String, BigKey> bigkeyMapBackup = new ConcurrentHashMap<String, BigKey>();
 	
+	private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	
 	public ConcurrentHashMap<String, BigKey> getBigkeyMap() {
 		return bigkeyMap;
@@ -40,6 +44,13 @@ public class BigKeyCollector implements StatCollector {
 				// 清除： 最近5分钟没有使用过 && 使用总次数小于5 && 小于1M
 				if (TimeUtil.currentTimeMillis() - bigKey.lastUseTime > 5 * 60 * 1000
 						&& bigKey.count.get() < 5 && bigKey.size < 1 * 1024 * 1024) {
+					bigkeyMapBackup.put(entry.getKey(), entry.getValue());
+					if(bigkeyMapBackup.size() >= 100) {
+						String version = sdf.format(new Date());
+						DataBackupHandler.storeBigkeyFile(bigkeyMapBackup, version, true);
+						bigkeyMapBackup.clear();
+					}
+					
 					bigkeyMap.remove(entry.getKey());
 				}
 			}
@@ -73,7 +84,16 @@ public class BigKeyCollector implements StatCollector {
 	}
 
 	@Override
-	public void onScheduleToZore() {
+	public void onScheduleToZore(long zeroTimeMillis) {
+		String version = sdf.format(new Date(zeroTimeMillis));
+		ConcurrentHashMap<String, BigKey> tempBigkeystats = DataBackupHandler.transformFile2BigkeyMap(version);
+		long totalNum = tempBigkeystats.size() + bigkeyMap.size() + bigkeyMapBackup.size();
+		bigkeyMap = DataBackupHandler.mergeBigkeyMap(bigkeyMap, bigkeyMapBackup);
+		bigkeyMap = DataBackupHandler.mergeBigkeyMap(bigkeyMap, tempBigkeystats);
+		long finalNum = bigkeyMap.size();
+		DataBackupHandler.storeBigkeyFile(bigkeyMap, version, true);
+		LOGGER.info("At Zero: FileVersion:{}; Total BigKey Num : {}; Merge BigKey Num : {}; Final BigKey Num : {};", version, totalNum, totalNum - finalNum, finalNum);
+		bigkeyMapBackup.clear();
 		bigkeyMap.clear();
 	}
 

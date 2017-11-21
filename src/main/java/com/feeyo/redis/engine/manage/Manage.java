@@ -25,6 +25,7 @@ import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.DataBackupHandler;
 import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
@@ -791,8 +792,36 @@ public class Manage {
 						lines.add(line1.toString());
 					}
 					return encode(lines);
+				}else if(arg2.equalsIgnoreCase("CMD_BACKUP")) {
+					if ( request.getArgs().length < 3) {
+						return "-ERR Parameter error, Please Add Date Parameter eg:2017_01_01 \r\n".getBytes();
+					}
+					String version = new String( request.getArgs()[2] );
+					List<String> lines = DataBackupHandler.getCommandCountBackUp(version);
+					return encode(lines);
+				}else if(arg2.equalsIgnoreCase("BIGKEY_BACKUP")) {
+					if ( request.getArgs().length < 3) {
+						return "-ERR Parameter error, Please Add Date Parameter eg:2017_01_01 \r\n".getBytes();
+					}
+					String version = new String( request.getArgs()[2] );
+					List<String> lines = DataBackupHandler.getBigkeyBackUp(version);
+					return encode(lines);
+				}else if(arg2.equalsIgnoreCase("USER_DAY_NET_IO_BACKUP")) {
+					if ( request.getArgs().length < 3) {
+						return "-ERR Parameter error, Please Add Date Parameter eg:2017_01_01 \r\n".getBytes();
+					}
+					String version = new String( request.getArgs()[2] );
+					List<String> lines = DataBackupHandler.getUserNetFlowBackup(version);
+					return encode(lines);
+				}else if(arg2.equalsIgnoreCase("COST_BACKUP")) {
+					if ( request.getArgs().length < 3) {
+						return "-ERR Parameter error, Please Add Date Parameter eg:2017_01_01 \r\n".getBytes();
+					}
+					String version = new String( request.getArgs()[2] );
+					List<String> lines = DataBackupHandler.getCommandProcTimeBackup(version);
+					return encode(lines);
 				}
-			
+				
 			// NODE
 			} else if (  (arg1[0] == 'N' || arg1[0] == 'n' ) && 
 						 (arg1[1] == 'O' || arg1[1] == 'o' ) && 

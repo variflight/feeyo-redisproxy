@@ -1,5 +1,8 @@
 package com.feeyo.redis.net.front.route;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -8,9 +11,6 @@ import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategyFactory;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.RoutStrategyFactory;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 路由功能
@@ -28,14 +28,14 @@ public class RouteService {
 		boolean isReadOnly = frontCon.getUserCfg().isReadonly();
 		boolean isAdmin = frontCon.getUserCfg().isAdmin();
 		boolean isPipeline = requests.size() > 1;
-		RedisRequestPolicy accuralRequestPolicy = null;
 
 		List<RedisRequestPolicy> requestPolicys = new ArrayList<RedisRequestPolicy>( requests.size() );		// 指令策略
 		List<Integer> autoResponseIndexs = new ArrayList<Integer>();										// 直接返回指令索引
 		
 		// 请求是否存在不合法
 		boolean invalidPolicyExist = false;
-		boolean isMGetSetExist = false;
+		// 请求是否存在批量操作
+		boolean isMultiOpExist = false;
 		for(int i = 0; i < requests.size(); i++) {
 			
 			RedisRequest request = requests.get(i);
@@ -46,10 +46,9 @@ public class RouteService {
 			String cmd = new String( request.getArgs()[0] ).toUpperCase();
 			RedisRequestPolicy requestPolicy = CommandParse.getPolicy( cmd );
 			
-			// 包含MGETSET命令，则采用_MGETSET路由策略
-			if(!isMGetSetExist && (requestPolicy.getLevel() == CommandParse.MGETSET_CMD)) {
-				accuralRequestPolicy = requestPolicy;
-				isMGetSetExist = true;
+			// 包含批量操作命令，则采用_MultiOP路由策略
+			if(!isMultiOpExist && (requestPolicy.getLevel() == CommandParse.MGETSET_CMD || (requestPolicy.getLevel() == CommandParse.DEL_CMD && request.getArgs().length > 2))) {
+				isMultiOpExist = true;
 			}
 			requestPolicys.add( requestPolicy );
 			
@@ -88,14 +87,11 @@ public class RouteService {
 			throw new AutoRespNotTransException("auto response", requests, requestPolicys);
 		}
 		
-		// 根据路由策略对查询请求做路由
-		if(null == accuralRequestPolicy)
-			accuralRequestPolicy = requestPolicys.get(0);
-		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, accuralRequestPolicy);
+		// 根据请求做路由
+		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, isMultiOpExist);
 		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys, autoResponseIndexs);
 		return routeResult;
 	}
-
 	
 	// 校验指令是否为 不合法， true 为不合法
 	private static boolean checkIsInvalidPolicy(int poolType, RedisRequestPolicy requestPolicy, boolean isReadOnly, boolean isAdmin,
