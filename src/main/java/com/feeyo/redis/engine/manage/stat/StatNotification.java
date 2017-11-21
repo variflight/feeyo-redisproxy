@@ -19,9 +19,8 @@ public class StatNotification {
 	
 	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	
-	//收件人
-	private static final String[] addrs = new String[] {};
-	private static final String[] fileNames = new String[] { "big_key.txt", "top_hundred.txt" };
+	//附件
+	private static final String[] attachmentFileNames = new String[] { "big_key.txt", "top_hundred.txt" };
 	
 	private void createFile(String fileName, String content) {
 		FileOutputStream fos = null;
@@ -100,7 +99,7 @@ public class StatNotification {
 				tableBuffer.append(bigkey.count).append("    |");
 			}
 			
-			String[] attachmentsNames = transFilePathName(fileNames);
+			String[] attachmentsNames = transFilePathName(attachmentFileNames);
 			createFile(attachmentsNames[0],tableBuffer.toString());
 			tableBuffer.setLength(0);
 			
@@ -120,7 +119,7 @@ public class StatNotification {
 			
 			createFile(attachmentsNames[1], tableBuffer.toString());
 			
-			MailUtil.send( addrs, " ## REDIS PROXY STATUS ##", "Please check the attachments", attachmentsNames);
+			MailUtil.send(" ## REDIS PROXY COLLECT ##", "Please check the attachments", attachmentsNames);
 			clearFiles(attachmentsNames);
 			
 		} catch(Exception e) {
