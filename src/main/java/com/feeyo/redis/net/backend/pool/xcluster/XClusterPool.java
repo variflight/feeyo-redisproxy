@@ -1,4 +1,4 @@
-package com.feeyo.redis.net.backend.pool.customcluster;
+package com.feeyo.redis.net.backend.pool.xcluster;
 
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -6,8 +6,8 @@ import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.net.backend.pool.customcluster.rule.RuleAlgorithm;
-import com.feeyo.redis.net.backend.pool.customcluster.rule.RuleAlgorithmFactory;
+import com.feeyo.redis.net.backend.pool.xcluster.rule.RuleAlgorithm;
+import com.feeyo.redis.net.backend.pool.xcluster.rule.RuleAlgorithmFactory;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
@@ -21,11 +21,12 @@ import java.util.Map;
  *
  * @author Tr!bf wangyamin@variflight.com
  */
-public class RedisCustomClusterPool extends AbstractPool {
-    private Map<String/* connection string ex: 127.0.0.1:8888 */, CustomClusterNode> nodes = new HashMap<>();
+public class XClusterPool extends AbstractPool {
+	
+    private Map<String/* connection string ex: 127.0.0.1:8888 */, XClusterNode> nodes = new HashMap<>();
     private RuleAlgorithm ruleAlgorithm;
 
-    public RedisCustomClusterPool(PoolCfg poolCfg) {
+    public XClusterPool(PoolCfg poolCfg) {
         super(poolCfg);
     }
 
@@ -39,7 +40,7 @@ public class RedisCustomClusterPool extends AbstractPool {
         int maxCon = poolCfg.getMaxCon();
 
         for (String nodeConnStr : poolCfg.getNodes()) {
-            CustomClusterNode ccNode = new CustomClusterNode();
+            XClusterNode ccNode = new XClusterNode();
             String[] ipAndPort = nodeConnStr.split(":");
             String ip = ipAndPort[0];
             int port = Integer.parseInt(ipAndPort[1]);
@@ -75,7 +76,7 @@ public class RedisCustomClusterPool extends AbstractPool {
 
     @Override
     public boolean testConnection() {
-        for (Map.Entry<String, CustomClusterNode> entry : nodes.entrySet()) {
+        for (Map.Entry<String, XClusterNode> entry : nodes.entrySet()) {
             PhysicalNode physicalNode = entry.getValue().getPhysicalNode();
             String host = physicalNode.getHost();
             int port = physicalNode.getPort();
@@ -107,8 +108,8 @@ public class RedisCustomClusterPool extends AbstractPool {
         }
 
         try {
-            for (Map.Entry<String, CustomClusterNode> entry : nodes.entrySet()) {
-                CustomClusterNode ccNode = entry.getValue();
+            for (Map.Entry<String, XClusterNode> entry : nodes.entrySet()) {
+                XClusterNode ccNode = entry.getValue();
                 ccNode.availableCheck();
             }
         } finally {
@@ -128,7 +129,7 @@ public class RedisCustomClusterPool extends AbstractPool {
         }
 
         String str = poolCfg.getNodes().get(idx);
-        CustomClusterNode node = nodes.get(str);
+        XClusterNode node = nodes.get(str);
         return node.getPhysicalNode();
     }
 }

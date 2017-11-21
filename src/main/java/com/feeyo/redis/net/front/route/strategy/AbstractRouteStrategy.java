@@ -7,7 +7,7 @@ import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterCRC16Util;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
-import com.feeyo.redis.net.backend.pool.customcluster.RedisCustomClusterPool;
+import com.feeyo.redis.net.backend.pool.xcluster.XClusterPool;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
@@ -73,14 +73,13 @@ public abstract class AbstractRouteStrategy {
 				arrangePhyNode(nodes, i, physicalNode);
 			}
 		} else if ( pool.getType() == 2) {
-			RedisCustomClusterPool ccPool = (RedisCustomClusterPool) pool;
+			XClusterPool xClusterPool = (XClusterPool) pool;
 			for (int i = 0; i < requests.size(); i++) {
 				if (requestPolicys.get(i).getLevel() == CommandParse.AUTO_RESP_CMD) {
 					continue;
 				}
-
 				RedisRequest request = requests.get(i);
-				PhysicalNode physicalNode = ccPool.getPhysicalNode(request);
+				PhysicalNode physicalNode = xClusterPool.getPhysicalNode(request);
 				arrangePhyNode(nodes, i, physicalNode);
 			}
 		}
