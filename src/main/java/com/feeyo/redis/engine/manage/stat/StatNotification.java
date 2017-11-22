@@ -1,85 +1,24 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
+import com.feeyo.util.FileUtils;
 import com.feeyo.util.MailUtil;
 
 public class StatNotification {
 	
-	private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
-	
 	//附件
 	private static final String[] attachmentFileNames = new String[] { "big_key.txt", "big_length.txt" };
 	
-	private void createFile(String fileName, String content) {
-		FileOutputStream fos = null;
-		OutputStreamWriter out = null;
-		BufferedWriter bw = null;
-		try {
-			File file =new File(fileName);
-	        if(!file.exists()){  
-	        	file.createNewFile();
-	        } 
-			fos = new FileOutputStream(file,false);
-			out =new OutputStreamWriter(fos,"utf-8");
-	        bw = new BufferedWriter(out);
-	        bw.write(content);
-	        bw.flush();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (bw != null) {
-				try {
-					bw.close();
-				} catch (IOException e) {
-				}
-			}
-			if (out != null) {
-				try {
-					out.close();
-				} catch (IOException e) {
-				}
-			}
-			if (fos != null) {
-				try {
-					fos.close();
-				} catch (IOException e) {
-				}
-			}
-		}
-	}
 	
-	private String[] transFilePathName(String[] filenames) {
-		
-		String filePath = System.getProperty("FEEYO_HOME") + "\\store\\";
-		
-		String[] attachementNames = new String[filenames.length];
-		for(int index = 0 ;index< filenames.length; index++) {
-			attachementNames[index] = filePath + sdf.format(new Date())+"_"+filenames[index];
-		}
-		return attachementNames;
-	}
-	
-	private void clearFiles( String[] attachmentsNames) {
-		for(String fileName : attachmentsNames) {
-			File file = new File(fileName);
-			if(file.exists())
-				file.delete();
-		}
-	}
-
-
-	public void sendMail() { 
-
+	public void sendMail() {
 		ConcurrentHashMap<String, BigKey> bigkeyStats = StatUtil.getBigKeyMap();
 		StringBuffer tableBuffer = new StringBuffer();
 		tableBuffer.append("#############   bigkey status   #################\n");
@@ -96,7 +35,7 @@ public class StatNotification {
 		}
 
 		String[] attachmentsNames = transFilePathName(attachmentFileNames);
-		createFile(attachmentsNames[0], tableBuffer.toString());
+		FileUtils.ensureCreateFile(attachmentsNames[0], tableBuffer.toString(),false);
 		tableBuffer.setLength(0);
 
 		tableBuffer.append("#############   top  hundred   #################\n");
@@ -108,13 +47,13 @@ public class StatNotification {
 			tableBuffer.append(bigLength.cmd).append("    |    ");
 			tableBuffer.append(bigLength.length).append("    |    ");
 			tableBuffer.append(bigLength.count_1k).append("    |    ");
-			tableBuffer.append(bigLength.count_10k).append("    |    ");
+			tableBuffer.append(bigLength.count_10k).append("    |");
 		}
 
 		//
 		try {
 
-			createFile(attachmentsNames[1], tableBuffer.toString());
+			FileUtils.ensureCreateFile(attachmentsNames[1], tableBuffer.toString(),false);
 
 			StringBuffer body = new StringBuffer();
 			body.append("");
@@ -124,9 +63,51 @@ public class StatNotification {
 
 			MailUtil.send(" ## RedisProxy Report ##", body.toString(), attachmentsNames);
 		} finally {
-			clearFiles(attachmentsNames);
+			FileUtils.cleanFiles(attachmentsNames);
 		}
-
 	}
-
+	
+	public void sendMailDailyDiscardMsg() {
+		String basepath = System.getProperty("FEEYO_HOME")+"\\store\\discard\\";
+		String[] filenames = FileUtils.getFilenamesUnderDir(basepath);
+		StringBuffer body = new StringBuffer();
+		body.append("");
+		body.append("");
+		body.append("");
+		body.append("");
+		filenames = filterFilenames(filenames);
+		MailUtil.send(" ## RedisProxy Daily DisCard Report ##", body.toString(), filenames);
+		FileUtils.cleanFiles(filenames);
+	}
+	
+	private String[] transFilePathName(String[] filenames) {
+		
+		String filePath = System.getProperty("FEEYO_HOME") + "\\store\\";
+		
+		String[] attachementNames = new String[filenames.length];
+		for(int index = 0 ;index< filenames.length; index++) {
+			attachementNames[index] = filePath + getYesterdayDate()+"_"+filenames[index];
+		}
+		return attachementNames;
+	}
+	
+	private String[] filterFilenames(String[] filenames) {
+		List<String> list = new ArrayList<String>();
+		
+		for(String filename : filenames) {
+			String date = getYesterdayDate();
+			if(filename.indexOf(date)>= 0)
+				list.add(filename);
+		}
+		return list.toArray(new String[0]);
+	}
+	
+	//由于是0点发送邮件，所以取昨天的日期
+	private String getYesterdayDate() {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(new Date());
+		cal.add(Calendar.DATE, -1);
+		return sdf.format(cal.getTime());
+	}
 }

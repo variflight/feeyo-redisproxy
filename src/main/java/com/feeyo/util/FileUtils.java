@@ -104,6 +104,14 @@ public class FileUtils {
 		}
 	}
 	
+	public static void cleanFile(String filename) {
+		File file = new File(filename);
+		if(file.exists()) {
+			file.delete();
+			LOGGER.info("Clean the file : {}",filename);
+		}
+	}
+	
 	public static String[] getFilenamesUnderDir(String dirPath) {
 		List<String> filenames = new ArrayList<String>();
 		File file = new File(dirPath);
@@ -111,7 +119,7 @@ public class FileUtils {
             File[] files = file.listFiles();
             for(File file2 : files)
             	if(file2.isFile())
-            		filenames.add(file2.getName());
+            		filenames.add(file2.getPath());
         }
 		return filenames.toArray(new String[0]);
 	}

@@ -1,15 +1,17 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Set;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class NetFlowCollector implements StatCollector {
+import com.feeyo.util.FileUtils;
+
+public class NetFlowCollector extends AbstractStatCollector {
 	
 
+	private static final String USER_NET_FLOW_FILE_NAME = "user_net_flow_v";
 	private static ConcurrentHashMap<String, UserNetFlow> userNetFlowMap = new ConcurrentHashMap<String, UserNetFlow>();
 
 
@@ -28,9 +30,9 @@ public class NetFlowCollector implements StatCollector {
 	}
 
 	@Override
-	public void onScheduleToZore(long zeroTimeMillis) {
-		String version = new SimpleDateFormat("yyyy_MM_dd").format(new Date(zeroTimeMillis));
-		DataBackupHandler.storeUserNetFlowFile(userNetFlowMap, version);
+	public void onScheduleToZore() {
+		String date = getYesterdayDate();
+		saveFile(date, false);
 		userNetFlowMap.clear();
 	}
 
@@ -48,5 +50,27 @@ public class NetFlowCollector implements StatCollector {
 		public AtomicLong netOut = new AtomicLong(0);
 	}
 
+	@Override
+	protected void saveFile(String date, boolean isTemp) {
+		if(userNetFlowMap.isEmpty())
+			return;
+		StringBuffer buffer = new StringBuffer();
+		long totalNetIn = 0;
+		long totalNetOut = 0;
+		Set<Entry<String, UserNetFlow>> entrys = userNetFlowMap.entrySet();
+		buffer.append("User").append(FIELD_SPARATOR).append("NetIn").append(FIELD_SPARATOR).append("NetOut").append(LINE_SPARATOR);
+		for (Map.Entry<String, UserNetFlow> entry : entrys) { 
+			if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
+				UserNetFlow userNetIo = entry.getValue();
+				buffer.append(userNetIo.password).append(FIELD_SPARATOR).append(userNetIo.netIn.get()).append(FIELD_SPARATOR).append(userNetIo.netOut.get()).append(LINE_SPARATOR);
+				totalNetIn = totalNetIn + userNetIo.netIn.get();
+				totalNetOut = totalNetOut + userNetIo.netOut.get();
+			}
+		}
+		buffer.append("total").append(FIELD_SPARATOR).append(totalNetIn).append(FIELD_SPARATOR).append(totalNetOut).append(LINE_SPARATOR);
+		
+		String filename = basepath+USER_NET_FLOW_FILE_NAME+date;
+		FileUtils.ensureCreateFile(filename, buffer.toString(), isTemp);
+	}
 
 }
