@@ -17,10 +17,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
-import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -110,13 +110,12 @@ public class StatUtil {
 						// clear temp data
 						for(StatCollector listener: collectors) {
 							try {
-								listener.onScheduleToZore(zeroTimeMillis);
+								listener.onScheduleToZore();
 							} catch(Exception e) {
 								LOGGER.error("error:",e);
 							}
 						}
-						
-						DataBackupHandler.cleanDataBackupBeforeOneMonth();
+						notification.sendMailDailyDiscardMsg();
 						
 					}
 					

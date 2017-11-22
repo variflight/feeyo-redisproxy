@@ -1,14 +1,21 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.feeyo.redis.engine.codec.RedisRequestType;
+import com.feeyo.util.FileUtils;
 
-public class CmdAccessCollector implements StatCollector {
+public class CmdAccessCollector extends AbstractStatCollector {
+	
+	private static final String COMMAND_COUNT_FILE_NAME = "command_count_v";
+	private static final String COMMAND_PROC_TIME_FILE_NAME = "command_proc_time_v";
 	
 	// COMMAND、KEY
 	private static ConcurrentHashMap<String, Command> commandCountMap = new ConcurrentHashMap<String, Command>();
@@ -75,11 +82,10 @@ public class CmdAccessCollector implements StatCollector {
 	}
 
 	@Override
-	public void onScheduleToZore(long zeroTimeMillis) {
-		String version = new SimpleDateFormat("yyyy_MM_dd").format(new Date(zeroTimeMillis));
-		DataBackupHandler.storeCommandCountFile(commandCountMap, version);
+	public void onScheduleToZore() {
+		String date = getYesterdayDate();
+		saveFile(date, false);
 		commandCountMap.clear();
-		DataBackupHandler.storeCommandProcTimeFile(commandProcTimeMap, version);
 		commandProcTimeMap.clear();
 	}
 
@@ -111,6 +117,45 @@ public class CmdAccessCollector implements StatCollector {
 		public void addChild(Command command) {
 			childs.put(command.cmd, command);
 		}
+	}
+
+	@Override
+	protected void saveFile(String date, boolean isTemp) {
+		storeCommandCountFile(date,isTemp);
+		storeCommandProcTimeFile(date, isTemp);
+	}
+
+	private void storeCommandCountFile(String date, boolean isTemp) {
+		if(commandCountMap.isEmpty())
+			return;
+		StringBuffer buffer = new StringBuffer();
+		Set<Entry<String, Command>> entrys = commandCountMap.entrySet();
+		for (Entry<String, Command> entry : entrys) {
+			Command parent = entry.getValue();
+			buffer.append(  parent.cmd ).append(FIELD_SPARATOR).append( parent.count.get()).append(LINE_SPARATOR);
+			if ( parent.childs != null) {
+				List<String> list = new ArrayList<String>();
+				list.add( buffer.toString() );
+				for (Entry<String, Command> childEntry : parent.childs.entrySet()) {
+					Command child = childEntry.getValue();
+					buffer.append(FIELD_SPARATOR).append( child.cmd ).append(FIELD_SPARATOR).append( child.count.get() ).append(LINE_SPARATOR);
+				}
+			}
+		}
+		String filename = basepath+COMMAND_COUNT_FILE_NAME+date;
+		FileUtils.ensureCreateFile(filename, buffer.toString(), isTemp);
+	}
+	
+	private void storeCommandProcTimeFile(String date, boolean isTemp) {
+		if(commandProcTimeMap.isEmpty())
+			return;
+		StringBuffer buffer = new StringBuffer();
+		Collection<Entry<String, AtomicLong>> entrys = commandProcTimeMap.entrySet();
+		for (Entry<String, AtomicLong> entry : entrys) {
+			buffer.append(entry.getKey()).append(FIELD_SPARATOR).append(entry.getValue().get()).append(LINE_SPARATOR);
+		}
+		String filename = basepath+COMMAND_PROC_TIME_FILE_NAME+date;
+		FileUtils.ensureCreateFile(filename, buffer.toString(), isTemp);
 	}
 
 }
