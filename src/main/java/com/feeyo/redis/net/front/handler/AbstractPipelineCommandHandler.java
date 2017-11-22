@@ -20,9 +20,9 @@ import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
 import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.net.front.route.RequestIndexCombination;
+import com.feeyo.redis.net.front.route.SegmentType;
+import com.feeyo.redis.net.front.route.Segment;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResult.PipelineCommandType;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.virtualmemory.Message;
 import com.feeyo.redis.virtualmemory.PutMessageResult;
@@ -229,7 +229,9 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 						offsets[index] = new DataOffset( "+OK\r\n".getBytes() );
 					}
 				}
-				if(null != rrs.getRequestIndexCombinations() && !rrs.getRequestIndexCombinations().isEmpty()) {
+				
+				
+				if(null != rrs.getSegments() && !rrs.getSegments().isEmpty()) {
 					List<DataOffset> offsetsCopy = new ArrayList<DataOffset>();
 					transformCombineDataOffsets( Arrays.asList(offsets), offsetsCopy);
 					return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, offsetsCopy);
@@ -248,19 +250,22 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
         return new ResponseMargeResult( ResponseMargeResult.ERROR );
 	}
 	
+	
 	private void transformCombineDataOffsets(List<DataOffset> offsets, List<DataOffset> offsetsCopy) {
-		List<RequestIndexCombination> requestIndexCombinations = rrs.getRequestIndexCombinations();
-		for (RequestIndexCombination requestIndexCombination : requestIndexCombinations) {
-			int[] indexs = requestIndexCombination.getIndexCombinations();
-			PipelineCommandType type = requestIndexCombination.getType();
-			combineDataOffset(offsets, offsetsCopy, type, indexs);
+		List<Segment> segments = rrs.getSegments();
+		for (Segment seg : segments) {
+			int[] indexs = seg.getIndexs();
+			SegmentType type = seg.getType();
+			
+			pack(offsets, offsetsCopy, type, indexs);		//组包
 		}
 	}
 	
-	private void combineDataOffset(List<DataOffset> offsets, List<DataOffset> offsetsCopy, PipelineCommandType type,
+	private void pack(List<DataOffset> offsets, List<DataOffset> offsetsCopy, SegmentType type,
 			int[] indexs) {
+		
 		switch (type) {
-		case MGET_OP_COMMAND:
+		case MGET:
 			int len = 0;
 			List<byte[]> newResponses = new ArrayList<byte[]>();
 			for (int index : indexs) {
@@ -281,13 +286,13 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			}
 			offsetsCopy.add(new DataOffset(buffer.array()));
 			break;
-		case MSET_OP_COMMAND:
+		case MSET:
 			offsetsCopy.add(new DataOffset("+OK\r\n".getBytes()));
 			for (int i : indexs) {
 				offsets.get(i).clearData();
 			}
 			break;
-		case MDEL_OP_COMMAND:
+		case MDEL:
 			RedisResponseDecoderV4 responseDecoder = new RedisResponseDecoderV4();
 			int okCount = 0;
 			for (DataOffset offset : offsets) {
@@ -306,7 +311,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 				offsets.get(i).clearData();
 			}
 			break;
-		case DEFAULT_OP_COMMAND:
+		case DEFAULT:
 			offsetsCopy.add(offsets.get(indexs[0]));
 			break;
 		}

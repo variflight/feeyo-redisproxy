@@ -117,7 +117,9 @@ public class BigKeyCollector extends AbstractStatCollector {
 		Collection<Entry<String, BigKey>> entrys = bigkeyMap.entrySet();
 		for(Entry<String, BigKey> e : entrys) {
 			BigKey bigkey = e.getValue();
-			buffer.append( bigkey.cmd ).append(FIELD_SPARATOR).append( bigkey.key ).append( FIELD_SPARATOR ).append( bigkey.size ).append( FIELD_SPARATOR ).append( bigkey.count.get() ).append(LINE_SPARATOR);
+			buffer.append( bigkey.cmd ).append(FIELD_SPARATOR).append( bigkey.key )
+				.append( FIELD_SPARATOR ).append( bigkey.size )
+				.append( FIELD_SPARATOR ).append( bigkey.count.get() ).append(LINE_SPARATOR);
 		}
 		String filename = basepath+BIG_KEY_FILE_NAME+date;
 		FileUtils.ensureCreateFile(filename, buffer.toString(), isTemp);

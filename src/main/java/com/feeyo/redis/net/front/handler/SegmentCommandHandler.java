@@ -30,11 +30,11 @@ import com.feeyo.redis.nio.util.TimeUtil;
  *   
  * @author Tr!bf wangyamin@variflight.com
  */
-public class MultiOperatorCommandHandler extends AbstractPipelineCommandHandler {
+public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
 	
-    private static Logger LOGGER = LoggerFactory.getLogger(MultiOperatorCommandHandler.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(SegmentCommandHandler.class);
     
-    public MultiOperatorCommandHandler(RedisFrontConnection frontCon) {
+    public SegmentCommandHandler(RedisFrontConnection frontCon) {
         super(frontCon);
     }
 
@@ -48,7 +48,7 @@ public class MultiOperatorCommandHandler extends AbstractPipelineCommandHandler 
 			
 			ByteBuffer buffer = getRequestBufferByRRN(rrn);
 			
-		    RedisBackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new MultiOperatorCallBack()); 
+		    RedisBackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new SegmentCallBack()); 
 		    
 		    if ( backendConn != null )
 				this.holdBackendConnection(backendConn);
@@ -61,7 +61,7 @@ public class MultiOperatorCommandHandler extends AbstractPipelineCommandHandler 
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
     }
     
-    private class MultiOperatorCallBack extends DirectTransTofrontCallBack {
+    private class SegmentCallBack extends DirectTransTofrontCallBack {
 
         private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
 
