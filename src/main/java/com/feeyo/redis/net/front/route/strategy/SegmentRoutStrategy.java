@@ -114,6 +114,10 @@ public class SegmentRoutStrategy extends AbstractRouteStrategy {
 		
 		List<RouteResultNode> nodes = doSharding(poolId, newRequests, newRequestPolicys);
 		requestType = requests.size() > 1 ? RedisRequestType.PIPELINE : requestType;
-		return new RouteResult(requestType, newRequests, newRequestPolicys, nodes, autoResponseIndexs, segments);
+		
+		RouteResult result = new RouteResult(requestType, newRequests, newRequestPolicys, nodes);
+		result.setAutoResponseIndexs(autoResponseIndexs);
+		result.setSegments(segments);
+		return result;
     }
 }

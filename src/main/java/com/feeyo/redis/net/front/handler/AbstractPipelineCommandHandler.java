@@ -224,7 +224,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 					}
 				}
 				
-				if ( !rrs.getAutoResponseIndexs().isEmpty() ) {
+				if ( rrs.getAutoResponseIndexs() != null && !rrs.getAutoResponseIndexs().isEmpty() ) {
 					for (int index : rrs.getAutoResponseIndexs()) {
 						offsets[index] = new DataOffset( "+OK\r\n".getBytes() );
 					}
