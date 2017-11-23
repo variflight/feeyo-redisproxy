@@ -34,8 +34,9 @@ public class RouteService {
 		
 		// 请求是否存在不合法
 		boolean invalidPolicyExist = false;
-		// 请求是否存在批量操作
-		boolean isMultiOpExist = false;
+		
+		// 是否需要分段
+		boolean isNeedSegment = false;
 		for(int i = 0; i < requests.size(); i++) {
 			
 			RedisRequest request = requests.get(i);
@@ -47,8 +48,9 @@ public class RouteService {
 			RedisRequestPolicy requestPolicy = CommandParse.getPolicy( cmd );
 			
 			// 包含批量操作命令，则采用_MultiOP路由策略
-			if(!isMultiOpExist && (requestPolicy.getLevel() == CommandParse.MGETSET_CMD || (requestPolicy.getLevel() == CommandParse.DEL_CMD && request.getArgs().length > 2))) {
-				isMultiOpExist = true;
+			if(!isNeedSegment && (requestPolicy.getLevel() == CommandParse.MGETSET_CMD 
+					|| (requestPolicy.getLevel() == CommandParse.DEL_CMD && request.getArgs().length > 2))) {
+				isNeedSegment = true;
 			}
 			requestPolicys.add( requestPolicy );
 			
@@ -88,7 +90,7 @@ public class RouteService {
 		}
 		
 		// 根据请求做路由
-		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, isMultiOpExist);
+		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, isNeedSegment);
 		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys, autoResponseIndexs);
 		return routeResult;
 	}

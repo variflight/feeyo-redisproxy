@@ -1,4 +1,4 @@
-package com.feeyo.redis.net.front.handler;
+package com.feeyo.redis.net.front.handler.ext;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,6 +13,7 @@ import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+import com.feeyo.redis.net.front.handler.AbstractPipelineCommandHandler;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -30,11 +31,11 @@ import com.feeyo.redis.nio.util.TimeUtil;
  *   
  * @author Tr!bf wangyamin@variflight.com
  */
-public class MultiOperatorCommandHandler extends AbstractPipelineCommandHandler {
+public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
 	
-    private static Logger LOGGER = LoggerFactory.getLogger(MultiOperatorCommandHandler.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(SegmentCommandHandler.class);
     
-    public MultiOperatorCommandHandler(RedisFrontConnection frontCon) {
+    public SegmentCommandHandler(RedisFrontConnection frontCon) {
         super(frontCon);
     }
 
@@ -48,7 +49,7 @@ public class MultiOperatorCommandHandler extends AbstractPipelineCommandHandler 
 			
 			ByteBuffer buffer = getRequestBufferByRRN(rrn);
 			
-		    RedisBackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new MultiOperatorCallBack()); 
+		    RedisBackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new SegmentCallBack()); 
 		    
 		    if ( backendConn != null )
 				this.holdBackendConnection(backendConn);
@@ -61,7 +62,7 @@ public class MultiOperatorCommandHandler extends AbstractPipelineCommandHandler 
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
     }
     
-    private class MultiOperatorCallBack extends DirectTransTofrontCallBack {
+    private class SegmentCallBack extends DirectTransTofrontCallBack {
 
         private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
 

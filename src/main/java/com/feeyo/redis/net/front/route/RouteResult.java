@@ -3,6 +3,7 @@ package com.feeyo.redis.net.front.route;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
+import com.feeyo.redis.net.front.handler.ext.Segment;
 
 import java.util.List;
 
@@ -13,14 +14,8 @@ import java.util.List;
  */
 public class RouteResult {
 	 
-	public enum PipelineCommandType {
-		MGET_OP_COMMAND,  //由pipeline中MGET拆分出来的命令标志
-		MSET_OP_COMMAND,  //由pipeline中MSET拆分出来的命令标志
-		MDEL_OP_COMMAND,  //由pipeline中DEL批量操作拆分出来的命令标志
-		DEFAULT_OP_COMMAND  //pipeline中的其他命令（非批量操作命令）
-	}
 	
-	private final List<RequestIndexCombination> requestIndexCombinations;
+	private final List<Segment> segments;
 	
 	private final RedisRequestType requestType;
 	
@@ -32,7 +27,7 @@ public class RouteResult {
     
     
 	public RouteResult(RedisRequestType requestType, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
-			List<RouteResultNode> nodes, List<Integer> autoResponseIndexs, List<RequestIndexCombination>  requestIndexCombinations) {
+			List<RouteResultNode> nodes, List<Integer> autoResponseIndexs, List<Segment> segments) {
 		
 		this.requestType = requestType;
 		this.requests = requests;
@@ -40,7 +35,7 @@ public class RouteResult {
 		
 		this.nodes = nodes;
 		this.autoResponseIndexs = autoResponseIndexs;
-		this.requestIndexCombinations = requestIndexCombinations;
+		this.segments = segments;
 	}
 
 	public RedisRequestType getRequestType() {
@@ -63,8 +58,8 @@ public class RouteResult {
 		return nodes;
 	}
 	
-	public  List<RequestIndexCombination> getRequestIndexCombinations() {
-		return requestIndexCombinations;
+	public  List<Segment> getSegments() {
+		return segments;
 	}
 
 	// 请求数
