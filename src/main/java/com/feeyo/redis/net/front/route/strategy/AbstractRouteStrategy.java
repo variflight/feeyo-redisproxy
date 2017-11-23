@@ -105,7 +105,7 @@ public abstract class AbstractRouteStrategy {
 	}
 
 	// 路由
-    public abstract RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
-    		List<Integer> autoResponseIndexs) throws InvalidRequestExistsException, PhysicalNodeUnavailableException;
+    public abstract RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys) 
+    		throws InvalidRequestExistsException, PhysicalNodeUnavailableException;
 
 }

@@ -47,7 +47,7 @@ public class RouteService {
 			String cmd = new String( request.getArgs()[0] ).toUpperCase();
 			RedisRequestPolicy requestPolicy = CommandParse.getPolicy( cmd );
 			
-			// 包含批量操作命令，则采用_MultiOP路由策略
+			// 包含批量操作命令，则采用分段的路由策略
 			if(!isNeedSegment && (requestPolicy.getLevel() == CommandParse.MGETSET_CMD 
 					|| (requestPolicy.getLevel() == CommandParse.DEL_CMD && request.getArgs().length > 2))) {
 				isNeedSegment = true;
@@ -61,7 +61,7 @@ public class RouteService {
 			
 			// 如果上个指令是合法的，继续校验下个指令
 			if ( !invalidPolicyExist ) {
-				invalidPolicyExist = checkIsInvalidPolicy( poolType, requestPolicy, isReadOnly, isAdmin, isPipeline );
+				invalidPolicyExist = RouteUtil.checkIsInvalidPolicy( poolType, requestPolicy, isReadOnly, isAdmin, isPipeline );
 			}
 					
 			// 不需要透传，中间件自动回复
@@ -91,46 +91,9 @@ public class RouteService {
 		
 		// 根据请求做路由
 		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, isNeedSegment);
-		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys, autoResponseIndexs);
+		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys);
+		routeResult.setAutoResponseIndexs( autoResponseIndexs );
 		return routeResult;
 	}
-	
-	// 校验指令是否为 不合法， true 为不合法
-	private static boolean checkIsInvalidPolicy(int poolType, RedisRequestPolicy requestPolicy, boolean isReadOnly, boolean isAdmin,
-			boolean isPipeline) {
-		
-		// readonly 只读权限后， 不能执行写入操作
-		if ( isReadOnly && !requestPolicy.isRead()  ) {
-			return true;
-		}
-		
-		boolean result = false;
-		switch( requestPolicy.getLevel()  ) {
-		case CommandParse.DISABLED_CMD :
-			result = true;
-			break;
-		case CommandParse.NO_CLUSTER_CMD:
-			if ( poolType == 1 ) //集群
-				result = true;
-			break;
-		case CommandParse.CLUSTER_CMD:
-			if ( poolType == 0 ) //非集群
-				result = true; 
-			break;
-		case CommandParse.PUBSUB_CMD:
-			if ( isPipeline )	// pipeline 不支持 pubsub
-				result = true;
-			break;
-		case CommandParse.MANAGE_CMD:
-			if ( isPipeline )
-				result = true;
-			if ( !isAdmin )
-				result = true;
-			break;
-		case CommandParse.UNKNOW_CMD:
-			result = true;
-			break;
-		}
-		return result;
-	}
+
 }

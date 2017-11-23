@@ -53,8 +53,8 @@ public class MGetSetRoutStrategy extends AbstractRouteStrategy {
 	}
    
 	@Override
-    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
-    		List<Integer> autoResponseIndexs) throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
+    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys ) 
+    		throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
 	
 		RedisRequest firstRequest = requests.get(0);
         RedisRequestPolicy firstRequestPolicy = requestPolicys.get(0);
@@ -70,11 +70,9 @@ public class MGetSetRoutStrategy extends AbstractRouteStrategy {
         
         RouteResult routeResult;
         String cmd = new String( firstRequest.getArgs()[0] ).toUpperCase();
-        if (cmd.startsWith("MGET")) {
-            routeResult = new RouteResult(RedisRequestType.MGET, newRequests, newRequestPolicys, nodes, new ArrayList<Integer>(),null);    
-        } else {
-            routeResult = new RouteResult(RedisRequestType.MSET, newRequests, newRequestPolicys, nodes, new ArrayList<Integer>(),null);    
-        }
+        
+        routeResult = new RouteResult( cmd.startsWith("MGET") ? RedisRequestType.MGET: RedisRequestType.MSET, 
+        		newRequests, newRequestPolicys, nodes);    
         return routeResult;
     }
 
