@@ -3,7 +3,7 @@ package com.feeyo.redis.engine.manage.stat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
-public class AbstractStatCollector implements StatCollector{
+public abstract class AbstractStatCollector implements StatCollector{
 	
 	protected static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	protected static final String LINE_SPARATOR = System.getProperty("line.separator");
@@ -29,8 +29,7 @@ public class AbstractStatCollector implements StatCollector{
 	}
 	
 	//临时文件以append方式
-	protected void saveFile(String date, boolean isTemp) {
-	}
+	protected abstract void saveFile(String date, boolean isTemp);
 	
 	protected String getYesterdayDate() {
 		Calendar cal = Calendar.getInstance();
