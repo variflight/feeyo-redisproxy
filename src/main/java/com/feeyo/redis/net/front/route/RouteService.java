@@ -91,7 +91,8 @@ public class RouteService {
 		
 		// 根据请求做路由
 		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, isNeedSegment);
-		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys, autoResponseIndexs);
+		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys);
+		routeResult.setAutoResponseIndexs( autoResponseIndexs );
 		return routeResult;
 	}
 

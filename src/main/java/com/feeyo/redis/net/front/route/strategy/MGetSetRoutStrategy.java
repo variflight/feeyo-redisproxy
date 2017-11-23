@@ -53,8 +53,8 @@ public class MGetSetRoutStrategy extends AbstractRouteStrategy {
 	}
    
 	@Override
-    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
-    		List<Integer> autoResponseIndexs) throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
+    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys ) 
+    		throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
 	
 		RedisRequest firstRequest = requests.get(0);
         RedisRequestPolicy firstRequestPolicy = requestPolicys.get(0);

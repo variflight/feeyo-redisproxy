@@ -85,8 +85,8 @@ public class SegmentRoutStrategy extends AbstractRouteStrategy {
 	}
    
 	@Override
-    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
-    		List<Integer> autoResponseIndexs) throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
+    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys ) 
+    		throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
 		
 		List<Segment> segments = new ArrayList<Segment>();
 		
@@ -116,7 +116,6 @@ public class SegmentRoutStrategy extends AbstractRouteStrategy {
 		requestType = requests.size() > 1 ? RedisRequestType.PIPELINE : requestType;
 		
 		RouteResult result = new RouteResult(requestType, newRequests, newRequestPolicys, nodes);
-		result.setAutoResponseIndexs(autoResponseIndexs);
 		result.setSegments(segments);
 		return result;
     }

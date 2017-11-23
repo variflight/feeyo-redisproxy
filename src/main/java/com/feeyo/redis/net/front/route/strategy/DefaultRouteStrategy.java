@@ -18,15 +18,14 @@ import java.util.List;
 public class DefaultRouteStrategy extends AbstractRouteStrategy {
 	
     @Override
-    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
-    		List<Integer> autoResponseIndexs) throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
+    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys ) 
+    		throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
     	
     	// 切片
         List<RouteResultNode> nodes = doSharding(poolId, requests, requestPolicys);
         
         RedisRequestType requestType = requests.size() == 1 ? RedisRequestType.DEFAULT : RedisRequestType.PIPELINE;
         RouteResult routeResult = new RouteResult(requestType, requests, requestPolicys, nodes);
-        routeResult.setAutoResponseIndexs( autoResponseIndexs );
         return routeResult;
     }
 
