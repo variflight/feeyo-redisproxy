@@ -20,8 +20,8 @@ import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
 import com.feeyo.redis.engine.codec.RedisResponseV3;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.net.front.route.SegmentType;
-import com.feeyo.redis.net.front.route.Segment;
+import com.feeyo.redis.net.front.handler.ext.Segment;
+import com.feeyo.redis.net.front.handler.ext.SegmentType;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.virtualmemory.Message;
@@ -231,10 +231,22 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 				}
 				
 				
+				// segments pack
 				if(null != rrs.getSegments() && !rrs.getSegments().isEmpty()) {
-					List<DataOffset> offsetsCopy = new ArrayList<DataOffset>();
-					transformCombineDataOffsets( Arrays.asList(offsets), offsetsCopy);
-					return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, offsetsCopy);
+					
+					List<DataOffset> newDataOffsets = new ArrayList<DataOffset>();
+				
+					List<Segment> segments = rrs.getSegments();
+					for (Segment seg : segments) {
+						int[] indexs = seg.getIndexs();
+						SegmentType type = seg.getType();
+						
+						//组包
+						List<DataOffset> segmentDataOffset = pack(Arrays.asList(offsets), type, indexs);		
+						newDataOffsets.addAll( segmentDataOffset );
+					}
+					
+					return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, newDataOffsets);
 				}
 				return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, Arrays.asList(offsets));
 			} 
@@ -250,19 +262,9 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
         return new ResponseMargeResult( ResponseMargeResult.ERROR );
 	}
 	
-	
-	private void transformCombineDataOffsets(List<DataOffset> offsets, List<DataOffset> offsetsCopy) {
-		List<Segment> segments = rrs.getSegments();
-		for (Segment seg : segments) {
-			int[] indexs = seg.getIndexs();
-			SegmentType type = seg.getType();
-			
-			pack(offsets, offsetsCopy, type, indexs);		//组包
-		}
-	}
-	
-	private void pack(List<DataOffset> offsets, List<DataOffset> offsetsCopy, SegmentType type,
-			int[] indexs) {
+	private List<DataOffset> pack(List<DataOffset> offsets, SegmentType type, int[] indexs) {
+		
+		List<DataOffset> newDataOffsets = new ArrayList<DataOffset>();
 		
 		switch (type) {
 		case MGET:
@@ -284,10 +286,10 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			for (byte[] respData : newResponses) {
 				buffer.put(respData);
 			}
-			offsetsCopy.add(new DataOffset(buffer.array()));
+			newDataOffsets.add(new DataOffset(buffer.array()));
 			break;
 		case MSET:
-			offsetsCopy.add(new DataOffset("+OK\r\n".getBytes()));
+			newDataOffsets.add(new DataOffset("+OK\r\n".getBytes()));
 			for (int i : indexs) {
 				offsets.get(i).clearData();
 			}
@@ -306,15 +308,17 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 					okCount += c;
 				}
 			}
-			offsetsCopy.add(new DataOffset(encode(okCount)));
+			newDataOffsets.add(new DataOffset(encode(okCount)));
 			for( int i :indexs) {
 				offsets.get(i).clearData();
 			}
 			break;
 		case DEFAULT:
-			offsetsCopy.add(offsets.get(indexs[0]));
+			newDataOffsets.add(offsets.get(indexs[0]));
 			break;
 		}
+		
+		return newDataOffsets;
 	}
 	
 	private int readInt(byte[] buf) {

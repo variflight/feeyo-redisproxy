@@ -7,10 +7,10 @@ import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
-import com.feeyo.redis.net.front.route.SegmentType;
+import com.feeyo.redis.net.front.handler.ext.Segment;
+import com.feeyo.redis.net.front.handler.ext.SegmentType;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
-import com.feeyo.redis.net.front.route.Segment;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 

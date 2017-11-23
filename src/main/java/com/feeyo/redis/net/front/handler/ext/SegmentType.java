@@ -1,4 +1,4 @@
-package com.feeyo.redis.net.front.route;
+package com.feeyo.redis.net.front.handler.ext;
 
 //fragment
 public enum SegmentType {
