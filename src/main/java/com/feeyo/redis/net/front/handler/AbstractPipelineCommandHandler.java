@@ -295,6 +295,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			}
 			break;
 		case MDEL:
+		case MEXISTS:
 			RedisResponseDecoderV4 responseDecoder = new RedisResponseDecoderV4();
 			int okCount = 0;
 			for (DataOffset offset : offsets) {

@@ -278,6 +278,7 @@ public class RedisFrontSession {
 		case DEL_MULTIKEY:
 		case MGET:
 		case MSET:
+		case MEXISTS:
 			if (multiOperatorCommandHandler == null) {
 				synchronized (_lock) {
 					if (multiOperatorCommandHandler == null) {

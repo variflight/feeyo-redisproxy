@@ -6,6 +6,7 @@ public enum RedisRequestType {
 	PIPELINE("PIPELINE"),
 	MGET("MGET"),
 	MSET("MSET"),
+	MEXISTS("EXISTS"),
 	DEL_MULTIKEY("MULTI_DEL");
 	
 	private final String cmd;
