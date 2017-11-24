@@ -5,10 +5,10 @@ package com.feeyo.redis.net.front.route.strategy;
  *
  * @author Tr!bf wangyamin@variflight.com
  */
-public class RoutStrategyFactory {
+public class RouteStrategyFactory {
 	
 	private static DefaultRouteStrategy _DEFAULT = new DefaultRouteStrategy();
-	private static SegmentRoutStrategy  _SEGMENT = new SegmentRoutStrategy();
+	private static SegmentRouteStrategy  _SEGMENT = new SegmentRouteStrategy();
 	
     public static AbstractRouteStrategy getStrategy(int poolType, boolean isNeedSegment) {
     	// 集群情况下，需要对 Mset、Mget、Del mulitKey 分片
