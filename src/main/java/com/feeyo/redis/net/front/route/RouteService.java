@@ -10,7 +10,7 @@ import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategyFactory;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
-import com.feeyo.redis.net.front.route.strategy.RoutStrategyFactory;
+import com.feeyo.redis.net.front.route.strategy.RouteStrategyFactory;
 
 /**
  * 路由功能
@@ -91,7 +91,7 @@ public class RouteService {
 		}
 		
 		// 根据请求做路由
-		AbstractRouteStrategy routeStrategy = RoutStrategyFactory.getStrategy(poolType, isNeedSegment);
+		AbstractRouteStrategy routeStrategy = RouteStrategyFactory.getStrategy(poolType, isNeedSegment);
 		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys);
 		routeResult.setAutoResponseIndexs( autoResponseIndexs );
 		return routeResult;

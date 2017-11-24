@@ -22,7 +22,7 @@ import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
-import com.feeyo.redis.net.front.handler.ext.SegmentCommandHandler;
+import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
 import com.feeyo.redis.net.front.route.AutoRespNotTransException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.ManageRespNotTransException;

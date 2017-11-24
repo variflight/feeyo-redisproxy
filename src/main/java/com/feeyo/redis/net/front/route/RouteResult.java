@@ -3,7 +3,7 @@ package com.feeyo.redis.net.front.route;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
-import com.feeyo.redis.net.front.handler.ext.Segment;
+import com.feeyo.redis.net.front.handler.segment.Segment;
 
 import java.util.List;
 
