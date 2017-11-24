@@ -16,7 +16,7 @@ public class MSetSegmentStrategy extends SegmentStrategy {
 			throws InvalidRequestExistsException {
 		byte[][] args = request.getArgs();
 		if (args.length == 1 || (args.length & 0x01) == 0) {
-			throw new InvalidRequestExistsException("wrong number of arguments", null, null);
+			throw new InvalidRequestExistsException("wrong number of arguments", null);
 		}
 		int[] indexs = new int[(args.length - 1) / 2];
 		for (int j = 1; j < args.length; j += 2) {

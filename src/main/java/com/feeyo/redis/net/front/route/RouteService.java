@@ -55,7 +55,7 @@ public class RouteService {
 				isNeedSegment = true;
 			}
 			
-			// 如果是管理指令，且非pipeline,且是管理员用户      提取跳出
+			// 如果是管理指令，且非pipeline,且是管理员用户  提前跳出
 			if ( !isPipeline && policy.getLevel() == CommandParse.MANAGE_CMD && isAdmin) {
 				throw new ManageRespNotTransException("manage cmd exist", requests);
 			}

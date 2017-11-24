@@ -16,7 +16,7 @@ public class MDelSegmentStrategy extends SegmentStrategy {
 		
 		byte[][] args = request.getArgs();
 		if (args.length < 3) {
-            throw new InvalidRequestExistsException("wrong number of arguments", null, null);
+            throw new InvalidRequestExistsException("wrong number of arguments", null);
         }
     	int[] indexs = new int[args.length-1];
         for (int j=1; j<args.length; j++) {
