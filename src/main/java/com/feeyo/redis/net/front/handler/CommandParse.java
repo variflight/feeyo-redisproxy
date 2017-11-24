@@ -24,6 +24,7 @@ public class CommandParse {
 	public static final int AUTO_RESP_CMD	= 7;		// 中间件应答指令
 	public static final int MGETSET_CMD		= 9;		// 中间件加强指令
 	public static final int DEL_CMD			= 10;		// 中间件加强指令
+	public static final int EXISTS_CMD		= 11;		// 中间件加强指令
 	
 	// RW 指令
 	public static final byte WRITE_CMD = 1;
@@ -46,7 +47,7 @@ public class CommandParse {
 		//Key
 		_cmds.put("DEL", 			new RedisRequestPolicy(DEL_CMD, DELETE_CMD));
 		_cmds.put("DUMP", 			new RedisRequestPolicy(THROUGH_CMD, WRITE_CMD));		//返回被序列化的值
-		_cmds.put("EXISTS", 		new RedisRequestPolicy(THROUGH_CMD, READ_CMD));
+		_cmds.put("EXISTS", 		new RedisRequestPolicy(EXISTS_CMD, READ_CMD));
 		_cmds.put("EXPIRE", 		new RedisRequestPolicy(THROUGH_CMD, WRITE_CMD));
 		_cmds.put("EXPIREAT", 		new RedisRequestPolicy(THROUGH_CMD, WRITE_CMD));
 		_cmds.put("KEYS", 			new RedisRequestPolicy(NO_CLUSTER_CMD, READ_CMD));

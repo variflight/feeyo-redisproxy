@@ -49,7 +49,8 @@ public class RouteService {
 			
 			// 包含批量操作命令，则采用分段的路由策略
 			if(!isNeedSegment && (requestPolicy.getLevel() == CommandParse.MGETSET_CMD 
-					|| (requestPolicy.getLevel() == CommandParse.DEL_CMD && request.getArgs().length > 2))) {
+					|| ((requestPolicy.getLevel() == CommandParse.DEL_CMD || requestPolicy.getLevel() == CommandParse.EXISTS_CMD) 
+							&& request.getArgs().length > 2))) {
 				isNeedSegment = true;
 			}
 			requestPolicys.add( requestPolicy );
