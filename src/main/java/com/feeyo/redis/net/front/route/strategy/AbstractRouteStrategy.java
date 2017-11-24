@@ -2,7 +2,6 @@ package com.feeyo.redis.net.front.route.strategy;
 
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterCRC16Util;
@@ -26,8 +25,7 @@ public abstract class AbstractRouteStrategy {
 	
 	
 	// pipeline 分片
-	protected List<RouteResultNode> doSharding(int poolId, 
-			List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys) throws PhysicalNodeUnavailableException {
+	protected List<RouteResultNode> doSharding(int poolId, List<RedisRequest> requests) throws PhysicalNodeUnavailableException {
 		
 		List<RouteResultNode> nodes = new ArrayList<RouteResultNode>();
 		
@@ -53,13 +51,13 @@ public abstract class AbstractRouteStrategy {
 			RedisClusterPool clusterPool =  (RedisClusterPool) pool;
 			for (int i = 0; i < requests.size(); i++) {
 				
-				if ( requestPolicys.get(i).getLevel() == CommandParse.AUTO_RESP_CMD )  {
+				RedisRequest request = requests.get(i);
+				if ( request.getPolicy().getLevel() == CommandParse.AUTO_RESP_CMD )  {
 					continue;
 				}
 
 				// 计算key的slot值。
 				int slot = 0;
-				RedisRequest request = requests.get(i);
 				byte[] requestKey = request.getNumArgs() > 1 ? request.getArgs()[1] : null;
 				if (requestKey != null) {
 					slot = ClusterCRC16Util.getSlot( requestKey );
@@ -75,10 +73,11 @@ public abstract class AbstractRouteStrategy {
 		} else if ( pool.getType() == 2) {
 			XClusterPool xClusterPool = (XClusterPool) pool;
 			for (int i = 0; i < requests.size(); i++) {
-				if (requestPolicys.get(i).getLevel() == CommandParse.AUTO_RESP_CMD) {
+				
+				RedisRequest request = requests.get(i);
+				if ( request.getPolicy().getLevel() == CommandParse.AUTO_RESP_CMD) {
 					continue;
 				}
-				RedisRequest request = requests.get(i);
 				PhysicalNode physicalNode = xClusterPool.getPhysicalNode(request);
 				arrangePhyNode(nodes, i, physicalNode);
 			}
@@ -105,7 +104,6 @@ public abstract class AbstractRouteStrategy {
 	}
 
 	// 路由
-    public abstract RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys) 
-    		throws InvalidRequestExistsException, PhysicalNodeUnavailableException;
+    public abstract RouteResult route(int poolId, List<RedisRequest> requests) throws InvalidRequestExistsException, PhysicalNodeUnavailableException;
 
 }

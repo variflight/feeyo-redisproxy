@@ -61,7 +61,7 @@ public class RedisFrontSession {
 	private RedisRequestDecoderV5 requestDecoder = new RedisRequestDecoderV5();
 	
 	private AbstractCommandHandler defaultCommandHandler;
-	private AbstractCommandHandler multiOperatorCommandHandler;
+	private AbstractCommandHandler segmentCommandHandler;
 	private AbstractCommandHandler pipelineCommandHandler;
 	
 	private AbstractCommandHandler currentCommandHandler;
@@ -181,15 +181,18 @@ public class RedisFrontSession {
 			} catch (InvalidRequestExistsException e) {
 				
 				// 指令策略未通过
-				List<RedisRequestPolicy> requestPolicys = e.getRequestPolicys();
-				if ( requestPolicys != null ) {
+				List<RedisRequest> invalidRequests = e.getRequests();
+				if ( invalidRequests != null ) {
 					
-					if ( requestPolicys.size() > 1 ) {
+					if ( invalidRequests.size() > 1 ) {
 						
 						StringBuffer sb = new StringBuffer();
 						sb.append("-ERR ");
-						for (int i = 0; i < requestPolicys.size(); i++) {
-							String resp = getInvalidCmdResponse(requestPolicys.get(i), frontCon.getUserCfg().isAdmin());
+						for (int i = 0; i < invalidRequests.size(); i++) {
+							RedisRequestPolicy policy = invalidRequests.get(i).getPolicy();
+							if ( policy == null) 
+								break;
+							String resp = getInvalidCmdResponse(policy, frontCon.getUserCfg().isAdmin());
 							if (resp != null) {
 								sb.append("NO: ").append(i+1).append(", ").append(resp);
 							}
@@ -279,14 +282,14 @@ public class RedisFrontSession {
 		case MGET:
 		case MSET:
 		case MEXISTS:
-			if (multiOperatorCommandHandler == null) {
+			if (segmentCommandHandler == null) {
 				synchronized (_lock) {
-					if (multiOperatorCommandHandler == null) {
-						multiOperatorCommandHandler = new SegmentCommandHandler( frontCon );
+					if (segmentCommandHandler == null) {
+						segmentCommandHandler = new SegmentCommandHandler( frontCon );
 					}
 				}
 			}
-			return multiOperatorCommandHandler;
+			return segmentCommandHandler;
 			
 		case PIPELINE:
 			if (pipelineCommandHandler == null) {
@@ -511,7 +514,7 @@ public class RedisFrontSession {
 	
 	private void cleanup() {
 		defaultCommandHandler = null;
-		multiOperatorCommandHandler = null;
+		segmentCommandHandler = null;
 		pipelineCommandHandler = null;
 		currentCommandHandler = null;
 	}

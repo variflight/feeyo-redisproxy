@@ -1,7 +1,6 @@
 package com.feeyo.redis.net.front.route.strategy;
 
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
@@ -18,14 +17,14 @@ import java.util.List;
 public class DefaultRouteStrategy extends AbstractRouteStrategy {
 	
     @Override
-    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys ) 
+    public RouteResult route(int poolId, List<RedisRequest> requests ) 
     		throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
     	
     	// 切片
-        List<RouteResultNode> nodes = doSharding(poolId, requests, requestPolicys);
+        List<RouteResultNode> nodes = doSharding(poolId, requests);
         
         RedisRequestType requestType = requests.size() == 1 ? RedisRequestType.DEFAULT : RedisRequestType.PIPELINE;
-        RouteResult routeResult = new RouteResult(requestType, requests, requestPolicys, nodes);
+        RouteResult routeResult = new RouteResult(requestType, requests, nodes);
         return routeResult;
     }
 

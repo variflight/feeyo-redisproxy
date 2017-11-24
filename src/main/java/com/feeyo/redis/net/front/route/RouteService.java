@@ -29,7 +29,6 @@ public class RouteService {
 		boolean isAdmin = frontCon.getUserCfg().isAdmin();
 		boolean isPipeline = requests.size() > 1;
 
-		List<RedisRequestPolicy> requestPolicys = new ArrayList<RedisRequestPolicy>( requests.size() );		// 指令策略
 		List<Integer> autoResponseIndexs = new ArrayList<Integer>();										// 直接返回指令索引
 		
 		// 请求是否存在不合法
@@ -45,29 +44,29 @@ public class RouteService {
 			}
 			
 			String cmd = new String( request.getArgs()[0] ).toUpperCase();
-			RedisRequestPolicy requestPolicy = CommandParse.getPolicy( cmd );
+			RedisRequestPolicy policy = CommandParse.getPolicy( cmd );
+			request.setPolicy( policy );
 			
 			// 包含批量操作命令，则采用分段的路由策略
-			if(!isNeedSegment && (requestPolicy.getLevel() == CommandParse.MGETSET_CMD 
-					|| ((requestPolicy.getLevel() == CommandParse.DEL_CMD || requestPolicy.getLevel() == CommandParse.EXISTS_CMD) 
-							&& request.getArgs().length > 2))) {
+			if(!isNeedSegment && ( 
+					policy.getLevel() == CommandParse.MGETSET_CMD 
+					|| (policy.getLevel() == CommandParse.DEL_CMD && request.getArgs().length > 2 )
+					|| (policy.getLevel() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) )) {
 				isNeedSegment = true;
 			}
-			requestPolicys.add( requestPolicy );
 			
 			// 如果是管理指令，且非pipeline,且是管理员用户      提取跳出
-			if ( !isPipeline && requestPolicy.getLevel() == CommandParse.MANAGE_CMD && isAdmin) {
-				throw new ManageRespNotTransException("manage cmd exist", requests, requestPolicys);
+			if ( !isPipeline && policy.getLevel() == CommandParse.MANAGE_CMD && isAdmin) {
+				throw new ManageRespNotTransException("manage cmd exist", requests);
 			}
 			
 			// 如果上个指令是合法的，继续校验下个指令
 			if ( !invalidPolicyExist ) {
-				invalidPolicyExist = RouteUtil.checkIsInvalidPolicy( poolType, requestPolicy, isReadOnly, isAdmin, isPipeline );
+				invalidPolicyExist = RouteUtil.checkIsInvalidPolicy( poolType, policy, isReadOnly, isAdmin, isPipeline );
 			}
 					
 			// 不需要透传，中间件自动回复
-			if ( requestPolicy.getLevel() == CommandParse.AUTO_RESP_CMD 
-					|| requestPolicy.getLevel() == CommandParse.MANAGE_CMD ) {
+			if ( policy.getLevel() == CommandParse.AUTO_RESP_CMD || policy.getLevel() == CommandParse.MANAGE_CMD ) {
 				autoResponseIndexs.add(i);
 				continue;
 			} 
@@ -82,17 +81,17 @@ public class RouteService {
 		
 		// 存在不支持指令
 		if ( invalidPolicyExist ) {
-			throw new InvalidRequestExistsException("invalid policy exist", requests, requestPolicys);
+			throw new InvalidRequestExistsException("invalid policy exist", requests);
 		}
 		
 		// 全部自动回复
 		if ( autoResponseIndexs.size() == requests.size() ) {
-			throw new AutoRespNotTransException("auto response", requests, requestPolicys);
+			throw new AutoRespNotTransException("auto response", requests);
 		}
 		
 		// 根据请求做路由
 		AbstractRouteStrategy routeStrategy = RouteStrategyFactory.getStrategy(poolType, isNeedSegment);
-		RouteResult routeResult = routeStrategy.route(poolId, requests, requestPolicys);
+		RouteResult routeResult = routeStrategy.route(poolId, requests);
 		routeResult.setAutoResponseIndexs( autoResponseIndexs );
 		return routeResult;
 	}
