@@ -79,6 +79,8 @@ public abstract class AbstractRouteStrategy {
 					continue;
 				}
 				PhysicalNode physicalNode = xClusterPool.getPhysicalNode(request);
+				if ( physicalNode == null )
+					throw new PhysicalNodeUnavailableException("node unavailable.");
 				arrangePhyNode(nodes, i, physicalNode);
 			}
 		}

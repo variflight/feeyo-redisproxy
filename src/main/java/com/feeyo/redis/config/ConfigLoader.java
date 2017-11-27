@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.naming.ConfigurationException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -75,16 +76,20 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-				String rule = getAttribute(nameNodeMap, "rule", null);
 
-				PoolCfg poolCfg = new PoolCfg(id, name, type, minCon, maxCon, rule);
+				PoolCfg poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
 				for(int j = 0; j < nodeList.size(); j++) {
 					Node node = nodeList.get(j);					
 					NamedNodeMap attrs = node.getAttributes();
 					String ip = getAttribute(attrs, "ip", null);
-					int port = getIntAttribute(attrs, "port", 6379);					
-					poolCfg.addNode( ip + ":" + port );
+					int port = getIntAttribute(attrs, "port", 6379);
+					String suffix = getAttribute(attrs, "suffix", null);
+					if(suffix == null && type == 2) {
+						throw new ConfigurationException("Customer Cluster nodes need to set unique suffix property");
+					}
+					else
+						poolCfg.addNode( ip + ":" + port + ":" + suffix);
 				}
 				map.put(id,  poolCfg);
 			}

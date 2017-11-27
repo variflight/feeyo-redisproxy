@@ -1,7 +1,6 @@
 package com.feeyo.redis.net.backend.pool.xcluster;
 
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
@@ -13,12 +12,10 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
  */
 public class XClusterNode {
     private PhysicalNode physicalNode = null;
-//    private PhysicalNode phyNodeFollow = null;
 
     private volatile int heartbeatRetry = 0;
     private volatile int heartbeatStatus = 1;
-    private volatile long heartbeatTime = -1;
-
+    
     public PhysicalNode getPhysicalNode() {
         return physicalNode;
     }
@@ -49,7 +46,6 @@ public class XClusterNode {
                 heartbeatStatus = -1;
             }
         } finally {
-            heartbeatTime = TimeUtil.currentTimeMillis();
             if ( conn != null ) {
                 conn.disconnect();
             }
@@ -59,4 +55,5 @@ public class XClusterNode {
             physicalNode.clearConnections("this node exception, automatic reload", true);
         }
     }
+
 }
