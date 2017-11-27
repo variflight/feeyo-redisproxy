@@ -13,11 +13,6 @@ import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
-import com.feeyo.redis.net.front.route.strategy.segment.MDelSegmentStrategy;
-import com.feeyo.redis.net.front.route.strategy.segment.MExistsSegmentStrategy;
-import com.feeyo.redis.net.front.route.strategy.segment.MGetSegmentStrategy;
-import com.feeyo.redis.net.front.route.strategy.segment.MSetSegmentStrategy;
-import com.feeyo.redis.net.front.route.strategy.segment.SegmentStrategy;
 
 /**
  * pipeline && mget and mset and del and exists and default command route
@@ -27,10 +22,6 @@ import com.feeyo.redis.net.front.route.strategy.segment.SegmentStrategy;
  */
 public class SegmentRouteStrategy extends AbstractRouteStrategy {
 	
-	private static MSetSegmentStrategy MSET_STR =  new MSetSegmentStrategy();
-	private static MGetSegmentStrategy MGET_STR =  new MGetSegmentStrategy();
-	private static MDelSegmentStrategy MDEL_STR =  new MDelSegmentStrategy();
-	private static MExistsSegmentStrategy EXISTS_STR =  new MExistsSegmentStrategy();
 
 	private RedisRequestType rewrite(RedisRequest request, List<RedisRequest> newRequests, List<Segment> segments)
 			throws InvalidRequestExistsException {
@@ -38,17 +29,85 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 		byte[][] args = request.getArgs();
 		String cmd = new String(args[0]).toUpperCase();
 		
-		SegmentStrategy strategy = null;
-		if (cmd.startsWith("MSET"))
-			strategy = MSET_STR;
-		else if (cmd.startsWith("MGET"))
-			strategy = MGET_STR;
-		else if (cmd.startsWith("DEL"))
-			strategy = MDEL_STR;
-		else if (cmd.startsWith("EXISTS"))
-			strategy = EXISTS_STR;
+		if (cmd.startsWith("MSET")) {
+			
+			if (args.length == 1 || (args.length & 0x01) == 0) {
+				throw new InvalidRequestExistsException("wrong number of arguments", null);
+			}
+			int[] indexs = new int[(args.length - 1) / 2];
+			for (int j = 1; j < args.length; j += 2) {
+				RedisRequest newRequest = new RedisRequest();
+				newRequest.setArgs(new byte[][] { "SET".getBytes(), args[j], args[j + 1] });
+				newRequest.setPolicy( request.getPolicy() );
+				newRequests.add(newRequest);
+	
+				indexs[(j - 1) / 2] = newRequests.size() - 1;
+			}
+	
+			Segment segment = new Segment(SegmentType.MSET, indexs);
+			segments.add(segment);
+			return RedisRequestType.MSET;
 
-		return strategy.unpack( request, newRequests, segments);
+		} else if (cmd.startsWith("MGET")) {
+			
+			if (args.length == 1) {
+	            throw new InvalidRequestExistsException("wrong number of arguments", null);
+	        }
+	        int[] indexs = new int[args.length-1];
+			for (int j = 1; j < args.length; j++) {
+	            RedisRequest newRequest = new RedisRequest();
+	            newRequest.setArgs(new byte[][] {"GET".getBytes(),args[j]});
+	            newRequest.setPolicy( request.getPolicy() );
+	            newRequests.add( newRequest );
+
+	            indexs[j-1] = newRequests.size()-1;
+	        }
+			
+			Segment segment = new Segment(SegmentType.MGET, indexs);
+			segments.add(segment);
+			
+	        return RedisRequestType.MGET;
+	        
+		} else if (cmd.startsWith("DEL")) {
+			
+			if (args.length < 3) {
+	            throw new InvalidRequestExistsException("wrong number of arguments", null);
+	        }
+	    	int[] indexs = new int[args.length-1];
+	        for (int j=1; j<args.length; j++) {
+	            RedisRequest newRequest = new RedisRequest();
+	            newRequest.setArgs(new byte[][] {"DEL".getBytes(), args[j] });
+	            newRequest.setPolicy( request.getPolicy() );
+	            newRequests.add( newRequest );
+
+	            indexs[j-1] = newRequests.size()-1;
+	        }
+	        
+	        Segment segment = new Segment(SegmentType.MDEL, indexs);
+			segments.add(segment);
+	    	return RedisRequestType.DEL_MULTIKEY;
+			
+		} else if (cmd.startsWith("EXISTS")) {
+			
+			if (args.length < 3) {
+	            throw new InvalidRequestExistsException("wrong number of arguments", null);
+	        }
+	    	int[] indexs = new int[args.length-1];
+	        for (int j=1; j<args.length; j++) {
+	            RedisRequest newRequest = new RedisRequest();
+	            newRequest.setArgs(new byte[][] {"EXISTS".getBytes(), args[j] });
+	            newRequest.setPolicy( request.getPolicy() );
+	            newRequests.add( newRequest );
+
+	            indexs[j-1] = newRequests.size()-1;
+	        }
+	        
+	        Segment segment = new Segment(SegmentType.MEXISTS, indexs);
+			segments.add(segment);
+			return RedisRequestType.MEXISTS;
+		}
+		
+		return null;
 	}
 
 	@Override
