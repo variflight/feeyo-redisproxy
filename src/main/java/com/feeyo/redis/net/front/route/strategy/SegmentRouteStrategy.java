@@ -13,8 +13,11 @@ import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.strategy.segment.MDelSegmentStrategy;
+import com.feeyo.redis.net.front.route.strategy.segment.MExistsSegmentStrategy;
+import com.feeyo.redis.net.front.route.strategy.segment.MGetSegmentStrategy;
+import com.feeyo.redis.net.front.route.strategy.segment.MSetSegmentStrategy;
 import com.feeyo.redis.net.front.route.strategy.segment.SegmentStrategy;
-import com.feeyo.redis.net.front.route.strategy.segment.SegmentStrategyFactory;
 
 /**
  * pipeline && mget and mset and del and exists and default command route
@@ -23,6 +26,11 @@ import com.feeyo.redis.net.front.route.strategy.segment.SegmentStrategyFactory;
  * @author xuwenfeng
  */
 public class SegmentRouteStrategy extends AbstractRouteStrategy {
+	
+	private static MSetSegmentStrategy MSET_STR =  new MSetSegmentStrategy();
+	private static MGetSegmentStrategy MGET_STR =  new MGetSegmentStrategy();
+	private static MDelSegmentStrategy MDEL_STR =  new MDelSegmentStrategy();
+	private static MExistsSegmentStrategy EXISTS_STR =  new MExistsSegmentStrategy();
 
 	private RedisRequestType rewrite(RedisRequest request, List<RedisRequest> newRequests, List<Segment> segments)
 			throws InvalidRequestExistsException {
@@ -30,7 +38,16 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 		byte[][] args = request.getArgs();
 		String cmd = new String(args[0]).toUpperCase();
 		
-		SegmentStrategy strategy = SegmentStrategyFactory.getStrategy(cmd);
+		SegmentStrategy strategy = null;
+		if (cmd.startsWith("MSET"))
+			strategy = MSET_STR;
+		else if (cmd.startsWith("MGET"))
+			strategy = MGET_STR;
+		else if (cmd.startsWith("DEL"))
+			strategy = MDEL_STR;
+		else if (cmd.startsWith("EXISTS"))
+			strategy = EXISTS_STR;
+
 		return strategy.unpack( request, newRequests, segments);
 	}
 
