@@ -29,6 +29,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 		byte[][] args = request.getArgs();
 		String cmd = new String(args[0]).toUpperCase();
 		
+		// mset 分包
 		if (cmd.startsWith("MSET")) {
 			
 			if (args.length == 1 || (args.length & 0x01) == 0) {
