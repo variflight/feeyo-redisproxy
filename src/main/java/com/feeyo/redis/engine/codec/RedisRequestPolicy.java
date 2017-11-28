@@ -22,7 +22,11 @@ public class RedisRequestPolicy {
 	}
 	
 	public boolean isRead() {
-		 return (rw == CommandParse.READ_CMD) ? true : false;
+		 return rw == CommandParse.READ_CMD;
+	}
+	
+	public boolean isAutoResp() {
+		return level == CommandParse.AUTO_RESP_CMD;
 	}
 	
 }

@@ -9,7 +9,6 @@ import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.backend.pool.xcluster.XClusterPool;
 import com.feeyo.redis.net.backend.pool.xcluster.XNodeUtil;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
-import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
@@ -54,7 +53,7 @@ public abstract class AbstractRouteStrategy {
 			for (int i = 0; i < requests.size(); i++) {
 				
 				RedisRequest request = requests.get(i);
-				if ( request.getPolicy().getLevel() == CommandParse.AUTO_RESP_CMD )  {
+				if ( request.getPolicy().isAutoResp() )  {
 					continue;
 				}
 
@@ -77,13 +76,14 @@ public abstract class AbstractRouteStrategy {
 			XClusterPool xPool = (XClusterPool) pool;
 			for (int i = 0; i < requests.size(); i++) {
 				
+				// 
 				RedisRequest request = requests.get(i);
-				if ( request.getPolicy().getLevel() == CommandParse.AUTO_RESP_CMD) {
+				if ( request.getPolicy().isAutoResp() )  {
 					continue;
 				}
 				
 				// 根据后缀 路由节点
-				String suffix = XNodeUtil.getSuffix(request);
+				String suffix = XNodeUtil.getSuffix( request );
 				PhysicalNode physicalNode = xPool.getPhysicalNode( suffix );
 				if ( physicalNode == null )
 					throw new PhysicalNodeUnavailableException("node unavailable.");
