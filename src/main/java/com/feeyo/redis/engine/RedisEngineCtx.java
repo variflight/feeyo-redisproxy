@@ -15,7 +15,7 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.loader.zk.ZkClient;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
-import com.feeyo.redis.net.backend.pool.RedisPoolFactory;
+import com.feeyo.redis.net.backend.pool.PoolFactory;
 import com.feeyo.redis.net.front.RedisFrontendConnectionFactory;
 import com.feeyo.redis.nio.NIOAcceptor;
 import com.feeyo.redis.nio.NIOConnector;
@@ -141,7 +141,7 @@ public class RedisEngineCtx {
         
 		this.poolMap = new HashMap<Integer, AbstractPool>( poolCfgMap.size() );
 		for (final PoolCfg poolCfg : poolCfgMap.values()) {
-			AbstractPool pool = RedisPoolFactory.createPoolByCfg(poolCfg);
+			AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
 			pool.startup();
 			this.poolMap.put(pool.getId(), pool);
 		}
@@ -202,7 +202,7 @@ public class RedisEngineCtx {
 			// 3 连接池自检 
 			Map<Integer, AbstractPool> newPoolMap = new HashMap<Integer, AbstractPool>( newPoolCfgMap.size() );
 			for (final PoolCfg poolCfg : newPoolCfgMap.values()) {
-				AbstractPool pool = RedisPoolFactory.createPoolByCfg(poolCfg);
+				AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
 				newPoolMap.put(pool.getId(), pool);
 	        }
 			
@@ -332,7 +332,7 @@ public class RedisEngineCtx {
 			// 2. 初始化新的 pool
 			Map<Integer, AbstractPool> newPoolMap = new HashMap<Integer, AbstractPool>( newPoolCfgMap.size() );
 			for (final PoolCfg poolCfg : newPoolCfgMap.values()) {
-				AbstractPool pool = RedisPoolFactory.createPoolByCfg(poolCfg);
+				AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
 				newPoolMap.put(pool.getId(), pool);
 			}
 
