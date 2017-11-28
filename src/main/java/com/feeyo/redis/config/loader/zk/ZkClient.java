@@ -353,6 +353,9 @@ public class ZkClient implements ConnectionStateListener {
                                     case "server.xml":
                                         RedisEngineCtx.INSTANCE().reloadServer();
                                         break;
+                                    case "mail.properties":
+                                    	RedisEngineCtx.INSTANCE().reloadMailProperties();
+                                        break;
                                     default:
                                         break;
                                 }

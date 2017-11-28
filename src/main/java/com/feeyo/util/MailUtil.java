@@ -1,6 +1,5 @@
 package com.feeyo.util;
 
-import java.io.FileInputStream;
 import java.util.Date;
 import java.util.Properties;
 
@@ -17,6 +16,8 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
+
 public class MailUtil {
 	
 	private static Properties props = null;
@@ -31,13 +32,12 @@ public class MailUtil {
 	
 	public static boolean send(String subject, String body, String[] fileNames) {
 		
-		//
-		if (props == null) {
-			synchronized ( _lock ) {	
-				if ( props == null ) {
+		Properties mailProperty = RedisEngineCtx.INSTANCE().getMailProperties();
+		if(props != mailProperty) {
+			synchronized ( _lock ) {
+				if(props !=  mailProperty) {
 					try {
-						props = new Properties();
-						props.load(new FileInputStream(System.getProperty("FEEYO_HOME") + "/conf/mail.properties"));
+						props = mailProperty;
 						
 						userName = props.getProperty("mail.from.userName");
 						password = props.getProperty("mail.from.password");
@@ -51,11 +51,9 @@ public class MailUtil {
 							toAddrs[i]= new InternetAddress( addrs[i] );
 						}
 						
-					} catch (Exception e1) {
-						e1.printStackTrace();
+					} catch (Exception e) {
 					}
 				}
-				
 			}
 		}
 
