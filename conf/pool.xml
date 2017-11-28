@@ -12,9 +12,12 @@
 	      <node ip="192.168.1.101" port="7002" />
 	</pool>
 
-	<!-- suffix_hint user add the suffix behind the key (key#1#) -->
-	<pool id="3" name="pool3" type="2" maxCon="200" minCon="1" rule="suffix_hint">
-		<node ip="192.168.1.101" port="7006" />
-		<node ip="192.168.1.101" port="7007" />
+	<!-- 
+		suffix_hint user add the suffix behind the key (key#A#)
+		suffix is combined with [a-zA-Z0-9]+
+	 -->
+	<pool id="3" name="pool3" type="2" maxCon="200" minCon="1">
+		<node ip="192.168.1.101" port="7006" suffix="A" />
+		<node ip="192.168.1.101" port="7007" suffix="B"/>
 	</pool>
 </redis>

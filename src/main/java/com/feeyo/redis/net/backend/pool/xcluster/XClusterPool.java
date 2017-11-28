@@ -1,30 +1,35 @@
 package com.feeyo.redis.net.backend.pool.xcluster;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.net.backend.pool.xcluster.rule.RuleAlgorithm;
-import com.feeyo.redis.net.backend.pool.xcluster.rule.RuleAlgorithmFactory;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * custom cluster pool
  *
  * @author Tr!bf wangyamin@variflight.com
  */
-public class XClusterPool extends AbstractPool {
+public class XClusterPool extends AbstractPool{
 	
-    private Map<String/* connection string ex: 127.0.0.1:8888 */, XClusterNode> nodes = new HashMap<>();
-    private RuleAlgorithm ruleAlgorithm;
+	//#号中间匹配若干字母和数字
+	private static Pattern pattern = Pattern.compile(".*#[a-zA-Z0-9]+#$");
+	
+	// connection string ex: 127.0.0.1:8888:suffix
+    private Map<String, XClusterNode> nodes = new HashMap<>();
+    
+    private static Map<String,String> suffixs = new HashMap<String, String>();
 
     public XClusterPool(PoolCfg poolCfg) {
         super(poolCfg);
@@ -32,8 +37,6 @@ public class XClusterPool extends AbstractPool {
 
     @Override
     public boolean startup() {
-        ruleAlgorithm = RuleAlgorithmFactory.getRuleAlgorithm(poolCfg.getRule());
-
         int type = poolCfg.getType();
         String name = poolCfg.getName();
         int minCon = poolCfg.getMinCon();
@@ -41,10 +44,11 @@ public class XClusterPool extends AbstractPool {
 
         for (String nodeConnStr : poolCfg.getNodes()) {
             XClusterNode ccNode = new XClusterNode();
-            String[] ipAndPort = nodeConnStr.split(":");
-            String ip = ipAndPort[0];
-            int port = Integer.parseInt(ipAndPort[1]);
-
+            String[] ipPortSuffix = nodeConnStr.split(":");
+            String ip = ipPortSuffix[0];
+            int port = Integer.parseInt(ipPortSuffix[1]);
+            String suffix = ipPortSuffix[2];
+            suffixs.put(suffix, nodeConnStr);
             RedisBackendConnectionFactory factory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();
             PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, ip, port);
             physicalNode.initConnections();
@@ -121,15 +125,20 @@ public class XClusterPool extends AbstractPool {
     public void heartbeatCheck(long timeout) {
     }
 
-    public PhysicalNode getPhysicalNode(RedisRequest request) throws PhysicalNodeUnavailableException {
-        int idx = ruleAlgorithm.calculate(request);
-        // 暂不对 pool.xml 添加更多信息，以加载顺序作为索引顺序
-        if (idx > poolCfg.getNodes().size()) {
-            throw new PhysicalNodeUnavailableException("custom cluster pool node unavailable: " + idx);
+    //改写key并且返回node
+    public PhysicalNode getPhysicalNode(RedisRequest request) {
+    	PhysicalNode node = null;
+    	byte[] requestKey = request.getNumArgs() > 1 ? request.getArgs()[1] : null;
+        if (requestKey != null) {
+            String key = new String(requestKey);
+            Matcher matcher = pattern.matcher(key);
+            if (matcher.matches()) {
+                String[] strs = key.split("#");
+                String suffix = strs[strs.length - 1];
+                request.getArgs()[1] = key.substring(0,key.length()-suffix.length()-2).getBytes();
+                node =  nodes.get(suffixs.get(suffix)).getPhysicalNode();
+            }
         }
-
-        String str = poolCfg.getNodes().get(idx);
-        XClusterNode node = nodes.get(str);
-        return node.getPhysicalNode();
+        return node;
     }
 }
