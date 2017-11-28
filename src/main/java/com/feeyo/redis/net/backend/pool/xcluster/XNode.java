@@ -10,13 +10,44 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
  *
  * @author Tr!bf wangyamin@variflight.com
  */
-public class XClusterNode {
+public class XNode {
+	
+	// 
+	private String ip;
+	private int port;
+	private String suffix;		// 依赖后缀做路由
+	
+	
     private PhysicalNode physicalNode = null;
 
     private volatile int heartbeatRetry = 0;
     private volatile int heartbeatStatus = 1;
-    
-    public PhysicalNode getPhysicalNode() {
+
+	public String getIp() {
+		return ip;
+	}
+
+	public void setIp(String ip) {
+		this.ip = ip;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	public String getSuffix() {
+		return suffix;
+	}
+
+	public void setSuffix(String suffix) {
+		this.suffix = suffix;
+	}
+
+	public PhysicalNode getPhysicalNode() {
         return physicalNode;
     }
 

@@ -485,10 +485,9 @@ public class RedisClusterPool extends AbstractPool {
 	public void heartbeatCheck(long timeout) {	
 		
 		// 心跳
-		for (Map.Entry<String, ClusterNode> entry : masters.entrySet()) {			
-			ClusterNode clusterNode = entry.getValue();
-			PhysicalNode physicalNode = clusterNode.getPhysicalNode();
+		for (ClusterNode clusterNode : masters.values()) {			
 			
+			PhysicalNode physicalNode = clusterNode.getPhysicalNode();
 			this.heartbeatCheck( physicalNode, timeout );
 		}
 	}

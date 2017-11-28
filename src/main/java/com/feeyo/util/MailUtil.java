@@ -16,8 +16,6 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
-import com.feeyo.redis.engine.RedisEngineCtx;
-
 public class MailUtil {
 	
 	private static Properties props = null;
@@ -29,15 +27,13 @@ public class MailUtil {
 	
 	private static Object _lock = new Object();
 	
-	
-	public static boolean send(String subject, String body, String[] fileNames) {
+	public static boolean send(Properties mailProps, String subject, String body, String[] fileNames) {
 		
-		Properties mailProperty = RedisEngineCtx.INSTANCE().getMailProperties();
-		if(props != mailProperty) {
+		if(props != mailProps) {
 			synchronized ( _lock ) {
-				if(props !=  mailProperty) {
+				if(props !=  mailProps) {
 					try {
-						props = mailProperty;
+						props = mailProps;
 						
 						userName = props.getProperty("mail.from.userName");
 						password = props.getProperty("mail.from.password");

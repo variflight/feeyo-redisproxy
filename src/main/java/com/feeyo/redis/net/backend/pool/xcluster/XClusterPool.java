@@ -1,17 +1,15 @@
 package com.feeyo.redis.net.backend.pool.xcluster;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
@@ -23,13 +21,7 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
  */
 public class XClusterPool extends AbstractPool{
 	
-	//#号中间匹配若干字母和数字
-	private static Pattern pattern = Pattern.compile(".*#[a-zA-Z0-9]+#$");
-	
-	// connection string ex: 127.0.0.1:8888:suffix
-    private Map<String, XClusterNode> nodes = new HashMap<>();
-    
-    private static Map<String,String> suffixs = new HashMap<String, String>();
+    private Map<String, XNode> nodes = new HashMap<>();
 
     public XClusterPool(PoolCfg poolCfg) {
         super(poolCfg);
@@ -37,23 +29,27 @@ public class XClusterPool extends AbstractPool{
 
     @Override
     public boolean startup() {
+    	
         int type = poolCfg.getType();
         String name = poolCfg.getName();
         int minCon = poolCfg.getMinCon();
         int maxCon = poolCfg.getMaxCon();
 
-        for (String nodeConnStr : poolCfg.getNodes()) {
-            XClusterNode ccNode = new XClusterNode();
-            String[] ipPortSuffix = nodeConnStr.split(":");
-            String ip = ipPortSuffix[0];
-            int port = Integer.parseInt(ipPortSuffix[1]);
-            String suffix = ipPortSuffix[2];
-            suffixs.put(suffix, nodeConnStr);
+        for (String nodeStr : poolCfg.getNodes()) {
+            
+            String[] attrs = nodeStr.split(":");
+            
+            XNode xNode = new XNode();
+            xNode.setIp( attrs[0] );
+            xNode.setPort( Integer.parseInt(attrs[1]) );
+            xNode.setSuffix( attrs[2] );
+
             RedisBackendConnectionFactory factory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();
-            PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, ip, port);
+            PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, xNode.getIp(), xNode.getPort());
             physicalNode.initConnections();
-            ccNode.setPhysicalNode(physicalNode);
-            nodes.put(nodeConnStr, ccNode);
+            xNode.setPhysicalNode(physicalNode);
+            
+            nodes.put(xNode.getSuffix(), xNode);
         }
         return false;
     }
@@ -80,8 +76,8 @@ public class XClusterPool extends AbstractPool{
 
     @Override
     public boolean testConnection() {
-        for (Map.Entry<String, XClusterNode> entry : nodes.entrySet()) {
-            PhysicalNode physicalNode = entry.getValue().getPhysicalNode();
+        for (XNode xNode : nodes.values()) {
+            PhysicalNode physicalNode = xNode.getPhysicalNode();
             String host = physicalNode.getHost();
             int port = physicalNode.getPort();
 
@@ -107,14 +103,14 @@ public class XClusterPool extends AbstractPool{
 
     @Override
     public void availableCheck() {
+    	
         if ( !availableCheckFlag.compareAndSet(false,  true) ) {
             return;
         }
 
         try {
-            for (Map.Entry<String, XClusterNode> entry : nodes.entrySet()) {
-                XClusterNode ccNode = entry.getValue();
-                ccNode.availableCheck();
+            for (XNode node : nodes.values()) {
+            	node.availableCheck();
             }
         } finally {
             availableCheckFlag.set( false );
@@ -123,22 +119,65 @@ public class XClusterPool extends AbstractPool{
 
     @Override
     public void heartbeatCheck(long timeout) {
+    	
+    	for(XNode node : nodes.values()) {
+    		PhysicalNode physicalNode = node.getPhysicalNode();
+    		heartbeatCheck(physicalNode, timeout);
+    	}
+    	
     }
-
-    //改写key并且返回node
-    public PhysicalNode getPhysicalNode(RedisRequest request) {
-    	PhysicalNode node = null;
-    	byte[] requestKey = request.getNumArgs() > 1 ? request.getArgs()[1] : null;
-        if (requestKey != null) {
-            String key = new String(requestKey);
-            Matcher matcher = pattern.matcher(key);
-            if (matcher.matches()) {
-                String[] strs = key.split("#");
-                String suffix = strs[strs.length - 1];
-                request.getArgs()[1] = key.substring(0,key.length()-suffix.length()-2).getBytes();
-                node =  nodes.get(suffixs.get(suffix)).getPhysicalNode();
-            }
-        }
+    
+	private void heartbeatCheck(PhysicalNode physicalNode, long timeout) {
+		
+		// 心跳检测, 超时抛弃 
+		// --------------------------------------------------------------------------
+		long heartbeatTime = System.currentTimeMillis() - timeout;
+		long closeTime = System.currentTimeMillis() - timeout * 2;
+		
+		LinkedList<RedisBackendConnection> heartBeatCons = getNeedHeartbeatCons( physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
+		for (RedisBackendConnection conn : heartBeatCons) {
+			conHeartBeatHanler.doHeartBeat(conn, PING );
+		}
+		heartBeatCons.clear();		
+		conHeartBeatHanler.abandTimeoutConns();
+		
+		// 连接池 动态调整逻辑
+		// -------------------------------------------------------------------------------
+		int idleCons = physicalNode.getIdleCount();
+		int activeCons = physicalNode.getActiveCount();
+		int minCons = poolCfg.getMinCon();
+		int maxCons = poolCfg.getMaxCon();
+		
+		LOGGER.info( "XNode: host={}, idle={}, active={}, min={}, max={}, lasttime={}", 
+				new Object[] { physicalNode.getHost() + ":" + physicalNode.getPort(),  
+				idleCons, activeCons, minCons, maxCons, System.currentTimeMillis() } );
+		
+		if ( idleCons > minCons ) {	
+			
+			if ( idleCons < activeCons ) {
+				return;
+			}		
+			
+			//闲置太多
+			closeByIdleMany(physicalNode, idleCons - minCons );
+			
+		} else if ( idleCons < minCons ) {
+			
+			if ( idleCons > ( minCons * 0.5 ) ) {
+				return;
+			}
+			
+			//闲置太少
+			if ( (idleCons + activeCons) < maxCons ) {	
+				int createCount =  (int)Math.ceil( (minCons - idleCons) / 3F );			
+				createByIdleLitte(physicalNode, idleCons, createCount);
+			}			
+		}
+		
+	}
+    
+    public PhysicalNode getPhysicalNode(String suffix) {
+    	PhysicalNode node = nodes.get( suffix ).getPhysicalNode();
         return node;
     }
 }

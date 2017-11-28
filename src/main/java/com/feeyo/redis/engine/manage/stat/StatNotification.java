@@ -5,8 +5,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.util.FileUtils;
@@ -60,8 +62,7 @@ public class StatNotification {
 			body.append("");
 			body.append("");
 			body.append("");
-
-			MailUtil.send(" ## RedisProxy Report ##", body.toString(), attachmentsNames);
+			MailUtil.send(getMailProperty(), " ## RedisProxy Report ##", body.toString(), attachmentsNames);
 		} finally {
 			FileUtils.cleanFiles(attachmentsNames);
 		}
@@ -76,7 +77,7 @@ public class StatNotification {
 		body.append("");
 		body.append("");
 		filenames = filterFilenames(filenames);
-		MailUtil.send(" ## RedisProxy Daily DisCard Report ##", body.toString(), filenames);
+		MailUtil.send(getMailProperty(), " ## RedisProxy Daily DisCard Report ##", body.toString(), filenames);
 		FileUtils.cleanFiles(filenames);
 	}
 	
@@ -109,5 +110,9 @@ public class StatNotification {
 		cal.setTime(new Date());
 		cal.add(Calendar.DATE, -1);
 		return sdf.format(cal.getTime());
+	}
+	
+	private Properties getMailProperty() {
+		return RedisEngineCtx.INSTANCE().getMailProperties();
 	}
 }

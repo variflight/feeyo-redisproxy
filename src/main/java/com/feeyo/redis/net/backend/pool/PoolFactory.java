@@ -9,7 +9,8 @@ import com.feeyo.redis.net.backend.pool.xcluster.XClusterPool;
  *
  * @author Tr!bf wangyamin@variflight.com
  */
-public class RedisPoolFactory {
+public class PoolFactory {
+	
     public static AbstractPool createPoolByCfg(PoolCfg poolCfg) {
         AbstractPool pool;
         switch (poolCfg.getType()) {
