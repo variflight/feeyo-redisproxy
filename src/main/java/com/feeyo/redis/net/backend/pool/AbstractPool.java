@@ -87,23 +87,26 @@ public abstract class AbstractPool {
 		Iterator<RedisBackendConnection> checkListItor = checkLis.iterator();
 		while (checkListItor.hasNext()) {
 			RedisBackendConnection con = checkListItor.next();
-			if (con.isClosed()) {
+			if ( con.isClosed() ) {
 				checkListItor.remove();
 				continue;
 			}
 			
 			// 关闭 闲置过久的 connection
 			if (con.getLastTime() < closeTime) {
-				checkListItor.remove();
-				con.close("heartbeate idle close ");
-				continue;
+				if(checkLis.remove(con)) { 
+					con.close("heartbeate idle close ");
+					continue;
+				}
 			}
 			
 			// 提取需要做心跳检测的 connection
 			if (con.getLastTime() < heartbeatTime && heartbeatCons.size() < maxConsInOneCheck) {
-				checkListItor.remove();
-				con.setBorrowed(true);
-				heartbeatCons.add(con);
+				// 如果移除失败，说明该连接已经被其他线程使用
+				if(checkLis.remove(con)) { 
+					con.setBorrowed(true);
+					heartbeatCons.add(con);
+				}
 			} 
 		}
 		

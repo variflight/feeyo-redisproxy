@@ -163,8 +163,8 @@ public class RedisEngineCtx {
         KeepAlived.check(port, authString);
         
 		// 7, zk startup
-		ZkClient.INSTANCE().init();
-		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
+//		ZkClient.INSTANCE().init();
+//		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
 	}
 	
 	public byte[] reloadAll() {
@@ -252,7 +252,7 @@ public class RedisEngineCtx {
 		        NetSystem.getInstance().setNetConfig( systemConfig );
 				
 		        // zk 重新加载
-	            ZkClient.INSTANCE().reloadZkCfg();
+//	            ZkClient.INSTANCE().reloadZkCfg();
 
 	            //清理 old
 				for (final AbstractPool pool : _poolMap.values()) {	
@@ -321,7 +321,7 @@ public class RedisEngineCtx {
 			NetSystem.getInstance().setNetConfig( systemConfig );
 
 			// 4. 生效新的 ZK
-			ZkClient.INSTANCE().reloadZkCfg();
+//			ZkClient.INSTANCE().reloadZkCfg();
 			
 			return "+OK\r\n".getBytes();
 		} finally {

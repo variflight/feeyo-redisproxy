@@ -18,6 +18,7 @@ import com.feeyo.redis.engine.manage.Manage;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
+import com.feeyo.redis.net.front.handler.BlockCommandHandler;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
@@ -63,6 +64,7 @@ public class RedisFrontSession {
 	private AbstractCommandHandler defaultCommandHandler;
 	private AbstractCommandHandler segmentCommandHandler;
 	private AbstractCommandHandler pipelineCommandHandler;
+	private AbstractCommandHandler blockCommandHandler;
 	
 	private AbstractCommandHandler currentCommandHandler;
 	
@@ -301,6 +303,17 @@ public class RedisFrontSession {
 			}
 			return pipelineCommandHandler;
 
+		case BLOCK: 
+			
+			if (blockCommandHandler == null) {
+				synchronized (_lock) {
+					if (blockCommandHandler == null) {
+						blockCommandHandler = new BlockCommandHandler( frontCon );
+					}
+				}
+			}
+			return blockCommandHandler;
+			
 		default:
 			return defaultCommandHandler;
 		}
@@ -516,6 +529,7 @@ public class RedisFrontSession {
 		defaultCommandHandler = null;
 		segmentCommandHandler = null;
 		pipelineCommandHandler = null;
+		blockCommandHandler = null;
 		currentCommandHandler = null;
 	}
 	

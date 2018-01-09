@@ -20,6 +20,7 @@ public class CommandParse {
 	public static final int MANAGE_CMD 		= 3;		// 管理指令
 	public static final int PUBSUB_CMD 		= 4;		// 
 	public static final int THROUGH_CMD 	= 5;		// 透传指令
+	public static final int BLOCK_CMD 	= 6;		// 透传指令
 
 	public static final int AUTO_RESP_CMD	= 7;		// 中间件应答指令
 	public static final int MGETSET_CMD		= 9;		// 中间件加强指令
@@ -110,9 +111,9 @@ public class CommandParse {
 		_cmds.put("HSTRLEN", 			new RedisRequestPolicy(THROUGH_CMD, READ_CMD));
 		
 		// List
-		_cmds.put("BLPOP", 				new RedisRequestPolicy(NO_CLUSTER_CMD, READ_CMD));
-		_cmds.put("BRPOP", 				new RedisRequestPolicy(NO_CLUSTER_CMD, READ_CMD));
-		_cmds.put("BRPOPLPUSH", 		new RedisRequestPolicy(NO_CLUSTER_CMD, WRITE_CMD));
+		_cmds.put("BLPOP", 				new RedisRequestPolicy(BLOCK_CMD, READ_CMD));
+		_cmds.put("BRPOP", 				new RedisRequestPolicy(BLOCK_CMD, READ_CMD));
+		_cmds.put("BRPOPLPUSH", 		new RedisRequestPolicy(BLOCK_CMD, WRITE_CMD));
 		
 		_cmds.put("LINDEX", 			new RedisRequestPolicy(THROUGH_CMD, READ_CMD));
 		_cmds.put("LINSERT", 			new RedisRequestPolicy(THROUGH_CMD, WRITE_CMD));
