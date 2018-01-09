@@ -3,6 +3,7 @@ package com.feeyo.redis.engine.codec;
 public enum RedisRequestType {
 	
 	DEFAULT("DEFAULT"),
+	BLOCK("BLOCK"),
 	PIPELINE("PIPELINE"),
 	MGET("MGET"),
 	MSET("MSET"),

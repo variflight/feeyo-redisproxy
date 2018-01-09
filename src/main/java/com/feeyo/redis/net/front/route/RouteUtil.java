@@ -40,6 +40,12 @@ public class RouteUtil {
 		case CommandParse.UNKNOW_CMD:
 			result = true;
 			break;
+		case CommandParse.BLOCK_CMD:
+			if ( poolType == 1 ) // 集群不支持阻塞指令
+				result = true;
+			if ( isPipeline )
+				result = true;  // pipe不支持阻塞指令
+			break;
 		}
 		return result;
 	}
