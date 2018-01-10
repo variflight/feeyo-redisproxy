@@ -1,6 +1,5 @@
 package com.feeyo.util;
 
-import java.io.FileInputStream;
 import java.util.Date;
 import java.util.Properties;
 
@@ -28,16 +27,13 @@ public class MailUtil {
 	
 	private static Object _lock = new Object();
 	
-	
-	public static boolean send(String subject, String body, String[] fileNames) {
+	public static boolean send(Properties mailProps, String subject, String body, String[] fileNames) {
 		
-		//
-		if (props == null) {
-			synchronized ( _lock ) {	
-				if ( props == null ) {
+		if(props != mailProps) {
+			synchronized ( _lock ) {
+				if(props !=  mailProps) {
 					try {
-						props = new Properties();
-						props.load(new FileInputStream(System.getProperty("FEEYO_HOME") + "/conf/mail.properties"));
+						props = mailProps;
 						
 						userName = props.getProperty("mail.from.userName");
 						password = props.getProperty("mail.from.password");
@@ -51,11 +47,9 @@ public class MailUtil {
 							toAddrs[i]= new InternetAddress( addrs[i] );
 						}
 						
-					} catch (Exception e1) {
-						e1.printStackTrace();
+					} catch (Exception e) {
 					}
 				}
-				
 			}
 		}
 

@@ -129,6 +129,7 @@ public class CmdAccessCollector extends AbstractStatCollector {
 		if(commandCountMap.isEmpty())
 			return;
 		StringBuffer buffer = new StringBuffer();
+		buffer.append("CMD"+FIELD_SPARATOR+"COUNT"+LINE_SPARATOR);
 		Set<Entry<String, Command>> entrys = commandCountMap.entrySet();
 		for (Entry<String, Command> entry : entrys) {
 			Command parent = entry.getValue();
@@ -142,7 +143,7 @@ public class CmdAccessCollector extends AbstractStatCollector {
 				}
 			}
 		}
-		String filename = basepath+COMMAND_COUNT_FILE_NAME+date;
+		String filename = basepath+COMMAND_COUNT_FILE_NAME+date+FILE_TYPE;
 		FileUtils.ensureCreateFile(filename, buffer.toString(), isTemp);
 	}
 	
@@ -150,11 +151,12 @@ public class CmdAccessCollector extends AbstractStatCollector {
 		if(commandProcTimeMap.isEmpty())
 			return;
 		StringBuffer buffer = new StringBuffer();
+		buffer.append("KEY"+FIELD_SPARATOR+"VALUE"+LINE_SPARATOR);
 		Collection<Entry<String, AtomicLong>> entrys = commandProcTimeMap.entrySet();
 		for (Entry<String, AtomicLong> entry : entrys) {
 			buffer.append(entry.getKey()).append(FIELD_SPARATOR).append(entry.getValue().get()).append(LINE_SPARATOR);
 		}
-		String filename = basepath+COMMAND_PROC_TIME_FILE_NAME+date;
+		String filename = basepath+COMMAND_PROC_TIME_FILE_NAME+date+FILE_TYPE;
 		FileUtils.ensureCreateFile(filename, buffer.toString(), isTemp);
 	}
 

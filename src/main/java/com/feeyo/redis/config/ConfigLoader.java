@@ -1,10 +1,12 @@
 package com.feeyo.redis.config;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.naming.ConfigurationException;
 import javax.xml.parsers.DocumentBuilder;
@@ -203,6 +205,19 @@ public class ConfigLoader {
 		return zkCfg;
 	}
 	
+	/*
+	 * load mail properties
+	 */
+	public static Properties loadMailProperties(String uri) {
+		Properties props = new Properties();
+		try {
+			props.load(new FileInputStream(uri));
+		} catch (Exception e) {
+			LOGGER.error("load mail property error", e);
+		}
+		return props;
+	}
+	
 	private static Document loadXmlDoc(String uri) throws Exception {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db = dbf.newDocumentBuilder();
@@ -252,4 +267,5 @@ public class ConfigLoader {
 		path.append( "conf" ).append( File.separator ).append( fileName );
         return path.toString();
 	}
+
 }

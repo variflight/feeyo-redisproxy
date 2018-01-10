@@ -26,6 +26,7 @@
 		<zkHome value="/root/redis-proxy/" />
 		<conf name="user.xml" />
 		<conf name="pool.xml" />
+		<conf name="mail.properties" />
 		<node ipAndPort="192.168.5.13:2181" />
 	</zookeeper>
 </redis>

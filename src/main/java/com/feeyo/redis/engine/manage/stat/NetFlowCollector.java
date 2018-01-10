@@ -69,7 +69,7 @@ public class NetFlowCollector extends AbstractStatCollector {
 		}
 		buffer.append("total").append(FIELD_SPARATOR).append(totalNetIn).append(FIELD_SPARATOR).append(totalNetOut).append(LINE_SPARATOR);
 		
-		String filename = basepath+USER_NET_FLOW_FILE_NAME+date;
+		String filename = basepath+USER_NET_FLOW_FILE_NAME+date+FILE_TYPE;
 		FileUtils.ensureCreateFile(filename, buffer.toString(), isTemp);
 	}
 

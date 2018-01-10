@@ -5,8 +5,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.util.FileUtils;
@@ -15,10 +17,13 @@ import com.feeyo.util.MailUtil;
 public class StatNotification {
 	
 	//附件
-	private static final String[] attachmentFileNames = new String[] { "big_key.txt", "big_length.txt" };
+	private static final String[] fileNames = new String[] { "big_key.txt", "big_length.txt" };
 	
 	
-	public void sendMail() {
+	private static List<String> attachmentFileNames = new ArrayList<String>();
+	
+	public void gatherStatusContent() {
+		
 		ConcurrentHashMap<String, BigKey> bigkeyStats = StatUtil.getBigKeyMap();
 		StringBuffer tableBuffer = new StringBuffer();
 		tableBuffer.append("#############   bigkey status   #################\n");
@@ -34,8 +39,10 @@ public class StatNotification {
 			tableBuffer.append(bigkey.count).append("    |");
 		}
 
-		String[] attachmentsNames = transFilePathName(attachmentFileNames);
+		String[] attachmentsNames = transFilePathName(fileNames);
 		FileUtils.ensureCreateFile(attachmentsNames[0], tableBuffer.toString(),false);
+		attachmentFileNames.add(attachmentsNames[0]);
+		
 		tableBuffer.setLength(0);
 
 		tableBuffer.append("#############   top  hundred   #################\n");
@@ -50,34 +57,32 @@ public class StatNotification {
 			tableBuffer.append(bigLength.count_10k).append("    |");
 		}
 
+		FileUtils.ensureCreateFile(attachmentsNames[1], tableBuffer.toString(),false);
+		attachmentFileNames.add(attachmentsNames[1]);
+		
+	}
+	
+	public void gatherDailyDiscardContent() {
+		String basepath = System.getProperty("FEEYO_HOME")+"\\store\\discard\\";
+		String[] filenames = FileUtils.getFilenamesUnderDir(basepath);
+		attachmentFileNames.addAll(filterFilenames(filenames));
+	}
+	
+	public void sendMail() {
 		//
 		try {
-
-			FileUtils.ensureCreateFile(attachmentsNames[1], tableBuffer.toString(),false);
 
 			StringBuffer body = new StringBuffer();
 			body.append("");
 			body.append("");
 			body.append("");
 			body.append("");
-
-			MailUtil.send(" ## RedisProxy Report ##", body.toString(), attachmentsNames);
+			MailUtil.send(getMailProperty(), " ## RedisProxy Report ##", body.toString(), attachmentFileNames.toArray(new String[0]));
+			//clean
+			attachmentFileNames.clear();
 		} finally {
-			FileUtils.cleanFiles(attachmentsNames);
+			FileUtils.cleanFiles(attachmentFileNames.toArray(new String[0]));
 		}
-	}
-	
-	public void sendMailDailyDiscardMsg() {
-		String basepath = System.getProperty("FEEYO_HOME")+"\\store\\discard\\";
-		String[] filenames = FileUtils.getFilenamesUnderDir(basepath);
-		StringBuffer body = new StringBuffer();
-		body.append("");
-		body.append("");
-		body.append("");
-		body.append("");
-		filenames = filterFilenames(filenames);
-		MailUtil.send(" ## RedisProxy Daily DisCard Report ##", body.toString(), filenames);
-		FileUtils.cleanFiles(filenames);
 	}
 	
 	private String[] transFilePathName(String[] filenames) {
@@ -91,7 +96,7 @@ public class StatNotification {
 		return attachementNames;
 	}
 	
-	private String[] filterFilenames(String[] filenames) {
+	private List<String> filterFilenames(String[] filenames) {
 		List<String> list = new ArrayList<String>();
 		
 		for(String filename : filenames) {
@@ -99,7 +104,7 @@ public class StatNotification {
 			if(filename.indexOf(date)>= 0)
 				list.add(filename);
 		}
-		return list.toArray(new String[0]);
+		return list;
 	}
 	
 	//由于是0点发送邮件，所以取昨天的日期
@@ -109,5 +114,9 @@ public class StatNotification {
 		cal.setTime(new Date());
 		cal.add(Calendar.DATE, -1);
 		return sdf.format(cal.getTime());
+	}
+	
+	private Properties getMailProperty() {
+		return RedisEngineCtx.INSTANCE().getMailProperties();
 	}
 }

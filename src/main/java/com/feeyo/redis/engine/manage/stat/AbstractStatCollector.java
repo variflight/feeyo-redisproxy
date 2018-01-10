@@ -5,6 +5,7 @@ import java.util.Calendar;
 
 public abstract class AbstractStatCollector implements StatCollector{
 	
+	protected static final String FILE_TYPE = ".txt";
 	protected static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	protected static final String LINE_SPARATOR = System.getProperty("line.separator");
 	protected static final String FIELD_SPARATOR = "  |  ";

@@ -1,13 +1,11 @@
 package com.feeyo.redis.config.loader.zk;
 
-import com.feeyo.redis.engine.RedisEngineCtx;
+import java.io.File;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import com.feeyo.redis.engine.RedisEngineCtx;
 
 /**
  * redis proxy's config file (on zk server) listener
@@ -45,6 +43,8 @@ public class ConfigFileListener implements ZkDataListener {
                 case "server.xml":
                     RedisEngineCtx.INSTANCE().reloadServer();
                     break;
+                case "mail.properties":
+                	RedisEngineCtx.INSTANCE().reloadMailProperties();
                 default:
                     break;
             }
