@@ -29,7 +29,13 @@ public class BigKeyDelegation implements Comparator<String> {
 	private static final String FIELD_SPARATOR = "  |  ";
 	private static final String BIG_KEY_FILE_NAME = "big_key_v";
 	private static final String basepath = System.getProperty("FEEYO_HOME") + "\\store\\discard\\";
-
+	
+	// bigkey 内存转磁盘清理限制
+	private static int MEMORY_TO_FILE_LIMIT_LENGTH = 500;
+	private static int MEMORY_TO_FILE_LIMIT_TIME = 5 * 60 * 1000;
+	private static int MEMORY_TO_FILE_LIMIT_SIZE = 1 * 1024 * 1024;
+	private static int MEMORY_TO_FILE_LIMIT_COUNT = 5;
+	
 	private static ConcurrentHashMap<String, BigKey> bigkeyMap = new ConcurrentHashMap<String, BigKey>(); 
 	private static ConcurrentHashMap<String, BigKey> backupMap = new ConcurrentHashMap<String, BigKey>(); //size达到100个写入一次文件
 	private static Map<String, BigKey> sortedMap;	//有序map
@@ -106,12 +112,12 @@ public class BigKeyDelegation implements Comparator<String> {
 	}
 
 	private void storeUnusedBigkey2File() {
-		if (bigkeyMap.size() > 500) {
+		if (bigkeyMap.size() > MEMORY_TO_FILE_LIMIT_LENGTH) {
 			for (Entry<String, BigKey> entry : bigkeyMap.entrySet()) {
 				BigKey bigKey = entry.getValue();
 				// 清除： 最近5分钟没有使用过 && 使用总次数小于5 && 小于1M
-				if (TimeUtil.currentTimeMillis() - bigKey.lastUseTime > 5 * 60 * 1000 && bigKey.count.get() < 5
-						&& bigKey.size < 1 * 1024 * 1024) {
+				if (TimeUtil.currentTimeMillis() - bigKey.lastUseTime > MEMORY_TO_FILE_LIMIT_TIME && bigKey.count.get() < MEMORY_TO_FILE_LIMIT_COUNT
+						&& bigKey.size < MEMORY_TO_FILE_LIMIT_SIZE) {
 					backupMap.put(entry.getKey(), entry.getValue());
 					if (backupMap.size() >= 100) {
 						String date = sdf.format(new Date());
@@ -122,6 +128,13 @@ public class BigKeyDelegation implements Comparator<String> {
 				}
 			}
 			LOGGER.info("bigkey clear. after clear bigkey length is :" + bigkeyMap.size());
+		}
+		
+		// 如果清理内存转移到磁盘只清理掉50个key。说明转移的规则需要改变。
+		if (bigkeyMap.size() > MEMORY_TO_FILE_LIMIT_LENGTH - 50) {
+			MEMORY_TO_FILE_LIMIT_TIME = MEMORY_TO_FILE_LIMIT_TIME - (30 * 1000);
+			MEMORY_TO_FILE_LIMIT_COUNT = MEMORY_TO_FILE_LIMIT_COUNT + 5;
+			MEMORY_TO_FILE_LIMIT_SIZE = MEMORY_TO_FILE_LIMIT_SIZE + (1 * 1024 * 1024);
 		}
 	}
 	
