@@ -28,6 +28,7 @@ import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.SlowProcKeyColletor.SlowProcKeyInfo;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
@@ -99,6 +100,7 @@ public class Manage {
 	 *  SHOW MEM
 	 *  
 	 *  SHOW QPS
+	 *  SHOW SLOWKEY
 	 *  SHOW CONN
 	 *  SHOW USER_CONN
 	 *  SHOW BUFFER
@@ -788,6 +790,23 @@ public class Manage {
 						line1.append(bigLength.length.get()).append(", ");
 						line1.append(bigLength.count_1k.get()).append(", ");
 						line1.append(bigLength.count_10k.get());
+						lines.add(line1.toString());
+					}
+					return encode(lines);
+					
+				} else if (arg2.equalsIgnoreCase("SLOWKEY")) {
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("cmd").append(",  ");
+					titleLine.append("key").append(",  ");
+					titleLine.append("count");
+					lines.add(titleLine.toString());
+					for (Map.Entry<String, SlowProcKeyInfo> entry : StatUtil.getSlowKeyShowSet()) {
+						StringBuffer line1 = new StringBuffer();
+						SlowProcKeyInfo slowKey = entry.getValue();
+						line1.append(slowKey.lastCmd).append(", ");
+						line1.append(slowKey.key).append(", ");
+						line1.append(slowKey.count.get());
 						lines.add(line1.toString());
 					}
 					return encode(lines);
