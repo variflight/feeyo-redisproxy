@@ -49,14 +49,14 @@ public class RouteService {
 			
 			// 包含批量操作命令，则采用分段的路由策略
 			if(!isNeedSegment && ( 
-					policy.getLevel() == CommandParse.MGETSET_CMD 
-					|| (policy.getLevel() == CommandParse.DEL_CMD && request.getArgs().length > 2 )
-					|| (policy.getLevel() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) )) {
+					policy.getHandlePolicy() == CommandParse.MGETSET_CMD 
+					|| (policy.getHandlePolicy() == CommandParse.DEL_CMD && request.getArgs().length > 2 )
+					|| (policy.getHandlePolicy() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) )) {
 				isNeedSegment = true;
 			}
 			
 			// 如果是管理指令，且非pipeline,且是管理员用户  提前跳出
-			if ( !isPipeline && policy.getLevel() == CommandParse.MANAGE_CMD && isAdmin) {
+			if ( !isPipeline && policy.getTypePolicy() == CommandParse.MANAGE_CMD && isAdmin) {
 				throw new ManageRespNotTransException("manage cmd exist", requests);
 			}
 			
@@ -66,7 +66,7 @@ public class RouteService {
 			}
 					
 			// 不需要透传，中间件自动回复
-			if ( policy.getLevel() == CommandParse.AUTO_RESP_CMD || policy.getLevel() == CommandParse.MANAGE_CMD ) {
+			if ( policy.getHandlePolicy() == CommandParse.AUTO_RESP_CMD ) {
 				autoResponseIndexs.add(i);
 				continue;
 			} 

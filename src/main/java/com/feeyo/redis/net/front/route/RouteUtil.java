@@ -14,40 +14,39 @@ public class RouteUtil {
 			return true;
 		}
 		
-		boolean result = false;
-		switch( requestPolicy.getLevel()  ) {
+		// 类型策略校验
+		switch( requestPolicy.getTypePolicy()  ) {
 		case CommandParse.DISABLED_CMD :
-			result = true;
-			break;
+			return true;
 		case CommandParse.NO_CLUSTER_CMD:
 			if ( poolType == 1 ) //集群
-				result = true;
-			break;
-		case CommandParse.CLUSTER_CMD:
-			if ( poolType == 0 ) //非集群
-				result = true; 
-			break;
-		case CommandParse.PUBSUB_CMD:
-			if ( isPipeline )	// pipeline 不支持 pubsub
-				result = true;
+				return true;
 			break;
 		case CommandParse.MANAGE_CMD:
 			if ( isPipeline )
-				result = true;
+				return true;
 			if ( !isAdmin )
-				result = true;
+				return true;
 			break;
 		case CommandParse.UNKNOW_CMD:
-			result = true;
+			return true;
+		}
+		
+		// 处理策略校验
+		switch( requestPolicy.getHandlePolicy() ) {
+		case CommandParse.PUBSUB_CMD:
+			if ( isPipeline )	// pipeline 不支持 pubsub
+				return true;
 			break;
+		
 		case CommandParse.BLOCK_CMD:
 			if ( poolType == 1 ) // 集群不支持阻塞指令
-				result = true;
+				return true;
 			if ( isPipeline )
-				result = true;  // pipe不支持阻塞指令
+				return true;  // pipe不支持阻塞指令
 			break;
 		}
-		return result;
+		return false;
 	}
 
 }

@@ -28,7 +28,7 @@ public class DefaultRouteStrategy extends AbstractRouteStrategy {
         RedisRequestType requestType;
         if ( requests.size() == 1 ) {
         		RedisRequestPolicy policy = requests.get(0).getPolicy();
-        		if ( policy.getLevel() == CommandParse.BLOCK_CMD ) {
+        		if ( policy.getHandlePolicy() == CommandParse.BLOCK_CMD ) {
         			requestType = RedisRequestType.BLOCK;
         		} else {
         			requestType = RedisRequestType.DEFAULT;

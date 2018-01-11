@@ -381,18 +381,12 @@ public class RedisFrontSession {
 		
 		String result = null;
 		
-		switch( policy.getLevel() ) {
+		switch( policy.getTypePolicy() ) {
 		case CommandParse.NO_CLUSTER_CMD:
 			if ( frontCon.getUserCfg().getPoolType() == 1 ) 
 				result = NOT_SUPPORTED;
 			break;
-		case CommandParse.CLUSTER_CMD:
-			if ( frontCon.getUserCfg().getPoolType() == 0 )
-				result = NOT_SUPPORTED;
-			break;
 		case CommandParse.DISABLED_CMD:
-		case CommandParse.PUBSUB_CMD:
-		case CommandParse.MGETSET_CMD:
 			result = NOT_SUPPORTED;
 			break;
 		case CommandParse.MANAGE_CMD:
