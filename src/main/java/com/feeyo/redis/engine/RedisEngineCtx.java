@@ -28,7 +28,6 @@ import com.feeyo.redis.nio.buffer.BufferPool;
 import com.feeyo.redis.nio.buffer.bucket.ByteBufferBucketPool;
 import com.feeyo.redis.virtualmemory.VirtualMemoryService;
 import com.feeyo.util.ExecutorUtil;
-import com.feeyo.util.NetworkUtil;
 import com.feeyo.util.keepalived.KeepAlived;
 
 public class RedisEngineCtx {
