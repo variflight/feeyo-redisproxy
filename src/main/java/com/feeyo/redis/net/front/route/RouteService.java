@@ -47,12 +47,8 @@ public class RouteService {
 		boolean isPipeline = requests.size() > 1;
 
 		List<Integer> noThroughtIndexs = null;
-		
-		// 请求是否存在不合法
-		boolean invalidPolicyExist = false;
-		
-		// 是否需要分段
 		boolean isNeedSegment = false;
+		
 		for(int i = 0; i < requests.size(); i++) {
 			
 			RedisRequest request = requests.get(i);
@@ -73,9 +69,10 @@ public class RouteService {
 			}
 			
 			
-			// 如果上个指令是合法的，继续校验下个指令
-			if ( !invalidPolicyExist ) {
-				invalidPolicyExist = RouteUtil.checkIsInvalidPolicy( poolType, policy, isReadOnly, isAdmin, isPipeline );
+			// 是否存在无效指令
+			boolean invalidRequestExist =  RouteUtil.checkIsInvalidPolicy( poolType, policy, isReadOnly, isAdmin, isPipeline );
+			if ( invalidRequestExist ) {
+				throw new InvalidRequestExistsException("invalid request exist");
 			}
 					
 			// 不需要透传
@@ -92,11 +89,6 @@ public class RouteService {
 				KeyPrefixStrategy strategy = KeyPrefixStrategyFactory.getStrategy(cmd);
 				strategy.rebuildKey(request, prefix);
 			}
-		}
-		
-		// 存在不支持指令
-		if ( invalidPolicyExist ) {
-			throw new InvalidRequestExistsException("invalid request exist", requests);
 		}
 		
 		// 全部自动回复
