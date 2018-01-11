@@ -21,7 +21,7 @@ public class CommandParse {
 	public static final byte MANAGE_CMD 		= 3;		// 管理指令
 	
 	// 处理策略 THROUGH
-	public static final byte NO_THROUGH_CMD		= 7;		// 中间件应答指令, 不透传
+	public static final byte NO_THROUGH_CMD		= 7;		// 中间件不透传指令
 	public static final byte THROUGH_CMD 		= 8;		// 中间件透传指令
 	public static final byte PUBSUB_CMD 		= 9;		// 中间件特殊处理 pubsub
 	public static final byte MGETSET_CMD		= 10;		// 中间件加强指令 mgetset

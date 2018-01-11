@@ -24,7 +24,7 @@ import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
-import com.feeyo.redis.net.front.route.FullNoThroughtException;
+import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
@@ -231,7 +231,7 @@ public class RedisFrontSession {
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
 				
-			} catch (FullNoThroughtException e) {
+			} catch (FullRequestNoThroughtException e) {
 
 				//  自动响应指令
 				for (int i = 0; i < e.getRequests().size(); i++) {
