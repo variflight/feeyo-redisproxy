@@ -246,8 +246,8 @@ public class StatUtil {
     	return netflowCollector.getUserFlowSet();
     }
     
-    public static Set<Entry<String, SlowProcKeyInfo>> getSlowKeyShowSet() {
-    	return slowProcKeyCollector.getSlowKeyShowSet();
+    public static List<SlowProcKeyInfo> getSlowKeyShowList() {
+    	return slowProcKeyCollector.getSlowKeyShowList();
     }
     
   
