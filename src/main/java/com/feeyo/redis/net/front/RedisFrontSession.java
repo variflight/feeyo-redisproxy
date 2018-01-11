@@ -204,13 +204,14 @@ public class RedisFrontSession {
 				
 			} catch (InvalidRequestExistsException e) {
 				
-				if ( requests.size() > 1 ) {
-					frontCon.write( ERR_INVALID_COMMAND );
-					
-				} else {
-					// 此处用于兼容
-					frontCon.write( OK );
-				}
+				frontCon.write( ERR_INVALID_COMMAND );
+				
+//				if ( requests.size() > 1 ) {
+//					frontCon.write( ERR_INVALID_COMMAND );
+//				} else {
+//					// 此处用于兼容
+//					frontCon.write( OK );
+//				}
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
 				

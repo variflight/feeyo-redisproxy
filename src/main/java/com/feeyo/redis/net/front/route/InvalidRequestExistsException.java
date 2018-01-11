@@ -12,4 +12,6 @@ public class InvalidRequestExistsException extends Exception {
 	public InvalidRequestExistsException(String message, Throwable cause) {
 		super(message, cause);
 	}
+	
+	
 }

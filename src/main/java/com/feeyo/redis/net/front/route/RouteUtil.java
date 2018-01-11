@@ -6,7 +6,7 @@ import com.feeyo.redis.net.front.handler.CommandParse;
 public class RouteUtil {
 	
 	// 校验指令是否为 不合法， true 为不合法
-	public static boolean checkIsInvalidPolicy(int poolType, RedisRequestPolicy requestPolicy, 
+	public static boolean isInvalidRequest(int poolType, RedisRequestPolicy requestPolicy, 
 			boolean isReadOnly, boolean isAdmin, boolean isPipeline) {
 		
 		// readonly 只读权限后， 不能执行写入操作

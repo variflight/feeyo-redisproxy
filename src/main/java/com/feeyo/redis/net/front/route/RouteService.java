@@ -70,7 +70,7 @@ public class RouteService {
 			
 			
 			// 是否存在无效指令
-			boolean invalidRequestExist =  RouteUtil.checkIsInvalidPolicy( poolType, policy, isReadOnly, isAdmin, isPipeline );
+			boolean invalidRequestExist =  RouteUtil.isInvalidRequest( poolType, policy, isReadOnly, isAdmin, isPipeline );
 			if ( invalidRequestExist ) {
 				throw new InvalidRequestExistsException("invalid request exist");
 			}
