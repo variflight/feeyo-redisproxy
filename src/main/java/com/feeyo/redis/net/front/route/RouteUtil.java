@@ -15,7 +15,7 @@ public class RouteUtil {
 		}
 		
 		// 类型策略校验
-		switch( requestPolicy.getTypePolicy()  ) {
+		switch( requestPolicy.getCategory()  ) {
 		case CommandParse.DISABLED_CMD :
 			return true;
 		case CommandParse.NO_CLUSTER_CMD:
@@ -33,7 +33,7 @@ public class RouteUtil {
 		}
 		
 		// 处理策略校验
-		switch( requestPolicy.getHandlePolicy() ) {
+		switch( requestPolicy.getHandleType() ) {
 		case CommandParse.PUBSUB_CMD:
 			if ( isPipeline )	// pipeline 不支持 pubsub
 				return true;

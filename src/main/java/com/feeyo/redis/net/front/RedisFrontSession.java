@@ -24,9 +24,8 @@ import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
-import com.feeyo.redis.net.front.route.AutoRespNotTransException;
+import com.feeyo.redis.net.front.route.FullNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
-import com.feeyo.redis.net.front.route.ManageRespNotTransException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
@@ -80,19 +79,22 @@ public class RedisFrontSession {
 		
 		// 默认需要立即释放
 		boolean isImmediateReleaseConReadLock = true;
+		RedisRequest firstRequest = null;
 		
 		try {
 			// parse
 			List<RedisRequest> requests = requestDecoder.decode(byteBuff);
-			if (requests == null ) {
+			if (requests == null || requests.size() == 0 ) {
 				return;
 			}
+			
+			firstRequest = requests.get(0);
 			
 			// 非pipeline 情况下， 特殊指令前置优化性能
 			if ( requests.size() ==  1 ) {
 				
-				RedisRequest request = requests.get(0);
-				byte[] cmd = request.getArgs()[0];
+			
+				byte[] cmd = firstRequest.getArgs()[0];
 				int len = cmd.length;
 				if ( len == 4 ) {
 					
@@ -100,18 +102,18 @@ public class RedisFrontSession {
 					if ( (cmd[0] == 'A' || cmd[0] == 'a') && (cmd[1] == 'U' || cmd[1] == 'u') 
 							&& (cmd[2] == 'T' || cmd[2] == 't') && (cmd[3] == 'H' || cmd[3] == 'h')   ) {
 						
-						if( request.getArgs().length < 2 ) {
+						if( firstRequest.getArgs().length < 2 ) {
 							frontCon.write( ERR_NO_AUTH_NO_PASSWORD );
 							return;
 						}
 						
-						auth( request );
+						auth( firstRequest );
 						return;
 					
 					// ECHO
 					} else if ( (cmd[0] == 'E' || cmd[0] == 'e') && (cmd[1] == 'C' || cmd[1] == 'c') 
 							 && (cmd[2] == 'H' || cmd[2] == 'h') && (cmd[3] == 'O' || cmd[3] == 'o') ) {
-						echo( request );
+						echo( firstRequest );
 						return;
 
 					// PING
@@ -138,12 +140,11 @@ public class RedisFrontSession {
 					}
 				}
 				
-			}
+			} 
 			
 			// 认证
 			if ( !frontCon.isAuthenticated() ) {
 				
-				RedisRequest firstRequest = requests.get(0);
 				byte[] cmd = firstRequest.getArgs()[0];
 				if (cmd.length == 4 && 
 						(cmd[0] == 'A' || cmd[0] == 'a') && 
@@ -165,8 +166,25 @@ public class RedisFrontSession {
 			
 			// 执行路由
 			try {
+				
+				// 管理指令
+				if ( requests.size() == 1 
+						&& firstRequest.getPolicy().getCategory() == CommandParse.MANAGE_CMD 
+						&& frontCon.getUserCfg().isAdmin()) {
 
+					RedisRequest request = requests.get(0);
+					byte[] buff = Manage.execute(request, frontCon);
+					if (buff != null)
+						frontCon.write(buff);
+					return;
+				}
+				
 				RouteResult routeResult = RouteService.route(requests, frontCon);
+				if ( routeResult == null ) {
+					frontCon.write( "-ERR unkonw command \r\n".getBytes() );
+					return;
+				}
+				
 				boolean intercepted = interceptPubsub( routeResult );
 				if ( intercepted ) {
 					return;
@@ -213,15 +231,7 @@ public class RedisFrontSession {
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
 				
-			} catch(ManageRespNotTransException e) {
-				
-				// 管理指令
-				RedisRequest request = e.getRequests().get(0);
-				byte[] buff = Manage.execute(request, frontCon);
-				if (buff != null)
-					frontCon.write(buff);
-
-			} catch (AutoRespNotTransException e) {
+			} catch (FullNoThroughtException e) {
 
 				//  自动响应指令
 				for (int i = 0; i < e.getRequests().size(); i++) {
@@ -381,7 +391,7 @@ public class RedisFrontSession {
 		
 		String result = null;
 		
-		switch( policy.getTypePolicy() ) {
+		switch( policy.getCategory() ) {
 		case CommandParse.NO_CLUSTER_CMD:
 			if ( frontCon.getUserCfg().getPoolType() == 1 ) 
 				result = NOT_SUPPORTED;

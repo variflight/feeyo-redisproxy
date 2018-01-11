@@ -53,7 +53,7 @@ public abstract class AbstractRouteStrategy {
 			for (int i = 0; i < requests.size(); i++) {
 				
 				RedisRequest request = requests.get(i);
-				if ( request.getPolicy().isAutoResp() )  {
+				if ( request.getPolicy().isNotThrough() )  {
 					continue;
 				}
 
@@ -78,7 +78,7 @@ public abstract class AbstractRouteStrategy {
 				
 				// 
 				RedisRequest request = requests.get(i);
-				if ( request.getPolicy().isAutoResp() )  {
+				if ( request.getPolicy().isNotThrough() )  {
 					continue;
 				}
 				
