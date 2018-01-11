@@ -19,9 +19,10 @@ import com.feeyo.redis.net.front.route.strategy.RouteStrategyFactory;
  */
 public class RouteService {
 	
+	
 	// 路由计算, 必须认证后
 	public static RouteResult route(List<RedisRequest> requests, RedisFrontConnection frontCon) 
-			throws InvalidRequestExistsException, ManageCmdNotThroughtException, FullNotThroughtException, PhysicalNodeUnavailableException {
+			throws InvalidRequestExistsException, FullNoThroughtException, PhysicalNodeUnavailableException {
 		
 		int poolId = frontCon.getUserCfg().getPoolId();
 		int poolType = frontCon.getUserCfg().getPoolType();
@@ -55,10 +56,6 @@ public class RouteService {
 				isNeedSegment = true;
 			}
 			
-			// 如果是管理指令，且非pipeline,且是管理员用户  提前跳出
-			if ( !isPipeline && policy.getCategory() == CommandParse.MANAGE_CMD && isAdmin) {
-				throw new ManageCmdNotThroughtException("manage cmd exist", requests);
-			}
 			
 			// 如果上个指令是合法的，继续校验下个指令
 			if ( !invalidPolicyExist ) {
@@ -86,7 +83,7 @@ public class RouteService {
 		
 		// 全部自动回复
 		if ( noThroughtIndexs.size() == requests.size() ) {
-			throw new FullNotThroughtException("not throught", requests);
+			throw new FullNoThroughtException("not throught", requests);
 		}
 		
 		// 根据请求做路由

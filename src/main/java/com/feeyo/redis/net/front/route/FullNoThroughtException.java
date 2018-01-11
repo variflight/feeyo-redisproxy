@@ -10,18 +10,18 @@ import com.feeyo.redis.engine.codec.RedisRequest;
  * @author zhuam
  *
  */
-public class FullNotThroughtException extends Exception {
+public class FullNoThroughtException extends Exception {
 
 	private static final long serialVersionUID = -7389705871040422092L;
 	
 	private List<RedisRequest> requests;
 	
-	public FullNotThroughtException(String message, List<RedisRequest> requests) {
+	public FullNoThroughtException(String message, List<RedisRequest> requests) {
 		super(message);
 		this.requests = requests;
 	}
 
-	public FullNotThroughtException(String message, Throwable cause, List<RedisRequest> requests) {
+	public FullNoThroughtException(String message, Throwable cause, List<RedisRequest> requests) {
 		super(message, cause);
 		this.requests = requests;
 	}
