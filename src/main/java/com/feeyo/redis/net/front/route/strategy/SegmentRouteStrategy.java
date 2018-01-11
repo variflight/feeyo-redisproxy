@@ -33,7 +33,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 		if (cmd.startsWith("MSET")) {
 			
 			if (args.length == 1 || (args.length & 0x01) == 0) {
-				throw new InvalidRequestExistsException("wrong number of arguments", null);
+				throw new InvalidRequestExistsException("wrong number of arguments");
 			}
 			int[] indexs = new int[(args.length - 1) / 2];
 			for (int j = 1; j < args.length; j += 2) {

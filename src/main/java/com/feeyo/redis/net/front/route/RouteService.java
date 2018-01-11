@@ -46,13 +46,9 @@ public class RouteService {
 		boolean isAdmin = frontCon.getUserCfg().isAdmin();
 		boolean isPipeline = requests.size() > 1;
 
-		List<Integer> noThroughtIndexs = new ArrayList<Integer>();										// 直接返回指令索引
-		
-		// 请求是否存在不合法
-		boolean invalidPolicyExist = false;
-		
-		// 是否需要分段
+		List<Integer> noThroughtIndexs = null;
 		boolean isNeedSegment = false;
+		
 		for(int i = 0; i < requests.size(); i++) {
 			
 			RedisRequest request = requests.get(i);
@@ -64,26 +60,28 @@ public class RouteService {
 			RedisRequestPolicy policy = CommandParse.getPolicy( cmd );
 			request.setPolicy( policy );
 			
+			// 是否存在无效指令
+			boolean invalidRequestExist =  RouteUtil.isInvalidRequest( poolType, policy, isReadOnly, isAdmin, isPipeline );
+			if ( invalidRequestExist ) {
+				throw new InvalidRequestExistsException("invalid request exist");
+			}
+			
+			// 不需要透传
+			if ( policy.getHandleType() == CommandParse.NO_THROUGH_CMD ) {
+				if ( noThroughtIndexs == null )
+					noThroughtIndexs = new ArrayList<Integer>(2);
+				noThroughtIndexs.add(i);
+				continue;
+			} 
+			
 			// 包含批量操作命令，则采用分段的路由策略
 			if(!isNeedSegment && ( 
 					policy.getHandleType() == CommandParse.MGETSET_CMD 
 					|| (policy.getHandleType() == CommandParse.DEL_CMD && request.getArgs().length > 2 )
-					|| (policy.getHandleType() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) )) {
+					|| (policy.getHandleType() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) ) ) {
 				isNeedSegment = true;
 			}
-			
-			
-			// 如果上个指令是合法的，继续校验下个指令
-			if ( !invalidPolicyExist ) {
-				invalidPolicyExist = RouteUtil.checkIsInvalidPolicy( poolType, policy, isReadOnly, isAdmin, isPipeline );
-			}
-					
-			// 不需要透传
-			if ( policy.getHandleType() == CommandParse.NO_THROUGH_CMD ) {
-				noThroughtIndexs.add(i);
-				continue;
-			} 
-
+						
 			// 前缀构建 
 			byte[] prefix = frontCon.getUserCfg().getPrefix();
 			if (prefix != null) {
@@ -92,21 +90,17 @@ public class RouteService {
 			}
 		}
 		
-		// 存在不支持指令
-		if ( invalidPolicyExist ) {
-			throw new InvalidRequestExistsException("invalid policy exist", requests);
-		}
-		
 		// 全部自动回复
-		if ( noThroughtIndexs.size() == requests.size() ) {
-			throw new FullRequestNoThroughtException("not throught", requests);
+		if ( noThroughtIndexs != null && noThroughtIndexs.size() == requests.size() ) {
+			throw new FullRequestNoThroughtException("full request no throught", requests);
 		}
 		
 		// 根据请求做路由
-		AbstractRouteStrategy routeStrategy = getStrategy(poolType, isNeedSegment);
+		AbstractRouteStrategy strategy = getStrategy(poolType, isNeedSegment);
+		RouteResult routeResult = strategy.route(poolId, requests);
+		if ( noThroughtIndexs != null )
+			routeResult.setNoThroughtIndexs( noThroughtIndexs );
 		
-		RouteResult routeResult = routeStrategy.route(poolId, requests);
-		routeResult.setNoThroughtIndexs( noThroughtIndexs );
 		return routeResult;
 	}
 
