@@ -11,6 +11,7 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestDecoderV5;
+import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.codec.RedisRequestUnknowException;
 import com.feeyo.redis.engine.manage.Manage;
@@ -172,15 +173,17 @@ public class RedisFrontSession {
 			try {
 				
 				// 管理指令
-				if ( requests.size() == 1 
-						&& firstRequest.getPolicy().getCategory() == CommandParse.MANAGE_CMD 
-						&& frontCon.getUserCfg().isAdmin()) {
-
-					RedisRequest request = requests.get(0);
-					byte[] buff = Manage.execute(request, frontCon);
-					if (buff != null)
-						frontCon.write(buff);
-					return;
+				if ( frontCon.getUserCfg().isAdmin() && requests.size() == 1 ) {
+					
+					String cmd = new String( firstRequest.getArgs()[0] ).toUpperCase();
+					RedisRequestPolicy policy = CommandParse.getPolicy( cmd );
+					
+					if( policy.getCategory() == CommandParse.MANAGE_CMD ) {
+						byte[] buff = Manage.execute(firstRequest, frontCon);
+						if (buff != null)
+							frontCon.write(buff);
+						return;
+					}
 				}
 				
 				RouteResult routeResult = RouteService.route(requests, frontCon);
