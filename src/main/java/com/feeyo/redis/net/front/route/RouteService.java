@@ -46,7 +46,7 @@ public class RouteService {
 		boolean isAdmin = frontCon.getUserCfg().isAdmin();
 		boolean isPipeline = requests.size() > 1;
 
-		List<Integer> noThroughtIndexs = new ArrayList<Integer>();										// 直接返回指令索引
+		List<Integer> noThroughtIndexs = null;
 		
 		// 请求是否存在不合法
 		boolean invalidPolicyExist = false;
@@ -80,6 +80,8 @@ public class RouteService {
 					
 			// 不需要透传
 			if ( policy.getHandleType() == CommandParse.NO_THROUGH_CMD ) {
+				if ( noThroughtIndexs == null )
+					noThroughtIndexs = new ArrayList<Integer>(2);
 				noThroughtIndexs.add(i);
 				continue;
 			} 
@@ -94,19 +96,20 @@ public class RouteService {
 		
 		// 存在不支持指令
 		if ( invalidPolicyExist ) {
-			throw new InvalidRequestExistsException("invalid policy exist", requests);
+			throw new InvalidRequestExistsException("invalid request exist", requests);
 		}
 		
 		// 全部自动回复
-		if ( noThroughtIndexs.size() == requests.size() ) {
-			throw new FullRequestNoThroughtException("not throught", requests);
+		if ( noThroughtIndexs != null && noThroughtIndexs.size() == requests.size() ) {
+			throw new FullRequestNoThroughtException("full request no throught", requests);
 		}
 		
 		// 根据请求做路由
-		AbstractRouteStrategy routeStrategy = getStrategy(poolType, isNeedSegment);
+		AbstractRouteStrategy strategy = getStrategy(poolType, isNeedSegment);
+		RouteResult routeResult = strategy.route(poolId, requests);
+		if ( noThroughtIndexs != null )
+			routeResult.setNoThroughtIndexs( noThroughtIndexs );
 		
-		RouteResult routeResult = routeStrategy.route(poolId, requests);
-		routeResult.setNoThroughtIndexs( noThroughtIndexs );
 		return routeResult;
 	}
 
