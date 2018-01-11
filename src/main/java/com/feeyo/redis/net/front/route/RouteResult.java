@@ -19,8 +19,8 @@ public class RouteResult {
 	private final List<RouteResultNode> nodes;				// 封装后的路由请求，包含路由到的节点和 分组后的请求 index 集合
 	
 	
-	private List<Integer> noThroughIndexs;				// 需要自动应答的 request index 集合
-	private List<Segment> segments;
+	private List<Integer> noThroughIndexs = null;				// 需要自动应答的 request index 集合
+	private List<Segment> segments = null;
     
 	public RouteResult(RedisRequestType requestType, List<RedisRequest> requests, List<RouteResultNode> nodes) {
 		

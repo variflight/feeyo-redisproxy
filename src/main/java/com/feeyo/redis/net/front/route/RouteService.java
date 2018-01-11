@@ -60,21 +60,12 @@ public class RouteService {
 			RedisRequestPolicy policy = CommandParse.getPolicy( cmd );
 			request.setPolicy( policy );
 			
-			// 包含批量操作命令，则采用分段的路由策略
-			if(!isNeedSegment && ( 
-					policy.getHandleType() == CommandParse.MGETSET_CMD 
-					|| (policy.getHandleType() == CommandParse.DEL_CMD && request.getArgs().length > 2 )
-					|| (policy.getHandleType() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) ) ) {
-				isNeedSegment = true;
-			}
-			
-			
 			// 是否存在无效指令
 			boolean invalidRequestExist =  RouteUtil.isInvalidRequest( poolType, policy, isReadOnly, isAdmin, isPipeline );
 			if ( invalidRequestExist ) {
 				throw new InvalidRequestExistsException("invalid request exist");
 			}
-					
+			
 			// 不需要透传
 			if ( policy.getHandleType() == CommandParse.NO_THROUGH_CMD ) {
 				if ( noThroughtIndexs == null )
@@ -82,7 +73,15 @@ public class RouteService {
 				noThroughtIndexs.add(i);
 				continue;
 			} 
-
+			
+			// 包含批量操作命令，则采用分段的路由策略
+			if(!isNeedSegment && ( 
+					policy.getHandleType() == CommandParse.MGETSET_CMD 
+					|| (policy.getHandleType() == CommandParse.DEL_CMD && request.getArgs().length > 2 )
+					|| (policy.getHandleType() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) ) ) {
+				isNeedSegment = true;
+			}
+						
 			// 前缀构建 
 			byte[] prefix = frontCon.getUserCfg().getPrefix();
 			if (prefix != null) {
