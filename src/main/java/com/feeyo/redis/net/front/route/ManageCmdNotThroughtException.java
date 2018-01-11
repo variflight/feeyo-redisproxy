@@ -10,19 +10,19 @@ import com.feeyo.redis.engine.codec.RedisRequest;
  * @author zhuam
  *
  */
-public class ManageRespNotTransException extends Exception {
+public class ManageCmdNotThroughtException extends Exception {
 	
 	private static final long serialVersionUID = -4827673049382354888L;
 	
 	private List<RedisRequest> requests;
 	
-	public ManageRespNotTransException(String message, 
+	public ManageCmdNotThroughtException(String message, 
 			List<RedisRequest> requests) {
 		super(message);
 		this.requests = requests;
 	}
 
-	public ManageRespNotTransException(String message, Throwable cause, 
+	public ManageCmdNotThroughtException(String message, Throwable cause, 
 			List<RedisRequest> requests) {
 		super(message, cause);
 		this.requests = requests;

@@ -20,7 +20,7 @@ public class RouteResult {
 	
 	private final List<RouteResultNode> nodes;				// 封装后的路由请求，包含路由到的节点和 分组后的请求 index 集合
 	
-	private List<Integer> autoResponseIndexs;				// 需要自动应答的 request index 集合
+	private List<Integer> noThroughIndexs;				// 需要自动应答的 request index 集合
 	private List<Segment> segments;
     
 	public RouteResult(RedisRequestType requestType, List<RedisRequest> requests, List<RouteResultNode> nodes) {
@@ -44,12 +44,12 @@ public class RouteResult {
 		return nodes;
 	}
 	
-	public List<Integer> getAutoResponseIndexs() {
-		return autoResponseIndexs;
+	public List<Integer> getNoThroughtIndexs() {
+		return noThroughIndexs;
 	}
 	
-	public void setAutoResponseIndexs(List<Integer> autoResponseIndexs) {
-		this.autoResponseIndexs = autoResponseIndexs;
+	public void setNoThroughtIndexs(List<Integer> noThroughIndexs) {
+		this.noThroughIndexs = noThroughIndexs;
 	}
 
 	public void setSegments(List<Segment> segments) {
@@ -66,13 +66,13 @@ public class RouteResult {
 	}
 
 	// 透传数
-	public int getTransCount() {
-		return requests.size() - autoResponseIndexs.size();	
+	public int getThroughtCount() {
+		return requests.size() - noThroughIndexs.size();	
 	}
 
-	// 自动应答数
-	public int getAutoRespCount() {				
-		return  autoResponseIndexs.size();		
+	// 不透传数
+	public int getNoThroughtCount() {				
+		return  noThroughIndexs.size();		
 	}
 	
 	// 请求字节数
@@ -90,7 +90,7 @@ public class RouteResult {
 	    }
 	    
 	    requests.clear();
-	    autoResponseIndexs.clear();
+	    noThroughIndexs.clear();
 	    nodes.clear();
 	}
 }

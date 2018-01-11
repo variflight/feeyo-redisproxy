@@ -19,23 +19,21 @@ import com.feeyo.redis.net.front.route.RouteResultNode;
 public class DefaultRouteStrategy extends AbstractRouteStrategy {
 	
     @Override
-    public RouteResult route(int poolId, List<RedisRequest> requests ) 
+    public RouteResult route(int poolId, List<RedisRequest> requests) 
     		throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
     	
-    		// 切片
+    	// 切片
         List<RouteResultNode> nodes = doSharding(poolId, requests);
         
         RedisRequestType requestType;
         if ( requests.size() == 1 ) {
         		RedisRequestPolicy policy = requests.get(0).getPolicy();
-        		if ( policy.getHandlePolicy() == CommandParse.BLOCK_CMD ) {
-        			requestType = RedisRequestType.BLOCK;
-        		} else {
-        			requestType = RedisRequestType.DEFAULT;
-        		}
+        		requestType = policy.getHandleType() == CommandParse.BLOCK_CMD ? 
+        				RedisRequestType.BLOCK : RedisRequestType.DEFAULT;
         } else {
         		requestType = RedisRequestType.PIPELINE;
         }
+        
         RouteResult routeResult = new RouteResult(requestType, requests, nodes);
         return routeResult;
     }

@@ -24,9 +24,9 @@ import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
-import com.feeyo.redis.net.front.route.AutoRespNotTransException;
+import com.feeyo.redis.net.front.route.FullNotThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
-import com.feeyo.redis.net.front.route.ManageRespNotTransException;
+import com.feeyo.redis.net.front.route.ManageCmdNotThroughtException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
@@ -213,7 +213,7 @@ public class RedisFrontSession {
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
 				
-			} catch(ManageRespNotTransException e) {
+			} catch(ManageCmdNotThroughtException e) {
 				
 				// 管理指令
 				RedisRequest request = e.getRequests().get(0);
@@ -221,7 +221,7 @@ public class RedisFrontSession {
 				if (buff != null)
 					frontCon.write(buff);
 
-			} catch (AutoRespNotTransException e) {
+			} catch (FullNotThroughtException e) {
 
 				//  自动响应指令
 				for (int i = 0; i < e.getRequests().size(); i++) {
@@ -381,7 +381,7 @@ public class RedisFrontSession {
 		
 		String result = null;
 		
-		switch( policy.getTypePolicy() ) {
+		switch( policy.getCategory() ) {
 		case CommandParse.NO_CLUSTER_CMD:
 			if ( frontCon.getUserCfg().getPoolType() == 1 ) 
 				result = NOT_SUPPORTED;

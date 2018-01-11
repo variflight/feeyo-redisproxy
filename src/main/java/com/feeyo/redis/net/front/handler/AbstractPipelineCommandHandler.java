@@ -213,7 +213,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			allResponseCount.addAndGet(count);
 			
 			// 判断所有节点是否全部返回
-			if ( allResponseCount.get()  == rrs.getTransCount() ) {
+			if ( allResponseCount.get()  == rrs.getThroughtCount() ) {
 				
 				//合并结果
 				DataOffset[] offsets = new DataOffset[ rrs.getRequestCount() ];
@@ -224,8 +224,8 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 					}
 				}
 				
-				if ( rrs.getAutoResponseIndexs() != null && !rrs.getAutoResponseIndexs().isEmpty() ) {
-					for (int index : rrs.getAutoResponseIndexs()) {
+				if ( rrs.getNoThroughtIndexs() != null && !rrs.getNoThroughtIndexs().isEmpty() ) {
+					for (int index : rrs.getNoThroughtIndexs()) {
 						offsets[index] = new DataOffset( "+OK\r\n".getBytes() );
 					}
 				}
