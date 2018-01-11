@@ -5,7 +5,7 @@ import java.util.List;
 import com.feeyo.redis.engine.codec.RedisRequest;
 
 /**
- * 自动响应
+ * 所有请求都不需要透传
  * 
  * @author zhuam
  *

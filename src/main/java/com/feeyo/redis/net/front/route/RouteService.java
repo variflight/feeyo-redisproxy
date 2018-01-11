@@ -68,7 +68,7 @@ public class RouteService {
 			if(!isNeedSegment && ( 
 					policy.getHandleType() == CommandParse.MGETSET_CMD 
 					|| (policy.getHandleType() == CommandParse.DEL_CMD && request.getArgs().length > 2 )
-					|| (policy.getHandleType() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) )) {
+					|| (policy.getHandleType() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) ) ) {
 				isNeedSegment = true;
 			}
 			
