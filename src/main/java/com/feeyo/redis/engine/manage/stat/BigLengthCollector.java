@@ -62,15 +62,18 @@ public class BigLengthCollector implements StatCollector {
 				
 				if (userCfg != null) {
 					AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get( userCfg.getPoolId() );
-					PhysicalNode physicalNode = pool.getPhysicalNode();
+					PhysicalNode physicalNode;
+					if (pool.getType() == 1) {
+						physicalNode = pool.getPhysicalNode(cmd, key);
+					} else {
+						physicalNode = pool.getPhysicalNode();
+					}
 					
 					JedisConnection conn = null;		
 					try {
 						
 						// 前置设置 readonly
 						conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 1000, 0);
-						conn.sendCommand( RedisCommand.READONLY );
-						conn.getBulkReply();
 						
 						if ( cmd.equals("HMSET") 	
 								|| cmd.equals("HSET") 	

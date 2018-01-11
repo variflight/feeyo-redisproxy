@@ -125,9 +125,9 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			RedisRequestPolicy policy = request.getPolicy();
 			
 			// 
-			if ( CommandParse.MGETSET_CMD == policy.getLevel()
-					|| (CommandParse.DEL_CMD == policy.getLevel()  && request.getArgs().length > 2 )
-					|| (CommandParse.EXISTS_CMD == policy.getLevel() && request.getArgs().length > 2) ) {
+			if ( CommandParse.MGETSET_CMD == policy.getHandleType()
+					|| (CommandParse.DEL_CMD == policy.getHandleType()  && request.getArgs().length > 2 )
+					|| (CommandParse.EXISTS_CMD == policy.getHandleType() && request.getArgs().length > 2) ) {
 				
 				requestType = rewrite(request, newRequests, segments);
 
