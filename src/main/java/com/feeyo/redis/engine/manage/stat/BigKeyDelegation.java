@@ -158,7 +158,7 @@ public class BigKeyDelegation implements Comparator<String> {
 			//0点保存文件的时候进行排序
 			sortAtZero(date);
 			entrys = sortedMap.entrySet();
-			buffer.append("CMD"+FIELD_SPARATOR+"KEY"+FIELD_SPARATOR+"SIZE"+FIELD_SPARATOR+"COUNT"+LINE_SPARATOR);
+			buffer.append("CMD").append(FIELD_SPARATOR).append("KEY").append(FIELD_SPARATOR).append("SIZE").append(FIELD_SPARATOR).append("COUNT").append(LINE_SPARATOR);
 		}else
 			entrys = backupMap.entrySet();
 		
