@@ -129,7 +129,7 @@ public class CmdAccessCollector extends AbstractStatCollector {
 		if(commandCountMap.isEmpty())
 			return;
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("CMD"+FIELD_SPARATOR+"COUNT"+LINE_SPARATOR);
+		buffer.append("CMD").append(FIELD_SPARATOR).append("COUNT").append(LINE_SPARATOR);
 		Set<Entry<String, Command>> entrys = commandCountMap.entrySet();
 		for (Entry<String, Command> entry : entrys) {
 			Command parent = entry.getValue();
@@ -151,7 +151,7 @@ public class CmdAccessCollector extends AbstractStatCollector {
 		if(commandProcTimeMap.isEmpty())
 			return;
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("KEY"+FIELD_SPARATOR+"VALUE"+LINE_SPARATOR);
+		buffer.append("KEY").append(FIELD_SPARATOR).append("VALUE").append(LINE_SPARATOR);
 		Collection<Entry<String, AtomicLong>> entrys = commandProcTimeMap.entrySet();
 		for (Entry<String, AtomicLong> entry : entrys) {
 			buffer.append(entry.getKey()).append(FIELD_SPARATOR).append(entry.getValue().get()).append(LINE_SPARATOR);
