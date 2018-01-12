@@ -13,7 +13,7 @@ public class SlowKeyColletor implements StatCollector {
 	
 	private List<SlowKey> keys = new ArrayList<SlowKey>( KEY_SIZE );
 	
-	private AtomicBoolean blocking = new AtomicBoolean(false);
+	private AtomicBoolean locking = new AtomicBoolean(false);
 	
 	
 	@Override
@@ -24,7 +24,7 @@ public class SlowKeyColletor implements StatCollector {
 		if( procTimeMills < 50 )
 			return;
 		
-		if ( !blocking.compareAndSet(false, true) ) {
+		if ( !locking.compareAndSet(false, true) ) {
 			return;
 		}
 		
@@ -50,7 +50,7 @@ public class SlowKeyColletor implements StatCollector {
 			}
 
 		} finally {
-			blocking.set(false);
+			locking.set(false);
 		}
 		
 	}
@@ -78,14 +78,14 @@ public class SlowKeyColletor implements StatCollector {
 	
 	public List<SlowKey> getSlowKeys() {
 		try {
-			while (!blocking.compareAndSet(false, true)) {
+			while (!locking.compareAndSet(false, true)) {
 			}
 			
 			sort();
 			
 			return keys.subList(0, keys.size() > 100 ? 100 : keys.size());
 		} finally {
-			blocking.set(false);
+			locking.set(false);
 		}
 	}
 	
