@@ -5,8 +5,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.util.FileUtils;
@@ -112,5 +114,9 @@ public class StatNotification {
 		cal.setTime(new Date());
 		cal.add(Calendar.DATE, -1);
 		return sdf.format(cal.getTime());
+	}
+	
+	private Properties getMailProperty() {
+		return RedisEngineCtx.INSTANCE().getMailProperties();
 	}
 }

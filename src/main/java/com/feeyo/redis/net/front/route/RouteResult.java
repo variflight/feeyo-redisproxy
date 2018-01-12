@@ -15,13 +15,12 @@ public class RouteResult {
 	 
 
 	private final RedisRequestType requestType;
-	
 	private final List<RedisRequest> requests;
-	
 	private final List<RouteResultNode> nodes;				// 封装后的路由请求，包含路由到的节点和 分组后的请求 index 集合
 	
-	private List<Integer> autoResponseIndexs;				// 需要自动应答的 request index 集合
-	private List<Segment> segments;
+	
+	private List<Integer> noThroughIndexs = null;				// 需要自动应答的 request index 集合
+	private List<Segment> segments = null;
     
 	public RouteResult(RedisRequestType requestType, List<RedisRequest> requests, List<RouteResultNode> nodes) {
 		
@@ -44,12 +43,12 @@ public class RouteResult {
 		return nodes;
 	}
 	
-	public List<Integer> getAutoResponseIndexs() {
-		return autoResponseIndexs;
+	public List<Integer> getNoThroughtIndexs() {
+		return noThroughIndexs;
 	}
 	
-	public void setAutoResponseIndexs(List<Integer> autoResponseIndexs) {
-		this.autoResponseIndexs = autoResponseIndexs;
+	public void setNoThroughtIndexs(List<Integer> noThroughIndexs) {
+		this.noThroughIndexs = noThroughIndexs;
 	}
 
 	public void setSegments(List<Segment> segments) {
@@ -62,17 +61,19 @@ public class RouteResult {
 
 	// 请求数
 	public int getRequestCount() {
-		return  requests.size();				
+		return requests.size();				
 	}
 
 	// 透传数
-	public int getTransCount() {
-		return requests.size() - autoResponseIndexs.size();	
+	public int getThroughtCount() {
+		int noThroughtCnt = noThroughIndexs != null ? noThroughIndexs.size() : 0;
+		return requests.size() - noThroughtCnt;	
 	}
 
-	// 自动应答数
-	public int getAutoRespCount() {				
-		return  autoResponseIndexs.size();		
+	// 不透传数
+	public int getNoThroughtCount() {		
+		int noThroughtCnt = noThroughIndexs != null ? noThroughIndexs.size() : 0;
+		return  noThroughtCnt;		
 	}
 	
 	// 请求字节数
@@ -88,9 +89,12 @@ public class RouteResult {
 	    for (RedisRequest request : requests) {
 	        request.clear();
 	    }
-	    
 	    requests.clear();
-	    autoResponseIndexs.clear();
-	    nodes.clear();
+	    
+	    if ( noThroughIndexs != null )
+	    	noThroughIndexs.clear();
+	    
+	    if ( nodes != null)
+	    	nodes.clear();
 	}
 }

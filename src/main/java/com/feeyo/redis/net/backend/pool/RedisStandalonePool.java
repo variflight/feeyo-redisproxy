@@ -181,9 +181,12 @@ public class RedisStandalonePool extends AbstractPool {
 		int minCons = poolCfg.getMinCon();
 		int maxCons = poolCfg.getMaxCon();
 		
-		LOGGER.info( "NoClusterHeartbeat: host={}, idle={}, active={}, min={}, max={}, lasttime={}", 
-				new Object[] { physicalNode.getHost() + ":" + physicalNode.getPort(),  
-				idleCons, activeCons, minCons, maxCons, System.currentTimeMillis() } );
+		
+		if ( LOGGER.isDebugEnabled() ) {
+			LOGGER.debug( "Sthandalone heartbeat: host={}, idle={}, active={}, min={}, max={}, lasttime={}", 
+					new Object[] { physicalNode.getHost() + ":" + physicalNode.getPort(),  
+					idleCons, activeCons, minCons, maxCons, System.currentTimeMillis() } );
+		}
 		
 		if ( idleCons > minCons ) {	
 			

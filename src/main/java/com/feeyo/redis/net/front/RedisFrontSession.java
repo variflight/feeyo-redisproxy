@@ -24,9 +24,8 @@ import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
-import com.feeyo.redis.net.front.route.AutoRespNotTransException;
+import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
-import com.feeyo.redis.net.front.route.ManageRespNotTransException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
@@ -43,11 +42,14 @@ public class RedisFrontSession {
 	public static final byte[] ERR_NO_AUTH_PASSWORD = "-ERR invalid password.\r\n".getBytes();
 	public static final byte[] ERR_NO_AUTH_NO_PASSWORD = "-ERR Client sent AUTH, but no password is set\r\n".getBytes();
 	public static final byte[] ERR_PIPELINE_BACKEND = "-ERR pipeline error\r\n".getBytes();
+	public static final byte[] ERR_INVALID_COMMAND = "-ERR invalid command exist.\r\n".getBytes();
 	
 	public static final String NOT_SUPPORTED = "Not supported.";
 	public static final String NOT_ADMIN_USER = "Not supported:manage cmd but not admin user.";
 	public static final String UNKNOW_COMMAND = "Unknow command.";
-	public static final String NOT_READ_CMD = "Not read cmd.";
+	public static final String NOT_READ_COMMAND = "Not read command.";
+
+	
 	
 	// PUBSUB
 	private PubSub pubsub = null;
@@ -81,18 +83,23 @@ public class RedisFrontSession {
 		// 默认需要立即释放
 		boolean isImmediateReleaseConReadLock = true;
 		
+		List<RedisRequest> requests = null;
+		RedisRequest firstRequest = null;
+		
 		try {
 			// parse
-			List<RedisRequest> requests = requestDecoder.decode(byteBuff);
-			if (requests == null ) {
+			requests = requestDecoder.decode(byteBuff);
+			if (requests == null || requests.size() == 0 ) {
 				return;
 			}
+			
+			firstRequest = requests.get(0);
 			
 			// 非pipeline 情况下， 特殊指令前置优化性能
 			if ( requests.size() ==  1 ) {
 				
-				RedisRequest request = requests.get(0);
-				byte[] cmd = request.getArgs()[0];
+			
+				byte[] cmd = firstRequest.getArgs()[0];
 				int len = cmd.length;
 				if ( len == 4 ) {
 					
@@ -100,18 +107,18 @@ public class RedisFrontSession {
 					if ( (cmd[0] == 'A' || cmd[0] == 'a') && (cmd[1] == 'U' || cmd[1] == 'u') 
 							&& (cmd[2] == 'T' || cmd[2] == 't') && (cmd[3] == 'H' || cmd[3] == 'h')   ) {
 						
-						if( request.getArgs().length < 2 ) {
+						if( firstRequest.getArgs().length < 2 ) {
 							frontCon.write( ERR_NO_AUTH_NO_PASSWORD );
 							return;
 						}
 						
-						auth( request );
+						auth( firstRequest );
 						return;
 					
 					// ECHO
 					} else if ( (cmd[0] == 'E' || cmd[0] == 'e') && (cmd[1] == 'C' || cmd[1] == 'c') 
 							 && (cmd[2] == 'H' || cmd[2] == 'h') && (cmd[3] == 'O' || cmd[3] == 'o') ) {
-						echo( request );
+						echo( firstRequest );
 						return;
 
 					// PING
@@ -138,12 +145,11 @@ public class RedisFrontSession {
 					}
 				}
 				
-			}
+			} 
 			
 			// 认证
 			if ( !frontCon.isAuthenticated() ) {
 				
-				RedisRequest firstRequest = requests.get(0);
 				byte[] cmd = firstRequest.getArgs()[0];
 				if (cmd.length == 4 && 
 						(cmd[0] == 'A' || cmd[0] == 'a') && 
@@ -165,8 +171,27 @@ public class RedisFrontSession {
 			
 			// 执行路由
 			try {
-
+				
+				// 管理指令
+				if ( frontCon.getUserCfg().isAdmin() && requests.size() == 1 ) {
+					
+					String cmd = new String( firstRequest.getArgs()[0] ).toUpperCase();
+					RedisRequestPolicy policy = CommandParse.getPolicy( cmd );
+					
+					if( policy.getCategory() == CommandParse.MANAGE_CMD ) {
+						byte[] buff = Manage.execute(firstRequest, frontCon);
+						if (buff != null)
+							frontCon.write(buff);
+						return;
+					}
+				}
+				
 				RouteResult routeResult = RouteService.route(requests, frontCon);
+				if ( routeResult == null ) {
+					frontCon.write( "-ERR unkonw command \r\n".getBytes() );
+					return;
+				}
+				
 				boolean intercepted = interceptPubsub( routeResult );
 				if ( intercepted ) {
 					return;
@@ -182,46 +207,18 @@ public class RedisFrontSession {
 				
 			} catch (InvalidRequestExistsException e) {
 				
-				// 指令策略未通过
-				List<RedisRequest> invalidRequests = e.getRequests();
-				if ( invalidRequests != null ) {
-					
-					if ( invalidRequests.size() > 1 ) {
-						
-						StringBuffer sb = new StringBuffer();
-						sb.append("-ERR ");
-						for (int i = 0; i < invalidRequests.size(); i++) {
-							RedisRequestPolicy policy = invalidRequests.get(i).getPolicy();
-							if ( policy == null) 
-								break;
-							String resp = getInvalidCmdResponse(policy, frontCon.getUserCfg().isAdmin());
-							if (resp != null) {
-								sb.append("NO: ").append(i+1).append(", ").append(resp);
-							}
-						}
-						sb.append("\r\n");
-						frontCon.write( sb.toString().getBytes() );
-						
-					} else {
-						// 此处用于兼容
-						frontCon.write( OK );
-					}
-					
-				} else {
-					frontCon.write( ("-ERR " + e.getMessage()+"\r\n").getBytes() );
-				}
+				frontCon.write( ERR_INVALID_COMMAND );
+				
+//				if ( requests.size() > 1 ) {
+//					frontCon.write( ERR_INVALID_COMMAND );
+//				} else {
+//					// 此处用于兼容
+//					frontCon.write( OK );
+//				}
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
 				
-			} catch(ManageRespNotTransException e) {
-				
-				// 管理指令
-				RedisRequest request = e.getRequests().get(0);
-				byte[] buff = Manage.execute(request, frontCon);
-				if (buff != null)
-					frontCon.write(buff);
-
-			} catch (AutoRespNotTransException e) {
+			} catch (FullRequestNoThroughtException e) {
 
 				//  自动响应指令
 				for (int i = 0; i < e.getRequests().size(); i++) {
@@ -371,50 +368,6 @@ public class RedisFrontSession {
 		} else {	
 			frontCon.write(OK);				
 		}
-	}
-	
-	
-	
-	
-	// 无效指令应答
-	private String getInvalidCmdResponse(RedisRequestPolicy policy, boolean isAdmin) {
-		
-		String result = null;
-		
-		switch( policy.getLevel() ) {
-		case CommandParse.NO_CLUSTER_CMD:
-			if ( frontCon.getUserCfg().getPoolType() == 1 ) 
-				result = NOT_SUPPORTED;
-			break;
-		case CommandParse.CLUSTER_CMD:
-			if ( frontCon.getUserCfg().getPoolType() == 0 )
-				result = NOT_SUPPORTED;
-			break;
-		case CommandParse.DISABLED_CMD:
-		case CommandParse.PUBSUB_CMD:
-		case CommandParse.MGETSET_CMD:
-			result = NOT_SUPPORTED;
-			break;
-		case CommandParse.MANAGE_CMD:
-			if (isAdmin) {
-				result = NOT_SUPPORTED;
-			} else {
-				result = NOT_ADMIN_USER;
-			}
-			break;
-		case CommandParse.UNKNOW_CMD:
-			result = UNKNOW_COMMAND;
-			break;
-		default:
-			result = NOT_SUPPORTED;
-			break; 
-		}
-		
-		// ReadOnly， 不能执行写入操作
-		if ( frontCon.getUserCfg().isReadonly() && !policy.isRead() )  {
-			result = NOT_READ_CMD;
-		}
-		return result;
 	}
 	
 	public PubSub getPubsub() {

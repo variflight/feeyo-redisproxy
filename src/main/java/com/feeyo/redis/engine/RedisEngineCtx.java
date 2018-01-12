@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
@@ -27,7 +28,6 @@ import com.feeyo.redis.nio.buffer.BufferPool;
 import com.feeyo.redis.nio.buffer.bucket.ByteBufferBucketPool;
 import com.feeyo.redis.virtualmemory.VirtualMemoryService;
 import com.feeyo.util.ExecutorUtil;
-import com.feeyo.util.NetworkUtil;
 import com.feeyo.util.keepalived.KeepAlived;
 
 public class RedisEngineCtx {
@@ -51,11 +51,13 @@ public class RedisEngineCtx {
 	private volatile Map<String, UserCfg> userMap = null;
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
+	private volatile Properties mailProperty = null;
 
 	// backup
 	private volatile  Map<Integer, AbstractPool> _poolMap = null;
 	private volatile  Map<String, UserCfg> _userMap = null;
 	private volatile  Map<String, String> _serverMap = null;
+	private volatile  Properties _mailProperty = null;
 	
 	private ReentrantLock lock;
 	
@@ -68,6 +70,7 @@ public class RedisEngineCtx {
 		this.serverMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
 		this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 		this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
+		this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 		
 		
 		// 1、Buffer 配置
@@ -181,6 +184,7 @@ public class RedisEngineCtx {
 			Map<String, String> newServerMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
 			Map<Integer, PoolCfg> newPoolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 			Map<String, UserCfg> newUserMap = ConfigLoader.loadUserMap(newPoolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
+			Properties newMailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 			
 			// 2、用户自检
 			for( UserCfg userCfg: newUserMap.values() ) {
@@ -226,12 +230,14 @@ public class RedisEngineCtx {
 				this._userMap = userMap;
 				this._poolMap = poolMap;
 				this._serverMap = serverMap;
+				this._mailProperty = mailProperty;
 				
 				
 				//切换 new
 				this.poolMap = newPoolMap;
 				this.userMap = newUserMap;
 				this.serverMap = newServerMap;
+				this.mailProperty = newMailProperty;
 				
 				// server.xml 部分设置生效
 				String frontIdleTimeoutString = this.serverMap.get("frontIdleTimeout");
@@ -321,6 +327,19 @@ public class RedisEngineCtx {
 			lock.unlock();
 		}
 	}
+	
+	public byte[] reloadMailProperties() {
+		final ReentrantLock lock = this.lock;
+		lock.lock();
+		try {
+			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
+			ZkClient.INSTANCE().reloadZkCfg();
+			
+			return "+OK\r\n".getBytes();
+		}finally {
+			lock.unlock();
+		}
+	}
 
 	public byte[] reloadPool() {
 		final ReentrantLock lock = this.lock;
@@ -394,6 +413,10 @@ public class RedisEngineCtx {
 		return this.userMap;
 	}
 	
+	public Properties getMailProperties() {
+		return this.mailProperty;
+	}
+	
 	public Map<Integer, AbstractPool> getBackupPoolMap() {
 		return this._poolMap;
 	}
@@ -408,6 +431,10 @@ public class RedisEngineCtx {
 
 	public Map<String, String> getBackupServerMap() {
 		return this._serverMap;
+	}
+	
+	public Properties getBackupMailProperties() {
+		return this._mailProperty;
 	}
 	
 	public static RedisEngineCtx INSTANCE() {

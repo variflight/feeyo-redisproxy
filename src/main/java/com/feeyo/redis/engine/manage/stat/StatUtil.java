@@ -21,6 +21,7 @@ import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -57,6 +58,7 @@ public class StatUtil {
 	private static CmdAccessCollector cmdAccessCollector = new CmdAccessCollector();
 	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
 	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
+	private static SlowKeyColletor slowProcKeyCollector = new SlowKeyColletor();
 	
 	
 	private static StatNotification notification = new StatNotification();
@@ -67,6 +69,7 @@ public class StatUtil {
 		addCollector( cmdAccessCollector );
 		addCollector( bigKeyCollector );
 		addCollector( bigLengthCollector );
+		addCollector( slowProcKeyCollector );
 		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
@@ -241,6 +244,10 @@ public class StatUtil {
     
     public static Set<Entry<String, UserNetFlow>> getUserFlowSet() {
     	return netflowCollector.getUserFlowSet();
+    }
+    
+    public static List<SlowKey> getSlowKeyShowList() {
+    	return slowProcKeyCollector.getSlowKeys();
     }
     
   

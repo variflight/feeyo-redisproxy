@@ -4,29 +4,32 @@ import com.feeyo.redis.net.front.handler.CommandParse;
 
 public class RedisRequestPolicy {
 
-	private int level;
+	private byte categroy;				// 类别 
+	private byte handleType;			// 处理类型
+	
 	private byte rw = -1;
 	
-	public RedisRequestPolicy(int level, byte rw) {
+	public RedisRequestPolicy(byte category, byte type, byte rw) {
 		super();
-		this.level = level;
+		this.categroy = category;
+		this.handleType = type;
 		this.rw = rw;
 	}
 
-	public int getLevel() {
-		return level;
-	}
-
-	public byte getRw() {
-		return rw;
+	public byte getCategory() {
+		return categroy;
 	}
 	
+	public byte getHandleType() {
+		return handleType;
+	}
+
 	public boolean isRead() {
 		 return rw == CommandParse.READ_CMD;
 	}
 	
-	public boolean isAutoResp() {
-		return level == CommandParse.AUTO_RESP_CMD;
+	public boolean isNotThrough() {
+		return handleType == CommandParse.NO_THROUGH_CMD;
 	}
 	
 }
