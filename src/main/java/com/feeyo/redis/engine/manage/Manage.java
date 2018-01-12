@@ -801,12 +801,11 @@ public class Manage {
 					titleLine.append("key").append(",  ");
 					titleLine.append("count");
 					lines.add(titleLine.toString());
-					for (Map.Entry<String, SlowProcKeyInfo> entry : StatUtil.getSlowKeyShowSet()) {
+					for (SlowProcKeyInfo slowKey : StatUtil.getSlowKeyShowList()) {
 						StringBuffer line1 = new StringBuffer();
-						SlowProcKeyInfo slowKey = entry.getValue();
 						line1.append(slowKey.lastCmd).append(", ");
 						line1.append(slowKey.key).append(", ");
-						line1.append(slowKey.count.get());
+						line1.append(slowKey.count);
 						lines.add(line1.toString());
 					}
 					return encode(lines);
