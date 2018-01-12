@@ -16,7 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FileUtils {
+	
 	private static Logger LOGGER = LoggerFactory.getLogger( FileUtils.class );
+	
 	private static ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(); 
 	
 	public static boolean ensureCreateFile(String filename, String content, boolean isAppend) {

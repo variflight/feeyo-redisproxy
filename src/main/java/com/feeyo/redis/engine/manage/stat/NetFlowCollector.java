@@ -1,7 +1,5 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -32,8 +30,8 @@ public class NetFlowCollector implements StatCollector {
 	public void onSchedulePeroid(int peroid) {
 	}
 	
-	public Set<Entry<String, UserNetFlow>> getUserFlowSet() {
-		return userNetFlowMap.entrySet();
+	public ConcurrentHashMap<String, UserNetFlow> getUserFlowMap() {
+		return userNetFlowMap;
 	}
 	
 	public static class UserNetFlow {

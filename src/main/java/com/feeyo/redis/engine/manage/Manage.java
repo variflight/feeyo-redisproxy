@@ -492,11 +492,12 @@ public class Manage {
 				} else if ( arg2.equalsIgnoreCase("BIGKEY") ) {
 					
 					List<String> lines = new ArrayList<String>();						
-					Collection<Entry<String, BigKey>> entrys = StatUtil.getBigKeyMap().entrySet();
-					for(Entry<String, BigKey> e : entrys) {
-						BigKey bigkey = e.getValue();
+					for(BigKey bigkey: StatUtil.getBigKeys()) {
 						StringBuffer sBuffer = new StringBuffer();
-						sBuffer.append( bigkey.cmd ).append("  ").append( bigkey.key ).append( "  " ).append( bigkey.size ).append( "  " ).append( bigkey.count.get() );
+						sBuffer.append( bigkey.cmd ).append("  ");
+						sBuffer.append( bigkey.key ).append( "  " );
+						sBuffer.append( bigkey.size ).append( "  " );
+						sBuffer.append( bigkey.count.get() );
 						lines.add( sBuffer.toString()  );
 					}			
 					return encode( lines );
@@ -629,23 +630,25 @@ public class Manage {
 					
 					long totalNetIn = 0;
 					long totalNetOut = 0;
-					for (Map.Entry<String, UserNetFlow> entry : StatUtil.getUserFlowSet()) { 
+					for (Map.Entry<String, UserNetFlow> entry : StatUtil.getUserFlowMap().entrySet()) { 
 						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
 							StringBuffer sb = new StringBuffer();
 							UserNetFlow userNetIo = entry.getValue();
 							sb.append(userNetIo.password).append("  ");
-							sb.append(userNetIo.netIn.get()).append("  ");
-							sb.append(userNetIo.netOut.get());
+							sb.append( JavaUtils.bytesToString2( userNetIo.netIn.get() ) ).append("  ");
+							sb.append( JavaUtils.bytesToString2( userNetIo.netOut.get() ) );
 							totalNetIn = totalNetIn + userNetIo.netIn.get();
 							totalNetOut = totalNetOut + userNetIo.netOut.get();
+							
 							lines.add(sb.toString());
 						}
 					}
 					
 					StringBuffer total = new StringBuffer();
 					total.append("total").append("    ");
-					total.append(totalNetIn).append("    ");
-					total.append(totalNetOut);
+					total.append( JavaUtils.bytesToString2(totalNetIn) ).append("    ");
+					total.append( JavaUtils.bytesToString2(totalNetOut) );
+					
 					lines.add(total.toString());
 					return encode(lines);
 					

@@ -8,13 +8,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SlowKeyColletor implements StatCollector {
 	
-	private static int KEY_SIZE = 5000;
-	private static int REDUECE_SIZE = (int)(KEY_SIZE * 0.5);
+	private static int LENGTH = 5000;
 	
-	private List<SlowKey> keys = new ArrayList<SlowKey>( KEY_SIZE );
+	private List<SlowKey> keys = new ArrayList<SlowKey>( LENGTH );
 	
 	private AtomicBoolean locking = new AtomicBoolean(false);
-	
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
@@ -30,12 +28,13 @@ public class SlowKeyColletor implements StatCollector {
 		
 		try {
 			
-			if ( keys.size() == KEY_SIZE ) {
+			if ( keys.size() == LENGTH ) {
 				
-				sort();
+				// 处理排序, 降序
+				Collections.sort(keys, new SlowKeyComparator( false ));
 				
 				// 缩容
-				while (keys.size() >= REDUECE_SIZE ) {
+				while (keys.size() >= ( LENGTH * 0.5 ) ) {
 					int index = keys.size() - 1;
 					keys.remove( index );
 				}
@@ -55,33 +54,13 @@ public class SlowKeyColletor implements StatCollector {
 		
 	}
 	
-	private void sort() {
-		
-		// 处理排序
-		Collections.sort(keys, new Comparator<SlowKey>(){
-			@Override
-			public int compare(SlowKey k1, SlowKey k2) {
-				if (k1 == k2)
-					return 0;
-				else if (k1.count > k2.count)
-					return -1;
-				else if (k1.count == k2.count) {
-					if (null == k1.key)
-						return -1;
-					return k1.key.compareTo(k2.key);
-				}
-				return 1;
-			}
-		});
-		
-	}
-	
 	public List<SlowKey> getSlowKeys() {
 		try {
 			while (!locking.compareAndSet(false, true)) {
 			}
 			
-			sort();
+			// 处理排序, 降序
+			Collections.sort(keys, new SlowKeyComparator( false ));
 			
 			return keys.subList(0, keys.size() > 100 ? 100 : keys.size());
 		} finally {
@@ -90,11 +69,57 @@ public class SlowKeyColletor implements StatCollector {
 	}
 	
 	@Override
-	public void onScheduleToZore() {}
+	public void onScheduleToZore() {
+		
+		try {
+			while (!locking.compareAndSet(false, true)) {
+			}
+			
+			keys.clear();
+			
+		} finally {
+			locking.set(false);
+		}
+	}
 
 	@Override
 	public void onSchedulePeroid(int peroid) {}
 	
+
+	// sort
+	public class SlowKeyComparator implements Comparator<SlowKey> {
+
+		boolean isASC;
+		
+		public SlowKeyComparator(boolean isASC) {
+			this.isASC = isASC;
+		}
+		
+		@Override
+		public int compare(SlowKey o1, SlowKey o2) {
+			
+			if ( o1 == null || o2 == null ) {
+				return -1;
+			}
+			
+			long a, b;
+            if ( isASC ) {
+                a = o1.count;
+                b = o2.count;
+            } else {
+                a = o2.count;
+                b = o1.count;
+            }
+			
+            if (a > b)
+                return 1;	// 大于
+            else if (a == b)
+                return 0;	//等于
+            else
+                return -1;	//小于
+		}
+		
+	}
 
 	public class SlowKey {
 		

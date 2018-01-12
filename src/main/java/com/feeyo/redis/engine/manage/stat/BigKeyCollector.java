@@ -1,26 +1,45 @@
 package com.feeyo.redis.engine.manage.stat;
 
 
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class BigKeyCollector implements StatCollector {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( BigKeyCollector.class );
-	
+	public static int LENGTH = 500;
 	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	
-	private static ConcurrentHashMap<String, BigKey> bigkeyMap = new ConcurrentHashMap<String, BigKey>();
+	
+	private List<BigKey> keys = new ArrayList<BigKey>( LENGTH );
 	
 	
-	public ConcurrentHashMap<String, BigKey> getBigkeyMap() {
-		return bigkeyMap;
+	private AtomicBoolean locking = new AtomicBoolean(false);
+	
+	
+	public List<BigKey> getBigkeys() {
+		try {
+			while (!locking.compareAndSet(false, true)) {
+			}
+			
+			// 处理排序, 降序
+			Collections.sort(keys, new BigKeyKeyComparator( false ));
+			
+			int len = keys.size() > 100 ? 100 : keys.size();
+			List<BigKey> newList = new ArrayList<BigKey>( len );
+			for(int i = 0; i < len; i++) {
+				newList.add( keys.get(i) );
+			}
+			return newList;
+			
+		} finally {
+			locking.set(false);
+		}
 	}
 
 	
@@ -32,54 +51,105 @@ public class BigKeyCollector implements StatCollector {
 		if (  requestSize < BIGKEY_SIZE && responseSize < BIGKEY_SIZE  ) {	
 			return;
 		}
-	
-		if ( bigkeyMap.size() > 500 ) {
-			for (Entry<String, BigKey> entry : bigkeyMap.entrySet()) {
-				BigKey bigKey = entry.getValue();
-				// TODO 后序优化
-				// 清除： 最近5分钟没有使用过 && 使用总次数小于5 && 小于1M
-				if (TimeUtil.currentTimeMillis() - bigKey.lastUseTime > 5 * 60 * 1000
-						&& bigKey.count.get() < 5 && bigKey.size < 1 * 1024 * 1024) {
-					bigkeyMap.remove(entry.getKey());
+		
+		
+		if ( !locking.compareAndSet(false, true) ) {
+			return;
+		}
+		
+		//
+		try {
+			if ( keys.size() == LENGTH ) {
+				// 处理排序, 降序
+				Collections.sort(keys, new BigKeyKeyComparator( false ));
+				
+				// 缩容
+				while (keys.size() >= ( LENGTH * 0.5 ) ) {
+					int index = keys.size() - 1;
+					keys.remove( index );
 				}
 			}
-			LOGGER.info("bigkey clear. after clear bigkey length is :" + bigkeyMap.size());
-		}
 			
-		String keyStr = new String(key);
-		BigKey bigkey = bigkeyMap.get( keyStr );
-		if ( bigkey == null ) {
-			bigkey = new BigKey();
-			bigkey.cmd = cmd;
-			bigkey.key = keyStr;
-			bigkey.size = requestSize > responseSize ? requestSize : responseSize;
-			bigkey.lastUseTime = TimeUtil.currentTimeMillis();
+			BigKey newBigKey = new BigKey();
+			newBigKey.key = new String(key);
 			
-			bigkeyMap.put(bigkey.key, bigkey);
 			
-		} else {
-			if ( bigkey.count.get() >= Integer.MAX_VALUE ) {
-				bigkey.count.set(1);
+			int index = keys.indexOf( newBigKey );
+			if (index >= 0) {
+				BigKey oldBigKey = keys.get(index);
+				oldBigKey.cmd = cmd;
+				oldBigKey.size = requestSize > responseSize ? requestSize : responseSize;
+				oldBigKey.lastUseTime = TimeUtil.currentTimeMillis();
+				oldBigKey.count.incrementAndGet();
+				
+			} else {
+				newBigKey.cmd = cmd;
+				newBigKey.size = requestSize > responseSize ? requestSize : responseSize;
+				newBigKey.lastUseTime = TimeUtil.currentTimeMillis();
+				keys.add( newBigKey );
 			}
 			
-			bigkey.cmd = cmd;
-			bigkey.size = requestSize > responseSize ? requestSize : responseSize;
-			bigkey.count.incrementAndGet();
-			bigkey.lastUseTime = TimeUtil.currentTimeMillis();
 			
-			bigkeyMap.put(bigkey.key, bigkey);
+		} finally {
+			locking.set(false);
 		}
+
 		
 	}
 
 	@Override
 	public void onScheduleToZore() {
-		bigkeyMap.clear();
+		try {
+			while (!locking.compareAndSet(false, true)) {
+			}
+			
+			keys.clear();
+			
+		} finally {
+			locking.set(false);
+		}
 	}
 
 
 	@Override
 	public void onSchedulePeroid(int peroid) {
+	}
+	
+	
+	
+	// sort
+	public class BigKeyKeyComparator implements Comparator<BigKey> {
+
+		boolean isASC;
+		
+		public BigKeyKeyComparator(boolean isASC) {
+			this.isASC = isASC;
+		}
+		
+		@Override
+		public int compare(BigKey o1, BigKey o2) {
+			
+			if ( o1 == null || o2 == null ) {
+				return -1;
+			}
+			
+			long a, b;
+            if ( isASC ) {
+                a = o1.count.get();
+                b = o2.count.get();
+            } else {
+                a = o2.count.get();
+                b = o1.count.get();
+            }
+			
+            if (a > b)
+                return 1;	// 大于
+            else if (a == b)
+                return 0;	//等于
+            else
+                return -1;	//小于
+		}
+		
 	}
 	
 	public static class BigKey {
@@ -88,5 +158,17 @@ public class BigKeyCollector implements StatCollector {
 		public int size;
 		public AtomicInteger count = new AtomicInteger(1);
 		public long lastUseTime;
+		
+		@Override
+		public boolean equals(Object obj) {
+			if(obj == this)
+				return true;
+			
+			if(obj == null || !(obj instanceof BigKey))
+				return false;
+			
+			BigKey bigkey = (BigKey) obj;
+			return this.key.equals(bigkey.key);
+		}
 	}
 }

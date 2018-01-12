@@ -4,8 +4,6 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -106,7 +104,6 @@ public class StatUtil {
 							StringBuffer subject = new StringBuffer( 50 );
 							subject.append(" ###RedisProxy report, host:" ).append( NetworkUtil.getLocalAddress() );
 							
-							
 							StringBuffer body = new StringBuffer( 500 );
 							
 							// COMMAND 
@@ -143,7 +140,7 @@ public class StatUtil {
 							// BIG KEY
 							body.append("#############   bigkey status   #################\n");
 							body.append("|    cmd    |     key     |    size    |    count    |");
-							for (BigKey bigkey : bigKeyCollector.getBigkeyMap().values() ) {
+							for (BigKey bigkey : bigKeyCollector.getBigkeys() ) {
 								body.append("\n");
 								body.append("|    ");
 								body.append(bigkey.cmd).append("    |    ");
@@ -286,8 +283,8 @@ public class StatUtil {
         return totalResults;
     }
     
-    public static ConcurrentHashMap<String, BigKey> getBigKeyMap() {
-    	return bigKeyCollector.getBigkeyMap();
+    public static List<BigKey> getBigKeys() {
+    	return bigKeyCollector.getBigkeys();
     }
     
     public static ConcurrentHashMap<String, BigLength> getBigLengthMap() {
@@ -302,8 +299,8 @@ public class StatUtil {
     	return cmdAccessCollector.getCommandCountMap();
     }
     
-    public static Set<Entry<String, UserNetFlow>> getUserFlowSet() {
-    	return netflowCollector.getUserFlowSet();
+    public static ConcurrentHashMap<String, UserNetFlow> getUserFlowMap() {
+    	return netflowCollector.getUserFlowMap();
     }
     
     public static List<SlowKey> getSlowKey() {
