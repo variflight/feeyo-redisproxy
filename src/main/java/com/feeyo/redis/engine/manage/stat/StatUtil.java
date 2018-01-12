@@ -27,6 +27,7 @@ import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.MailUtil;
+import com.feeyo.util.NetworkUtil;
 
 /**
  * 数据埋点收集器
@@ -97,77 +98,87 @@ public class StatUtil {
 					//
 					if ( zeroTimeMillis > 0 ) {
 						
-						
 						// send mail
 						// ##################################################################################
-						StringBuffer body = new StringBuffer();
-						
-						// COMMAND 
-						long sum = 0;
-						body.append("#############   command asscess  #################\n");
-						body.append("|    cmd    |     count     |");
-						for (Command command : cmdAccessCollector.getCommandCountMap().values() ) {
-							body.append("\n");
-							body.append("|    ");
-							body.append(command.cmd).append("    |    ");
-							body.append(command.count.get() ).append("    |    ");
-
-							sum += command.count.get();
+						try {
+							
+							
+							StringBuffer subject = new StringBuffer( 50 );
+							subject.append(" ###RedisProxy report, host:" ).append( NetworkUtil.getLocalAddress() );
+							
+							
+							StringBuffer body = new StringBuffer( 500 );
+							
+							// COMMAND 
+							long sum = 0;
+							body.append("#############   command asscess  #################\n");
+							body.append("|    cmd    |     count     |");
+							for (Command command : cmdAccessCollector.getCommandCountMap().values() ) {
+								body.append("\n");
+								body.append("|    ");
+								body.append(command.cmd).append("    |    ");
+								body.append(command.count.get() ).append("    |    ");
+	
+								sum += command.count.get();
+							}
+							body.append("\r\n");
+							body.append("\r\n");
+							
+							LOGGER.info("Through cmd count:" + sum);
+							
+							
+							// SLOW KEY
+							body.append("#############   slowkey status ( >50ms )   #################\n");
+							body.append("|    cmd    |     key     |    count    |");
+							for (SlowKey slowKey : slowKeyCollector.getSlowKeys() ) {
+								body.append("\n");
+								body.append("|    ");
+								body.append(slowKey.cmd).append("    |    ");
+								body.append(slowKey.key).append("    |    ");
+								body.append(slowKey.count).append("    |");
+							}
+							body.append("\r\n");
+							body.append("\r\n");
+							
+							// BIG KEY
+							body.append("#############   bigkey status   #################\n");
+							body.append("|    cmd    |     key     |    size    |    count    |");
+							for (BigKey bigkey : bigKeyCollector.getBigkeyMap().values() ) {
+								body.append("\n");
+								body.append("|    ");
+								body.append(bigkey.cmd).append("    |    ");
+								body.append(bigkey.key).append("    |    ");
+								body.append(bigkey.size).append("    |    ");
+								body.append(bigkey.count).append("    |");
+							}
+							body.append("\r\n");
+							body.append("\r\n");
+	
+							// BIG LENGTH
+							body.append("#############   biglenght status   #################\n");
+							body.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
+							for (BigLength bigLength : bigLengthCollector.getBigLengthMap().values() ) {
+								body.append("\n");
+								body.append("|    ");
+								body.append(bigLength.key).append("    |    ");
+								body.append(bigLength.cmd).append("    |    ");
+								body.append(bigLength.length).append("    |    ");
+								body.append(bigLength.count_1k).append("    |    ");
+								body.append(bigLength.count_10k).append("    |");
+							}
+							body.append("\r\n");
+							body.append("\r\n");
+							
+							String[] attachments = null;
+							
+							Properties prop = RedisEngineCtx.INSTANCE().getMailProperties();
+							MailUtil.send(prop, subject.toString(), body.toString(), attachments);
+							
+							
+						} catch(Throwable t) {
+							//ignore
 						}
-						body.append("\r\n");
-						body.append("\r\n");
-						
-						LOGGER.info("Through cmd count:" + sum);
-						
-						
-						// SLOW KEY
-						body.append("#############   slowkey status ( >50ms )   #################\n");
-						body.append("|    cmd    |     key     |    count    |");
-						for (SlowKey slowKey : slowKeyCollector.getSlowKeys() ) {
-							body.append("\n");
-							body.append("|    ");
-							body.append(slowKey.cmd).append("    |    ");
-							body.append(slowKey.key).append("    |    ");
-							body.append(slowKey.count).append("    |");
-						}
-						body.append("\r\n");
-						body.append("\r\n");
-						
-						// BIG KEY
-						body.append("#############   bigkey status   #################\n");
-						body.append("|    cmd    |     key     |    size    |    count    |");
-						for (BigKey bigkey : bigKeyCollector.getBigkeyMap().values() ) {
-							body.append("\n");
-							body.append("|    ");
-							body.append(bigkey.cmd).append("    |    ");
-							body.append(bigkey.key).append("    |    ");
-							body.append(bigkey.size).append("    |    ");
-							body.append(bigkey.count).append("    |");
-						}
-						body.append("\r\n");
-						body.append("\r\n");
-
-						// BIG LENGTH
-						body.append("#############   biglenght status   #################\n");
-						body.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
-						for (BigLength bigLength : bigLengthCollector.getBigLengthMap().values() ) {
-							body.append("\n");
-							body.append("|    ");
-							body.append(bigLength.key).append("    |    ");
-							body.append(bigLength.cmd).append("    |    ");
-							body.append(bigLength.length).append("    |    ");
-							body.append(bigLength.count_1k).append("    |    ");
-							body.append(bigLength.count_10k).append("    |");
-						}
-						body.append("\r\n");
-						body.append("\r\n");
-						
-						String[] attachments = null;
-						
-						Properties prop = RedisEngineCtx.INSTANCE().getMailProperties();
-						MailUtil.send(prop, " ## RedisProxy Report ##", body.toString(), attachments);
 						// ##################################################################################
-					
 						
 						
 						// 触发0 点事件
@@ -178,10 +189,6 @@ public class StatUtil {
 								LOGGER.error("error:",e);
 							}
 						}
-
-						
-					
-						
 					}
 					
 					zeroTimeMillis = cal.getTimeInMillis();
