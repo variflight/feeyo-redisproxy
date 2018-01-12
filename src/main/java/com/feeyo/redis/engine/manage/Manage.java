@@ -775,7 +775,8 @@ public class Manage {
 						lines.add(sBuffer.toString());
 					}
 					return encode(lines);
-					
+				
+				// SHOW BIGLENGTH
 				} else  if(arg2.equalsIgnoreCase("BIGLENGTH")) {
 					List<String> lines = new ArrayList<String>();
 					StringBuffer titleLine = new StringBuffer();
@@ -795,7 +796,8 @@ public class Manage {
 						lines.add(line1.toString());
 					}
 					return encode(lines);
-					
+				
+				// SHOW BIGLENGTH
 				} else if (arg2.equalsIgnoreCase("SLOWKEY")) {
 					List<String> lines = new ArrayList<String>();
 					StringBuffer titleLine = new StringBuffer();
