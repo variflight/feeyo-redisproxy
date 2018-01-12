@@ -28,7 +28,7 @@ import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
-import com.feeyo.redis.engine.manage.stat.SlowProcKeyColletor.SlowProcKeyInfo;
+import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
@@ -100,12 +100,14 @@ public class Manage {
 	 *  SHOW MEM
 	 *  
 	 *  SHOW QPS
-	 *  SHOW SLOWKEY
 	 *  SHOW CONN
 	 *  SHOW USER_CONN
 	 *  SHOW BUFFER
+	 *  
 	 *  SHOW BIGKEY
 	 *  SHOW BIGLENGTH
+	 *  SHOW SLOWKEY
+	 *  
 	 *  SHOW CMD
 	 *  SHOW VER
 	 *  SHOW NET_IO 该指令兼容过去的 SHOW NETBYTES
@@ -801,9 +803,9 @@ public class Manage {
 					titleLine.append("key").append(",  ");
 					titleLine.append("count");
 					lines.add(titleLine.toString());
-					for (SlowProcKeyInfo slowKey : StatUtil.getSlowKeyShowList()) {
+					for (SlowKey slowKey : StatUtil.getSlowKeyShowList()) {
 						StringBuffer line1 = new StringBuffer();
-						line1.append(slowKey.lastCmd).append(", ");
+						line1.append(slowKey.cmd).append(", ");
 						line1.append(slowKey.key).append(", ");
 						line1.append(slowKey.count);
 						lines.add(line1.toString());

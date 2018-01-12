@@ -21,7 +21,7 @@ import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
-import com.feeyo.redis.engine.manage.stat.SlowProcKeyColletor.SlowProcKeyInfo;
+import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -58,7 +58,7 @@ public class StatUtil {
 	private static CmdAccessCollector cmdAccessCollector = new CmdAccessCollector();
 	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
 	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
-	private static SlowProcKeyColletor slowProcKeyCollector = new SlowProcKeyColletor();
+	private static SlowKeyColletor slowProcKeyCollector = new SlowKeyColletor();
 	
 	
 	private static StatNotification notification = new StatNotification();
@@ -246,8 +246,8 @@ public class StatUtil {
     	return netflowCollector.getUserFlowSet();
     }
     
-    public static List<SlowProcKeyInfo> getSlowKeyShowList() {
-    	return slowProcKeyCollector.getSlowKeyShowList();
+    public static List<SlowKey> getSlowKeyShowList() {
+    	return slowProcKeyCollector.getSlowKeys();
     }
     
   
