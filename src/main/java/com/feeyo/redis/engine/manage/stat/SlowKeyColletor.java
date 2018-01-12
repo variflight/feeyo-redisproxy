@@ -83,7 +83,7 @@ public class SlowKeyColletor implements StatCollector {
 			
 			sort();
 			
-			return keys.subList(0, 100);
+			return keys.subList(0, keys.size() > 100 ? 100 : keys.size());
 		} finally {
 			blocking.set(false);
 		}
