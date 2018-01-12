@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SlowKeyColletor implements StatCollector {
 	
 	private static int KEY_SIZE = 5000;
-	private static int KEY_WRAN_SIZE = (int)(KEY_SIZE * 0.8);
+	private static int REDUECE_SIZE = (int)(KEY_SIZE * 0.8);
 	
 	private List<SlowKey> keys = new ArrayList<SlowKey>( KEY_SIZE );
 	
@@ -30,10 +30,15 @@ public class SlowKeyColletor implements StatCollector {
 		
 		try {
 			
-			// 缩容
-			while (keys.size() >= KEY_WRAN_SIZE ) {
-				int index = keys.size() - 1;
-				keys.remove( index );
+			if ( keys.size() == KEY_SIZE ) {
+				
+				sort();
+				
+				// 缩容
+				while (keys.size() >= REDUECE_SIZE ) {
+					int index = keys.size() - 1;
+					keys.remove( index );
+				}
 			}
 
 			SlowKey slowKey = new SlowKey(cmd, key);
@@ -41,25 +46,8 @@ public class SlowKeyColletor implements StatCollector {
 			if (index >= 0) {
 				keys.get(index).count++;
 			} else {
-				keys.add(slowKey);
+				keys.add( slowKey );
 			}
-			
-			// 处理排序
-			Collections.sort(keys, new Comparator<SlowKey>(){
-				@Override
-				public int compare(SlowKey k1, SlowKey k2) {
-					if (k1 == k2)
-						return 0;
-					else if (k1.count > k2.count)
-						return -1;
-					else if (k1.count == k2.count) {
-						if (null == k1.key)
-							return -1;
-						return k1.key.compareTo(k2.key);
-					}
-					return 1;
-				}
-			});
 
 		} finally {
 			blocking.set(false);
@@ -67,10 +55,34 @@ public class SlowKeyColletor implements StatCollector {
 		
 	}
 	
+	private void sort() {
+		
+		// 处理排序
+		Collections.sort(keys, new Comparator<SlowKey>(){
+			@Override
+			public int compare(SlowKey k1, SlowKey k2) {
+				if (k1 == k2)
+					return 0;
+				else if (k1.count > k2.count)
+					return -1;
+				else if (k1.count == k2.count) {
+					if (null == k1.key)
+						return -1;
+					return k1.key.compareTo(k2.key);
+				}
+				return 1;
+			}
+		});
+		
+	}
+	
 	public List<SlowKey> getSlowKeys() {
 		try {
 			while (!blocking.compareAndSet(false, true)) {
 			}
+			
+			sort();
+			
 			return keys.subList(0, 100);
 		} finally {
 			blocking.set(false);
