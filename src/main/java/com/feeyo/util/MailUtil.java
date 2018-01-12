@@ -65,29 +65,27 @@ public class MailUtil {
 			MimeMessage message = new MimeMessage(session);
 	        message.setFrom( fromAddr );
 	        message.setRecipients(MimeMessage.RecipientType.TO, toAddrs);
-			
 	        message.setSubject(subject, "UTF-8");
-	        Multipart mp = new MimeMultipart();  
+	       
             // 附件操作  
-            if (fileNames.length > 0) {  
-                for (int i=0;i < fileNames.length; i++) {  
+            if (fileNames != null && fileNames.length > 0) {  
+            	
+            	Multipart mp = new MimeMultipart();  
+                for (String fileName: fileNames) {  
                     MimeBodyPart mbp = new MimeBodyPart();  
-                    // 得到数据源  
-                    FileDataSource fds = new FileDataSource(fileNames[i]);  
-                    // 得到附件本身并至入BodyPart  
-                    mbp.setDataHandler(new DataHandler(fds));  
-                    // 得到文件名同样至入BodyPart  
-                    mbp.setFileName(fds.getName());  
+                    FileDataSource fds = new FileDataSource(fileName); 	  // 得到数据源  
+                    mbp.setDataHandler(new DataHandler(fds));  	 		  // 得到附件本身并至入BodyPart  
+                    mbp.setFileName(fds.getName());  					  // 得到文件名同样至入BodyPart  
                     mp.addBodyPart(mbp);  
                 }  
+                
                 MimeBodyPart mbp = new MimeBodyPart();  
                 mbp.setText(body);  
                 mp.addBodyPart(mbp);  
-                // Multipart加入到信件  
-                message.setContent(mp);  
-            }else {
-                // 设置邮件正文  
-                message.setText(body);  
+                message.setContent(mp);  		// Multipart加入到信件  
+                
+            } else {
+                message.setText(body);  		// 设置邮件正文  
             }
             message.setSentDate(new Date());
 	        message.saveChanges();
@@ -99,7 +97,6 @@ public class MailUtil {
             e.printStackTrace();
             return false;
         }
-
         return true;
     }
 	 

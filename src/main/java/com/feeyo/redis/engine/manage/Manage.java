@@ -805,7 +805,7 @@ public class Manage {
 					titleLine.append("key").append(",  ");
 					titleLine.append("count");
 					lines.add(titleLine.toString());
-					for (SlowKey slowKey : StatUtil.getSlowKeyShowList()) {
+					for (SlowKey slowKey : StatUtil.getSlowKey()) {
 						StringBuffer line1 = new StringBuffer();
 						line1.append(slowKey.cmd).append(", ");
 						line1.append(slowKey.key).append(", ");
