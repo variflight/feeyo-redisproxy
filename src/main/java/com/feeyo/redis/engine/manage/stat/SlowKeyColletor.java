@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SlowKeyColletor implements StatCollector {
 	
 	private static int KEY_SIZE = 5000;
-	private static int REDUECE_SIZE = (int)(KEY_SIZE * 0.8);
+	private static int REDUECE_SIZE = (int)(KEY_SIZE * 0.5);
 	
 	private List<SlowKey> keys = new ArrayList<SlowKey>( KEY_SIZE );
 	
