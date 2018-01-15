@@ -10,9 +10,12 @@ import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 
+/**
+ * 支持 BLPOP BRPOP 阻塞特性
+ */
 public class BlockCommandHandler extends AbstractCommandHandler {
 	
-	private RedisBackendConnection backendConnection;
+	private RedisBackendConnection usedConnection;
 	
 	public BlockCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -33,14 +36,25 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestSize(request.getSize());
 		
 		// 透传
-		backendConnection = writeToBackend(node.getPhysicalNode(), request.encode(), new BlockDirectTransTofrontCallBack());
+		usedConnection = writeToBackend(node.getPhysicalNode(), request.encode(), new BlockDirectTransTofrontCallBack());
 	}
 	
 	private class BlockDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
+		
+		@Override
+		public void connectionError(Exception e, RedisBackendConnection backendCon) {
+			usedConnection = null;
+		}
+		
+		@Override
+		public void connectionClose(RedisBackendConnection backendCon, String reason) {
+			usedConnection = null;
+		}
+		
 		@Override
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 			// handler释放后端链接
-			backendConnection = null;
+			usedConnection = null;
 			
 			try {
 				super.handleResponse(backendCon, byteBuff);
@@ -54,9 +68,9 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 	public void frontConnectionClose(String reason) {
 		super.frontConnectionClose(reason);
 		
-		if (backendConnection != null) {
-			backendConnection.close(reason);
-			backendConnection = null;
+		if (usedConnection != null) {
+			usedConnection.close(reason);
+			usedConnection = null;
 		}
 	}
 	
@@ -64,9 +78,9 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 	public void frontHandlerError(Exception e) {
 		super.frontHandlerError(e);
 		
-		if (backendConnection != null) {
-			backendConnection.close( e.getMessage() );
-			backendConnection = null;
+		if (usedConnection != null) {
+			usedConnection.close( e.getMessage() );
+			usedConnection = null;
 		}
 	}
 }
