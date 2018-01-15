@@ -15,7 +15,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  */
 public class BlockCommandHandler extends AbstractCommandHandler {
 	
-	private RedisBackendConnection usedConnection;
+	private RedisBackendConnection keepConnection;
 	
 	public BlockCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -36,25 +36,25 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestSize(request.getSize());
 		
 		// 透传
-		usedConnection = writeToBackend(node.getPhysicalNode(), request.encode(), new BlockDirectTransTofrontCallBack());
+		keepConnection = writeToBackend(node.getPhysicalNode(), request.encode(), new BlockDirectTransTofrontCallBack());
 	}
 	
 	private class BlockDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
 		
 		@Override
 		public void connectionError(Exception e, RedisBackendConnection backendCon) {
-			usedConnection = null;
+			keepConnection = null;
 		}
 		
 		@Override
 		public void connectionClose(RedisBackendConnection backendCon, String reason) {
-			usedConnection = null;
+			keepConnection = null;
 		}
 		
 		@Override
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 			// handler释放后端链接
-			usedConnection = null;
+			keepConnection = null;
 			
 			try {
 				super.handleResponse(backendCon, byteBuff);
@@ -68,9 +68,9 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 	public void frontConnectionClose(String reason) {
 		super.frontConnectionClose(reason);
 		
-		if (usedConnection != null) {
-			usedConnection.close(reason);
-			usedConnection = null;
+		if (keepConnection != null) {
+			keepConnection.close(reason);
+			keepConnection = null;
 		}
 	}
 	
@@ -78,9 +78,9 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 	public void frontHandlerError(Exception e) {
 		super.frontHandlerError(e);
 		
-		if (usedConnection != null) {
-			usedConnection.close( e.getMessage() );
-			usedConnection = null;
+		if (keepConnection != null) {
+			keepConnection.close( e.getMessage() );
+			keepConnection = null;
 		}
 	}
 }
