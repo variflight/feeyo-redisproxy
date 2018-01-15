@@ -2,6 +2,8 @@
 
 一个分布式 Redis 解决方案, 上层应用可以像使用单机的 Redis 一样使用, RedisProxy 底层会处理请求的分发，一切对你无感 ～
 
+内部的服务能力，当前日处理查询量50亿+，QPS，50K～80K
+
 ## 目前已实现的特性：
 *  支持 redis standalone 、 redis cluster 代理
 *  支持 redis cluster 情况下的跨片 marge 操作，如：pipeline 、 mget、 mset、 del mulit key 指令， 通过虚拟内存，解决高并发情况下的 pipeline 的数据堆积问题
@@ -29,6 +31,8 @@
 	 SHOW USER_CONN
 	 SHOW BUFFER
 	 SHOW BIGKEY
+	 SHOW BIGLENGTH
+	 SHOW SLOWKEY
 	 SHOW CMD
 	 SHOW VER
 	 SHOW NET_IO
