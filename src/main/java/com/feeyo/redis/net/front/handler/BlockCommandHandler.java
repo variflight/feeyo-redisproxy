@@ -42,16 +42,6 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 	private class BlockDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
 		
 		@Override
-		public void connectionError(Exception e, RedisBackendConnection backendCon) {
-			keepConnection = null;
-		}
-		
-		@Override
-		public void connectionClose(RedisBackendConnection backendCon, String reason) {
-			keepConnection = null;
-		}
-		
-		@Override
 		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 			// handler释放后端链接
 			keepConnection = null;
@@ -83,4 +73,27 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 			keepConnection = null;
 		}
 	}
+	
+	@Override
+    public void backendConnectionError(Exception e) {
+		keepConnection = null;
+		
+		super.backendConnectionError(e);
+		
+		if( frontCon != null && !frontCon.isClosed() ) {
+			frontCon.writeErrMessage(e.toString());
+		}
+	}
+
+	@Override
+	public void backendConnectionClose(String reason) {
+		keepConnection = null;
+		
+		super.backendConnectionClose(reason);
+
+		if( frontCon != null && !frontCon.isClosed() ) {
+			frontCon.writeErrMessage( reason );
+		}
+	}
+	
 }

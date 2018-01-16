@@ -249,6 +249,13 @@ public class Manage {
 						StringBuffer sBuffer = new StringBuffer();	
 						sBuffer.append(  parent.cmd ).append("  ").append( parent.count.get() );
 						
+						// 用户 cmd 数量
+						sBuffer.append(" (  ");
+						for (Entry<String, AtomicLong> userCommandCount : parent.userCommandCount.entrySet()) {
+							sBuffer.append(userCommandCount.getKey()).append(":").append(userCommandCount.getValue().get()).append("  ");
+						}
+						sBuffer.append(")");
+						
 						if ( parent.childs != null) {
 							List<String> list = new ArrayList<String>();
 							list.add( sBuffer.toString() );
@@ -256,6 +263,14 @@ public class Manage {
 								Command child = childEntry.getValue();
 								StringBuffer sb = new StringBuffer();
 								sb.append("  ").append( child.cmd ).append("  ").append( child.count.get() );
+								
+								// 用户 cmd 数量
+								sb.append(" (  ");
+								for (Entry<String, AtomicLong> userCommandCount : child.userCommandCount.entrySet()) {
+									sb.append(userCommandCount.getKey()).append(":").append(userCommandCount.getValue().get()).append("  ");
+								}
+								sb.append(")");
+								
 								list.add( sb.toString() );	
 							}
 							lines.add( list );

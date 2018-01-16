@@ -26,7 +26,7 @@ public class CmdAccessCollector implements StatCollector {
 				commandCountMap.put(pipelineCmd, parent);
 			}
 			
-			Command child = parent.getChild( cmd);
+			Command child = parent.getChild( cmd );
 			if (child == null) {
 				child = new Command();
 				child.cmd = cmd;
@@ -35,6 +35,7 @@ public class CmdAccessCollector implements StatCollector {
 			} else {
 				child.count.incrementAndGet();
 			}
+			child.addUserCommandCount(password);
 			return;
 		}
 		
@@ -47,7 +48,7 @@ public class CmdAccessCollector implements StatCollector {
 			command.cmd = cmd;
 			commandCountMap.put(cmd, command);	
 		}			
-		
+		command.addUserCommandCount(password);
 		
 		// 计算指令消耗时间分布，5个档（小于5，小于10，小于20，小于50，大于50）
     	String timeKey = null;
@@ -98,6 +99,7 @@ public class CmdAccessCollector implements StatCollector {
 		public AtomicLong count = new AtomicLong(1);
 		
 		public Map<String, Command> childs = new ConcurrentHashMap<>();
+		public Map<String, AtomicLong> userCommandCount = new ConcurrentHashMap<>();
 		
 		public Command getChild(String cmd) {
 			return childs.get(cmd);
@@ -106,6 +108,17 @@ public class CmdAccessCollector implements StatCollector {
 		public void addChild(Command command) {
 			childs.put(command.cmd, command);
 		}
+		
+		public void addUserCommandCount(String user) {
+			AtomicLong commandCount = userCommandCount.get(user);
+			if (commandCount == null) {
+				commandCount = new AtomicLong(1);
+				userCommandCount.put(user, commandCount);
+			} else {
+				commandCount.incrementAndGet();
+			}
+		}
+		
 	}
 
 }
