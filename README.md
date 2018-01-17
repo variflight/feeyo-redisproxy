@@ -2,7 +2,7 @@
 
 一个分布式 Redis 解决方案, 上层应用可以像使用单机的 Redis 一样使用, RedisProxy 底层会处理请求的分发，一切对你无感 ～
 
-内部的服务能力，当前日处理查询量50亿+，QPS，50K～80K
+内部的服务能力，当前单节点RedisProxy，日处理查询量50亿+， QPS维持在( 50K～80K )
 
 ## 目前已实现的特性：
 *  支持 redis standalone 、 redis cluster 代理
@@ -24,6 +24,9 @@
 	 运行信息
 	 SHOW USER
 	 SHOW USER_NET_IO 
+	 SHOW USER_CMD
+	 SHOW USER_CMD_DETAIL {password}
+	 
 	 SHOW CPU
 	 SHOW MEM
 	 SHOW QPS
