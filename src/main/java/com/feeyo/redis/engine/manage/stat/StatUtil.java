@@ -20,6 +20,7 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
 import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.nio.NetSystem;
@@ -297,6 +298,10 @@ public class StatUtil {
 
     public static ConcurrentHashMap<String, Command> getCommandCountMap() {
     	return cmdAccessCollector.getCommandCountMap();
+    }
+    
+    public static ConcurrentHashMap<String, UserCommand> getUserCommandCountMap() {
+    	return cmdAccessCollector.getUserCommandCountMap();
     }
     
     public static ConcurrentHashMap<String, UserNetFlow> getUserFlowMap() {

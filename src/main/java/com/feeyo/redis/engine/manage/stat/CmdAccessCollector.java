@@ -4,18 +4,27 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
+import com.feeyo.redis.net.front.handler.CommandParse;
 
 public class CmdAccessCollector implements StatCollector {
 	
 	// COMMAND、KEY
 	private static ConcurrentHashMap<String, Command> commandCountMap = new ConcurrentHashMap<String, Command>();
+	private static ConcurrentHashMap<String, UserCommand> userCommandCountMap = new ConcurrentHashMap<String, UserCommand>();
 	private static ConcurrentHashMap<String, AtomicLong> commandProcTimeMap = new ConcurrentHashMap<String, AtomicLong>();
 	
 
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, boolean isCommandOnly ) {
 	
+		UserCommand userCommand = userCommandCountMap.get(password);
+		if ( userCommand == null ) {
+			userCommand = new UserCommand( password );
+			userCommandCountMap.put(password, userCommand);
+		}
+		
 		// 只有pipeline的子命令 是这种只收集指令数据的情况。
 		if ( isCommandOnly ) {
 			String pipelineCmd = RedisRequestType.PIPELINE.getCmd();
@@ -35,7 +44,8 @@ public class CmdAccessCollector implements StatCollector {
 			} else {
 				child.count.incrementAndGet();
 			}
-			child.addUserCommandCount(password);
+			
+			userCommand.incrementCommandCount( cmd );
 			return;
 		}
 		
@@ -48,8 +58,8 @@ public class CmdAccessCollector implements StatCollector {
 			command.cmd = cmd;
 			commandCountMap.put(cmd, command);	
 		}			
-		command.addUserCommandCount(password);
 		
+		userCommand.incrementCommandCount( cmd );
 		// 计算指令消耗时间分布，5个档（小于5，小于10，小于20，小于50，大于50）
     	String timeKey = null;
     	if ( procTimeMills < 5 ) {
@@ -77,6 +87,7 @@ public class CmdAccessCollector implements StatCollector {
 	public void onScheduleToZore() {
 		commandCountMap.clear();
 		commandProcTimeMap.clear();
+		userCommandCountMap.clear();
 	}
 
 	@Override
@@ -84,11 +95,15 @@ public class CmdAccessCollector implements StatCollector {
 	}
 	
 	public ConcurrentHashMap<String, AtomicLong> getCommandProcTimeMap() {
-    	return commandProcTimeMap;
+    		return commandProcTimeMap;
     }
 
     public ConcurrentHashMap<String, Command> getCommandCountMap() {
-    	return commandCountMap;
+    		return commandCountMap;
+    }
+    
+    public ConcurrentHashMap<String, UserCommand> getUserCommandCountMap() {
+    		return userCommandCountMap;
     }
     
     
@@ -99,7 +114,6 @@ public class CmdAccessCollector implements StatCollector {
 		public AtomicLong count = new AtomicLong(1);
 		
 		public Map<String, Command> childs = new ConcurrentHashMap<>();
-		public Map<String, AtomicLong> userCommandCount = new ConcurrentHashMap<>();
 		
 		public Command getChild(String cmd) {
 			return childs.get(cmd);
@@ -108,17 +122,36 @@ public class CmdAccessCollector implements StatCollector {
 		public void addChild(Command command) {
 			childs.put(command.cmd, command);
 		}
+	}
+	
+	public static class UserCommand {
+		public String user;
+		public AtomicLong writeCommandCount;
+		public AtomicLong readComandCount;
+		public ConcurrentHashMap<String, AtomicLong> commandCount = new ConcurrentHashMap<String, AtomicLong>();
 		
-		public void addUserCommandCount(String user) {
-			AtomicLong commandCount = userCommandCount.get(user);
-			if (commandCount == null) {
-				commandCount = new AtomicLong(1);
-				userCommandCount.put(user, commandCount);
-			} else {
-				commandCount.incrementAndGet();
-			}
+		public UserCommand(String user) {
+			this.user = user;
+			writeCommandCount = new AtomicLong(0);
+			readComandCount = new AtomicLong(0);
 		}
 		
+		public void incrementCommandCount(String cmd) {
+			RedisRequestPolicy policy = CommandParse.getPolicy(cmd);
+			if ( policy.isRead() ) {
+				readComandCount.incrementAndGet();
+			} else {
+				writeCommandCount.incrementAndGet();
+			}
+			
+			AtomicLong count = commandCount.get(cmd);
+			if (count == null) {
+				count = new AtomicLong(1);
+				commandCount.put(cmd, count);
+			} else {
+				count.incrementAndGet();
+			}
+		}
 	}
 
 }

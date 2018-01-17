@@ -27,6 +27,7 @@ import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
 import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
@@ -109,6 +110,8 @@ public class Manage {
 	 *  SHOW SLOWKEY
 	 *  
 	 *  SHOW CMD
+	 *  SHOW USER_CMD
+	 *  SHOW USER_CMD_DETAIL USER
 	 *  SHOW VER
 	 *  SHOW NET_IO 该指令兼容过去的 SHOW NETBYTES
 	 *  SHOW VM
@@ -249,13 +252,6 @@ public class Manage {
 						StringBuffer sBuffer = new StringBuffer();	
 						sBuffer.append(  parent.cmd ).append("  ").append( parent.count.get() );
 						
-						// 用户 cmd 数量
-						sBuffer.append(" (  ");
-						for (Entry<String, AtomicLong> userCommandCount : parent.userCommandCount.entrySet()) {
-							sBuffer.append(userCommandCount.getKey()).append(":").append(userCommandCount.getValue().get()).append("  ");
-						}
-						sBuffer.append(")");
-						
 						if ( parent.childs != null) {
 							List<String> list = new ArrayList<String>();
 							list.add( sBuffer.toString() );
@@ -263,14 +259,6 @@ public class Manage {
 								Command child = childEntry.getValue();
 								StringBuffer sb = new StringBuffer();
 								sb.append("  ").append( child.cmd ).append("  ").append( child.count.get() );
-								
-								// 用户 cmd 数量
-								sb.append(" (  ");
-								for (Entry<String, AtomicLong> userCommandCount : child.userCommandCount.entrySet()) {
-									sb.append(userCommandCount.getKey()).append(":").append(userCommandCount.getValue().get()).append("  ");
-								}
-								sb.append(")");
-								
 								list.add( sb.toString() );	
 							}
 							lines.add( list );
@@ -287,6 +275,55 @@ public class Manage {
 					
 					return encodeObject( lines );
 					
+				// SHOW USER_CMD
+				} else if (arg2.equalsIgnoreCase("USER_CMD")) {
+
+					List<String> lines = new ArrayList<String>();
+					
+					StringBuffer title = new StringBuffer();
+					title.append("USER").append("      ").append("READ").append("      ").append("WRITE").append("      ").append("TOTAL");
+					lines.add(title.toString());
+
+					Set<Entry<String, UserCommand>> entrys = StatUtil.getUserCommandCountMap().entrySet();
+					for (Entry<String, UserCommand> entry : entrys) {
+						UserCommand userCommand = entry.getValue();
+						StringBuffer sBuffer = new StringBuffer();
+						sBuffer.append(userCommand.user).append("  ").append(userCommand.readComandCount.get())
+								.append("  ").append(userCommand.writeCommandCount.get()).append("  ")
+								.append( userCommand.readComandCount.get() + userCommand.writeCommandCount.get() );
+						
+						lines.add( sBuffer.toString() );
+					}
+
+					return encode(lines);
+
+				// SHOW USER_CMD_DETAIL USER
+				} else if ( arg2.equalsIgnoreCase("USER_CMD_DETAIL") && numArgs == 3 ) {
+					String user = new String( request.getArgs()[2] );
+					
+					List<String> lines = new ArrayList<String>();
+					
+					StringBuffer title = new StringBuffer();
+					title.append("USER").append("      ").append("CMD").append("      ").append("COUNT");
+					lines.add( title.toString() );
+
+					int sum = 0;
+					ConcurrentHashMap<String, UserCommand> userCommandMap = StatUtil.getUserCommandCountMap();
+					UserCommand userCommand = userCommandMap.get(user);
+					if (userCommand != null) {
+						for (Entry<String, AtomicLong> entry : userCommand.commandCount.entrySet()) {
+							StringBuffer sBuffer = new StringBuffer();
+							sBuffer.append(user).append("  ").append(entry.getKey()).append("  ").append(entry.getValue().get());
+							lines.add( sBuffer.toString() );
+						}
+					}
+					
+					
+					StringBuffer end = new StringBuffer();
+					end.append( "------" ).append("  ").append( sum );
+					lines.add( end.toString() );
+
+					return encode( lines );
 				// SHOW VER
 				} else if ( arg2.equalsIgnoreCase("VER") ) {
 					
