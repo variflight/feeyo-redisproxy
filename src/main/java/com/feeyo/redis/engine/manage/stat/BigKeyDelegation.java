@@ -26,6 +26,7 @@ public class BigKeyDelegation implements Comparator<String> {
 
 	private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 	private static final String LINE_SPARATOR = System.getProperty("line.separator");
+	private static final String FILE_TYPE = ".txt";
 	private static final String FIELD_SPARATOR = "  |  ";
 	private static final String BIG_KEY_FILE_NAME = "big_key_v";
 	private static final String basepath = System.getProperty("FEEYO_HOME") + "\\store\\discard\\";
@@ -166,7 +167,7 @@ public class BigKeyDelegation implements Comparator<String> {
 				.append( FIELD_SPARATOR ).append( bigkey.size )
 				.append( FIELD_SPARATOR ).append( bigkey.count.get() ).append(LINE_SPARATOR);
 		}
-		String filename = basepath+BIG_KEY_FILE_NAME+date;
+		String filename = basepath+BIG_KEY_FILE_NAME+date+FILE_TYPE;
 		FileUtils.ensureCreateFile(filename, buffer.toString(), isTemp);
 	}
 	
@@ -199,7 +200,7 @@ public class BigKeyDelegation implements Comparator<String> {
 	}
 
 	private List<String> getLinesFromFile(String date) {
-		String filename = basepath + BIG_KEY_FILE_NAME + date;
+		String filename = basepath+BIG_KEY_FILE_NAME+date+FILE_TYPE;
 		return FileUtils.readFile(filename);
 	}
 
