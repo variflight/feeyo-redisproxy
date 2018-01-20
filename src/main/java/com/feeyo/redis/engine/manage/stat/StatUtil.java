@@ -105,7 +105,7 @@ public class StatUtil {
 						
 						
 						// send mail
-						notification.sendMail();
+						notification.gatherStatusContent();
 						
 						// clear temp data
 						for(StatCollector listener: collectors) {
@@ -115,7 +115,9 @@ public class StatUtil {
 								LOGGER.error("error:",e);
 							}
 						}
-						notification.sendMailDailyDiscardMsg();
+						notification.gatherDailyDiscardContent();
+						
+						notification.sendMail();
 						
 					}
 					
