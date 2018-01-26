@@ -230,7 +230,8 @@ public abstract class Connection implements ClosableConnection {
 	protected void cleanup() {
 		
 		if (readBuffer != null) {
-			readBuffer = null;
+			recycle(readBuffer);
+			this.readBuffer = null;
 		}
 		
 		if (writeBuffer != null) {
@@ -543,7 +544,8 @@ public abstract class Connection implements ClosableConnection {
 		
 			//如果buffer为空，证明被回收或者是第一次读，新分配一个buffer给 Connection作为readBuffer
 			if ( readBuffer == null) {
-				readBuffer = ByteBuffer.allocate( 1024 * 16 );
+//				readBuffer = ByteBuffer.allocate( 1024 * 16 );
+				readBuffer = allocate( 1024 * 16 );
 			}
 			
 			lastReadTime = TimeUtil.currentTimeMillis();
@@ -579,11 +581,13 @@ public abstract class Connection implements ClosableConnection {
 					int newCapacity = readBuffer.capacity() << 1;
 					newCapacity = (newCapacity > maxCapacity) ? maxCapacity : newCapacity;			
 					
-					ByteBuffer newBuffer = ByteBuffer.allocate( newCapacity );
+//					ByteBuffer newBuffer = ByteBuffer.allocate( newCapacity );
+					ByteBuffer newBuffer = allocate( newCapacity );
 					
 					readBuffer.position( offset );
 					newBuffer.put( readBuffer );
 					
+					recycle(readBuffer);
 					readBuffer = newBuffer;
 					lastLargeMessageTime = TimeUtil.currentTimeMillis();
 					
@@ -611,14 +615,16 @@ public abstract class Connection implements ClosableConnection {
 						LOGGER.debug("change to direct con read buffer, cur temp buf size :" + readBuffer.capacity());
 					}
 					
-					ByteBuffer newBuffer = ByteBuffer.allocate( 1024 * 16 );
+//					ByteBuffer newBuffer = ByteBuffer.allocate( 1024 * 16 );
+					ByteBuffer newBuffer = allocate( 1024 * 16 );
 					readBuffer = newBuffer;
 					
 					lastLargeMessageTime = 0;
 					
 				} else {
 					if (readBuffer != null) {
-						readBuffer.clear();
+						recycle(readBuffer);
+						readBuffer = null;
 					}
 				}
 				
