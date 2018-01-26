@@ -623,6 +623,7 @@ public abstract class Connection implements ClosableConnection {
 					
 				} else {
 					if (readBuffer != null) {
+						// readBuffer.clear();
 						recycle(readBuffer);
 						readBuffer = null;
 					}
