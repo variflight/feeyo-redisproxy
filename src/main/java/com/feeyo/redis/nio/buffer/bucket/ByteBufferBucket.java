@@ -1,10 +1,15 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
  * This class is thread safe.
@@ -15,12 +20,17 @@ import org.slf4j.LoggerFactory;
 public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ByteBufferBucket.class );
+	private final static int STATE_IDLE = 0;
+	private final static int STATE_BORROW = 1;
 
 	private ByteBufferBucketPool bufferPool;
 	
 	// TODO: ConcurrentLinkedQueue
 	// https://bugs.openjdk.java.net/browse/JDK-8137185
 	private final ConcurrentLinkedDeque<ByteBuffer> buffers = new ConcurrentLinkedDeque<ByteBuffer>();
+	// buffer states, key:buffer address, value: 0:idle 1：borrow
+	private final ConcurrentHashMap<Long, AtomicInteger> bufferStates = new ConcurrentHashMap<Long, AtomicInteger>();
+	private final ConcurrentHashMap<Long, AbnormalBuffer> abnormalBuffers = new ConcurrentHashMap<Long, AbnormalBuffer>();
 	
 	private Object _lock = new Object();
 	
@@ -39,7 +49,9 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		
 		// 初始化
 		for(int j = 0; j < count; j++ ) {
-			queueOffer( ByteBuffer.allocateDirect(chunkSize) );
+			ByteBuffer buffer = ByteBuffer.allocateDirect(chunkSize);
+			initBufferStates( buffer, STATE_IDLE );
+			queueOffer( buffer );
 			pool.getUsedBufferSize().addAndGet( chunkSize );
 		}
 	}
@@ -49,9 +61,26 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		
 		ByteBuffer bb = queuePoll();
 		if (bb != null) {
-			// Clear sets limit == capacity. Position == 0.
-			bb.clear();
-			return bb;
+			long address = ((sun.nio.ch.DirectBuffer) bb).address();
+			AtomicInteger byteBufferState = bufferStates.get( address );
+			if (byteBufferState == null) {
+				byteBufferState = initBufferStates(bb, STATE_IDLE);
+			}
+			if (byteBufferState.getAndIncrement() == STATE_IDLE) {
+				// Clear sets limit == capacity. Position == 0.
+				bb.clear();
+				return bb;
+			} else {
+				AbnormalBuffer abnormalBuffer = abnormalBuffers.get(address);
+				if (abnormalBuffer == null) {
+					abnormalBuffer = new AbnormalBuffer(bb);
+					abnormalBuffers.put(address, abnormalBuffer);
+				} else {
+					abnormalBuffer.setLastUseTime(TimeUtil.currentTimeMillis());
+				}
+				LOGGER.warn("Direct ByteBuffer allocate warning.... allocate buffer that is been used。buffer: {}, address: {}, count: {}", abnormalBuffer, address, byteBufferState.get());
+				return null;
+			}
 		}
 		
 		// 桶内内存块不足，创建新的块
@@ -61,6 +90,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			
 			if ( ( used + chunkSize ) < bufferPool.getMaxBufferSize()) { 
 				bb = ByteBuffer.allocateDirect( chunkSize );
+				initBufferStates(bb, STATE_BORROW);
 				bufferPool.getUsedBufferSize().addAndGet( chunkSize );
 			} 
 			count++;
@@ -76,11 +106,44 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			return;
 		}
 		
-		buf.clear();
-		queueOffer( buf );
-		_shared++;
+		long address = ((sun.nio.ch.DirectBuffer) buf).address();
+		AtomicInteger byteBufferState = bufferStates.get( address );
+		AbnormalBuffer abnormalBuffer = abnormalBuffers.get( address );
+		if (byteBufferState.getAndDecrement() == STATE_BORROW && abnormalBuffer == null) {
+			buf.clear();
+			queueOffer( buf );
+			_shared++;
+		} else {
+			if (abnormalBuffer == null) {
+				abnormalBuffer = new AbnormalBuffer(buf);
+				abnormalBuffers.put(address, abnormalBuffer);
+			} else {
+				abnormalBuffer.setLastUseTime(TimeUtil.currentTimeMillis());
+			}
+			LOGGER.warn("Direct ByteBuffer recycle warning.... recycle buffer that is been used。buffer: {},address: {}, count: {}", abnormalBuffer, address, byteBufferState.get());
+		}
 	}
 
+	/**
+	 * 异常buffer检测
+	 */
+	public void abnormalBufferCheck() {
+		for (Entry<Long, AbnormalBuffer> entry : abnormalBuffers.entrySet()) {
+			AbnormalBuffer abnormalBuffer = entry.getValue();
+			if (TimeUtil.currentTimeMillis() - abnormalBuffer.getLastUseTime() > 30 * 60 * 1000) {
+				ByteBuffer buffer = abnormalBuffer.getBuffer();
+				if (buffer != null) {
+					buffer.clear();
+					queueOffer( buffer );
+					initBufferStates(buffer, STATE_IDLE);
+					_shared++;
+				}
+			}
+			abnormalBuffers.remove(entry.getKey());
+			LOGGER.info("abnomal byte buffer return. buffer: {}", abnormalBuffer);
+		}
+	}
+	
 	@SuppressWarnings("restriction")
 	public synchronized void clear() {
 		ByteBuffer buffer = null;
@@ -98,6 +161,12 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	
 	public long getShared() {
 		return _shared;
+	}
+	
+	private AtomicInteger initBufferStates(ByteBuffer buffer, int state) {
+		AtomicInteger bufferState = new AtomicInteger(state);
+		this.bufferStates.put( ((sun.nio.ch.DirectBuffer) buffer).address(), bufferState);
+		return bufferState;
 	}
 	
     private void queueOffer(ByteBuffer buffer)
@@ -140,4 +209,36 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		return 0;
 	}
 
+	protected class AbnormalBuffer {
+		private ByteBuffer buffer;
+		private long lastUseTime;
+		private long createTime;
+		public AbnormalBuffer(ByteBuffer buffer) {
+			this.buffer = buffer;
+			this.createTime = TimeUtil.currentTimeMillis();
+			this.lastUseTime = TimeUtil.currentTimeMillis();
+		}
+		public ByteBuffer getBuffer() {
+			return buffer;
+		}
+		public long getLastUseTime() {
+			return lastUseTime;
+		}
+		public void setLastUseTime(long lastUseTime) {
+			this.lastUseTime = lastUseTime;
+		}
+		public long getCreateTime() {
+			return createTime;
+		}
+		public void setCreateTime(long createTime) {
+			this.createTime = createTime;
+		}
+		
+		public String toString() {
+			StringBuffer sb = new StringBuffer();
+			sb.append("buffer:").append(buffer.toString()).append(". create:").append(createTime).append(". last use:")
+					.append(lastUseTime).append(".");
+			return sb.toString();
+		}
+	}
 }

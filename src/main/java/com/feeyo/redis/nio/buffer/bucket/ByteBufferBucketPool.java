@@ -1,9 +1,14 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
-import java.util.TreeMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +29,8 @@ public class ByteBufferBucketPool extends BufferPool {
 	
 	private long sharedOptsCount;
 	
+	private ScheduledExecutorService bufferCheckExecutor = null;
+	private final AtomicBoolean checking = new AtomicBoolean( false );
 	
 	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int minChunkSize, int increment, int maxChunkSize) {
 		
@@ -43,6 +50,35 @@ public class ByteBufferBucketPool extends BufferPool {
 			ByteBufferBucket bucket = new ByteBufferBucket(this, chunkSize, chunkCount);
 			this._buckets.put(bucket.getChunkSize(), bucket);
 		}
+		
+		// 自动扩容
+		Runnable runable = new Runnable() {
+
+			@Override
+			public void run() {
+
+				if (!checking.compareAndSet(false, true)) {
+					return;
+				}
+
+				try {
+					for (Entry<Integer, ByteBufferBucket> entry : _buckets.entrySet()) {
+						ByteBufferBucket byteBufferBucket = entry.getValue();
+						byteBufferBucket.abnormalBufferCheck();
+					}
+				} catch (Exception e) {
+					LOGGER.warn("ByteBufferBucket abnormalBufferCheck err:", e);
+
+				} finally {
+					checking.set(false);
+				}
+			}
+
+		};
+
+		// 异常监控
+		bufferCheckExecutor = Executors.newSingleThreadScheduledExecutor();
+		bufferCheckExecutor.scheduleAtFixedRate(runable, 120L, 300L, TimeUnit.SECONDS);
 		
 	}
 	
