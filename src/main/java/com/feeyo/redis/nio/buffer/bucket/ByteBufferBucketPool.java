@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.nio.buffer.BufferPool;
+import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
  * 堆外内存池
@@ -31,6 +32,7 @@ public class ByteBufferBucketPool extends BufferPool {
 	
 	private ScheduledExecutorService bufferCheckExecutor = null;
 	private final AtomicBoolean checking = new AtomicBoolean( false );
+	private final ConcurrentHashMap<Long, ByteBufferState> byteBufferStates;
 	
 	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int minChunkSize, int increment, int maxChunkSize) {
 		
@@ -38,6 +40,7 @@ public class ByteBufferBucketPool extends BufferPool {
 		
 		int bucketsCount = maxChunkSize / increment;
 		this._buckets = new TreeMap<Integer, ByteBufferBucket>();
+		this.byteBufferStates = new ConcurrentHashMap<Long, ByteBufferState>();
 		
 		// 平均分配初始化的桶size 
 		long bucketBufferSize = minBufferSize / bucketsCount;
@@ -62,9 +65,14 @@ public class ByteBufferBucketPool extends BufferPool {
 				}
 
 				try {
-					for (Entry<Integer, ByteBufferBucket> entry : _buckets.entrySet()) {
-						ByteBufferBucket byteBufferBucket = entry.getValue();
-						byteBufferBucket.abnormalBufferCheck();
+					for (Entry<Long, ByteBufferState> entry : byteBufferStates.entrySet()) {
+						ByteBufferState byteBufferState = entry.getValue();
+						if (byteBufferState.isUnHealthyTimeOut()) {
+							byteBufferState.setHealthy(true);
+							byteBufferState.getState().set(ByteBufferState.STATE_BORROW);
+							recycle(byteBufferState.getByteBuffer());
+							LOGGER.info("abnomal byte buffer return. buffer: {}", byteBufferState);
+						}
 					}
 				} catch (Exception e) {
 					LOGGER.warn("ByteBufferBucket abnormalBufferCheck err:", e);
@@ -107,7 +115,26 @@ public class ByteBufferBucketPool extends BufferPool {
 		
 		// 堆内
 		if (byteBuf == null) {
-			byteBuf =  ByteBuffer.allocate( size );
+			byteBuf = ByteBuffer.allocate( size );
+			
+		// 二次校验
+		} else {
+			long address = ((sun.nio.ch.DirectBuffer) byteBuf).address();
+			ByteBufferState byteBufferState = byteBufferStates.get(address);
+			if (byteBufferState == null) {
+				byteBufferState = new ByteBufferState(byteBuf);
+				byteBufferStates.put(address, byteBufferState);
+			}
+			
+			if (byteBufferState.getState().getAndIncrement() != ByteBufferState.STATE_IDLE || !byteBufferState.isHealthy()) {
+				byteBufferState.setHealthy(false);
+				LOGGER.warn(
+						"Direct ByteBuffer allocate warning.... allocate buffer that is been used。ByteBufferState: {}, address: {}",
+						byteBufferState, address);
+				return ByteBuffer.allocate( size );
+			}
+			
+			byteBufferState.setLastUseTime(TimeUtil.currentTimeMillis());
 		}
 		return byteBuf;
 
@@ -120,6 +147,20 @@ public class ByteBufferBucketPool extends BufferPool {
 		}
 		
 		if( !buf.isDirect() ) {
+			return;
+		}
+		
+		long address = ((sun.nio.ch.DirectBuffer) buf).address();
+		ByteBufferState byteBufferState = byteBufferStates.get(address);
+		if (byteBufferState.isHealthy()) {
+			if (byteBufferState.getState().getAndDecrement() != ByteBufferState.STATE_BORROW) {
+				byteBufferState.setHealthy(false);
+				LOGGER.warn(
+						"Direct ByteBuffer recycle warning.... recycle buffer that is been used。ByteBufferState: {},address: {}",
+						byteBufferState, address);
+				return;
+			}
+		} else {
 			return;
 		}
       	
