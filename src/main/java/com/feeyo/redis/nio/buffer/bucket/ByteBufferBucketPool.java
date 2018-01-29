@@ -1,8 +1,8 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -64,8 +64,9 @@ public class ByteBufferBucketPool extends BufferPool {
 				}
 
 				try {
-					for (Entry<Integer, ByteBufferBucket> entry : _buckets.entrySet()) {
-						ByteBufferBucket bucket = entry.getValue();
+					Iterator<ByteBufferBucket> it = _buckets.values().iterator();
+					while( it.hasNext() ) {
+						ByteBufferBucket bucket = it.next();
 						bucket.referenceCheck();
 					}
 				} catch (Exception e) {
