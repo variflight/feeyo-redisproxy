@@ -1,7 +1,10 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +24,8 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	// TODO: ConcurrentLinkedQueue
 	// https://bugs.openjdk.java.net/browse/JDK-8137185
 	private final ConcurrentLinkedDeque<ByteBuffer> buffers = new ConcurrentLinkedDeque<ByteBuffer>();
+	private final ConcurrentHashMap<Long, ByteBufferState> byteBufferStates;
+	private final AtomicInteger bufferUsedCount = new AtomicInteger(0);
 	
 	private Object _lock = new Object();
 	
@@ -36,6 +41,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
 		this.count = count;
+		this.byteBufferStates = new ConcurrentHashMap<Long, ByteBufferState>();
 		
 		// 初始化
 		for(int j = 0; j < count; j++ ) {
@@ -49,9 +55,25 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		
 		ByteBuffer bb = queuePoll();
 		if (bb != null) {
-			// Clear sets limit == capacity. Position == 0.
-			bb.clear();
-			return bb;
+			try {
+				long address = ((sun.nio.ch.DirectBuffer) bb).address();
+				ByteBufferState byteBufferState = byteBufferStates.get( address );
+				if (byteBufferState == null) {
+					byteBufferState = new ByteBufferState( bb );
+					byteBufferStates.put(address, byteBufferState);
+				}
+				if ( byteBufferState.borrow(address) ) {
+					// Clear sets limit == capacity. Position == 0.
+					bb.clear();
+					bufferUsedCount.incrementAndGet();
+					return bb;
+				} else {
+					return null;
+				}
+			} catch (Exception e) {
+				LOGGER.error("allocate err", e);
+				return bb;
+			}
 		}
 		
 		// 桶内内存块不足，创建新的块
@@ -61,6 +83,18 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			
 			if ( ( used + chunkSize ) < bufferPool.getMaxBufferSize()) { 
 				bb = ByteBuffer.allocateDirect( chunkSize );
+				
+				try {
+					long address = ((sun.nio.ch.DirectBuffer) bb).address();
+					ByteBufferState byteBufferState = new ByteBufferState( bb );
+					byteBufferStates.put(address, byteBufferState);
+					byteBufferState.borrow(address);
+				} catch (Exception e) {
+					LOGGER.error("allocate err", e);
+				}
+				
+				bufferUsedCount.incrementAndGet();
+				
 				bufferPool.getUsedBufferSize().addAndGet( chunkSize );
 			} 
 			count++;
@@ -76,9 +110,35 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			return;
 		}
 		
+		try {
+			long address = ((sun.nio.ch.DirectBuffer) buf).address();
+			ByteBufferState byteBufferState = byteBufferStates.get(address);
+			if (!byteBufferState.recycle(address)) {
+				return;
+			}
+		} catch (Exception e) {
+			LOGGER.error("recycle err", e);
+		}
+		
+		bufferUsedCount.decrementAndGet();
 		buf.clear();
 		queueOffer( buf );
 		_shared++;
+	}
+	
+	/**
+	 * 异常buffer检测
+	 */
+	public void byteBufferCheck() {
+		for (Entry<Long, ByteBufferState> entry : byteBufferStates.entrySet()) {
+			ByteBufferState byteBufferState = entry.getValue();
+			if (byteBufferState.isUnHealthyTimeOut()) {
+				byteBufferState.setHealthy(true);
+				byteBufferState.getState().set(ByteBufferState.STATE_BORROW);
+				recycle(byteBufferState.getByteBuffer());
+				LOGGER.info("abnomal byte buffer return. buffer: {}", byteBufferState);
+			}
+		}
 	}
 
 	@SuppressWarnings("restriction")
@@ -113,6 +173,10 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	
 	public int getQueueSize() {
 		return this.buffers.size();
+	}
+	
+	public int getBufferUsedCount() {
+		return this.bufferUsedCount.get();
 	}
 	
 	public int getChunkSize() {

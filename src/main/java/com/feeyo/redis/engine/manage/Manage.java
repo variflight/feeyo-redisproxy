@@ -534,6 +534,7 @@ public class Manage {
 							sBuffer.append(" chunkSize=").append( b.getChunkSize() ).append(",");
 							sBuffer.append(" queue=").append( b.getQueueSize() ).append( ", " );
 							sBuffer.append(" count=").append( b.getCount() ).append( ", " );
+							sBuffer.append(" useCount=").append( b.getBufferUsedCount() ).append( ", " );
 							sBuffer.append(" shared=").append( b.getShared() );		
 							lines.add( sBuffer.toString()  );
 						}		
