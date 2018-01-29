@@ -29,7 +29,7 @@ public class ByteBufferBucketPool extends BufferPool {
 	
 	private long sharedOptsCount;
 	
-	private ScheduledExecutorService bufferCheckExecutor = null;
+	private ScheduledExecutorService referenceCheckExecutor = null;
 	private final AtomicBoolean checking = new AtomicBoolean( false );
 	
 	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int minChunkSize, int increment, int maxChunkSize) {
@@ -51,20 +51,22 @@ public class ByteBufferBucketPool extends BufferPool {
 			this._buckets.put(bucket.getChunkSize(), bucket);
 		}
 		
-		// 自动扩容
-		Runnable runable = new Runnable() {
+
+		// buffer 引用 check
+		referenceCheckExecutor = Executors.newSingleThreadScheduledExecutor();
+		referenceCheckExecutor.scheduleAtFixedRate(new Runnable() {
 
 			@Override
 			public void run() {
-
+				
 				if (!checking.compareAndSet(false, true)) {
 					return;
 				}
 
 				try {
 					for (Entry<Integer, ByteBufferBucket> entry : _buckets.entrySet()) {
-						ByteBufferBucket byteBufferBucket = entry.getValue();
-						byteBufferBucket.byteBufferCheck();
+						ByteBufferBucket bucket = entry.getValue();
+						bucket.referenceCheck();
 					}
 				} catch (Exception e) {
 					LOGGER.warn("ByteBufferBucket abnormalBufferCheck err:", e);
@@ -74,11 +76,7 @@ public class ByteBufferBucketPool extends BufferPool {
 				}
 			}
 
-		};
-
-		// 异常监控
-		bufferCheckExecutor = Executors.newSingleThreadScheduledExecutor();
-		bufferCheckExecutor.scheduleAtFixedRate(runable, 120L, 300L, TimeUnit.SECONDS);
+		}, 120L, 300L, TimeUnit.SECONDS);
 		
 	}
 	

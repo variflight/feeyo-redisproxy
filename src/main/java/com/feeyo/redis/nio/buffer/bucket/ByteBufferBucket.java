@@ -24,8 +24,11 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	// TODO: ConcurrentLinkedQueue
 	// https://bugs.openjdk.java.net/browse/JDK-8137185
 	private final ConcurrentLinkedDeque<ByteBuffer> buffers = new ConcurrentLinkedDeque<ByteBuffer>();
-	private final ConcurrentHashMap<Long, ByteBufferState> byteBufferStates;
-	private final AtomicInteger bufferUsedCount = new AtomicInteger(0);
+	
+	private final ConcurrentHashMap<Long, ByteBufferReference> bufferReferencMap;
+	
+	// used count
+	private final AtomicInteger used = new AtomicInteger(0);
 	
 	private Object _lock = new Object();
 	
@@ -38,10 +41,12 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	public ByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count) {
+		
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
 		this.count = count;
-		this.byteBufferStates = new ConcurrentHashMap<Long, ByteBufferState>();
+		
+		this.bufferReferencMap = new ConcurrentHashMap<Long, ByteBufferReference>( count );
 		
 		// 初始化
 		for(int j = 0; j < count; j++ ) {
@@ -51,21 +56,26 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	//
+	@SuppressWarnings("restriction")
 	public ByteBuffer allocate() {
 		
 		ByteBuffer bb = queuePoll();
 		if (bb != null) {
 			try {
 				long address = ((sun.nio.ch.DirectBuffer) bb).address();
-				ByteBufferState byteBufferState = byteBufferStates.get( address );
-				if (byteBufferState == null) {
-					byteBufferState = new ByteBufferState( bb );
-					byteBufferStates.put(address, byteBufferState);
+				ByteBufferReference bufferReferenc = bufferReferencMap.get( address );
+				if (bufferReferenc == null) {
+					bufferReferenc = new ByteBufferReference( address, bb );
+					bufferReferencMap.put(address, bufferReferenc);
 				}
-				if ( byteBufferState.borrow(address) ) {
+				
+				// 检测
+				if ( bufferReferenc.isBorrow( address ) ) {
+					
+					used.incrementAndGet();
+					
 					// Clear sets limit == capacity. Position == 0.
 					bb.clear();
-					bufferUsedCount.incrementAndGet();
 					return bb;
 				} else {
 					return null;
@@ -79,21 +89,20 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		// 桶内内存块不足，创建新的块
 		synchronized ( _lock ) {
 			// 容量阀值
-			long used = bufferPool.getUsedBufferSize().get();
-			
-			if ( ( used + chunkSize ) < bufferPool.getMaxBufferSize()) { 
+			long poolUsed = bufferPool.getUsedBufferSize().get();
+			if ( ( poolUsed + chunkSize ) < bufferPool.getMaxBufferSize()) { 
 				bb = ByteBuffer.allocateDirect( chunkSize );
 				
 				try {
 					long address = ((sun.nio.ch.DirectBuffer) bb).address();
-					ByteBufferState byteBufferState = new ByteBufferState( bb );
-					byteBufferStates.put(address, byteBufferState);
-					byteBufferState.borrow(address);
+					ByteBufferReference byteBufferState = new ByteBufferReference( address, bb );
+					bufferReferencMap.put(address, byteBufferState);
+					byteBufferState.isBorrow(address);
 				} catch (Exception e) {
 					LOGGER.error("allocate err", e);
 				}
 				
-				bufferUsedCount.incrementAndGet();
+				used.incrementAndGet();
 				
 				bufferPool.getUsedBufferSize().addAndGet( chunkSize );
 			} 
@@ -103,6 +112,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		
 	}
 
+	@SuppressWarnings("restriction")
 	public void recycle(ByteBuffer buf) {
 	
 		if ( buf.capacity() != this.chunkSize ) {
@@ -112,31 +122,34 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		
 		try {
 			long address = ((sun.nio.ch.DirectBuffer) buf).address();
-			ByteBufferState byteBufferState = byteBufferStates.get(address);
-			if (!byteBufferState.recycle(address)) {
+			ByteBufferReference byteBufferState = bufferReferencMap.get(address);
+			if (!byteBufferState.isIdle(address)) {
 				return;
 			}
 		} catch (Exception e) {
 			LOGGER.error("recycle err", e);
 		}
 		
-		bufferUsedCount.decrementAndGet();
+		used.decrementAndGet();
+		
 		buf.clear();
 		queueOffer( buf );
 		_shared++;
 	}
 	
 	/**
-	 * 异常buffer检测
+	 * buffer 引用检测
 	 */
-	public void byteBufferCheck() {
-		for (Entry<Long, ByteBufferState> entry : byteBufferStates.entrySet()) {
-			ByteBufferState byteBufferState = entry.getValue();
-			if (byteBufferState.isUnHealthyTimeOut()) {
-				byteBufferState.setHealthy(true);
-				byteBufferState.getState().set(ByteBufferState.STATE_BORROW);
-				recycle(byteBufferState.getByteBuffer());
-				LOGGER.info("abnomal byte buffer return. buffer: {}", byteBufferState);
+	public void referenceCheck() {
+		
+		for (Entry<Long, ByteBufferReference> entry : bufferReferencMap.entrySet()) {
+			ByteBufferReference bufferReference = entry.getValue();
+			if ( bufferReference.isTimeout() ) {
+				
+				recycle( bufferReference.getByteBuffer() );
+				
+				bufferReference.reset();
+				LOGGER.info("buffer re. buffer: {}", bufferReference);
 			}
 		}
 	}
@@ -176,7 +189,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	public int getBufferUsedCount() {
-		return this.bufferUsedCount.get();
+		return this.used.get();
 	}
 	
 	public int getChunkSize() {
