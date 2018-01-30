@@ -71,7 +71,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 				}
 				
 				// 检测
-				if ( bbReference.isAllocateOK() ) {
+				if ( bbReference.isItAllocatable() ) {
 					
 					this.usedCount.incrementAndGet();
 					
@@ -126,7 +126,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		try {
 			long address = ((sun.nio.ch.DirectBuffer) buf).address();
 			ByteBufferReference bbReference = bufferReferencMap.get(address);
-			if ( bbReference != null && !bbReference.isRecycleOk() ) {
+			if ( bbReference != null && !bbReference.isItRecyclable() ) {
 				return;
 			}
 		} catch (Exception e) {
@@ -154,7 +154,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 				queueOffer( buf );
 				_shared++;
 				
-				useCounted.decrementAndGet();
+				usedCount.decrementAndGet();
 				
 				bufferReference.reset();
 				

@@ -20,11 +20,13 @@ public class ByteBufferReference {
 	private long address;
 	private ByteBuffer buffer;
 	
-	private AtomicInteger status;
+	private AtomicInteger status;				// 0 recycle 、 1 allocate
 	
 	private volatile boolean isMultiReferenced;	// 是否存在多重引用
 	private volatile long createTime;
 	private volatile long lastTime;
+	
+	private static final int TIMEOUT = 30 * 60 * 1000;
 	
 	public ByteBufferReference(long address, ByteBuffer bb) {
 		this.address = address;
@@ -54,40 +56,52 @@ public class ByteBufferReference {
 	}
 	
 	public boolean isTimeout() {
-		return isMultiReferenced && TimeUtil.currentTimeMillis() - lastTime > 30 * 60 * 1000;
+		return isMultiReferenced && ((TimeUtil.currentTimeMillis() - lastTime) > TIMEOUT);
 	}
 	
-	public boolean isAllocateOK() {
+	// 是否可分配
+	public boolean isItAllocatable() {
 		
 		// 是否存在多重引用
 		if ( !isMultiReferenced ) {
-			if ( !status.compareAndSet(0, 1) ) {
-				this.isMultiReferenced = true;
-				LOGGER.warn("##DBB reference allocate err: {}, address: {}", this, address);
-			} else {
-				this.lastTime =  TimeUtil.currentTimeMillis();
-				return true;
-			}
+			return false;
 		}
-		return false;
+		
+		// 
+		if ( !status.compareAndSet(0, 1) ) {
+			this.isMultiReferenced = true;
+			LOGGER.warn("##DBB allocate ckh, reference err: {}", this);
+			
+			return false;
+		} else {
+			this.lastTime =  TimeUtil.currentTimeMillis();
+			return true;
+		}
 	}
 	
-	public boolean isRecycleOk() {
+	// 是否可以回收的
+	public boolean isItRecyclable() {
+		
+		// 是否存在多重引用
 		if ( !isMultiReferenced ) {
-			if ( !status.compareAndSet(1, 0) ) { 
-				this.isMultiReferenced = true;
-				LOGGER.warn("##DBB reference recycle err: {}, address: {}", this, address);
-			} else {
-				return true;
-			}
+			return false;
 		}
-		return false;
+		
+		if ( !status.compareAndSet(1, 0) ) { 
+			this.isMultiReferenced = true;
+			LOGGER.warn("##DBB recycle chk, reference err: {}", this);
+			
+			return false;
+		} else {
+			return true;
+		}
 	}
 	
 	@Override
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
 		sb.append("buffer:").append(buffer.toString());
+		sb.append(" ,address:").append( address );
 		sb.append(" ,createTime:").append(createTime);
 		sb.append(" ,lastTime:").append(lastTime);
 		sb.append(" ,status:").append(status.get());
