@@ -146,9 +146,9 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			ByteBufferReference bufferReference = entry.getValue();
 			if ( bufferReference.isTimeout() ) {
 				
+				bufferReference.reset();
 				recycle( bufferReference.getByteBuffer() );
 				
-				bufferReference.reset();
 				LOGGER.info("buffer re. buffer: {}", bufferReference);
 			}
 		}
