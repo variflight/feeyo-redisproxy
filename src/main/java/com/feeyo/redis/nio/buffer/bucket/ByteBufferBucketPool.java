@@ -1,14 +1,9 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +24,6 @@ public class ByteBufferBucketPool extends BufferPool {
 	
 	private long sharedOptsCount;
 	
-	private ScheduledExecutorService referenceCheckExecutor = null;
-	private final AtomicBoolean checking = new AtomicBoolean( false );
-	
 	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int minChunkSize, int increment, int maxChunkSize) {
 		
 		super(minBufferSize, maxBufferSize, minChunkSize, increment, maxChunkSize);
@@ -51,34 +43,8 @@ public class ByteBufferBucketPool extends BufferPool {
 			this._buckets.put(bucket.getChunkSize(), bucket);
 		}
 		
-
-		// buffer 引用 check
-		referenceCheckExecutor = Executors.newSingleThreadScheduledExecutor();
-		referenceCheckExecutor.scheduleAtFixedRate(new Runnable() {
-
-			@Override
-			public void run() {
-				
-				if (!checking.compareAndSet(false, true)) {
-					return;
-				}
-
-				try {
-					Iterator<ByteBufferBucket> it = _buckets.values().iterator();
-					while( it.hasNext() ) {
-						ByteBufferBucket bucket = it.next();
-						bucket.referenceCheck();
-					}
-				} catch (Exception e) {
-					LOGGER.warn("ByteBufferBucket abnormalBufferCheck err:", e);
-
-				} finally {
-					checking.set(false);
-				}
-			}
-
-		}, 120L, 300L, TimeUnit.SECONDS);
-		
+		// byte buffer check
+		ByteBufferReferenceUtil.referenceCheck(_buckets);
 	}
 	
 	//根据size寻找 桶

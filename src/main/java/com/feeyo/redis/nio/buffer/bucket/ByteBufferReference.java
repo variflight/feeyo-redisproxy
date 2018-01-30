@@ -46,7 +46,7 @@ public class ByteBufferReference {
 
 	public void reset() {
 		this.isMultiReferenced = false;
-		this.status.set( 1 );
+		this.status.set( 0 );
 	}
 	
 	public boolean isTimeout() {

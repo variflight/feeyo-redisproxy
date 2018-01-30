@@ -146,8 +146,14 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			ByteBufferReference bufferReference = entry.getValue();
 			if ( bufferReference.isTimeout() ) {
 				
+				ByteBuffer buf = bufferReference.getByteBuffer();
+				buf.clear();
+				queueOffer( buf );
+				_shared++;
+				
+				useCounted.decrementAndGet();
+				
 				bufferReference.reset();
-				recycle( bufferReference.getByteBuffer() );
 				
 				LOGGER.info("buffer re. buffer: {}", bufferReference);
 			}
