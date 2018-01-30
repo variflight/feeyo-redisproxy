@@ -17,9 +17,6 @@ public class ByteBufferReference {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ByteBufferReference.class );
 	
-	public final static int _IDLE = 0;
-	public final static int _BORROW = 1;
-	
 	private long address;
 	private ByteBuffer buffer;
 	
@@ -33,7 +30,7 @@ public class ByteBufferReference {
 		this.address = address;
 		this.buffer = bb;
 		
-		this.status = new AtomicInteger(_IDLE);
+		this.status = new AtomicInteger(0);
 		this.isMultiReferenced = false;
 		this.createTime = TimeUtil.currentTimeMillis();
 		this.lastTime = TimeUtil.currentTimeMillis();
@@ -49,7 +46,7 @@ public class ByteBufferReference {
 
 	public void reset() {
 		this.isMultiReferenced = false;
-		this.status.set( _BORROW );
+		this.status.set( 1 );
 	}
 	
 	public boolean isTimeout() {
@@ -57,8 +54,10 @@ public class ByteBufferReference {
 	}
 	
 	public boolean isAllocateOK() {
-		if (!isMultiReferenced) {
-			if (status.getAndIncrement() != _IDLE) {
+		
+		// 是否存在多重引用
+		if ( !isMultiReferenced ) {
+			if (status.getAndIncrement() != 0 ) {
 				this.isMultiReferenced = true;
 				LOGGER.warn("##DBB reference err: {}, address: {}", this, address);
 			} else {
@@ -71,7 +70,7 @@ public class ByteBufferReference {
 	
 	public boolean isRecycleOk() {
 		if ( !isMultiReferenced ) {
-			if (status.getAndDecrement() != _BORROW) {
+			if (status.getAndDecrement() != 1) {
 				this.isMultiReferenced = true;
 				LOGGER.warn("##DBB reference err: {}, address: {}", this, address);
 			} else {
