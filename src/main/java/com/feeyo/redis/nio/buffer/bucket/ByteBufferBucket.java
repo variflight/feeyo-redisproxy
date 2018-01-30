@@ -44,7 +44,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
 		
-		this.count = new AtomicInteger(0);
+		this.count = new AtomicInteger(count);
 		this.usedCount = new AtomicInteger(0);
 		
 		this.bufferReferencMap = new ConcurrentHashMap<Long, ByteBufferReference>( count );

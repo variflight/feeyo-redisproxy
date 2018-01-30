@@ -60,7 +60,7 @@ public class ByteBufferReference {
 	public boolean isItAllocatable() {
 		
 		// 是否存在多重引用
-		if ( !isMultiReferenced ) {
+		if ( isMultiReferenced ) {
 			return false;
 		}
 		
@@ -80,7 +80,7 @@ public class ByteBufferReference {
 	public boolean isItRecyclable() {
 		
 		// 是否存在多重引用
-		if ( !isMultiReferenced ) {
+		if ( isMultiReferenced ) {
 			return false;
 		}
 		
