@@ -49,7 +49,7 @@ public class ByteBufferReferenceUtil {
 					bucket.referenceCheck();
 				}
 			} catch (Exception e) {
-				LOGGER.warn("ByteBufferBucket abnormalBufferCheck err:", e);
+				LOGGER.warn("##referenceCheck err:", e);
 
 			} finally {
 				checking.set(false);
