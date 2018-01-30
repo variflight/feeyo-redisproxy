@@ -57,7 +57,7 @@ public class ByteBufferReference {
 		
 		// 是否存在多重引用
 		if ( !isMultiReferenced ) {
-			if (status.getAndIncrement() != 0 ) {
+			if ( !status.compareAndSet(0, 1) ) {
 				this.isMultiReferenced = true;
 				LOGGER.warn("##DBB reference err: {}, address: {}", this, address);
 			} else {
@@ -70,7 +70,7 @@ public class ByteBufferReference {
 	
 	public boolean isRecycleOk() {
 		if ( !isMultiReferenced ) {
-			if (status.getAndDecrement() != 1) {
+			if ( !status.compareAndSet(1, 0) ) { 
 				this.isMultiReferenced = true;
 				LOGGER.warn("##DBB reference err: {}, address: {}", this, address);
 			} else {
