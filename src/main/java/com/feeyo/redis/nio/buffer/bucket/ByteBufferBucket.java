@@ -98,6 +98,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 				try {
 					long address = ((sun.nio.ch.DirectBuffer) bb).address();
 					ByteBufferReference bbReference = new ByteBufferReference( address, bb );
+					bbReference.update();
 					bufferReferencMap.put(address, bbReference);
 				} catch (Exception e) {
 					LOGGER.error("allocate err", e);

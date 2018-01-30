@@ -49,6 +49,10 @@ public class ByteBufferReference {
 		this.status.set( 0 );
 	}
 	
+	public void update() {
+		this.status.set(1);
+	}
+	
 	public boolean isTimeout() {
 		return isMultiReferenced && TimeUtil.currentTimeMillis() - lastTime > 30 * 60 * 1000;
 	}
@@ -59,7 +63,7 @@ public class ByteBufferReference {
 		if ( !isMultiReferenced ) {
 			if ( !status.compareAndSet(0, 1) ) {
 				this.isMultiReferenced = true;
-				LOGGER.warn("##DBB reference err: {}, address: {}", this, address);
+				LOGGER.warn("##DBB reference allocate err: {}, address: {}", this, address);
 			} else {
 				this.lastTime =  TimeUtil.currentTimeMillis();
 				return true;
@@ -72,7 +76,7 @@ public class ByteBufferReference {
 		if ( !isMultiReferenced ) {
 			if ( !status.compareAndSet(1, 0) ) { 
 				this.isMultiReferenced = true;
-				LOGGER.warn("##DBB reference err: {}, address: {}", this, address);
+				LOGGER.warn("##DBB reference recycle err: {}, address: {}", this, address);
 			} else {
 				return true;
 			}
