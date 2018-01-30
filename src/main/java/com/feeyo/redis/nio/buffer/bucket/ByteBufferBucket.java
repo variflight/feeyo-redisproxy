@@ -3,7 +3,7 @@ package com.feeyo.redis.nio.buffer.bucket;
 import java.nio.ByteBuffer;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -21,9 +21,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 
 	private ByteBufferBucketPool bufferPool;
 	
-	// TODO: ConcurrentLinkedQueue
-	// https://bugs.openjdk.java.net/browse/JDK-8137185
-	private final ConcurrentLinkedDeque<ByteBuffer> buffers = new ConcurrentLinkedDeque<ByteBuffer>();
+	private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<ByteBuffer>();
 	
 	private final ConcurrentHashMap<Long, ByteBufferReference> bufferReferencMap;
 	
@@ -47,7 +45,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		this.count = new AtomicInteger(0);
 		this.usedCount = new AtomicInteger(0);
 		
-		this.bufferReferencMap = new ConcurrentHashMap<Long, ByteBufferReference>( count );
+		this.bufferReferencMap = new ConcurrentHashMap<Long, ByteBufferReference>(  (int)(count * 1.6) );
 		
 		// 初始化
 		for(int j = 0; j < count; j++ ) {
@@ -186,7 +184,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	private void queueOffer(ByteBuffer buffer) {
-		this.buffers.offerFirst(buffer);
+		this.buffers.offer( buffer );
 	}
 
 	private ByteBuffer queuePoll() {
