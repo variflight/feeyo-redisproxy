@@ -27,12 +27,11 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	
 	private final ConcurrentHashMap<Long, ByteBufferReference> bufferReferencMap;
 	
-	// used count
-	private final AtomicInteger useCounted = new AtomicInteger(0);
-	
 	private Object _lock = new Object();
 	
-	private int count = 0;
+	private final AtomicInteger count;
+	private final AtomicInteger usedCount;
+	
 	private final int chunkSize;
 	private long _shared = 0;
 
@@ -44,7 +43,9 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
-		this.count = count;
+		
+		this.count = new AtomicInteger(0);
+		this.usedCount = new AtomicInteger(0);
 		
 		this.bufferReferencMap = new ConcurrentHashMap<Long, ByteBufferReference>( count );
 		
@@ -72,7 +73,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 				// 检测
 				if ( bbReference.isAllocateOK() ) {
 					
-					useCounted.incrementAndGet();
+					this.usedCount.incrementAndGet();
 					
 					// Clear sets limit == capacity. Position == 0.
 					bb.clear();
@@ -104,10 +105,11 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 					LOGGER.error("allocate err", e);
 				}
 				
-				useCounted.incrementAndGet();
+				this.count.incrementAndGet();
+				this.usedCount.incrementAndGet();
 				bufferPool.getUsedBufferSize().addAndGet( chunkSize );
 			} 
-			count++;
+			
 			return bb;
 		}
 		
@@ -131,7 +133,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			LOGGER.error("recycle err", e);
 		}
 		
-		useCounted.decrementAndGet();
+		usedCount.decrementAndGet();
 		
 		buf.clear();
 		queueOffer( buf );
@@ -173,30 +175,27 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 
 	public int getCount() {
-		return count;
+		return this.count.get();
+	}
+	
+	public int getUsedCount() {
+		return this.usedCount.get();
 	}
 	
 	public long getShared() {
 		return _shared;
 	}
 	
-    private void queueOffer(ByteBuffer buffer)
-    {
-        this.buffers.offerFirst(buffer);
-    }
+	private void queueOffer(ByteBuffer buffer) {
+		this.buffers.offerFirst(buffer);
+	}
 
-    private ByteBuffer queuePoll()
-    {
-        return this.buffers.poll();
-    }
+	private ByteBuffer queuePoll() {
+		return this.buffers.poll();
+	}
 
-	
 	public int getQueueSize() {
 		return this.buffers.size();
-	}
-	
-	public int getBufferUsedCount() {
-		return this.useCounted.get();
 	}
 	
 	public int getChunkSize() {

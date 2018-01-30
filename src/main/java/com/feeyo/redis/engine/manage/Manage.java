@@ -532,9 +532,9 @@ public class Manage {
 						for(ByteBufferBucket b: buckets) {
 							StringBuffer sBuffer = new StringBuffer();
 							sBuffer.append(" chunkSize=").append( b.getChunkSize() ).append(",");
-							sBuffer.append(" queue=").append( b.getQueueSize() ).append( ", " );
+							sBuffer.append(" queueSize=").append( b.getQueueSize() ).append( ", " );
 							sBuffer.append(" count=").append( b.getCount() ).append( ", " );
-							sBuffer.append(" useCount=").append( b.getBufferUsedCount() ).append( ", " );
+							sBuffer.append(" useCount=").append( b.getUsedCount() ).append( ", " );
 							sBuffer.append(" shared=").append( b.getShared() );		
 							lines.add( sBuffer.toString()  );
 						}		
