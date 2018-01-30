@@ -56,7 +56,7 @@ public class ByteBufferReference {
 		return isMultiReferenced && TimeUtil.currentTimeMillis() - lastTime > 30 * 60 * 1000;
 	}
 	
-	public boolean isIdle() {
+	public boolean isAllocateOK() {
 		if (!isMultiReferenced) {
 			if (status.getAndIncrement() != _IDLE) {
 				this.isMultiReferenced = true;
@@ -69,7 +69,7 @@ public class ByteBufferReference {
 		return false;
 	}
 	
-	public boolean isReferenceOk() {
+	public boolean isRecycleOk() {
 		if ( !isMultiReferenced ) {
 			if (status.getAndDecrement() != _BORROW) {
 				this.isMultiReferenced = true;
@@ -84,9 +84,11 @@ public class ByteBufferReference {
 	@Override
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
-		sb.append("buffer:").append(buffer.toString()).append(". createTime:").append(createTime).append(". lastTime:")
-				.append(lastTime).append(". status:").append(status.get()).append(". isMultiReferenced:").append(isMultiReferenced)
-				.append(".");
+		sb.append("buffer:").append(buffer.toString());
+		sb.append(" ,createTime:").append(createTime);
+		sb.append(" ,lastTime:").append(lastTime);
+		sb.append(" ,status:").append(status.get());
+		sb.append(" ,isMultiReferenced:").append(isMultiReferenced);
 		return sb.toString();
 	}
 }
