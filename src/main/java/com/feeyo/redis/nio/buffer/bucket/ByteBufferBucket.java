@@ -70,7 +70,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 				}
 				
 				// 检测
-				if ( bufferReferenc.isBorrow( address ) ) {
+				if ( bufferReferenc.isIdle() ) {
 					
 					used.incrementAndGet();
 					
@@ -97,7 +97,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 					long address = ((sun.nio.ch.DirectBuffer) bb).address();
 					ByteBufferReference byteBufferState = new ByteBufferReference( address, bb );
 					bufferReferencMap.put(address, byteBufferState);
-					byteBufferState.isBorrow(address);
+					byteBufferState.isIdle();
 				} catch (Exception e) {
 					LOGGER.error("allocate err", e);
 				}
@@ -123,7 +123,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		try {
 			long address = ((sun.nio.ch.DirectBuffer) buf).address();
 			ByteBufferReference byteBufferState = bufferReferencMap.get(address);
-			if (!byteBufferState.isIdle(address)) {
+			if (!byteBufferState.isSingleUsed()) {
 				return;
 			}
 		} catch (Exception e) {

@@ -25,7 +25,7 @@ public class ByteBufferReference {
 	
 	private AtomicInteger code;
 	
-	private volatile boolean isHealthy;
+	private volatile boolean isDoubleUsed;
 	private volatile long createTime;
 	private volatile long lastTime;
 	
@@ -35,7 +35,7 @@ public class ByteBufferReference {
 		
 		
 		this.code = new AtomicInteger(_IDLE);
-		this.isHealthy = true;
+		this.isDoubleUsed = false;
 		this.createTime = TimeUtil.currentTimeMillis();
 		this.lastTime = TimeUtil.currentTimeMillis();
 	}
@@ -51,24 +51,24 @@ public class ByteBufferReference {
 	}
 
 	public void reset() {
-		this.isHealthy = true;
+		this.isDoubleUsed = false;
 		this.code.set( _BORROW );
 	}
 	
-	public boolean isHealthy() {
-		return isHealthy;
+	public boolean isDoubleUsed() {
+		return isDoubleUsed;
 	}
 
 
 	
 	public boolean isTimeout() {
-		return !isHealthy() && TimeUtil.currentTimeMillis() - lastTime > 30 * 60 * 1000;
+		return isDoubleUsed() && TimeUtil.currentTimeMillis() - lastTime > 30 * 60 * 1000;
 	}
 	
-	public boolean isBorrow(long address) {
-		if (isHealthy) {
+	public boolean isIdle() {
+		if (!isDoubleUsed) {
 			if (code.getAndIncrement() != _IDLE) {
-				this.isHealthy = false;
+				this.isDoubleUsed = true;
 				LOGGER.warn(
 						"Direct ByteBuffer allocate warning.... allocate buffer that is been used。ByteBufferState: {}, address: {}",
 						this, address);
@@ -80,10 +80,10 @@ public class ByteBufferReference {
 		return false;
 	}
 	
-	public boolean isIdle(long address) {
-		if (isHealthy) {
+	public boolean isSingleUsed() {
+		if (!isDoubleUsed) {
 			if (code.getAndDecrement() != _BORROW) {
-				this.isHealthy = false;
+				this.isDoubleUsed = true;
 				LOGGER.warn("DirectByteBuffer reference err: {},address: {}", this, address);
 			} else {
 				return true;
@@ -96,7 +96,7 @@ public class ByteBufferReference {
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
 		sb.append("buffer:").append(byteBuffer.toString()).append(". create:").append(createTime).append(". last use:")
-				.append(lastTime).append(". use:").append(code.get()).append(". isHealthy:").append(isHealthy)
+				.append(lastTime).append(". use:").append(code.get()).append(". isDoubleUsed:").append(isDoubleUsed)
 				.append(".");
 		return sb.toString();
 	}
