@@ -10,7 +10,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
 
 
 /**
- *  direct byte buffer reference check
+ *  用于处理DBB 循环、多重引用 问题
  *
  */
 public class ByteBufferReference {
@@ -21,57 +21,46 @@ public class ByteBufferReference {
 	public final static int _BORROW = 1;
 	
 	private long address;
-	private ByteBuffer byteBuffer;
+	private ByteBuffer buffer;
 	
-	private AtomicInteger code;
+	private AtomicInteger status;
 	
-	private volatile boolean isDoubleUsed;
+	private volatile boolean isMultiReferenced;	// 是否存在多重引用
 	private volatile long createTime;
 	private volatile long lastTime;
 	
 	public ByteBufferReference(long address, ByteBuffer bb) {
 		this.address = address;
-		this.byteBuffer = bb;
+		this.buffer = bb;
 		
-		
-		this.code = new AtomicInteger(_IDLE);
-		this.isDoubleUsed = false;
+		this.status = new AtomicInteger(_IDLE);
+		this.isMultiReferenced = false;
 		this.createTime = TimeUtil.currentTimeMillis();
 		this.lastTime = TimeUtil.currentTimeMillis();
 	}
-	
-	
 
 	public long getAddress() {
 		return address;
 	}
 	
 	public ByteBuffer getByteBuffer() {
-		return byteBuffer;
+		return buffer;
 	}
 
 	public void reset() {
-		this.isDoubleUsed = false;
-		this.code.set( _BORROW );
+		this.isMultiReferenced = false;
+		this.status.set( _BORROW );
 	}
-	
-	public boolean isDoubleUsed() {
-		return isDoubleUsed;
-	}
-
-
 	
 	public boolean isTimeout() {
-		return isDoubleUsed() && TimeUtil.currentTimeMillis() - lastTime > 30 * 60 * 1000;
+		return isMultiReferenced && TimeUtil.currentTimeMillis() - lastTime > 30 * 60 * 1000;
 	}
 	
-	public boolean isIdle() {
-		if (!isDoubleUsed) {
-			if (code.getAndIncrement() != _IDLE) {
-				this.isDoubleUsed = true;
-				LOGGER.warn(
-						"Direct ByteBuffer allocate warning.... allocate buffer that is been used。ByteBufferState: {}, address: {}",
-						this, address);
+	public boolean isAllocateOK() {
+		if (!isMultiReferenced) {
+			if (status.getAndIncrement() != _IDLE) {
+				this.isMultiReferenced = true;
+				LOGGER.warn("##DBB reference err: {}, address: {}", this, address);
 			} else {
 				this.lastTime =  TimeUtil.currentTimeMillis();
 				return true;
@@ -80,11 +69,11 @@ public class ByteBufferReference {
 		return false;
 	}
 	
-	public boolean isSingleUsed() {
-		if (!isDoubleUsed) {
-			if (code.getAndDecrement() != _BORROW) {
-				this.isDoubleUsed = true;
-				LOGGER.warn("DirectByteBuffer reference err: {},address: {}", this, address);
+	public boolean isRecycleOk() {
+		if ( !isMultiReferenced ) {
+			if (status.getAndDecrement() != _BORROW) {
+				this.isMultiReferenced = true;
+				LOGGER.warn("##DBB reference err: {}, address: {}", this, address);
 			} else {
 				return true;
 			}
@@ -95,9 +84,11 @@ public class ByteBufferReference {
 	@Override
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
-		sb.append("buffer:").append(byteBuffer.toString()).append(". create:").append(createTime).append(". last use:")
-				.append(lastTime).append(". use:").append(code.get()).append(". isDoubleUsed:").append(isDoubleUsed)
-				.append(".");
+		sb.append("buffer:").append(buffer.toString());
+		sb.append(" ,createTime:").append(createTime);
+		sb.append(" ,lastTime:").append(lastTime);
+		sb.append(" ,status:").append(status.get());
+		sb.append(" ,isMultiReferenced:").append(isMultiReferenced);
 		return sb.toString();
 	}
 }
