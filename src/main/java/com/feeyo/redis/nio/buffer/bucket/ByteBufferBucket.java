@@ -123,7 +123,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		try {
 			long address = ((sun.nio.ch.DirectBuffer) buf).address();
 			ByteBufferReference byteBufferState = bufferReferencMap.get(address);
-			if (!byteBufferState.isSingleUsed()) {
+			if ( !byteBufferState.isReferenceOk() ) {
 				return;
 			}
 		} catch (Exception e) {
