@@ -48,11 +48,8 @@ public class ByteBufferReference {
 
 	public void reset() {
 		this.isMultiReferenced = false;
+		this.lastTime = TimeUtil.currentTimeMillis();
 		this.status.set( 0 );
-	}
-	
-	public void update() {
-		this.status.set(1);
 	}
 	
 	public boolean isTimeout() {

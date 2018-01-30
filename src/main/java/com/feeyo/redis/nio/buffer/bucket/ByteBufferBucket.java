@@ -64,14 +64,14 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		if (bb != null) {
 			try {
 				long address = ((sun.nio.ch.DirectBuffer) bb).address();
-				ByteBufferReference bbReference = bufferReferencMap.get( address );
-				if (bbReference == null) {
-					bbReference = new ByteBufferReference( address, bb );
-					bufferReferencMap.put(address, bbReference);
+				ByteBufferReference reference = bufferReferencMap.get( address );
+				if (reference == null) {
+					reference = new ByteBufferReference( address, bb );
+					bufferReferencMap.put(address, reference);
 				}
 				
 				// 检测
-				if ( bbReference.isItAllocatable() ) {
+				if ( reference.isItAllocatable() ) {
 					
 					this.usedCount.incrementAndGet();
 					
@@ -95,16 +95,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			long poolUsed = bufferPool.getUsedBufferSize().get();
 			if ( ( poolUsed + chunkSize ) < bufferPool.getMaxBufferSize()) { 
 				bb = ByteBuffer.allocateDirect( chunkSize );
-				
-				try {
-					long address = ((sun.nio.ch.DirectBuffer) bb).address();
-					ByteBufferReference bbReference = new ByteBufferReference( address, bb );
-					bbReference.update();
-					bufferReferencMap.put(address, bbReference);
-				} catch (Exception e) {
-					LOGGER.error("allocate err", e);
-				}
-				
+
 				this.count.incrementAndGet();
 				this.usedCount.incrementAndGet();
 				bufferPool.getUsedBufferSize().addAndGet( chunkSize );
@@ -125,10 +116,18 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		
 		try {
 			long address = ((sun.nio.ch.DirectBuffer) buf).address();
-			ByteBufferReference bbReference = bufferReferencMap.get(address);
-			if ( bbReference != null && !bbReference.isItRecyclable() ) {
-				return;
+			ByteBufferReference reference = bufferReferencMap.get(address);
+			if ( reference == null ) {
+				 reference = new ByteBufferReference( address, buf );
+				 bufferReferencMap.put(address, reference);
+				 
+			} else {
+				// 如果不能回收，则返回
+				if ( !reference.isItRecyclable() ) {
+					return;
+				}
 			}
+
 		} catch (Exception e) {
 			LOGGER.error("recycle err", e);
 		}
@@ -156,8 +155,8 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 				
 				usedCount.decrementAndGet();
 				
+				//
 				bufferReference.reset();
-				
 				LOGGER.info("buffer re. buffer: {}", bufferReference);
 			}
 		}

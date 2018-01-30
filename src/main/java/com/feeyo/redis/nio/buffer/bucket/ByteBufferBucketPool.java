@@ -43,7 +43,7 @@ public class ByteBufferBucketPool extends BufferPool {
 			this._buckets.put(bucket.getChunkSize(), bucket);
 		}
 		
-		// byte buffer check
+		// 引用检测
 		ByteBufferReferenceUtil.referenceCheck(_buckets);
 	}
 	
