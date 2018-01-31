@@ -24,9 +24,10 @@ public class ByteBufferBucketPool extends BufferPool {
 	
 	private long sharedOptsCount;
 	
-	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int minChunkSize, int increment, int maxChunkSize) {
+	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
+			int minChunkSize, int increment, int maxChunkSize) {
 		
-		super(minBufferSize, maxBufferSize, minChunkSize, increment, maxChunkSize);
+		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increment, maxChunkSize);
 		
 		int bucketsCount = maxChunkSize / increment;
 		this._buckets = new TreeMap<Integer, ByteBufferBucket>();

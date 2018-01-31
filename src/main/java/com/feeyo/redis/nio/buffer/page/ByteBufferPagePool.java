@@ -45,9 +45,10 @@ public class ByteBufferPagePool extends BufferPool {
      */
     private final ConcurrentHashMap<Long, Long> memoryUsage = new ConcurrentHashMap<Long, Long>();
     
-    public ByteBufferPagePool(long minBufferSize, final long maxBufferSize, int minChunkSize, int increment, int maxChunkSize) {
+    public ByteBufferPagePool(long minBufferSize, final long maxBufferSize, int decomposeBufferSize,
+    		int minChunkSize, int increment, int maxChunkSize) {
     	
-    	super(minBufferSize, maxBufferSize, minChunkSize, increment, maxChunkSize);
+    	super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increment, maxChunkSize);
     	
     	if (minChunkSize <= 0) {
     		this.chunkSize = increment;

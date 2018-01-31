@@ -392,7 +392,7 @@ public abstract class Connection implements ClosableConnection {
 			return;
 		
 		int size = data.length;
-		if ( size >= NetSystem.getInstance().getBufferPool().getMaxChunkSize() ) {
+		if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
 			size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
 		}
 		
@@ -414,7 +414,7 @@ public abstract class Connection implements ClosableConnection {
 			
 			// 大的 buffer 分解成多个小的 buffer
 			int size = srcBuffer.position();  // write PTR
-			if ( size >= NetSystem.getInstance().getBufferPool().getMaxChunkSize() ) {
+			if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
 				size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
 			}
 			

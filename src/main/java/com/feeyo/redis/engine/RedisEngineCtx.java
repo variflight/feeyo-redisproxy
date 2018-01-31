@@ -79,6 +79,7 @@ public class RedisEngineCtx {
         String reactorSizeString = this.serverMap.get("reactorSize");
         String minBufferSizeString = this.serverMap.get("minBufferSize");
         String maxBufferSizeString = this.serverMap.get("maxBufferSize");
+        String decomposeBufferSizeString = this.serverMap.get("decomposeBufferSize");
         
         String minChunkSizeString = this.serverMap.get("minChunkSize"); 
         String incrementString = this.serverMap.get("increment"); 
@@ -93,6 +94,8 @@ public class RedisEngineCtx {
         
         long minBufferSize = minBufferSizeString == null ? 16384 * 1000 : Long.parseLong( minBufferSizeString );
         long maxBufferSize = maxBufferSizeString == null ? 16384 * 10000 : Long.parseLong( maxBufferSizeString );
+        int decomposeBufferSize = decomposeBufferSizeString == null ? 64 * 1024 : Integer.parseInt( decomposeBufferSizeString ); 
+        
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
         int maxChunkSize = maxChunkSizeString == null ? 64 * 1024 : Integer.parseInt( maxChunkSizeString ); 
@@ -101,7 +104,8 @@ public class RedisEngineCtx {
         int timerSize = timerSizeString == null ? 6 : Integer.parseInt( timerSizeString ); 
 
         //ByteBufferPagePool ByteBufferBucketPool
-        this.bufferPool = new ByteBufferBucketPool(minBufferSize, maxBufferSize, minChunkSize, increment, maxChunkSize);   
+        this.bufferPool = new ByteBufferBucketPool(minBufferSize, maxBufferSize, decomposeBufferSize,
+        		minChunkSize, increment, maxChunkSize);   
        
         this.virtualMemoryService = new VirtualMemoryService();
         this.virtualMemoryService.start();

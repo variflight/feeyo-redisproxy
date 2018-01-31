@@ -17,11 +17,14 @@ public abstract class BufferPool {
 	protected int minChunkSize;
 	protected int increment;
 	protected int maxChunkSize;
+	protected int decomposeBufferSize;	// 用于大buffer 分解
 	
-	public BufferPool(long minBufferSize, long maxBufferSize, int minChunkSize, int increment, int maxChunkSize) {
+	public BufferPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize, 
+			int minChunkSize, int increment, int maxChunkSize) {
 		
 		this.minBufferSize = minBufferSize;
 		this.maxBufferSize = maxBufferSize;
+		this.decomposeBufferSize = decomposeBufferSize;
 		
 		if (minChunkSize <= 0)
 			minChunkSize = 0;
@@ -29,8 +32,13 @@ public abstract class BufferPool {
 		if (increment <= 0)
 			increment = 1024;
 		
-		if (maxChunkSize <= 0)
+		if (maxChunkSize <= 0) {
 			maxChunkSize = 64 * 1024;
+		}
+		
+		if ( decomposeBufferSize <= 0 ) {
+			decomposeBufferSize = 64 * 1024;
+		}
 		
 		//最小 size不能大于增量
 		if (minChunkSize >= increment)
@@ -52,6 +60,11 @@ public abstract class BufferPool {
 	public long getMaxBufferSize() {
 		return maxBufferSize;
 	}
+	
+	public int getDecomposeBufferSize() {
+		return decomposeBufferSize;
+	}
+
 
 	public AtomicLong getUsedBufferSize() {
 		return usedBufferSize;

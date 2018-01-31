@@ -7,9 +7,11 @@
 	<!-- Buffer chunk/total 65536-->
 	<property name="maxBufferSize">134217728</property>
 	<property name="minBufferSize">67108864</property>
+	<property name="decomposeBufferSize">65536</property>
 	<property name="minChunkSize">0</property>
 	<property name="increment">1024</property>
 	<property name="maxChunkSize">65536</property>
+
 	
 	<!-- Boss/Timer size -->
 	<property name="bossSize">10</property>
