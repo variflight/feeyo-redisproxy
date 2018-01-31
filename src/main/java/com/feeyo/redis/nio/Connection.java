@@ -659,19 +659,26 @@ public abstract class Connection implements ClosableConnection {
 				handler.handleReadEvent(this, data);
 				
 				
-				// 如果当前缓冲区不是 direct byte buffer 
+				// 存在扩大后的 byte buffer
 				// 并且最近30秒 没有接收到大的消息 
 				// 然后改为直接缓冲 direct byte buffer 提高性能
-				if (readBuffer != null && !readBuffer.isDirect() && lastLargeMessageTime != 0
-						&& lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  // used temp heap
+				
+				// if (readBuffer != null && !readBuffer.isDirect() && lastLargeMessageTime != 0
+				//		&& lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  
 					
+				if (readBuffer != null && lastLargeMessageTime != 0 && lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  
+
 					if (LOGGER.isDebugEnabled()) {
 						LOGGER.debug("change to direct con read buffer, cur temp buf size :" + readBuffer.capacity());
 					}
 					
-//					ByteBuffer newBuffer = ByteBuffer.allocate( 1024 * 16 );
-					ByteBuffer newBuffer = allocate( 1024 * 16 );
+					ByteBuffer oldBuffer = readBuffer;
+					ByteBuffer newBuffer = allocate( 1024 * 16 );  // ByteBuffer.allocate( 1024 * 16 );
 					readBuffer = newBuffer;
+					
+					//
+					if ( oldBuffer.isDirect() )
+						recycle( oldBuffer );
 					
 					lastLargeMessageTime = 0;
 					
@@ -683,7 +690,6 @@ public abstract class Connection implements ClosableConnection {
 				
 				// no more data ,break
 				break;
-				
 			}
 			
 			
