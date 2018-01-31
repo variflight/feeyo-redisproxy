@@ -968,7 +968,7 @@ public class Manage {
 					if (backendCon == null) {
 						frontCon.writeErrMessage("not idle backend connection, pls wait !!!");
 					} else {
-						backendCon.write( request.encode() );
+						backendCon.write( request.encode(), false );
 					}
 					
 					return null;	// null, not write

@@ -327,8 +327,39 @@ public abstract class Connection implements ClosableConnection {
 		}
 	}
 	
+	private ByteBuffer writeToBuffer(ByteBuffer srcBuf, ByteBuffer destBuf) {
+		
+		int offset = 0;
+		
+		int length = srcBuf.position();			// 原始数据长度		 
+		int remaining = destBuf.remaining();  	// buffer 可写长度
+		while (length > 0) {
+			
+			if (remaining >= length) {
+				 for (int i = offset; i < length; i++)
+					 destBuf.put(srcBuf.get(i));
+				break;
+				
+			} else {
+				
+				int end = offset + remaining;
+		        for (int i = offset; i < end; i++)
+		        	destBuf.put( srcBuf.get(i) );
+						
+				writeNotSend( destBuf);	
+				
+				int chunkSize = NetSystem.getInstance().getBufferPool().getMinChunkSize();
+				destBuf = allocate( chunkSize );
+				offset += remaining;
+				length -= remaining;
+				remaining = destBuf.remaining();
+				continue;
+			}
+		}
+		return destBuf;
+	}
 	
-	public ByteBuffer writeToBuffer(byte[] src, ByteBuffer buffer) {
+	private ByteBuffer writeToBuffer(byte[] src, ByteBuffer buffer) {
 		int offset = 0;
 		int length = src.length;			 // 原始数据长度
 		int remaining = buffer.remaining();  // buffer 可写长度
@@ -355,6 +386,7 @@ public abstract class Connection implements ClosableConnection {
 		 writeQueue.offer(buffer);
 	}
 
+	// data ->  N 个 minChunk buffer
 	public void write(byte[] data) {
 		if (data == null)
 			return;
@@ -366,19 +398,30 @@ public abstract class Connection implements ClosableConnection {
 		
 		ByteBuffer buffer = allocate( size );
 		buffer = writeToBuffer(data, buffer);
-		write( buffer );
+		write( buffer, false );
 	}
-
-	public static String getStackTrace(Throwable t) {
-	    StringWriter sw = new StringWriter();
-	    t.printStackTrace(new PrintWriter(sw));
-	    return sw.toString();
-	}
-
 	
-	public void write(ByteBuffer buffer) {
+	/**
+	 * @param buffer
+	 * @param isDecompose 是否分解 buffer， ( 1 to N) 
+	 */
+	public void write(ByteBuffer srcBuffer, boolean isDecompose) {
 		
-		this.writeQueue.offer(buffer);
+		if ( !isDecompose ) {
+			this.writeQueue.offer( srcBuffer );
+			
+		} else {
+			
+			// 大的 buffer 分解成多个小的 buffer
+			int size = srcBuffer.position();  // write PTR
+			if ( size >= NetSystem.getInstance().getBufferPool().getMaxChunkSize() ) {
+				size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
+			}
+			
+			ByteBuffer destBuffer = allocate( size );
+			destBuffer = writeToBuffer(srcBuffer, destBuffer);
+			write( destBuffer, false );
+		}
 		
 		try {
 			this.doNextWriteCheck();
@@ -388,6 +431,12 @@ public abstract class Connection implements ClosableConnection {
 			this.close("write err:" + e);
 			//throw new IOException( e );
 		}
+	}
+
+	public static String getStackTrace(Throwable t) {
+	    StringWriter sw = new StringWriter();
+	    t.printStackTrace(new PrintWriter(sw));
+	    return sw.toString();
 	}
 	
 	private boolean write0() throws IOException {

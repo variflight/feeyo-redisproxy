@@ -38,7 +38,7 @@ public class SelectDbCallback extends AbstractBackendCallback {
 				
 				// write real packet
 				if ( nextCmd != null )
-					backendCon.write( nextCmd );
+					backendCon.write( nextCmd, false );
 				return;
 			}
 			
