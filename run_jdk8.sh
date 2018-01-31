@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# about G1 http://www.oracle.com/technetwork/cn/articles/java/g1gc-1984535-zhs.html
 
 #check JAVA_HOME & java
 noJavaHome=false
