@@ -48,10 +48,11 @@ JAVA_OPTS="${JAVA_OPTS} -server -Xms2g -Xmx2g -Xmn1g -XX:PermSize=128m -XX:MaxPe
 JAVA_OPTS="${JAVA_OPTS} -XX:+UseConcMarkSweepGC -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=70"
 JAVA_OPTS="${JAVA_OPTS} -XX:+UseCMSCompactAtFullCollection -XX:CMSFullGCsBeforeCompaction=5"
 JAVA_OPTS="${JAVA_OPTS} -XX:+CMSParallelRemarkEnabled -XX:CMSMaxAbortablePrecleanTime=5000"
-JAVA_OPTS="${JAVA_OPTS} -XX:+DisableExplicitGC -XX:-UseParNewGC"
+JAVA_OPTS="${JAVA_OPTS} -XX:+DisableExplicitGC -XX:+UseParNewGC"
 JAVA_OPTS="${JAVA_OPTS} -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$FEEYO_HOME/logs/feeyoredisproxy_java.hprof"
-#JAVA_OPTS="${JAVA_OPTS} -verbose:gc -Xloggc:$FEEYO_HOME/logs/feeyoredisproxy_gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
-#JAVA_OPTS="${JAVA_OPTS} -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=100M"
+JAVA_OPTS="${JAVA_OPTS} -verbose:gc -Xloggc:$FEEYO_HOME/logs/feeyoredisproxy_gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+JAVA_OPTS="${JAVA_OPTS} -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=100M"
+
 #JAVA_OPTS="${JAVA_OPTS} -Xdebug -Xrunjdwp:transport=dt_socket,address=9555,server=y,suspend=n"
     
 JAVA_RUN="$JAVA_HOME/bin/java"
