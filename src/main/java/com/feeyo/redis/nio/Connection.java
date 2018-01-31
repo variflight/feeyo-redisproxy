@@ -598,7 +598,7 @@ public abstract class Connection implements ClosableConnection {
 		
 			//如果buffer为空，证明被回收或者是第一次读，新分配一个buffer给 Connection作为readBuffer
 			if ( readBuffer == null) {
-//				readBuffer = ByteBuffer.allocate( 1024 * 16 );
+				// readBuffer = ByteBuffer.allocate( 1024 * 16 );
 				readBuffer = allocate( 1024 * 16 );
 			}
 			
@@ -635,7 +635,7 @@ public abstract class Connection implements ClosableConnection {
 					int newCapacity = readBuffer.capacity() << 1;
 					newCapacity = (newCapacity > maxCapacity) ? maxCapacity : newCapacity;			
 					
-//					ByteBuffer newBuffer = ByteBuffer.allocate( newCapacity );
+					// ByteBuffer newBuffer = ByteBuffer.allocate( newCapacity );
 					ByteBuffer newBuffer = allocate( newCapacity );
 					
 					readBuffer.position( offset );
