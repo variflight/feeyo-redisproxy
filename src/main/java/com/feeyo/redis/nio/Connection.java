@@ -413,14 +413,19 @@ public abstract class Connection implements ClosableConnection {
 		} else {
 			
 			// 大的 buffer 分解成多个小的 buffer
-			int size = srcBuffer.position();  // write PTR
-			if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
-				size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
+			try  {
+				int size = srcBuffer.position();  // write PTR
+				if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
+					size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
+				}
+				
+				ByteBuffer destBuffer = allocate( size );
+				destBuffer = writeToBuffer(srcBuffer, destBuffer);
+				write( destBuffer, false );
+				
+			} finally {
+				recycle( srcBuffer );	// 回收
 			}
-			
-			ByteBuffer destBuffer = allocate( size );
-			destBuffer = writeToBuffer(srcBuffer, destBuffer);
-			write( destBuffer, false );
 		}
 		
 		try {
