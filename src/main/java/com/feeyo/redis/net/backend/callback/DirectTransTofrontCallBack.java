@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
-import com.feeyo.redis.engine.codec.RedisResponseV3;
+import com.feeyo.redis.engine.codec.RedisResponse;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -27,7 +27,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 	private static Logger LOGGER = LoggerFactory.getLogger( DirectTransTofrontCallBack.class );
 	
 	// 写入到前端
-	protected int writeToFront(RedisFrontConnection frontCon, RedisResponseV3 response, int size) throws IOException {	
+	protected int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {	
 		
 		int tmpSize = size;		
 		
@@ -58,7 +58,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				response.clear();
 				
 			} else {
-				RedisResponseV3[] items = (RedisResponseV3[]) response.data();
+				RedisResponse[] items = (RedisResponse[]) response.data();
 				for(int i = 0; i < items.length; i++) {
 					if ( i == 0 ) {
 						byte[] buf = (byte[])items[i].data() ;
@@ -99,7 +99,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 		// 应答解析
-		List<RedisResponseV3> resps = decoder.decode( byteBuff );
+		List<RedisResponse> resps = decoder.decode( byteBuff );
 		if ( resps != null ) {
 		
 			// 获取前端 connection
@@ -114,7 +114,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				long responseTimeMills = TimeUtil.currentTimeMillis();
 				int responseSize = 0;
 				
-				for(RedisResponseV3 resp: resps) 
+				for(RedisResponse resp: resps) 
 					responseSize += this.writeToFront(frontCon, resp, 0);
 				
 				resps.clear();	// help GC

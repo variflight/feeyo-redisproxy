@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisResponseV3;
+import com.feeyo.redis.engine.codec.RedisResponse;
 import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
@@ -61,11 +61,11 @@ public class PubSub  {
 				@Override
 				public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 					// 应答解析
-					List<RedisResponseV3> resps = decoder.decode(byteBuff);
+					List<RedisResponse> resps = decoder.decode(byteBuff);
 					if (resps != null) {
 						// 写入至前端
 						RedisFrontConnection frontCon = getFrontCon(backendCon);
-						for (RedisResponseV3 resp : resps)
+						for (RedisResponse resp : resps)
 							this.writeToFront(frontCon, resp, 0);
 
 						resps.clear();

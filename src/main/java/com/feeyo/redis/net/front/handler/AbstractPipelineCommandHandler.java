@@ -17,7 +17,7 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestEncoderV2;
 import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
-import com.feeyo.redis.engine.codec.RedisResponseV3;
+import com.feeyo.redis.engine.codec.RedisResponse;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.segment.Segment;
@@ -300,7 +300,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			int okCount = 0;
 			for (DataOffset offset : offsets) {
 				byte[] data = offset.getData();
-				RedisResponseV3 response = responseDecoder.decode( data ).get(0);
+				RedisResponse response = responseDecoder.decode( data ).get(0);
 				if ( response.is( (byte)':') ) {
 					byte[] _buf1 = (byte[])response.data();
 					byte[] buf2 = new byte[ _buf1.length - 1 ];

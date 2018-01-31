@@ -11,7 +11,7 @@ public class RedisResponseDecoderV3 {
 	private byte[] _buffer;
 	private int _offset;
 	
-	public RedisResponseV3 decode(byte[] buffer) {
+	public RedisResponse decode(byte[] buffer) {
 
 		append(buffer);
 
@@ -29,7 +29,7 @@ public class RedisResponseDecoderV3 {
 	          case ':':					// 整数, 以 ":" 开头, 返回
 	          case '$':					// 批量字符串, 以 "$" 开头,表示下一行的字符串长度,具体字符串在下一行中,字符串最大能达到512MB
 	        	  
-	            RedisResponseV3 resp = parseResponse(type);
+	            RedisResponse resp = parseResponse(type);
 	            if ( resp != null ) {
 	            	_buffer = null;
 	            	_offset = 0;
@@ -44,7 +44,7 @@ public class RedisResponseDecoderV3 {
 		return null;
 	}
 	
-	private RedisResponseV3 parseResponse(byte type) {
+	private RedisResponse parseResponse(byte type) {
 
 		int start, end, len, offset;
 		
@@ -62,7 +62,7 @@ public class RedisResponseDecoderV3 {
 			
 			// 长度
 			len = end - start + 1;
-			return new RedisResponseV3(type, getBytes(start, len));
+			return new RedisResponse(type, getBytes(start, len));
 			
 		 } else if (type == '$') {
 			 
@@ -74,7 +74,7 @@ public class RedisResponseDecoderV3 {
 		    	start = offset - 1;
 		    	end = _offset;
 		    	len = end - start;
-		        return new RedisResponseV3(type, getBytes(start, len));  // 此处不减
+		        return new RedisResponse(type, getBytes(start, len));  // 此处不减
 		      }
 
 		      end = _offset + packetSize + 2;	// offset + data + \r\n
@@ -87,7 +87,7 @@ public class RedisResponseDecoderV3 {
 		      
 		      start = offset - 1;
 		      len = end - start;
-		      return new RedisResponseV3(type, getBytes(start, len));
+		      return new RedisResponse(type, getBytes(start, len));
 			 
 		 } else if (type == '*') {
 			 
@@ -99,7 +99,7 @@ public class RedisResponseDecoderV3 {
 		    	start = offset -1;
 		    	end = _offset;
 		    	len = end - start;
-		        return new RedisResponseV3(type, getBytes(start, len));  // 此处不减
+		        return new RedisResponse(type, getBytes(start, len));  // 此处不减
 		      }
 
 		      if (packetSize > bytesRemaining()) {
@@ -108,14 +108,14 @@ public class RedisResponseDecoderV3 {
 		      }
 
 		      // 此处多增加一长度，用于存储 *packetSize\r\n
-		      RedisResponseV3 response = new RedisResponseV3(type, packetSize + 1);
+		      RedisResponse response = new RedisResponse(type, packetSize + 1);
 		      start = offset -1;
 		      end = _offset;
 		      len = end - start;
-		      response.set(0, new RedisResponseV3(type, getBytes(start, len)));
+		      response.set(0, new RedisResponse(type, getBytes(start, len)));
 
 		      byte ntype;
-		      RedisResponseV3 res;
+		      RedisResponse res;
 		      for (int i = 1; i <= packetSize; i++) {
 		        if (_offset + 1 >= _buffer.length ) {
 		          throw new IndexOutOfBoundsException("Wait for more data.");
@@ -239,7 +239,7 @@ public class RedisResponseDecoderV3 {
 		System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
 		
 		RedisResponseDecoderV3 decoder = new RedisResponseDecoderV3();
-		RedisResponseV3 resp = decoder.decode(buffer);
+		RedisResponse resp = decoder.decode(buffer);
 		
 		//RedisResponseV3 resp = decoder.decode(buffer1);
 		//resp = decoder.decode(buffer2);

@@ -2,8 +2,8 @@ package com.feeyo.redis.engine.codec;
 
 public class RedisResponse {
 
-	private final byte type;
-	private final Object data;
+	private byte type;
+	private Object data;
 
 	public RedisResponse(byte type, Object data) {
 		this.type = type;
@@ -30,6 +30,10 @@ public class RedisResponse {
 	public Object data() {
 		return data;
 	}
+	
+	public void clear() {
+		this.data = null;
+	}
 
 	//
 	public String toString() {
@@ -46,35 +50,26 @@ public class RedisResponse {
 		
 		if ( item.type == '+' ) {
 			sBuffer.append("type=").append( (char)item.type ).append(", ");
-			sBuffer.append("data=").append( item.data ).append("\r\n");
+			sBuffer.append("data=").append( new String( (byte[])item.data) ).append("\r\n");
 			
 		} else if ( item.type == '-') {
 			sBuffer.append("type=").append( (char)item.type ).append(", ");
-			sBuffer.append("data=").append( item.data ).append("\r\n");
+			sBuffer.append("data=").append( new String( (byte[])item.data) ).append("\r\n");
 			
 		} else if ( item.type == ':') {
 			sBuffer.append("type=").append( (char)item.type ).append(", ");
 			sBuffer.append("data=").append( new String( (byte[])item.data ) ).append("\r\n");;
 			
 		} else if ( item.type == '$') {
+			sBuffer.append("type=").append( (char)item.type ).append(", ");
+			sBuffer.append("data=").append( new String( (byte[])item.data ) ).append("\r\n");;
 			
-			if  ( item.data == null ) {				
+		} else if ( item.type == '*') {				
+			if  ( item.data instanceof byte[] ) {				
 				sBuffer.append("type=").append( (char)item.type ).append(", ");
-				sBuffer.append("data=").append( -1 ).append("\r\n");				
+				sBuffer.append("data=").append( new String( (byte[])item.data ) ).append("\r\n");				
 			} else {
-				sBuffer.append("type=").append( (char)item.type ).append(", ");
-				sBuffer.append("data=").append( new String( (byte[])item.data ) ).append("\r\n");
-			}
-			
-		} else if ( item.type == '*') {			
-			
-			if  ( item.data == null ) {				
-				sBuffer.append("type=").append( (char)item.type ).append(", ");
-				sBuffer.append("data=").append( -1 ).append("\r\n");				
-			} else {
-				RedisResponse[] items = (RedisResponse[]) item.data;				
-				sBuffer.append("type=").append( (char)item.type ).append(", ");
-				sBuffer.append("len=").append( items.length ).append("\r\n");				
+				RedisResponse[] items = (RedisResponse[]) item.data;
 				for(int i = 0; i < items.length; i++) {
 					toString(sBuffer, items[i] );
 				}
@@ -82,5 +77,4 @@ public class RedisResponse {
 		}
 		return sBuffer;
 	}
-
 }
