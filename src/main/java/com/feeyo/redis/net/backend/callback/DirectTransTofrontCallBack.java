@@ -24,6 +24,8 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 
 	private static Logger LOGGER = LoggerFactory.getLogger( DirectTransTofrontCallBack.class );
 	
+	protected RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
+	
 	// 写入到前端
 	protected int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {	
 		
@@ -97,7 +99,6 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 		// 应答解析
-		RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
 		List<RedisResponse> resps = decoder.decode( byteBuff );
 		if ( resps != null ) {
 		
