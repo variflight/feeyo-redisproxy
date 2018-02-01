@@ -91,7 +91,8 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			
 			// 容量阀值
 			long poolUsed = bufferPool.getUsedBufferSize().get();
-			if ( ( poolUsed + chunkSize ) < bufferPool.getMaxBufferSize()) { 
+			// chunkSize 在1兆以内，并且direct byte buffer使用容量小于最大容量，可以扩容
+			if ( chunkSize <= 1024 * 1024 && ( poolUsed + chunkSize ) < bufferPool.getMaxBufferSize()) { 
 				bb = ByteBuffer.allocateDirect( chunkSize );
 
 				this.count.incrementAndGet();
@@ -147,6 +148,8 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			if ( bufferReference.isTimeout() ) {
 				
 				ByteBuffer buf = bufferReference.getByteBuffer();
+				
+				bufferReferencMap.remove(entry.getKey());
 				buf.clear();
 				queueOffer( buf );
 				_shared++;
@@ -154,7 +157,6 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 				usedCount.decrementAndGet();
 				
 				//
-				bufferReference.reset();
 				LOGGER.warn("buffer re. buffer: {}", bufferReference);
 			}
 		}

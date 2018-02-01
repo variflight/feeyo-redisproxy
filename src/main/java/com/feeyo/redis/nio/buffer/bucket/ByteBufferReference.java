@@ -45,12 +45,6 @@ public class ByteBufferReference {
 	public ByteBuffer getByteBuffer() {
 		return buffer;
 	}
-
-	public void reset() {
-		this.isMultiReferenced = false;
-		this.lastTime = TimeUtil.currentTimeMillis();
-		this.status.set( 0 );
-	}
 	
 	public boolean isTimeout() {
 		return isMultiReferenced && ((TimeUtil.currentTimeMillis() - lastTime) > TIMEOUT);
