@@ -97,7 +97,22 @@ public class RedisEngineCtx {
         int decomposeBufferSize = decomposeBufferSizeString == null ? 64 * 1024 : Integer.parseInt( decomposeBufferSizeString ); 
         
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
-        int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
+//        int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
+        
+        int[] increments;
+        if (incrementString == null) {
+        		increments=new int[] {1024};
+        } else {
+        		String[] incrementStrings = incrementString.split(",");
+        		increments = new int[incrementStrings.length];
+        		int i = 0;
+        		for (String str : incrementStrings) {
+        			increments[i] = Integer.parseInt( str ); 
+        			
+        			i++;
+        		}
+        }
+        
         int maxChunkSize = maxChunkSizeString == null ? 64 * 1024 : Integer.parseInt( maxChunkSizeString ); 
         
         int bossSize = bossSizeString == null ? 10 : Integer.parseInt( bossSizeString ); 
@@ -105,7 +120,7 @@ public class RedisEngineCtx {
 
         //ByteBufferPagePool ByteBufferBucketPool
         this.bufferPool = new ByteBufferBucketPool(minBufferSize, maxBufferSize, decomposeBufferSize,
-        		minChunkSize, increment, maxChunkSize);   
+        		minChunkSize, increments, maxChunkSize);   
        
         this.virtualMemoryService = new VirtualMemoryService();
         this.virtualMemoryService.start();

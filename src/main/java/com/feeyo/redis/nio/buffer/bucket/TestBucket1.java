@@ -9,7 +9,7 @@ public class TestBucket1 {
 	// new DirectByteBufferPool(64,2048,64*1024, 500)
 	public static void main(String[] args) {
 
-		final ByteBufferBucketPool bufferPool = new ByteBufferBucketPool(1024*1024 * 15, 50 * 1024 * 1024, 64 * 1024, 128, 1024, 64 * 1024);
+		final ByteBufferBucketPool bufferPool = new ByteBufferBucketPool(1024*1024 * 15, 50 * 1024 * 1024, 64 * 1024, 128, new int[] {1024}, 64 * 1024);
 		ByteBufferBucket[] buckets = bufferPool.buckets();
 
 //		ByteBuffer buffer1 = bufferPool.allocate(100);

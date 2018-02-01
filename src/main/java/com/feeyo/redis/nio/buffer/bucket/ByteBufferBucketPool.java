@@ -25,11 +25,19 @@ public class ByteBufferBucketPool extends BufferPool {
 	private long sharedOptsCount;
 	
 	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
-			int minChunkSize, int increment, int maxChunkSize) {
+			int minChunkSize, int[] increments, int maxChunkSize) {
 		
-		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increment, maxChunkSize);
+		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increments, maxChunkSize);
 		
-		int bucketsCount = maxChunkSize / increment;
+//		int bucketsCount = maxChunkSize / increments;
+		
+		int bucketsCount;
+		if (increments.length > 1) {
+			bucketsCount = increments.length;
+		} else {
+			bucketsCount = maxChunkSize / increments[0];
+		}
+		
 		this._buckets = new TreeMap<Integer, ByteBufferBucket>();
 		
 		// 平均分配初始化的桶size 
@@ -38,7 +46,7 @@ public class ByteBufferBucketPool extends BufferPool {
 		// 初始化桶 
 		int chunkSize = 0;
 		for (int i = 0; i < bucketsCount; i++) {
-			chunkSize += increment;
+			chunkSize += increments[i >= increments.length ? 0 : i];
 			int chunkCount = (int) (bucketBufferSize / chunkSize);
 			ByteBufferBucket bucket = new ByteBufferBucket(this, chunkSize, chunkCount);
 			this._buckets.put(bucket.getChunkSize(), bucket);

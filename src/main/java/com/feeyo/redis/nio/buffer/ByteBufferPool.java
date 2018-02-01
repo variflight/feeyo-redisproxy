@@ -36,8 +36,8 @@ public class ByteBufferPool extends BufferPool {
 	private AtomicLong count = new AtomicLong(0);
 	
 	public ByteBufferPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
-			int minChunkSize, int increment, int maxChunkSize  ) {
-		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increment, maxChunkSize);
+			int minChunkSize, int[] increments, int maxChunkSize  ) {
+		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increments, maxChunkSize);
 		
 		this.chunkSize = getMinChunkSize();
 		
@@ -165,7 +165,7 @@ public class ByteBufferPool extends BufferPool {
 	}
 	
 	public static void main(String[] args) {
-		ByteBufferPool pool = new ByteBufferPool(1024*1024 * 10, 100*1024*1024, 128, 1024, 64 * 1024, 64 * 1024);
+		ByteBufferPool pool = new ByteBufferPool(1024*1024 * 10, 100*1024*1024, 128, 1024, new int[] {64 * 1024}, 64 * 1024);
 		long i = pool.capacity();		
 		System.out.println(i);
 		

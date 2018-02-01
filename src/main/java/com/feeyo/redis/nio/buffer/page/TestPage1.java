@@ -8,7 +8,7 @@ public class TestPage1 {
 		
 		int allocTimes = 10240000;
 //		PageBufferPool pool = new PageBufferPool(pageSize, (short) 256, (short) 100);
-		ByteBufferPagePool pool = new ByteBufferPagePool(1024*100*100*10, 1024*100*200*10, 64 * 1024, 256,1024,2048);
+		ByteBufferPagePool pool = new ByteBufferPagePool(1024*100*100*10, 1024*100*200*10, 64 * 1024, 256, new int[] {1024},2048);
 		long start = System.currentTimeMillis();
 		for (int i = 0; i < allocTimes; i++) {
 			// System.out.println("allocate "+i);
