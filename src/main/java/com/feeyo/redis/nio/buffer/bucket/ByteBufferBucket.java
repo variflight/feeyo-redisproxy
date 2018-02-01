@@ -32,18 +32,20 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	
 	private final int chunkSize;
 	private long _shared = 0;
+	private boolean isExpand = false;
 
-	public ByteBufferBucket(ByteBufferBucketPool pool,int chunkSize) {
-		this(pool, chunkSize, 0);
+	public ByteBufferBucket(ByteBufferBucketPool pool, int chunkSize) {
+		this(pool, chunkSize, 0, false);
 	}
 	
-	public ByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count) {
+	public ByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand) {
 		
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
 		
 		this.count = new AtomicInteger(count);
 		this.usedCount = new AtomicInteger(0);
+		this.isExpand = isExpand;
 		
 		this.bufferReferencMap = new ConcurrentHashMap<Long, ByteBufferReference>(  (int)(count * 1.6) );
 		
@@ -86,23 +88,27 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			}
 		}
 		
-		// 桶内内存块不足，创建新的块
-		synchronized ( _lock ) {
+		// 是否支持自动扩展
+		if ( isExpand ) {
 			
-			// 容量阀值
-			long poolUsed = bufferPool.getUsedBufferSize().get();
-			// chunkSize 在1兆以内，并且direct byte buffer使用容量小于最大容量，可以扩容
-			if ( chunkSize <= 1024 * 1024 && ( poolUsed + chunkSize ) < bufferPool.getMaxBufferSize()) { 
-				bb = ByteBuffer.allocateDirect( chunkSize );
-
-				this.count.incrementAndGet();
-				this.usedCount.incrementAndGet();
-				bufferPool.getUsedBufferSize().addAndGet( chunkSize );
-			} 
-			
-			return bb;
+			// 桶内内存块不足，创建新的块
+			synchronized ( _lock ) {
+				
+				// 容量阀值
+				long poolUsed = bufferPool.getUsedBufferSize().get();
+				if (  ( poolUsed + chunkSize ) < bufferPool.getMaxBufferSize()) { 
+					bb = ByteBuffer.allocateDirect( chunkSize );
+					this.count.incrementAndGet();
+					this.usedCount.incrementAndGet();
+					bufferPool.getUsedBufferSize().addAndGet( chunkSize );
+				} 
+				
+				return bb;
+			}
 		}
 		
+		return null;
+			
 	}
 
 	@SuppressWarnings("restriction")

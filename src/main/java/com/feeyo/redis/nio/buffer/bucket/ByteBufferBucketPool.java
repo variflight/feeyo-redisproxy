@@ -48,7 +48,8 @@ public class ByteBufferBucketPool extends BufferPool {
 		for (int i = 0; i < bucketsCount; i++) {
 			chunkSize += increments[i >= increments.length ? 0 : i];
 			int chunkCount = (int) (bucketBufferSize / chunkSize);
-			ByteBufferBucket bucket = new ByteBufferBucket(this, chunkSize, chunkCount);
+			boolean isExpand =  chunkSize <= 262144 ? true: false; 	// 256K内的块 支持自动扩容
+			ByteBufferBucket bucket = new ByteBufferBucket(this, chunkSize, chunkCount, isExpand);
 			this._buckets.put(bucket.getChunkSize(), bucket);
 		}
 		
