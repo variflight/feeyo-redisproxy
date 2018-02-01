@@ -155,7 +155,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 				
 				//
 				bufferReference.reset();
-				LOGGER.info("buffer re. buffer: {}", bufferReference);
+				LOGGER.warn("buffer re. buffer: {}", bufferReference);
 			}
 		}
 	}
