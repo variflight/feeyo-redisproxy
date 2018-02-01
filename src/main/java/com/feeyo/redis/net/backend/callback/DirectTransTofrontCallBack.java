@@ -21,9 +21,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  *
  */
 public class DirectTransTofrontCallBack extends AbstractBackendCallback {
-	
-	protected RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
-	
+
 	private static Logger LOGGER = LoggerFactory.getLogger( DirectTransTofrontCallBack.class );
 	
 	// 写入到前端
@@ -99,6 +97,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 		// 应答解析
+		RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
 		List<RedisResponse> resps = decoder.decode( byteBuff );
 		if ( resps != null ) {
 		

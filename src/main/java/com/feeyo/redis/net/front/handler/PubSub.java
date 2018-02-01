@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisResponse;
+import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
 import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
@@ -60,7 +61,9 @@ public class PubSub  {
 			DirectTransTofrontCallBack callback = new DirectTransTofrontCallBack() {
 				@Override
 				public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+					
 					// 应答解析
+					RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
 					List<RedisResponse> resps = decoder.decode(byteBuff);
 					if (resps != null) {
 						// 写入至前端
