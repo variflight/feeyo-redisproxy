@@ -97,21 +97,23 @@ public class RedisEngineCtx {
         int decomposeBufferSize = decomposeBufferSizeString == null ? 64 * 1024 : Integer.parseInt( decomposeBufferSizeString ); 
         
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
-//        int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
+        //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
         
-        int[] increments;
-        if (incrementString == null) {
-        		increments=new int[] {1024};
-        } else {
-        		String[] incrementStrings = incrementString.split(",");
-        		increments = new int[incrementStrings.length];
-        		int i = 0;
-        		for (String str : incrementStrings) {
-        			increments[i] = Integer.parseInt( str ); 
-        			
-        			i++;
-        		}
-        }
+		int[] increments = null;
+		if ( incrementString == null ) {
+			increments = new int[] { 1024 };
+			
+		} else {
+			String[] incrementStrings = incrementString.split(",");
+			if ( incrementStrings == null || incrementStrings.length == 0 ) {
+				increments = new int[] { 1024 };
+			} else {
+				increments = new int[ incrementStrings.length ];
+				for (int i = 0; i < incrementStrings.length; i++ ) {
+					increments[i] = Integer.parseInt( incrementStrings[i]);
+				}
+			}
+		}
         
         int maxChunkSize = maxChunkSizeString == null ? 64 * 1024 : Integer.parseInt( maxChunkSizeString ); 
         
