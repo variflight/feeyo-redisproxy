@@ -1,7 +1,7 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
-import java.util.Map.Entry;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,7 +23,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	
 	private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<ByteBuffer>();
 	
-	private final ConcurrentHashMap<Long, ByteBufferReference> bufferReferencMap;
+	private final ConcurrentHashMap<Long, ByteBufferReference> references;
 	
 	private Object _lock = new Object();
 	
@@ -47,7 +47,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		this.usedCount = new AtomicInteger(0);
 		this.isExpand = isExpand;
 		
-		this.bufferReferencMap = new ConcurrentHashMap<Long, ByteBufferReference>(  (int)(count * 1.6) );
+		this.references = new ConcurrentHashMap<Long, ByteBufferReference>(  (int)(count * 1.6) );
 		
 		// 初始化
 		for(int j = 0; j < count; j++ ) {
@@ -64,10 +64,10 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		if (bb != null) {
 			try {
 				long address = ((sun.nio.ch.DirectBuffer) bb).address();
-				ByteBufferReference reference = bufferReferencMap.get( address );
+				ByteBufferReference reference = references.get( address );
 				if (reference == null) {
 					reference = new ByteBufferReference( address, bb );
-					bufferReferencMap.put(address, reference);
+					references.put(address, reference);
 				}
 				
 				// 检测
@@ -121,10 +121,10 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		
 		try {
 			long address = ((sun.nio.ch.DirectBuffer) buf).address();
-			ByteBufferReference reference = bufferReferencMap.get(address);
+			ByteBufferReference reference = references.get(address);
 			if ( reference == null ) {
 				 reference = new ByteBufferReference( address, buf );
-				 bufferReferencMap.put(address, reference);
+				 references.put(address, reference);
 				 
 			} else {
 				// 如果不能回收，则返回
@@ -145,25 +145,25 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	/**
-	 * buffer 引用检测
+	 * buffer 引用释放
 	 */
-	public void referenceCheck() {
+	public void referenceRelease() {
 		
-		for (Entry<Long, ByteBufferReference> entry : bufferReferencMap.entrySet()) {
-			ByteBufferReference bufferReference = entry.getValue();
-			if ( bufferReference.isTimeout() ) {
+		Iterator<ByteBufferReference> it = references.values().iterator();
+		while( it.hasNext() ) {
+			ByteBufferReference ref = it.next();
+			if ( ref.isTimeout() ) {
 				
-				ByteBuffer buf = bufferReference.getByteBuffer();
+				ByteBuffer todoBuffer = ref.getByteBuffer();
+				references.remove( ref.getAddress() );
 				
-				bufferReferencMap.remove(entry.getKey());
-				buf.clear();
-				queueOffer( buf );
+				todoBuffer.clear();
+				queueOffer( todoBuffer );
 				_shared++;
 				
 				usedCount.decrementAndGet();
-				
 				//
-				LOGGER.warn("buffer re. buffer: {}", bufferReference);
+				LOGGER.warn("##buffer reference release : {}", ref);
 			}
 		}
 	}

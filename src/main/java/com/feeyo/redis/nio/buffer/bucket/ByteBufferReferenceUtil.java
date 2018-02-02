@@ -22,16 +22,15 @@ public class ByteBufferReferenceUtil {
 	public static void referenceCheck(TreeMap<Integer, ByteBufferBucket> buckets) {
 		
 		// 5 分钟
-		referenceExecutor.scheduleAtFixedRate(new ReferenceCheckTask(buckets), 
-				120L, 300L, TimeUnit.SECONDS);
+		referenceExecutor.scheduleAtFixedRate(new ReleaseTask(buckets), 120L, 300L, TimeUnit.SECONDS);
 	}
 	
-	private static final class ReferenceCheckTask implements Runnable {
+	private static final class ReleaseTask implements Runnable {
 		
 		private final TreeMap<Integer, ByteBufferBucket> buckets;
 		private final AtomicBoolean checking = new AtomicBoolean( false );
 		
-		ReferenceCheckTask(TreeMap<Integer, ByteBufferBucket> buckets) {
+		ReleaseTask(TreeMap<Integer, ByteBufferBucket> buckets) {
 			this.buckets = buckets;
 		}
 
@@ -46,7 +45,7 @@ public class ByteBufferReferenceUtil {
 				Iterator<ByteBufferBucket> it = buckets.values().iterator();
 				while( it.hasNext() ) {
 					ByteBufferBucket bucket = it.next();
-					bucket.referenceCheck();
+					bucket.referenceRelease();
 				}
 			} catch (Exception e) {
 				LOGGER.warn("##referenceCheck err:", e);
