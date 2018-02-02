@@ -145,9 +145,9 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	/**
-	 * buffer 引用释放
+	 * 错误 buffer 的释放
 	 */
-	public void referenceRelease() {
+	public void todoBufferRelease() {
 		
 		Iterator<ByteBufferReference> it = references.values().iterator();
 		while( it.hasNext() ) {

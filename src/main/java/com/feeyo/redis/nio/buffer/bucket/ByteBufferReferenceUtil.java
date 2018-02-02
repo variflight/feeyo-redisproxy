@@ -45,7 +45,7 @@ public class ByteBufferReferenceUtil {
 				Iterator<ByteBufferBucket> it = buckets.values().iterator();
 				while( it.hasNext() ) {
 					ByteBufferBucket bucket = it.next();
-					bucket.referenceRelease();
+					bucket.todoBufferRelease();
 				}
 			} catch (Exception e) {
 				LOGGER.warn("##referenceCheck err:", e);
