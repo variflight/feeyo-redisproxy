@@ -326,38 +326,7 @@ public abstract class Connection implements ClosableConnection {
 			writing.set(false);	
 		}
 	}
-	
-	private ByteBuffer writeToBuffer(ByteBuffer srcBuf, ByteBuffer destBuf) {
-		
-		int offset = 0;
-		
-		int length = srcBuf.position();			// 原始数据长度		 
-		int remaining = destBuf.remaining();  	// buffer 可写长度
-		while (length > 0) {
-			
-			if (remaining >= length) {
-				 for (int i = offset; i < length; i++)
-					 destBuf.put(srcBuf.get(i));
-				break;
-				
-			} else {
-				
-				int end = offset + remaining;
-		        for (int i = offset; i < end; i++)
-		        	destBuf.put( srcBuf.get(i) );
-						
-				writeNotSend( destBuf);	
-				
-				int chunkSize = NetSystem.getInstance().getBufferPool().getMinChunkSize();
-				destBuf = allocate( chunkSize );
-				offset += remaining;
-				length -= remaining;
-				remaining = destBuf.remaining();
-				continue;
-			}
-		}
-		return destBuf;
-	}
+
 	
 	private ByteBuffer writeToBuffer(byte[] src, ByteBuffer buffer) {
 		int offset = 0;
@@ -398,35 +367,12 @@ public abstract class Connection implements ClosableConnection {
 		
 		ByteBuffer buffer = allocate( size );
 		buffer = writeToBuffer(data, buffer);
-		write( buffer, false );
+		write( buffer );
 	}
 	
-	/**
-	 * @param buffer
-	 * @param isDecompose 是否分解 buffer， ( 1 to N) 
-	 */
-	public void write(ByteBuffer srcBuffer, boolean isDecompose) {
+	public void write(ByteBuffer srcBuffer) {
 		
-		if ( !isDecompose ) {
-			this.writeQueue.offer( srcBuffer );
-			
-		} else {
-			
-			// 大的 buffer 分解成多个小的 buffer
-			try  {
-				int size = srcBuffer.position();  // write PTR
-				if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
-					size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
-				}
-				
-				ByteBuffer destBuffer = allocate( size );
-				destBuffer = writeToBuffer(srcBuffer, destBuffer);
-				write( destBuffer, false );
-				
-			} finally {
-				recycle( srcBuffer );	// 回收
-			}
-		}
+		this.writeQueue.offer( srcBuffer );
 		
 		try {
 			this.doNextWriteCheck();
