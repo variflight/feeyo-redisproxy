@@ -9,12 +9,12 @@
 	<property name="minBufferSize">167772160</property>
 	<property name="decomposeBufferSize">65536</property>
 	<property name="minChunkSize">0</property>
-	<!-- 
 	<property name="increment">1024,3072,12288,49152,65536,131072,786432,3145728,4194304,8388608</property>
 	<property name="maxChunkSize">16777216</property>
-	 -->
+	<!-- 
 	<property name="increment">1024</property>
 	<property name="maxChunkSize">65536</property>
+	 -->
 
 	
 	<!-- Boss/Timer size -->
