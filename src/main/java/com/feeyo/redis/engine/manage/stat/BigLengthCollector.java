@@ -110,6 +110,7 @@ public class BigLengthCollector implements StatCollector {
 								bigLen = new BigLength();
 								bigLen.cmd = cmd;
 								bigLen.key = key;
+								bigLengthMap.put(key, bigLen);
 							}
 							bigLen.length.set( (int)length );
 							
@@ -119,18 +120,19 @@ public class BigLengthCollector implements StatCollector {
 						
 						
 						//###########################################
-						BigLength min = null;
-						for (BigLength bigLen : bigLengthMap.values()) {
-							if ( min == null ) {
-								min = bigLen;
-							} else {
-								if (bigLen.length.get() < min.length.get()) {
+						if (bigLengthMap.size() > 100) {
+							BigLength min = null;
+							for (BigLength bigLen : bigLengthMap.values()) {
+								if ( min == null ) {
 									min = bigLen;
+								} else {
+									if (bigLen.length.get() < min.length.get()) {
+										min = bigLen;
+									}
 								}
 							}
-						}
-						if ( min != null)
 							bigLengthMap.remove( min.key );
+						}
 						
 						
 					} catch (JedisDataException e1) {
