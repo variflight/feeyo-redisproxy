@@ -60,6 +60,7 @@ import com.feeyo.util.Versions;
 public class Manage {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( Manage.class );
+	private static String JAVA_BIN_PATH = "/usr/local/software/jdk1.7.0_71/bin/";
 	
 	private static List<String> getOS_JVM_INFO(String cmd) {
 		
@@ -150,7 +151,7 @@ public class Manage {
 				// /usr/local/software/jdk1.7.0_71/bin/jstack
 				StringBuffer cmdBuffer = new StringBuffer();
 				if ( JavaUtils.isLinux() )
-					cmdBuffer.append( "/usr/local/software/jdk1.7.0_71/bin/" );
+					cmdBuffer.append( JAVA_BIN_PATH );
 				
 				// JVM JSTACK
 				if ( arg2.equalsIgnoreCase("JSTACK") ) {
@@ -929,6 +930,11 @@ public class Manage {
 							c.close("manage close");
 						}
 					}
+					
+					return "+OK\r\n".getBytes();
+				} else if ( arg2.equalsIgnoreCase("PATH") ) {
+					
+					JAVA_BIN_PATH = new String( request.getArgs()[2] );
 					
 					return "+OK\r\n".getBytes();
 				}
