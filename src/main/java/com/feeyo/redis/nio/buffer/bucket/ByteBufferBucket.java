@@ -1,7 +1,9 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -149,27 +151,38 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	 */
 	public void releaseTimeoutBuffer() {
 		
-		Iterator<ByteBufferReference> it = references.values().iterator();
-		while( it.hasNext() ) {
-			ByteBufferReference ref = it.next();
+		
+		List<Long> timeoutAddrs = null;
+		
+		for (Entry<Long, ByteBufferReference> entry : references.entrySet()) {
+			ByteBufferReference ref = entry.getValue();
 			if ( ref.isTimeout() ) {
 				
-				//
-				boolean idDeleted = false;
-				ByteBufferReference oldRef = references.remove( ref.getAddress() );
-				if ( oldRef != null ) {
+				if ( timeoutAddrs == null )
+					timeoutAddrs = new ArrayList<Long>();
+				
+				timeoutAddrs.add( ref.getAddress() );
+			}
+		}
+		
+		//
+		if ( timeoutAddrs != null ) {
+			for(long addr: timeoutAddrs) {
+				boolean isRemoved = false;
+				ByteBufferReference addrRef = references.remove( addr );
+				if ( addrRef != null ) {
 					
-					ByteBuffer oldBuffer = oldRef.getByteBuffer();
+					ByteBuffer oldBuffer = addrRef.getByteBuffer();
 					oldBuffer.clear();
 					
 					queueOffer( oldBuffer );
 					_shared++;
 					usedCount.decrementAndGet();
-					idDeleted = true;
+					isRemoved = true;
 				} 
-
+		
 				//
-				LOGGER.warn("##buffer reference release addr:{}, idDeleted:{}", ref, idDeleted);
+				LOGGER.warn("##buffer reference release addr:{}, isRemoved:{}", addrRef, isRemoved);
 			}
 		}
 	}
