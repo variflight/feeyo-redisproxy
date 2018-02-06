@@ -145,25 +145,31 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	/**
-	 * 错误 buffer 的释放
+	 * 释放超时的 buffer
 	 */
-	public void todoBufferRelease() {
+	public void releaseTimeoutBuffer() {
 		
 		Iterator<ByteBufferReference> it = references.values().iterator();
 		while( it.hasNext() ) {
 			ByteBufferReference ref = it.next();
 			if ( ref.isTimeout() ) {
 				
-				ByteBuffer todoBuffer = ref.getByteBuffer();
-				references.remove( ref.getAddress() );
-				
-				todoBuffer.clear();
-				queueOffer( todoBuffer );
-				_shared++;
-				
-				usedCount.decrementAndGet();
 				//
-				LOGGER.warn("##buffer reference release : {}", ref);
+				boolean idDeleted = false;
+				ByteBufferReference oldRef = references.remove( ref.getAddress() );
+				if ( oldRef != null ) {
+					
+					ByteBuffer oldBuffer = oldRef.getByteBuffer();
+					oldBuffer.clear();
+					
+					queueOffer( oldBuffer );
+					_shared++;
+					usedCount.decrementAndGet();
+					idDeleted = true;
+				} 
+
+				//
+				LOGGER.warn("##buffer reference release addr:{}, idDeleted:{}", ref, idDeleted);
 			}
 		}
 	}
