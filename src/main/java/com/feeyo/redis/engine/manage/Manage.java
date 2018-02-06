@@ -60,7 +60,7 @@ import com.feeyo.util.Versions;
 public class Manage {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( Manage.class );
-	private static String JAVA_BIN_PATH = "/usr/local/software/jdk1.7.0_71/bin/";
+	private static String JAVA_BIN_PATH = "/usr/local/software/jdk1.7.0_72/bin/";
 	
 	private static List<String> getOS_JVM_INFO(String cmd) {
 		
