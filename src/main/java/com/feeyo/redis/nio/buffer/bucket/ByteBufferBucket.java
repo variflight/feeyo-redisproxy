@@ -175,10 +175,9 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 					ByteBuffer oldBuffer = addrRef.getByteBuffer();
 					oldBuffer.clear();
 					
-					queueOffer( oldBuffer );
+					isRemoved = queueOffer( oldBuffer );
 					_shared++;
 					usedCount.decrementAndGet();
-					isRemoved = true;
 				} 
 		
 				//
@@ -210,8 +209,8 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		return _shared;
 	}
 	
-	private void queueOffer(ByteBuffer buffer) {
-		this.buffers.offer( buffer );
+	private boolean queueOffer(ByteBuffer buffer) {
+		return this.buffers.offer( buffer );
 	}
 
 	private ByteBuffer queuePoll() {
