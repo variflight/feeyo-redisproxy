@@ -6,7 +6,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.feeyo.redis.config.loader.zk.ZkClient;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.nio.NetSystem;
@@ -19,7 +18,7 @@ import com.feeyo.util.Log4jInitializer;
  * redis-benchmark -p 8066 -c 100 -t set,get,lpush,LPOP,sAdd,spop,incr -n 500000 -a pwd01 --dbnum 1
  * redis-benchmark -p 8066 -c 100 -n 500000 -a pwd01
  * 
- * @author zhuam
+ * @author zhuam 
  *
  */
 
@@ -44,11 +43,6 @@ public class RedisServer {
          * 设置 LOG4J
          */
 		Log4jInitializer.configureAndWatch(System.getProperty("FEEYO_HOME"), "log4j.xml", 30000L);
-
-		/**
-		 * 初始化 zookeeper
-		 */
-		ZkClient.INSTANCE().init();
 
 		/**
 		 * 引擎初始化
@@ -82,7 +76,6 @@ public class RedisServer {
 			}			
 		}, 0L, 1 * 1000L, TimeUnit.MILLISECONDS);	
 		
-		
 		/**
 		 *  连接池有效性
 		 */
@@ -111,7 +104,7 @@ public class RedisServer {
 		 * 2、连接池过大、过小的动态调整
 		 */
 		heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
-			static final long TIMEOUT = 5 * 60 * 1000L;
+			static final long TIMEOUT = 2 * 60 * 1000L;
 			
 			@Override
 			public void run() {
@@ -126,7 +119,7 @@ public class RedisServer {
 					}
 				});
 			}			
-		}, 120L, 120L, TimeUnit.SECONDS);
+		}, 30L, 30L, TimeUnit.SECONDS);
 		
 		// CONSOLE 
 		System.out.println("Home directory=" + System.getProperty("FEEYO_HOME") + ", startup=" + System.currentTimeMillis());

@@ -5,11 +5,17 @@
 	<property name="reactorSize">4</property>
 	
 	<!-- Buffer chunk/total 65536-->
-	<property name="maxBufferSize">134217728</property>
-	<property name="minBufferSize">67108864</property>
+	<property name="maxBufferSize">335544320</property>
+	<property name="minBufferSize">167772160</property>
+	<property name="decomposeBufferSize">65536</property>
 	<property name="minChunkSize">0</property>
+	<!-- 
+	<property name="increment">1024,3072,12288,49152,65536,131072,786432,3145728,4194304,8388608</property>
+	<property name="maxChunkSize">16777216</property>
+	 -->
 	<property name="increment">1024</property>
 	<property name="maxChunkSize">65536</property>
+
 	
 	<!-- Boss/Timer size -->
 	<property name="bossSize">10</property>
@@ -23,10 +29,11 @@
 	<zookeeper>
 		<usingZk value="false" />
 		<autoActivation value="false" />
-		<zkHome value="/root/redis-proxy/conf/" />
-		<conf name="user.xml"/>
-		<conf name="pool.xml"/>
-		<conf name="server.xml"/>
+		<zkHome value="/root/redis-proxy/" />
+		<conf name="user.xml" />
+		<conf name="pool.xml" />
+		<conf name="mail.properties" />
 		<node ipAndPort="192.168.5.13:2181" />
 	</zookeeper>
-</redis>	
+</redis>
+

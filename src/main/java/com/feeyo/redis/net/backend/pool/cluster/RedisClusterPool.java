@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import com.feeyo.redis.config.PoolCfg;
@@ -14,7 +15,7 @@ import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-
+import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
@@ -252,16 +253,19 @@ public class RedisClusterPool extends AbstractPool {
 		return true;
 	}
 
+	private Random random = new Random();
+	
 	@Override
 	public PhysicalNode getPhysicalNode() {		
-		throw new UnsupportedOperationException("Not implemented");
+		int slot = random.nextInt( 16383 );
+		return getPhysicalNodeBySlot( slot );	// default slot 0
 	}
 
 	@Override
 	public PhysicalNode getPhysicalNode(String cmd, String key) {
 		int slot = 0;
 		if( key != null ) {
-			 slot = ClusterCRC16Util.getSlot( key, false);
+			 slot = ClusterCRC16Util.getSlot( key );
 		}
 		return getPhysicalNodeBySlot( slot );
 	}
@@ -270,7 +274,7 @@ public class RedisClusterPool extends AbstractPool {
 	public PhysicalNode getPhysicalNode(String cmd, byte[] key) {
 		int slot = 0;
 		if( key != null ) {
-			 slot = ClusterCRC16Util.getSlot( key, false);
+			 slot = ClusterCRC16Util.getSlot( key );
 		}
 		PhysicalNode node = getPhysicalNodeBySlot( slot );
 		return node;
@@ -481,10 +485,9 @@ public class RedisClusterPool extends AbstractPool {
 	public void heartbeatCheck(long timeout) {	
 		
 		// 心跳
-		for (Map.Entry<String, ClusterNode> entry : masters.entrySet()) {			
-			ClusterNode clusterNode = entry.getValue();
-			PhysicalNode physicalNode = clusterNode.getPhysicalNode();
+		for (ClusterNode clusterNode : masters.values()) {			
 			
+			PhysicalNode physicalNode = clusterNode.getPhysicalNode();
 			this.heartbeatCheck( physicalNode, timeout );
 		}
 	}
@@ -494,8 +497,8 @@ public class RedisClusterPool extends AbstractPool {
 		
 		// 心跳检测, 超时抛弃 
 		// --------------------------------------------------------------------------
-		long heartbeatTime = System.currentTimeMillis() - timeout;		
-		long closeTime = System.currentTimeMillis() - timeout * 2;
+		long heartbeatTime = TimeUtil.currentTimeMillis() - timeout;		
+		long closeTime = TimeUtil.currentTimeMillis() - (timeout * 2);
 		
 		LinkedList<RedisBackendConnection> heartBeatCons = getNeedHeartbeatCons(physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
 		if ( !heartBeatCons.isEmpty() ) { 			

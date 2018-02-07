@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class ClusterCRC16Util {
 
-	private static final int[] LOOKUP_TABLE = {0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5,
+	  private static final int[] LOOKUP_TABLE = {0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5,
 	          0x60C6, 0x70E7, 0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF, 0x1231,
 	          0x0210, 0x3273, 0x2252, 0x52B5, 0x4294, 0x72F7, 0x62D6, 0x9339, 0x8318, 0xB37B, 0xA35A,
 	          0xD3BD, 0xC39C, 0xF3FF, 0xE3DE, 0x2462, 0x3443, 0x0420, 0x1401, 0x64E6, 0x74C7, 0x44A4,
@@ -32,17 +32,16 @@ public final class ClusterCRC16Util {
 	          0xBB9A, 0x4A75, 0x5A54, 0x6A37, 0x7A16, 0x0AF1, 0x1AD0, 0x2AB3, 0x3A92, 0xFD2E, 0xED0F,
 	          0xDD6C, 0xCD4D, 0xBDAA, 0xAD8B, 0x9DE8, 0x8DC9, 0x7C26, 0x6C07, 0x5C64, 0x4C45, 0x3CA2,
 	          0x2C83, 0x1CE0, 0x0CC1, 0xEF1F, 0xFF3E, 0xCF5D, 0xDF7C, 0xAF9B, 0xBFBA, 0x8FD9, 0x9FF8,
-	          0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0};
+	          0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0,};
 
 	private ClusterCRC16Util() {
 		throw new InstantiationError("Must not instantiate this class");
 	}
 
-	public static int getSlot(String key, boolean isHashTag) {	
+	public static int getSlot(String key) {	
 		
-		if ( isHashTag )
-			key = ClusterHashTagUtil.getHashTag(key);		
-		
+		key = ClusterHashTagUtil.getHashTag(key);		
+
 		// optimization with modulo operator with power of 2
 		// equivalent to getCRC16(key) % 16384
 		
@@ -53,29 +52,26 @@ public final class ClusterCRC16Util {
 		return getCRC16(key) & 16383;
 	}
 	
-	public static int getSlot(byte[] key, boolean isHashTag) {		
-		if ( isHashTag ) {			
-			int s = -1;
-			int e = -1;
-			boolean sFound = false;
-			for (int i = 0; i < key.length; i++) {
-				if (key[i] == '{' && !sFound) {
-					s = i;
-					sFound = true;
-				}
-				if (key[i] == '}' && sFound) {
-					e = i;
-					break;
-				}
+	public static int getSlot(byte[] key) {		
+		int s = -1;
+		int e = -1;
+		boolean sFound = false;
+		for (int i = 0; i < key.length; i++) {
+			if (key[i] == '{' && !sFound) {
+				s = i;
+				sFound = true;
 			}
-			if (s > -1 && e > -1 && e != s + 1) {
-				return getCRC16(key, s + 1, e) & 16383; // (16384 - 1);
+			if (key[i] == '}' && sFound) {
+				e = i;
+				break;
 			}
+		}
+		if (s > -1 && e > -1 && e != s + 1) {
+			return getCRC16(key, s + 1, e) & 16383; // (16384 - 1);
 		}
 		
 		return getCRC16(key) & 16383; //(16384 - 1);
 	}
-
 
 	public static int getCRC16(String key) {
 		byte[] bytesKey = key.getBytes(StandardCharsets.UTF_8);

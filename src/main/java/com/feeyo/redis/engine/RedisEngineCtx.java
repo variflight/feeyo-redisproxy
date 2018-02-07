@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
@@ -15,8 +16,7 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.loader.zk.ZkClient;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
-import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
-import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
+import com.feeyo.redis.net.backend.pool.PoolFactory;
 import com.feeyo.redis.net.front.RedisFrontendConnectionFactory;
 import com.feeyo.redis.nio.NIOAcceptor;
 import com.feeyo.redis.nio.NIOConnector;
@@ -51,11 +51,13 @@ public class RedisEngineCtx {
 	private volatile Map<String, UserCfg> userMap = null;
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
+	private volatile Properties mailProperty = null;
 
 	// backup
 	private volatile  Map<Integer, AbstractPool> _poolMap = null;
 	private volatile  Map<String, UserCfg> _userMap = null;
 	private volatile  Map<String, String> _serverMap = null;
+	private volatile  Properties _mailProperty = null;
 	
 	private ReentrantLock lock;
 	
@@ -68,6 +70,7 @@ public class RedisEngineCtx {
 		this.serverMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
 		this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 		this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
+		this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 		
 		
 		// 1、Buffer 配置
@@ -76,6 +79,7 @@ public class RedisEngineCtx {
         String reactorSizeString = this.serverMap.get("reactorSize");
         String minBufferSizeString = this.serverMap.get("minBufferSize");
         String maxBufferSizeString = this.serverMap.get("maxBufferSize");
+        String decomposeBufferSizeString = this.serverMap.get("decomposeBufferSize");
         
         String minChunkSizeString = this.serverMap.get("minChunkSize"); 
         String incrementString = this.serverMap.get("increment"); 
@@ -90,15 +94,35 @@ public class RedisEngineCtx {
         
         long minBufferSize = minBufferSizeString == null ? 16384 * 1000 : Long.parseLong( minBufferSizeString );
         long maxBufferSize = maxBufferSizeString == null ? 16384 * 10000 : Long.parseLong( maxBufferSizeString );
+        int decomposeBufferSize = decomposeBufferSizeString == null ? 64 * 1024 : Integer.parseInt( decomposeBufferSizeString ); 
+        
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
-        int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
+        //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
+        
+		int[] increments = null;
+		if ( incrementString == null ) {
+			increments = new int[] { 1024 };
+			
+		} else {
+			String[] incrementStrings = incrementString.split(",");
+			if ( incrementStrings == null || incrementStrings.length == 0 ) {
+				increments = new int[] { 1024 };
+			} else {
+				increments = new int[ incrementStrings.length ];
+				for (int i = 0; i < incrementStrings.length; i++ ) {
+					increments[i] = Integer.parseInt( incrementStrings[i]);
+				}
+			}
+		}
+        
         int maxChunkSize = maxChunkSizeString == null ? 64 * 1024 : Integer.parseInt( maxChunkSizeString ); 
         
         int bossSize = bossSizeString == null ? 10 : Integer.parseInt( bossSizeString ); 
         int timerSize = timerSizeString == null ? 6 : Integer.parseInt( timerSizeString ); 
 
         //ByteBufferPagePool ByteBufferBucketPool
-        this.bufferPool = new ByteBufferBucketPool(minBufferSize, maxBufferSize, minChunkSize, increment, maxChunkSize);   
+        this.bufferPool = new ByteBufferBucketPool(minBufferSize, maxBufferSize, decomposeBufferSize,
+        		minChunkSize, increments, maxChunkSize);   
        
         this.virtualMemoryService = new VirtualMemoryService();
         this.virtualMemoryService.start();
@@ -140,11 +164,11 @@ public class RedisEngineCtx {
         this.backendRedisConFactory = new RedisBackendConnectionFactory();
         
 		this.poolMap = new HashMap<Integer, AbstractPool>( poolCfgMap.size() );
-		for (final PoolCfg poolCfg : poolCfgMap.values()) {					
-			AbstractPool pool = poolCfg.getType() == 0 ?  new RedisStandalonePool( poolCfg ) : new RedisClusterPool( poolCfg );	
+		for (final PoolCfg poolCfg : poolCfgMap.values()) {
+			AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
 			pool.startup();
-            this.poolMap.put(pool.getId(), pool);
-        }
+			this.poolMap.put(pool.getId(), pool);
+		}
         
         // 5、前端配置, 开启对外提供服务
         // ---------------------------------------------------------------------------
@@ -157,6 +181,10 @@ public class RedisEngineCtx {
         Iterator<String> it = userMap.keySet().iterator();
         String authString  = it.hasNext() ? it.next() : "";
         KeepAlived.check(port, authString);
+        
+		// 7, zk startup
+//		ZkClient.INSTANCE().init();
+//		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
 	}
 	
 	public byte[] reloadAll() {
@@ -177,6 +205,7 @@ public class RedisEngineCtx {
 			Map<String, String> newServerMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
 			Map<Integer, PoolCfg> newPoolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 			Map<String, UserCfg> newUserMap = ConfigLoader.loadUserMap(newPoolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
+			Properties newMailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 			
 			// 2、用户自检
 			for( UserCfg userCfg: newUserMap.values() ) {
@@ -197,8 +226,8 @@ public class RedisEngineCtx {
 			
 			// 3 连接池自检 
 			Map<Integer, AbstractPool> newPoolMap = new HashMap<Integer, AbstractPool>( newPoolCfgMap.size() );
-			for (final PoolCfg poolCfg : newPoolCfgMap.values()) {					
-				AbstractPool pool = poolCfg.getType() == 0 ?  new RedisStandalonePool( poolCfg ) : new RedisClusterPool( poolCfg );
+			for (final PoolCfg poolCfg : newPoolCfgMap.values()) {
+				AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
 				newPoolMap.put(pool.getId(), pool);
 	        }
 			
@@ -222,12 +251,14 @@ public class RedisEngineCtx {
 				this._userMap = userMap;
 				this._poolMap = poolMap;
 				this._serverMap = serverMap;
+				this._mailProperty = mailProperty;
 				
 				
 				//切换 new
 				this.poolMap = newPoolMap;
 				this.userMap = newUserMap;
 				this.serverMap = newServerMap;
+				this.mailProperty = newMailProperty;
 				
 				// server.xml 部分设置生效
 				String frontIdleTimeoutString = this.serverMap.get("frontIdleTimeout");
@@ -241,7 +272,7 @@ public class RedisEngineCtx {
 		        NetSystem.getInstance().setNetConfig( systemConfig );
 				
 		        // zk 重新加载
-	            ZkClient.INSTANCE().reloadZkCfg();
+//	            ZkClient.INSTANCE().reloadZkCfg();
 
 	            //清理 old
 				for (final AbstractPool pool : _poolMap.values()) {	
@@ -310,10 +341,23 @@ public class RedisEngineCtx {
 			NetSystem.getInstance().setNetConfig( systemConfig );
 
 			// 4. 生效新的 ZK
-			ZkClient.INSTANCE().reloadZkCfg();
+//			ZkClient.INSTANCE().reloadZkCfg();
 			
 			return "+OK\r\n".getBytes();
 		} finally {
+			lock.unlock();
+		}
+	}
+	
+	public byte[] reloadMailProperties() {
+		final ReentrantLock lock = this.lock;
+		lock.lock();
+		try {
+			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
+			ZkClient.INSTANCE().reloadZkCfg();
+			
+			return "+OK\r\n".getBytes();
+		}finally {
 			lock.unlock();
 		}
 	}
@@ -328,7 +372,7 @@ public class RedisEngineCtx {
 			// 2. 初始化新的 pool
 			Map<Integer, AbstractPool> newPoolMap = new HashMap<Integer, AbstractPool>( newPoolCfgMap.size() );
 			for (final PoolCfg poolCfg : newPoolCfgMap.values()) {
-				AbstractPool pool = poolCfg.getType() == 0 ?  new RedisStandalonePool( poolCfg ) : new RedisClusterPool( poolCfg );
+				AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
 				newPoolMap.put(pool.getId(), pool);
 			}
 
@@ -390,6 +434,10 @@ public class RedisEngineCtx {
 		return this.userMap;
 	}
 	
+	public Properties getMailProperties() {
+		return this.mailProperty;
+	}
+	
 	public Map<Integer, AbstractPool> getBackupPoolMap() {
 		return this._poolMap;
 	}
@@ -404,6 +452,10 @@ public class RedisEngineCtx {
 
 	public Map<String, String> getBackupServerMap() {
 		return this._serverMap;
+	}
+	
+	public Properties getBackupMailProperties() {
+		return this._mailProperty;
 	}
 	
 	public static RedisEngineCtx INSTANCE() {

@@ -16,17 +16,17 @@ import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.codec.RedisRequestUnknowException;
 import com.feeyo.redis.engine.manage.Manage;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.net.backend.callback.BackendCallback;
+import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
+import com.feeyo.redis.net.front.handler.BlockCommandHandler;
+import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
-import com.feeyo.redis.net.front.handler.DelMultiKeyCommandHandler;
-import com.feeyo.redis.net.front.handler.MGetSetCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
-import com.feeyo.redis.net.front.route.AutoRespNotTransException;
+import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
+import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
-import com.feeyo.redis.net.front.route.ManageRespNotTransException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.net.front.route.RouteService;
@@ -42,11 +42,14 @@ public class RedisFrontSession {
 	public static final byte[] ERR_NO_AUTH_PASSWORD = "-ERR invalid password.\r\n".getBytes();
 	public static final byte[] ERR_NO_AUTH_NO_PASSWORD = "-ERR Client sent AUTH, but no password is set\r\n".getBytes();
 	public static final byte[] ERR_PIPELINE_BACKEND = "-ERR pipeline error\r\n".getBytes();
+	public static final byte[] ERR_INVALID_COMMAND = "-ERR invalid command exist.\r\n".getBytes();
 	
 	public static final String NOT_SUPPORTED = "Not supported.";
 	public static final String NOT_ADMIN_USER = "Not supported:manage cmd but not admin user.";
 	public static final String UNKNOW_COMMAND = "Unknow command.";
-	public static final String NOT_READ_CMD = "Not read cmd.";
+	public static final String NOT_READ_COMMAND = "Not read command.";
+
+	
 	
 	// PUBSUB
 	private PubSub pubsub = null;
@@ -61,9 +64,9 @@ public class RedisFrontSession {
 	private RedisRequestDecoderV5 requestDecoder = new RedisRequestDecoderV5();
 	
 	private AbstractCommandHandler defaultCommandHandler;
-	private AbstractCommandHandler delMultiKeyCommandHandler;
-	private AbstractCommandHandler mGetSetCommandHandler;
+	private AbstractCommandHandler segmentCommandHandler;
 	private AbstractCommandHandler pipelineCommandHandler;
+	private AbstractCommandHandler blockCommandHandler;
 	
 	private AbstractCommandHandler currentCommandHandler;
 	
@@ -80,17 +83,73 @@ public class RedisFrontSession {
 		// 默认需要立即释放
 		boolean isImmediateReleaseConReadLock = true;
 		
+		List<RedisRequest> requests = null;
+		RedisRequest firstRequest = null;
+		
 		try {
 			// parse
-			List<RedisRequest> requests = requestDecoder.decode(byteBuff);
-			if (requests == null ) {
+			requests = requestDecoder.decode(byteBuff);
+			if (requests == null || requests.size() == 0 ) {
 				return;
 			}
 			
-			// 认证检测
+			firstRequest = requests.get(0);
+			
+			// 非pipeline 情况下， 特殊指令前置优化性能
+			if ( requests.size() ==  1 ) {
+				
+			
+				byte[] cmd = firstRequest.getArgs()[0];
+				int len = cmd.length;
+				if ( len == 4 ) {
+					
+					// AUTH
+					if ( (cmd[0] == 'A' || cmd[0] == 'a') && (cmd[1] == 'U' || cmd[1] == 'u') 
+							&& (cmd[2] == 'T' || cmd[2] == 't') && (cmd[3] == 'H' || cmd[3] == 'h')   ) {
+						
+						if( firstRequest.getArgs().length < 2 ) {
+							frontCon.write( ERR_NO_AUTH_NO_PASSWORD );
+							return;
+						}
+						
+						auth( firstRequest );
+						return;
+					
+					// ECHO
+					} else if ( (cmd[0] == 'E' || cmd[0] == 'e') && (cmd[1] == 'C' || cmd[1] == 'c') 
+							 && (cmd[2] == 'H' || cmd[2] == 'h') && (cmd[3] == 'O' || cmd[3] == 'o') ) {
+						echo( firstRequest );
+						return;
+
+					// PING
+					} else if ( (cmd[0] == 'P' || cmd[0] == 'p') && (cmd[1] == 'I' || cmd[1] == 'i') 
+							 && (cmd[2] == 'N' || cmd[2] == 'n') && (cmd[3] == 'G' || cmd[3] == 'g') ) {
+						frontCon.write(PONG);
+						return;
+						
+					// QUIT
+					} else if ( (cmd[0] == 'Q' || cmd[0] == 'q') && (cmd[1] == 'U' || cmd[1] == 'u') 
+							 && (cmd[2] == 'I' || cmd[2] == 'i') && (cmd[3] == 'T' || cmd[3] == 't') ) {
+						frontCon.write(OK);
+						frontCon.close("quit");
+						return;
+					}
+					
+				} else if ( len == 6 ) {
+					// SELECT
+					if ( (cmd[0] == 'S' || cmd[0] == 's') && (cmd[1] == 'E' || cmd[1] == 'e') 
+							 && (cmd[2] == 'L' || cmd[2] == 'l') && (cmd[3] == 'E' || cmd[3] == 'e')
+							 && (cmd[4] == 'C' || cmd[4] == 'c') && (cmd[5] == 'T' || cmd[5] == 't')) {
+						frontCon.write(OK);
+						return;
+					}
+				}
+				
+			} 
+			
+			// 认证
 			if ( !frontCon.isAuthenticated() ) {
 				
-				RedisRequest firstRequest = requests.get(0);
 				byte[] cmd = firstRequest.getArgs()[0];
 				if (cmd.length == 4 && 
 						(cmd[0] == 'A' || cmd[0] == 'a') && 
@@ -112,8 +171,27 @@ public class RedisFrontSession {
 			
 			// 执行路由
 			try {
-
+				
+				// 管理指令
+				if ( frontCon.getUserCfg().isAdmin() && requests.size() == 1 ) {
+					
+					String cmd = new String( firstRequest.getArgs()[0] ).toUpperCase();
+					RedisRequestPolicy policy = CommandParse.getPolicy( cmd );
+					
+					if( policy.getCategory() == CommandParse.MANAGE_CMD ) {
+						byte[] buff = Manage.execute(firstRequest, frontCon);
+						if (buff != null)
+							frontCon.write(buff);
+						return;
+					}
+				}
+				
 				RouteResult routeResult = RouteService.route(requests, frontCon);
+				if ( routeResult == null ) {
+					frontCon.write( "-ERR unkonw command \r\n".getBytes() );
+					return;
+				}
+				
 				boolean intercepted = interceptPubsub( routeResult );
 				if ( intercepted ) {
 					return;
@@ -129,42 +207,16 @@ public class RedisFrontSession {
 				
 			} catch (InvalidRequestExistsException e) {
 				
-				// 指令策略未通过
-				List<RedisRequestPolicy> requestPolicys = e.getRequestPolicys();
-				if ( requestPolicys != null ) {
-					
-					if ( requestPolicys.size() > 1 ) {
-						
-						StringBuffer sb = new StringBuffer();
-						sb.append("-ERR ");
-						for (int i = 0; i < requestPolicys.size(); i++) {
-							String resp = getInvalidCmdResponse(requestPolicys.get(i), frontCon.getUserCfg().isAdmin());
-							if (resp != null) {
-								sb.append("NO: ").append(i+1).append(", ").append(resp);
-							}
-						}
-						sb.append("\r\n");
-						frontCon.write( sb.toString().getBytes() );
-						
-					} else {
-						// 此处用于兼容
-						frontCon.write( OK );
-					}
-					
+				if ( requests.size() > 1 ) {
+					frontCon.write( ERR_INVALID_COMMAND );
 				} else {
-					frontCon.write( ("-ERR " + e.getMessage()+"\r\n").getBytes() );
+					// 此处用于兼容
+					frontCon.write( OK );
 				}
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
 				
-			} catch(ManageRespNotTransException e) {
-				
-				// 管理指令
-				RedisRequest request = e.getRequests().get(0);
-				byte[] buff = Manage.execute(request, frontCon);
-				frontCon.write(buff);
-
-			} catch (AutoRespNotTransException e) {
+			} catch (FullRequestNoThroughtException e) {
 
 				//  自动响应指令
 				for (int i = 0; i < e.getRequests().size(); i++) {
@@ -194,16 +246,10 @@ public class RedisFrontSession {
 			
 		} catch (RedisRequestUnknowException e0) {
 			frontCon.close("unknow redis client .");
-			return;
 
 		} catch (IOException e1) {
-			LOGGER.error("front handle err:", e1);
-			try {
-				String error = "-ERR " + e1.getMessage() + ".\r\n";
-				frontCon.write(error.getBytes());
-			} catch (IOException e) {
-			}
-			return;
+			String error = "-ERR " + e1.getMessage() + ".\r\n";
+			frontCon.write(error.getBytes());
 			
 		} finally {
 			
@@ -230,25 +276,17 @@ public class RedisFrontSession {
 			return defaultCommandHandler;
 			
 		case DEL_MULTIKEY:
-			if (delMultiKeyCommandHandler == null) {
-				synchronized (_lock) {
-					if (delMultiKeyCommandHandler == null) {
-						delMultiKeyCommandHandler = new DelMultiKeyCommandHandler( frontCon );
-					}
-				}
-			}
-			return delMultiKeyCommandHandler;
-			
 		case MGET:
 		case MSET:
-			if (mGetSetCommandHandler == null) {
+		case MEXISTS:
+			if (segmentCommandHandler == null) {
 				synchronized (_lock) {
-					if (mGetSetCommandHandler == null) {
-						mGetSetCommandHandler = new MGetSetCommandHandler( frontCon );
+					if (segmentCommandHandler == null) {
+						segmentCommandHandler = new SegmentCommandHandler( frontCon );
 					}
 				}
 			}
-			return mGetSetCommandHandler;
+			return segmentCommandHandler;
 			
 		case PIPELINE:
 			if (pipelineCommandHandler == null) {
@@ -260,13 +298,24 @@ public class RedisFrontSession {
 			}
 			return pipelineCommandHandler;
 
+		case BLOCK: 
+			
+			if (blockCommandHandler == null) {
+				synchronized (_lock) {
+					if (blockCommandHandler == null) {
+						blockCommandHandler = new BlockCommandHandler( frontCon );
+					}
+				}
+			}
+			return blockCommandHandler;
+			
 		default:
 			return defaultCommandHandler;
 		}
 	}
 	
 	// Auth
-	private boolean auth(RedisRequest request) throws IOException {
+	private boolean auth(RedisRequest request) {
 
 		if (request.getArgs().length < 2) {
 			frontCon.write(ERR_NO_AUTH_NO_PASSWORD);
@@ -288,7 +337,7 @@ public class RedisFrontSession {
 	}
 	
 	// Echo
-	protected void echo(RedisRequest request) throws IOException {	
+	protected void echo(RedisRequest request) {	
 		if ( request.getArgs().length != 2 ) {
 			StringBuffer error = new StringBuffer();
 			error.append("-");
@@ -307,7 +356,7 @@ public class RedisFrontSession {
 	}
 	
 	// Select
-	protected void select(RedisRequest request) throws IOException {	
+	protected void select(RedisRequest request) {	
 		if ( request.getArgs().length != 2 ) {
 			StringBuffer error = new StringBuffer();
 			error.append("-");
@@ -317,50 +366,6 @@ public class RedisFrontSession {
 		} else {	
 			frontCon.write(OK);				
 		}
-	}
-	
-	
-	
-	
-	// 无效指令应答
-	private String getInvalidCmdResponse(RedisRequestPolicy policy, boolean isAdmin) {
-		
-		String result = null;
-		
-		switch( policy.getLevel() ) {
-		case RedisRequestPolicy.NO_CLUSTER_CMD:
-			if ( frontCon.getUserCfg().getPoolType() == 1 ) 
-				result = NOT_SUPPORTED;
-			break;
-		case RedisRequestPolicy.CLUSTER_CMD:
-			if ( frontCon.getUserCfg().getPoolType() == 0 )
-				result = NOT_SUPPORTED;
-			break;
-		case RedisRequestPolicy.DISABLED_CMD:
-		case RedisRequestPolicy.PUBSUB_CMD:
-		case RedisRequestPolicy.MGETSET_CMD:
-			result = NOT_SUPPORTED;
-			break;
-		case RedisRequestPolicy.MANAGE_CMD:
-			if (isAdmin) {
-				result = NOT_SUPPORTED;
-			} else {
-				result = NOT_ADMIN_USER;
-			}
-			break;
-		case RedisRequestPolicy.UNKNOW_CMD:
-			result = UNKNOW_COMMAND;
-			break;
-		default:
-			result = NOT_SUPPORTED;
-			break; 
-		}
-		
-		// ReadOnly， 不能执行写入操作
-		if ( frontCon.getUserCfg().isReadonly() && !policy.isRead() )  {
-			result = NOT_READ_CMD;
-		}
-		return result;
 	}
 	
 	public PubSub getPubsub() {
@@ -437,8 +442,7 @@ public class RedisFrontSession {
 			} else {
 
 				// PUBSUB
-				pubsub = new PubSub(frontCon, new BackendCallback() {
-					
+				pubsub = new PubSub(frontCon, new AbstractBackendCallback() {
 					@Override
 					public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
 						if (frontCon != null && !frontCon.isClosed()) {
@@ -450,14 +454,6 @@ public class RedisFrontSession {
 							pubsub = null;
 						}
 					}
-					@Override
-					public void connectionAcquired(RedisBackendConnection conn) {}
-					@Override
-					public void connectionError(Exception e, RedisBackendConnection conn) {}
-					@Override
-					public void connectionClose(RedisBackendConnection conn, String reason) {}
-					@Override
-					public void handlerError(Exception e, RedisBackendConnection conn) {}
 				});
 				pubsub.subscribe(request, node.getPhysicalNode());
 			}
@@ -482,9 +478,9 @@ public class RedisFrontSession {
 	
 	private void cleanup() {
 		defaultCommandHandler = null;
-		delMultiKeyCommandHandler = null;
-		mGetSetCommandHandler = null;
+		segmentCommandHandler = null;
 		pipelineCommandHandler = null;
+		blockCommandHandler = null;
 		currentCommandHandler = null;
 	}
 	
@@ -497,17 +493,6 @@ public class RedisFrontSession {
 		
 		if ( currentCommandHandler != null )
 			currentCommandHandler.frontConnectionClose(reason);
-		
-		this.cleanup();
-	}
-	
-	public void frontHandlerError(Exception e) {
-		
-		if ( pubsub != null ) 
-			pubsub.unsubscribeAll();
-		
-		if ( currentCommandHandler != null )
-			currentCommandHandler.frontHandlerError(e);
 		
 		this.cleanup();
 	}
@@ -532,14 +517,6 @@ public class RedisFrontSession {
 			frontCon.writeErrMessage(reason);
 		
 		frontCon.close("backend connectionClose");
-	}
-	
-	public void backendHandlerError(Exception e) {
-		
-		if ( currentCommandHandler != null )
-			currentCommandHandler.backendHandlerError(e);
-		else
-			frontCon.writeErrMessage(e.toString());
 	}
 	
 }

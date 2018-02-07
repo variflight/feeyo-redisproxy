@@ -12,8 +12,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.nio.util.SelectorUtil;
-
 /**
  * NIO 连接器，用于连接对方Server
  * 
@@ -24,7 +22,7 @@ public final class NIOConnector extends Thread {
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOConnector.class );
 	
 	private final String name;
-	private volatile Selector selector;
+	private final Selector selector;
 	private final BlockingQueue<Connection> connectQueue;
 	private long connectCount;
 	private final NIOReactorPool reactorPool;
@@ -32,7 +30,7 @@ public final class NIOConnector extends Thread {
 	public NIOConnector(String name, NIOReactorPool reactorPool) throws IOException {
 		super.setName(name);
 		this.name = name;
-		this.selector = SelectorUtil.openSelector();
+		this.selector = Selector.open();
 		this.reactorPool = reactorPool;
 		this.connectQueue = new LinkedBlockingQueue<Connection>();
 	}
@@ -53,46 +51,26 @@ public final class NIOConnector extends Thread {
 
 	@Override
 	public void run() {
-		
-		int invalidSelectCount = 0;
+		final Selector selector = this.selector;
 		for (;;) {
-			final Selector tSelector = this.selector;
 			++connectCount;
 			try {
-				
-				long start = System.nanoTime();
-				tSelector.select(1000L);				//查看有无连接就绪
-				long end = System.nanoTime();
-				connect(tSelector);
-				Set<SelectionKey> keys = tSelector.selectedKeys();
-				if (keys.size() == 0 && (end - start) < SelectorUtil.MIN_SELECT_TIME_IN_NANO_SECONDS) {
-					invalidSelectCount++;
-				} else {
-					
-					try {
-						for (SelectionKey key : keys) {
-							Object att = key.attachment();
-							if (att != null && key.isValid() && key.isConnectable()) {
-								finishConnect(key, att);
-							} else {
-								key.cancel();
-							}
+				//查看有无连接就绪
+				selector.select( 1000L );
+				connect(selector);
+				Set<SelectionKey> keys = selector.selectedKeys();
+				try {
+					for (SelectionKey key: keys) {
+						Object att = key.attachment();
+						if (att != null && key.isValid() && key.isConnectable()) {
+							finishConnect(key, att);
+						} else {
+							key.cancel();
 						}
-					} finally {
-						invalidSelectCount = 0;
-						keys.clear();
 					}
-					
+				} finally {
+					keys.clear();
 				}
-				
-				if (invalidSelectCount > SelectorUtil.REBUILD_COUNT_THRESHOLD) {
-					final Selector rebuildSelector = SelectorUtil.rebuildSelector(this.selector);
-					if (rebuildSelector != null) {
-						this.selector = rebuildSelector;
-					}
-					invalidSelectCount = 0;
-				}
-				
 			} catch (Exception e) {
 				LOGGER.warn(name, e);
 			}
@@ -120,32 +98,37 @@ public final class NIOConnector extends Thread {
 	private void finishConnect(SelectionKey key, Object att) {
 		Connection c = (Connection) att;
 		try {
-				
 			 //做原生NIO连接是否完成的判断和操作
-			 SocketChannel channel = (SocketChannel) c.channel;
-			 if (channel.isConnectionPending()) {
-				 channel.finishConnect();
-				 c.setLocalPort(channel.socket().getLocalPort());
-				 
-				 clearSelectionKey(key);
+			if (finishConnect(c, (SocketChannel) c.channel)) {
+				clearSelectionKey(key);
 				//c.setId( ConnectIdGenerator.getINSTNCE().getId() );
-				 
-				 //与特定NIOReactor绑定监听读写
-				 NIOReactor reactor = reactorPool.getNextReactor();
-				 reactor.postRegister(c);
-			 }
-			
+				
+				//与特定NIOReactor绑定监听读写
+				NIOReactor reactor = reactorPool.getNextReactor();
+				reactor.postRegister(c);
+			}
 		} catch (Throwable e) {
 			
-			LOGGER.warn("caught err : conn={}", c, e);
+			LOGGER.warn("caught err ",e);
 			
 			//异常, 将key清空
 			clearSelectionKey(key);
 			c.close(e.toString());
 			c.getHandler().onConnectFailed(c, new Exception(e.getMessage()));
+
 		}
 	}
-	
+
+	private boolean finishConnect(Connection c, SocketChannel channel) throws IOException {
+		if (channel.isConnectionPending()) {
+			channel.finishConnect();
+			c.setLocalPort(channel.socket().getLocalPort());
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	private void clearSelectionKey(SelectionKey key) {
 		if (key.isValid()) {
 			key.attach(null);

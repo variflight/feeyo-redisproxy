@@ -52,10 +52,4 @@ public class RedisBackendConnectionHandler implements NIOHandler<RedisBackendCon
 			con.getCallback().connectionError(e, con);		
 	}
 
-	@Override
-	public void onHandlerError(RedisBackendConnection con, Exception e) {
-		if ( con.getCallback() != null )
-			con.getCallback().handlerError(e, con);
-	}
-
 }

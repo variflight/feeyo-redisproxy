@@ -19,10 +19,10 @@ public abstract class DelegateCallback implements BackendCallback {
 		this.target = target;
 	}
 
-//	@Override
-//	public void connectionAcquired(RedisBackendConnection conn) {
-//		target.connectionAcquired(conn);
-//	}
+	@Override
+	public void connectionAcquired(RedisBackendConnection conn) {
+		target.connectionAcquired(conn);
+	}
 
 	@Override
 	public void connectionError(Exception e, RedisBackendConnection conn) {
@@ -37,11 +37,6 @@ public abstract class DelegateCallback implements BackendCallback {
 	@Override
 	public void connectionClose(RedisBackendConnection conn, String reason) {
 		target.connectionClose(conn, reason);
-	}
-
-	@Override
-	public void handlerError(Exception e, RedisBackendConnection conn) {
-		target.handlerError(e, conn);
 	}
 
 }

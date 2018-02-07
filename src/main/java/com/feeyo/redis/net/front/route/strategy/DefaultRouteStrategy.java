@@ -1,14 +1,15 @@
 package com.feeyo.redis.net.front.route.strategy;
 
+import java.util.List;
+
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
-import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
+import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
+import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
-
-import java.util.List;
 
 /**
  * default route strategy servers for no default command and pipeline command
@@ -18,14 +19,22 @@ import java.util.List;
 public class DefaultRouteStrategy extends AbstractRouteStrategy {
 	
     @Override
-    public RouteResult route(int poolId, List<RedisRequest> requests, List<RedisRequestPolicy> requestPolicys, 
-    		List<Integer> autoResponseIndexs) throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
+    public RouteResult route(int poolId, List<RedisRequest> requests) 
+    		throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
     	
     	// 切片
-        List<RouteResultNode> nodes = doSharding(poolId, requests, requestPolicys);
+        List<RouteResultNode> nodes = doSharding(poolId, requests);
         
-        RedisRequestType requestType = requests.size() == 1 ? RedisRequestType.DEFAULT : RedisRequestType.PIPELINE;
-        RouteResult routeResult = new RouteResult(requestType, requests, requestPolicys, nodes, autoResponseIndexs);
+        RedisRequestType requestType;
+        if ( requests.size() == 1 ) {
+        		RedisRequestPolicy policy = requests.get(0).getPolicy();
+        		requestType = policy.getHandleType() == CommandParse.BLOCK_CMD ? 
+        				RedisRequestType.BLOCK : RedisRequestType.DEFAULT;
+        } else {
+        		requestType = RedisRequestType.PIPELINE;
+        }
+        
+        RouteResult routeResult = new RouteResult(requestType, requests, nodes);
         return routeResult;
     }
 

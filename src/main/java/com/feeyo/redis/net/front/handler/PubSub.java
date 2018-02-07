@@ -9,7 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisResponseV3;
+import com.feeyo.redis.engine.codec.RedisResponse;
+import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
@@ -52,65 +53,39 @@ public class PubSub  {
 	}
 	
 	// 写入至后端
-	private void writeToBackend(final RedisRequest request)
-			throws IOException {
+	private void writeToBackend(final RedisRequest request) throws IOException {
 
 		if ( backendCon == null ) {
-			
+
 			DirectTransTofrontCallBack callback = new DirectTransTofrontCallBack() {
-				
-				// pubsub 与 select database 应该无关
-				@Override
-				public void connectionAcquired(RedisBackendConnection backendCon) {
-					try {
-						backendCon.write( request.encode()  );
-					} catch (IOException e) {
-						frontCon.close( e.toString() );	
-					}
-				}
-				
 				@Override
 				public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
-
+					
 					// 应答解析
-					List<RedisResponseV3> resps = decoder.decode(byteBuff);
+					List<RedisResponse> resps = decoder.decode(byteBuff);
 					if (resps != null) {
-
-						// 获取前端 connection
-						// --------------------------------------------------------------
-						RedisFrontConnection frontCon = getFrontCon(backendCon);
-
 						// 写入至前端
-						for (RedisResponseV3 resp : resps)
+						RedisFrontConnection frontCon = getFrontCon(backendCon);
+						for (RedisResponse resp : resps)
 							this.writeToFront(frontCon, resp, 0);
 
 						resps.clear();
 						resps = null;
-
 					}
 				}
-				
+			};
+			
+			// 连接建立成功后需要处理的任务
+			TodoTask task = new TodoTask() {				
 				@Override
-				public void connectionError(Exception e, RedisBackendConnection conn) {
-					frontCon.close(e.toString());	
-				}
-				
-				@Override
-				public void connectionClose(RedisBackendConnection conn, String reason) {
-					frontCon.close( reason );	
-					unsubscribeAll();
-					
-				}
-				
-				@Override
-				public void handlerError(Exception e, RedisBackendConnection conn) {
-					frontCon.close( e.toString() );	
-					unsubscribeAll();
+				public void execute(RedisBackendConnection backendCon) throws Exception {	
+					backendCon.write(  request.encode()  );
 				}
 			};
-
+			callback.addTodoTask(task);
+			
 			// 创建新连接
-			this.backendCon = node.createNewConnection(callback, frontCon, true);
+			this.backendCon = node.createNewConnection(callback, frontCon);
 			
 		} else {
 			

@@ -161,6 +161,12 @@ public class VirtualMemoryService  {
 		}
 		return null;
 	}
+	
+	public byte[] getMessageBodyAndMarkAsConsumed(long commitLogOffset, int size) {
+		byte[] data =  getMessage(commitLogOffset, size).getBody();
+		this.markAsConsumed(commitLogOffset, size);
+		return data;
+	}
     
     public void markAsConsumed(long offset, int size) {
         this.commitLog.markAsConsumed(offset, size);

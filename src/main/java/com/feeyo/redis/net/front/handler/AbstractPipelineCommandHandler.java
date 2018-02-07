@@ -5,10 +5,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -18,15 +17,17 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestEncoderV2;
 import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
-import com.feeyo.redis.engine.codec.RedisResponseV3;
+import com.feeyo.redis.engine.codec.RedisResponse;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+import com.feeyo.redis.net.front.handler.segment.Segment;
+import com.feeyo.redis.net.front.handler.segment.SegmentType;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
-import com.feeyo.redis.virtualmemory.AppendMessageResult;
 import com.feeyo.redis.virtualmemory.Message;
 import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.redis.virtualmemory.Util;
+import com.feeyo.util.ProtoUtils;
 
 /**
  * 抽象 pipeline 处理
@@ -36,73 +37,109 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractPipelineCommandHandler.class );
 	
-	// 应答状态码
-	public enum ResponseStatusCode {
-		ALL_NODE_COMPLETED,		//所有节点都完成
-		THE_NODE_COMPLETED,		//当前节点完成
-		INCOMPLETE,				//未完整
-		ERROR					//错误
+	// VM数据偏移
+	public class DataOffset {
+		
+		public static final byte VIRTUAL_MEMORY = 0;	// 虚拟内存
+		public static final byte HEAP_MEMORY = 1;		// 堆内存
+		
+		private byte type;
+		
+		private long offset;
+		private int size;
+		private byte[] data;
+		
+		public DataOffset(long offset, int size) {
+			super();
+			this.type = VIRTUAL_MEMORY;
+			this.offset = offset;
+			this.size = size;
+		}
+
+		public DataOffset( byte[] data) {
+			super();
+			this.type = HEAP_MEMORY;
+			this.data = data;
+		}
+
+		public long getOffset() {
+			return offset;
+		}
+
+		public int getSize() {
+			return size;
+		}
+
+		public byte[] getData() {
+			if ( type == VIRTUAL_MEMORY ) {
+				return RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessageBodyAndMarkAsConsumed( offset, size );
+			}
+			return data;
+		}
+		
+		public void clearData() {
+			if ( type == VIRTUAL_MEMORY ) {
+				RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed( offset, size );
+			}
+		}
 	}
+	
+	// 应答合并结果
+	public class ResponseMargeResult {
+
+		public static final byte ERROR =  0;					//错误
+		public static final byte INCOMPLETE = 1;				//未完整
+		public static final byte THE_NODE_COMPLETED = 2;		//当前节点完成
+		public static final byte ALL_NODE_COMPLETED = 9; 		//所有节点都完成
+		
+		
+		private byte status;
+		private List<DataOffset> offsets = null;
+		
+		public ResponseMargeResult(byte status) {
+			super();
+			this.status = status;
+		}
+
+		public ResponseMargeResult(byte status, List<DataOffset> offsets) {
+			super();
+			this.status = status;
+			this.offsets = offsets;
+		}
+
+		public byte getStatus() {
+			return status;
+		}
+
+		public List<DataOffset> getDataOffsets() {
+			return offsets;
+		}
+		
+	}
+	
 	
 	// 应答节点
 	public class ResponseNode {
+
+		private RouteResultNode sourceNode;
 		
-		private String address;
-		private RouteResultNode node;
-		
-		private int responseCount = 0;
-		private ConcurrentLinkedQueue<PutMessageResult> bufferQueue = new ConcurrentLinkedQueue<PutMessageResult>();
-		private ConcurrentLinkedQueue<RedisResponseV3> responseQueue = new ConcurrentLinkedQueue<RedisResponseV3>();
+		private int count = 0;		//应答数
+		private ConcurrentLinkedQueue<DataOffset> dataOffsetQueue = new ConcurrentLinkedQueue<DataOffset>();
 		
 		public ResponseNode(RouteResultNode node) {
-			super();
-			this.node = node;
-			this.address = node.getPhysicalNode().getName();
-		}
-		
-		public String getAddress() {
-			return address;
-		}
-
-		public RouteResultNode getNode() {
-			return node;
-		}
-		
-		public void addResponseCount(int count) {
-			this.responseCount += count;
-		}
-
-		public int getResponseCount() {
-			return responseCount;
-		}
-
-		public ConcurrentLinkedQueue<PutMessageResult> getBufferQueue() {
-			return bufferQueue;
-		}
-
-		public ConcurrentLinkedQueue<RedisResponseV3> getResponseQueue() {
-			return responseQueue;
+			this.sourceNode = node;
 		}
 	}
-	
-	
-	public final static String PIPELINE_CMD = "pipeline";
-	public final static byte[] PIPELINE_KEY = PIPELINE_CMD.getBytes();
-	public final static String RESPONSE_APPEND_ERROR = "Response append error .";
-	
+
 	protected RedisRequestEncoderV2 encoder = new RedisRequestEncoderV2();
-	protected RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
-	
 	protected RouteResult rrs;
 	
-	
-	private CopyOnWriteArraySet<RedisBackendConnection> backendConnections = new CopyOnWriteArraySet<RedisBackendConnection>();
-	
-	private ConcurrentHashMap<String, ResponseNode> responseNodeMap =  new ConcurrentHashMap<String, ResponseNode>(); 
+	private ConcurrentHashMap<String, ResponseNode> allResponseNode =  new ConcurrentHashMap<String, ResponseNode>(); 
 	private AtomicInteger allResponseCount = new AtomicInteger(0); 					// 接收到返回数据的条数
-	private AtomicBoolean isMarged = new AtomicBoolean(false);
 	
-	protected final AtomicBoolean errorRepsponsed = new AtomicBoolean(false);		// 返回错误
+	private ConcurrentHashMap<Long, RedisBackendConnection> backendConnections = new ConcurrentHashMap<Long, RedisBackendConnection>();
+	
+
 
 	public AbstractPipelineCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -113,15 +150,13 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		
 		this.rrs = rrs;
 		this.allResponseCount.set(0);
-		this.isMarged.set( false );
-		this.errorRepsponsed.set( false );
+		this.allResponseNode.clear();
 		
-		this.responseNodeMap.clear();
-		
+		//
 		for(RouteResultNode node: rrs.getRouteResultNodes()) {
 			String address = node.getPhysicalNode().getName();
 			ResponseNode reponseNode = new ResponseNode( node );
-			responseNodeMap.put( address, reponseNode );
+			allResponseNode.put( address, reponseNode );
 		}
 	}
 	
@@ -136,7 +171,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			buffer = requests.get( indexs.get(0) ).encode();
 			
 		} else {
-			List<RedisRequest> tmpRequests = new ArrayList<RedisRequest>();
+			List<RedisRequest> tmpRequests = new ArrayList<RedisRequest>( indexs.size() );
 			for(int idx: indexs) {
 				tmpRequests.add( requests.get( idx ) );
 			}
@@ -146,174 +181,255 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	}
 
 	//
-	protected synchronized ResponseStatusCode recvResponse(String address, int count, byte[] resps) {
+	protected synchronized ResponseMargeResult addAndMargeResponse(String address, int count, byte[][] resps) {
 		
-		Message msg = new Message();
-        msg.setBody( resps );
-        msg.setBodyCRC( Util.crc32(msg.getBody()) );			// body CRC 
-        msg.setQueueId( 0 );									// queue id 后期可考虑利用
-        msg.setSysFlag( 0 );
-        msg.setBornTimestamp( System.currentTimeMillis() );
-      
-        
-        ResponseNode responseNode = responseNodeMap.get( address );
-        PutMessageResult pmr = RedisEngineCtx.INSTANCE().getVirtualMemoryService().putMessage( msg );
-        if ( pmr.isOk() ) {
-	    	responseNode.getBufferQueue().offer( pmr );
-	        responseNode.addResponseCount(count);
-	        
-		    allResponseCount.addAndGet(count);
-		    
-		    // 判断所有节点是否全部返回
- 			if ( allResponseCount.get()  == rrs.getTransCount() ) {
- 				return ResponseStatusCode.ALL_NODE_COMPLETED;
- 			} 
-			
-			// 判断当前节点是否全部返回
-			if ( responseNode.getNode().getRequestIndexs().size() == responseNode.getResponseCount() ) {
-				return ResponseStatusCode.THE_NODE_COMPLETED;
+		ResponseNode node = allResponseNode.get( address );
+		
+		if ( resps != null && resps.length > 0) {
+			for (byte[] resp : resps) {
+				
+				Message msg = new Message();
+				msg.setBody( resp );
+				msg.setBodyCRC( Util.crc32(msg.getBody()) );			// body CRC 
+				msg.setQueueId( 0 );									// queue id 后期可考虑利用
+				msg.setSysFlag( 0 );
+				msg.setBornTimestamp( System.currentTimeMillis() );
+				
+				
+				PutMessageResult pmr = RedisEngineCtx.INSTANCE().getVirtualMemoryService().putMessage( msg );
+				if ( pmr.isOk() ) {
+					DataOffset dataOffset = new DataOffset( pmr.getAppendMessageResult().getWroteOffset(), pmr.getAppendMessageResult().getWroteBytes());
+					node.dataOffsetQueue.offer( dataOffset );
+					
+				} else {
+					LOGGER.warn("response append error: appendMessageResult={}, conn={}",
+							new Object[] { pmr.getAppendMessageResult(), frontCon });
+					return new ResponseMargeResult( ResponseMargeResult.ERROR );
+				}
 			}
 			
-			return  ResponseStatusCode.INCOMPLETE;
-        }
-        
-		LOGGER.warn("response append error: appendMessageResult={}, conn={}",
-				new Object[] { pmr.getAppendMessageResult(), frontCon });
-        return ResponseStatusCode.ERROR;
-	}
-	
-	
-	// marge
-	protected List<RedisResponseV3> margeResponses() {
-		
-		if ( isMarged.compareAndSet(false, true) ) {
+			node.count += count;
 			
-			// 合并应答
-			for(ResponseNode responseNode: responseNodeMap.values()) {
+			allResponseCount.addAndGet(count);
+			
+			// 判断所有节点是否全部返回
+			if ( allResponseCount.get()  == rrs.getThroughtCount() ) {
 				
-				while( !responseNode.getBufferQueue().isEmpty() ) {
-					
-					PutMessageResult pmr = responseNode.getBufferQueue().poll();
-					if ( pmr == null )
-						continue;
-					
-					AppendMessageResult amr = pmr.getAppendMessageResult();
-					Message msg = RedisEngineCtx.INSTANCE().getVirtualMemoryService().getMessage( amr.getWroteOffset(), amr.getWroteBytes() );
-					
-					// 通知该消息已经被消费
-					RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
-					
-					List<RedisResponseV3> resps = decoder.decode( msg.getBody() ); // 解析返回值
-					if (resps != null) {
-						// 循环解析结果，添加到返回集合中
-						for (RedisResponseV3 resp : resps) {
-							responseNode.getResponseQueue().offer( resp );
-						}
+				//合并结果
+				DataOffset[] offsets = new DataOffset[ rrs.getRequestCount() ];
+				for(ResponseNode responseNode: allResponseNode.values()) {							//
+					List<Integer> idxs = responseNode.sourceNode.getRequestIndexs();
+					for (int index : idxs) {
+						offsets[index] = responseNode.dataOffsetQueue.poll();
 					}
 				}
-			}
-			
-			RedisResponseV3[] responses = new RedisResponseV3[ rrs.getRequestCount() ];
-			
-			// 后端节点应答
-			for(ResponseNode responseNode: responseNodeMap.values()) {
-				RouteResultNode node = responseNode.getNode();
-				List<Integer> idxs = node.getRequestIndexs();
-				for (int index : idxs) {
-					responses[index] = responseNode.responseQueue.poll();
+				
+				if ( rrs.getNoThroughtIndexs() != null && !rrs.getNoThroughtIndexs().isEmpty() ) {
+					for (int index : rrs.getNoThroughtIndexs()) {
+						offsets[index] = new DataOffset( "+OK\r\n".getBytes() );
+					}
 				}
-			}
-			
-			// 自动应答
-			if ( !rrs.getAutoResponseIndexs().isEmpty() ) {
-				RedisResponseV3 defaultResponse =  decoder.decode( "+OK\r\n".getBytes() ).get(0);		// 这种方式有问题
-				for (int index : rrs.getAutoResponseIndexs()) {
-					responses[index] = defaultResponse;
+				
+				
+				// segments pack
+				if(null != rrs.getSegments() && !rrs.getSegments().isEmpty()) {
+					
+					List<DataOffset> newDataOffsets = new ArrayList<DataOffset>();
+				
+					List<Segment> segments = rrs.getSegments();
+					for (Segment seg : segments) {
+						int[] indexs = seg.getIndexs();
+						SegmentType type = seg.getType();
+						
+						//组包
+						List<DataOffset> segmentDataOffset = pack(Arrays.asList(offsets), type, indexs);		
+						newDataOffsets.addAll( segmentDataOffset );
+					}
+					
+					return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, newDataOffsets);
 				}
-			}
-			return Arrays.asList(responses);
+				return new ResponseMargeResult( ResponseMargeResult.ALL_NODE_COMPLETED, Arrays.asList(offsets));
+			} 
 			
-		} else {
-			return null;
+			// 判断当前节点是否全部返回
+			if ( node.sourceNode.getRequestIndexs().size() == node.count ) {
+				return new ResponseMargeResult( ResponseMargeResult.THE_NODE_COMPLETED );
+			}
+			
+			return new ResponseMargeResult( ResponseMargeResult.INCOMPLETE );
 		}
+		
+        return new ResponseMargeResult( ResponseMargeResult.ERROR );
 	}
 	
-	private void markBrokenRespAsConusmed() {
-        if ( isMarged.compareAndSet(false, true) ) {
-            for(ResponseNode responseNode: responseNodeMap.values()) {
-                while( !responseNode.getBufferQueue().isEmpty() ) {
-                    PutMessageResult pmr = responseNode.getBufferQueue().poll();
-                    AppendMessageResult amr = pmr.getAppendMessageResult();
-                    // 标记该消息已经被消费
-                    RedisEngineCtx.INSTANCE().getVirtualMemoryService().markAsConsumed(amr.getWroteOffset(), amr.getWroteBytes());
+	private List<DataOffset> pack(List<DataOffset> offsets, SegmentType type, int[] indexs) {
+		
+		List<DataOffset> newDataOffsets = new ArrayList<DataOffset>();
+		
+		switch (type) {
+		case MGET:
+			int len = 0;
+			List<byte[]> newResponses = new ArrayList<byte[]>();
+			for (int index : indexs) {
+				DataOffset offset = offsets.get(index);
+				byte[] data = offset.getData();
+				newResponses.add(data);
+				len += data.length;
+			}
+			byte[] respCountInByte = ProtoUtils.convertIntToByteArray(indexs.length);
+			ByteBuffer buffer = ByteBuffer.allocate(len + 1 + 2 + respCountInByte.length);
+
+			buffer.put((byte) '*');
+			buffer.put(respCountInByte);
+			buffer.put("\r\n".getBytes());
+
+			for (byte[] respData : newResponses) {
+				buffer.put(respData);
+			}
+			newDataOffsets.add(new DataOffset(buffer.array()));
+			break;
+		case MSET:
+			newDataOffsets.add(new DataOffset("+OK\r\n".getBytes()));
+			for (int i : indexs) {
+				offsets.get(i).clearData();
+			}
+			break;
+		case MDEL:
+		case MEXISTS:
+			RedisResponseDecoderV4 responseDecoder = new RedisResponseDecoderV4();
+			int okCount = 0;
+			for (DataOffset offset : offsets) {
+				byte[] data = offset.getData();
+				RedisResponse response = responseDecoder.decode( data ).get(0);
+				if ( response.is( (byte)':') ) {
+					byte[] _buf1 = (byte[])response.data();
+					byte[] buf2 = new byte[ _buf1.length - 1 ];
+					System.arraycopy(_buf1, 1, buf2, 0, buf2.length);
+					int c = readInt( buf2 );
+					okCount += c;
+				}
+			}
+			newDataOffsets.add(new DataOffset(encode(okCount)));
+			for( int i :indexs) {
+				offsets.get(i).clearData();
+			}
+			break;
+		case DEFAULT:
+			newDataOffsets.add(offsets.get(indexs[0]));
+			break;
+		}
+		
+		return newDataOffsets;
+	}
+	
+	private int readInt(byte[] buf) {
+		int idx = 0;
+		final boolean isNeg = buf[idx] == '-';
+		if (isNeg) {
+			++idx;
+		}
+		int value = 0;
+		while (true) {
+			final int b = buf[idx++];
+			if (b == '\r' && buf[idx++] == '\n') {
+				break;
+			} else {
+				value = value * 10 + b - '0';
+			}
+		}
+		return value;
+	}
+	
+	private byte[] encode(int count) {
+		// 编码
+		byte[] countBytes = ProtoUtils.convertIntToByteArray( count );
+        ByteBuffer buffer = ByteBuffer.allocate( 1 + 2 + countBytes.length); //   cmd length + \r\n length + count bytes length
+        buffer.put((byte)':');
+        buffer.put( countBytes );
+        buffer.put("\r\n".getBytes());
+        
+        buffer.flip();
+        byte[] data = new byte[ buffer.remaining() ];
+        buffer.get( data );
+        return data;
+	}
+	
+	
+	// VM 资源清理
+	private synchronized void clearVirtualMemoryResource() {
+		for(ResponseNode node: allResponseNode.values()) {
+            while( !node.dataOffsetQueue.isEmpty() ) {
+                // 标记该消息已经被消费
+                DataOffset dataOffset = node.dataOffsetQueue.poll();
+                if ( dataOffset != null ) {
+                	dataOffset.clearData();
                 }
             }
         }
 	}
 	
-	// 释放所有后端链接
-	private void removeAllBackendConnection() {
-        for (RedisBackendConnection backendConn : backendConnections) {
-        	backendConn.release();
-        }
+	// 后端链接清理  
+	// 持有连接、 处理（正确、异常）、释放连接
+	// ------------------------------------------------------------
+	private void clearBackendConnections() {
+        for(Map.Entry<Long, RedisBackendConnection> entry: backendConnections.entrySet()) {
+        	RedisBackendConnection backendConn = entry.getValue();
+        	if (backendConnections.remove(entry.getKey()) != null )
+        		backendConn.release();
+        } 
+		
         backendConnections.clear();
 	}
 	
-	protected void removeBackendConnection(RedisBackendConnection backendConn) {
-		backendConnections.remove(backendConn);
+	
+	protected void holdBackendConnection(RedisBackendConnection backendConn) {
+		backendConnections.put(backendConn.getId(), backendConn);
 	}
-    
-	protected void addBackendConnection(RedisBackendConnection backendConn) {
-		backendConnections.add(backendConn);
+	
+	protected void releaseBackendConnection(RedisBackendConnection backendConn) {
+		if (backendConnections.remove(backendConn.getId()) != null) {
+			backendConn.release();
+		}
 	}
+	// ------------------------------------------------------------
+	
 	
 	// 消息写入出错
 	protected void responseAppendError() {
-		removeAllBackendConnection();
+		
+		this.clearBackendConnections();
         
         if( frontCon != null && !frontCon.isClosed() ) {
-            frontCon.writeErrMessage(RESPONSE_APPEND_ERROR);
+            frontCon.writeErrMessage("response append to vm is error");
         }
         
-        markBrokenRespAsConusmed();
+        this.clearVirtualMemoryResource();
 	}
 	
     @Override
     public void backendConnectionError(Exception e) {
         super.backendConnectionError(e);
         
-        removeAllBackendConnection();
+        clearBackendConnections();
         
         if( frontCon != null && !frontCon.isClosed() ) {
             frontCon.writeErrMessage(e.toString());
         }
         
-        markBrokenRespAsConusmed();
+        this.clearVirtualMemoryResource();
     }
 
     @Override
     public void backendConnectionClose(String reason) {
         super.backendConnectionClose(reason);
         
-        removeAllBackendConnection();
+        clearBackendConnections();
         
         if( frontCon != null && !frontCon.isClosed() ) {
             frontCon.writeErrMessage( reason );
         }
         
-        markBrokenRespAsConusmed();
+        this.clearVirtualMemoryResource();
     }
 
-    @Override
-    public void backendHandlerError(Exception e) {
-        super.backendHandlerError(e);
-        
-        removeAllBackendConnection();
-        
-        if( frontCon != null && !frontCon.isClosed() ) {
-            frontCon.writeErrMessage(e.toString());
-        }
-        
-        markBrokenRespAsConusmed();
-    }
 }

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.net.front.RedisFrontConnection;
 
 /**
  * 支持 select database 
@@ -12,70 +11,40 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
  * @author zhuam
  *
  */
-public class SelectDbCallback implements BackendCallback {
+public class SelectDbCallback extends AbstractBackendCallback {
 	
-	protected BackendCallback oldCallback = null;		//
-	protected ByteBuffer buffer = null;
+	protected BackendCallback nextCallback = null;		//
+	protected ByteBuffer nextCmd = null;
 	
 	private int db;
 	
-	public SelectDbCallback(int db, BackendCallback oldCallback, ByteBuffer buffer) {
+	public SelectDbCallback(int db, BackendCallback nextCallback, ByteBuffer nextCmd) {
 		this.db = db;
-		this.oldCallback = oldCallback;
-		this.buffer = buffer;
+		this.nextCallback = nextCallback;
+		this.nextCmd = nextCmd;
     }
 	
-	// 获取后端连接
-	protected RedisFrontConnection getFrontCon(RedisBackendConnection backendCon) {
-		return (RedisFrontConnection) backendCon.getAttachement();
-	}
-
 	@Override
-	public void handleResponse(RedisBackendConnection source, byte[] byteBuff) throws IOException {
+	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 		if ( byteBuff.length == 5 &&  byteBuff[0] == '+' &&  byteBuff[1] == 'O' &&  byteBuff[2] == 'K'  ) {
 			
-			if ( oldCallback != null ) {
+			if ( nextCallback != null ) {
 				// set database
-				source.setDb( db );
+				backendCon.setDb( db );
 				
 				// reset callback
-				source.setCallback( oldCallback );	
+				backendCon.setCallback( nextCallback );	
 				
 				// write real packet
-				if ( buffer != null )
-					source.write( buffer );
+				if ( nextCmd != null )
+					backendCon.write( nextCmd );
 				return;
 			}
 			
-		} 
-		
-		// select database error
-		RedisFrontConnection frontCon = getFrontCon(source);	
-		if ( frontCon != null && !frontCon.isClosed() ) {
-			frontCon.writeErrMessage("select database err:" + new String(byteBuff));
-			return;
+		} else {
+			backendCon.close("select database error:" + new String( byteBuff ) );
 		}
-	}
-
-	@Override
-	public void connectionAcquired(RedisBackendConnection conn) {
-	}
-
-	@Override
-	public void connectionError(Exception e, RedisBackendConnection conn) {
-		oldCallback.connectionError(e, conn);
-
-	}
-
-	@Override
-	public void connectionClose(RedisBackendConnection conn, String reason) {
-		oldCallback.connectionClose(conn, reason);
-	}
-
-	@Override
-	public void handlerError(Exception e, RedisBackendConnection conn) {
-		oldCallback.handlerError(e, conn);
 	}
 	
 }

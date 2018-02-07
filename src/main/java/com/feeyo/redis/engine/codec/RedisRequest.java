@@ -8,6 +8,9 @@ public class RedisRequest {
 	
 	private byte[][] args;
 	private boolean inline = false;
+	
+	private RedisRequestPolicy policy;
+
 
 	public byte[][] getArgs() {
 		return args;
@@ -47,6 +50,18 @@ public class RedisRequest {
 		return buffer;			
 	}
 	
+	public void clear() {
+		args = null;
+	}
+	
+	public RedisRequestPolicy getPolicy() {
+		return policy;
+	}
+
+	public void setPolicy(RedisRequestPolicy policy) {
+		this.policy = policy;
+	}
+
 	@Override
 	public String toString() {
 		StringBuffer sBuffer = new StringBuffer();
@@ -58,9 +73,5 @@ public class RedisRequest {
 			}
 		}
 		return sBuffer.toString();
-	}
-	
-	public void clear() {
-		args = null;
 	}
 }

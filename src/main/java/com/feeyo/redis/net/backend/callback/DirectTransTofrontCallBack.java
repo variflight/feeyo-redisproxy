@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
-import com.feeyo.redis.engine.codec.RedisResponseV3;
+import com.feeyo.redis.engine.codec.RedisResponse;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -20,16 +20,20 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * @author zhuam
  *
  */
-public class DirectTransTofrontCallBack implements BackendCallback {
+public class DirectTransTofrontCallBack extends AbstractBackendCallback {
+
+	private static Logger LOGGER = LoggerFactory.getLogger( DirectTransTofrontCallBack.class );
 	
 	protected RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( DirectTransTofrontCallBack.class );
-	
 	// 写入到前端
-	protected int writeToFront(RedisFrontConnection frontCon, RedisResponseV3 response, int size) throws IOException {	
+	protected int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {	
 		
 		int tmpSize = size;		
+		
+		if ( frontCon.isClosed() ) {
+			throw new IOException("front conn is closed!"); 
+		}
 		
 		if ( response.type() == '+' 
 				|| response.type() == '-'
@@ -54,7 +58,7 @@ public class DirectTransTofrontCallBack implements BackendCallback {
 				response.clear();
 				
 			} else {
-				RedisResponseV3[] items = (RedisResponseV3[]) response.data();
+				RedisResponse[] items = (RedisResponse[]) response.data();
 				for(int i = 0; i < items.length; i++) {
 					if ( i == 0 ) {
 						byte[] buf = (byte[])items[i].data() ;
@@ -73,25 +77,35 @@ public class DirectTransTofrontCallBack implements BackendCallback {
 		return tmpSize;
 	}
 	
-	// 获取后端连接
-	protected RedisFrontConnection getFrontCon(RedisBackendConnection backendCon) {
-		return (RedisFrontConnection) backendCon.getAttachement();
+	// 写入到前端
+	protected int writeToFront(RedisFrontConnection frontCon, byte[] response, int size) throws IOException {	
+		
+		int tmpSize = size;
+
+		if (frontCon.isClosed()) {
+			throw new IOException("front conn is closed!");
+		}
+
+		tmpSize += response.length;
+		frontCon.write(response);
+
+		// fast GC
+		response = null;
+
+		return tmpSize;
 	}
 	
 	@Override
 	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 		// 应答解析
-		List<RedisResponseV3> resps = decoder.decode( byteBuff );
+		List<RedisResponse> resps = decoder.decode( byteBuff );
 		if ( resps != null ) {
 		
 			// 获取前端 connection
 			// --------------------------------------------------------------
-			
-			RedisFrontConnection frontCon = null;
+			RedisFrontConnection frontCon = getFrontCon( backendCon );
 			try {
-				
-				frontCon = getFrontCon( backendCon );
 				String password = frontCon.getPassword();
 				String cmd = frontCon.getSession().getRequestCmd();
 				byte[] key = frontCon.getSession().getRequestKey();
@@ -100,7 +114,7 @@ public class DirectTransTofrontCallBack implements BackendCallback {
 				long responseTimeMills = TimeUtil.currentTimeMillis();
 				int responseSize = 0;
 				
-				for(RedisResponseV3 resp: resps) 
+				for(RedisResponse resp: resps) 
 					responseSize += this.writeToFront(frontCon, resp, 0);
 				
 				resps.clear();	// help GC
@@ -108,7 +122,6 @@ public class DirectTransTofrontCallBack implements BackendCallback {
 				
 				// 后段链接释放
 				backendCon.release();	
-				
 				// 数据收集
 				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
 				
@@ -123,40 +136,6 @@ public class DirectTransTofrontCallBack implements BackendCallback {
 				throw e2;
 			}
 		}	
-	}
-	
-	@Override
-	public void connectionAcquired(RedisBackendConnection backendCon) {
-	}
-	
-	// 后端连接异常
-	// ===================================================
-	@Override
-	public void connectionError(Exception e, RedisBackendConnection backendCon) {		
-		RedisFrontConnection frontCon = getFrontCon( backendCon );	
-		if ( frontCon != null && frontCon.getSession() != null ) {
-			frontCon.getSession().backendConnectionError(e);
-		}
-	}
-
-	@Override
-	public void connectionClose(RedisBackendConnection backendCon, String reason) {		
-
-		RedisFrontConnection frontCon = getFrontCon( backendCon );	
-		if ( frontCon != null && frontCon.getSession() != null ) {
-			frontCon.getSession().backendConnectionClose( reason );
-		}
-		
-		// 后端连接关闭, 清理连接池内的 connection
-		backendCon.getPhysicalNode().removeConnection( backendCon );
-	}
-
-	@Override
-	public void handlerError(Exception e, RedisBackendConnection backendCon) {
-		RedisFrontConnection frontCon = getFrontCon( backendCon );
-		if ( frontCon != null && frontCon.getSession() != null ) {
-			frontCon.getSession().backendHandlerError( e );
-		}
 	}
 	
 }

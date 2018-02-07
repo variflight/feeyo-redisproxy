@@ -16,7 +16,7 @@ public class PoolCfg {
 	
 	private final int maxCon;
 	private final int minCon;
-	
+
 	private List<String> nodes = new ArrayList<String>();
 
 	public PoolCfg(int id, String name, int type, int minCon, int maxCon) {

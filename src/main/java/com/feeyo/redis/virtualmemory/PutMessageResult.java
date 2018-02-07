@@ -27,7 +27,8 @@ public class PutMessageResult {
     }
 
     public boolean isOk() {
-        return this.appendMessageResult != null && this.appendMessageResult.isOk();
+        return  this.putMessageStatus != null && putMessageStatus == PutMessageStatus.PUT_OK 
+        		&& this.appendMessageResult != null && this.appendMessageResult.isOk();
     }
 
     public AppendMessageResult getAppendMessageResult() {

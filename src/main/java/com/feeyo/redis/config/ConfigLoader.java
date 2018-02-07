@@ -1,11 +1,14 @@
 package com.feeyo.redis.config;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
+import javax.naming.ConfigurationException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -75,15 +78,20 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-				
-				PoolCfg poolCfg = new PoolCfg(id, name, type, minCon, maxCon);				
+
+				PoolCfg poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
 				for(int j = 0; j < nodeList.size(); j++) {
 					Node node = nodeList.get(j);					
 					NamedNodeMap attrs = node.getAttributes();
 					String ip = getAttribute(attrs, "ip", null);
-					int port = getIntAttribute(attrs, "port", 6379);					
-					poolCfg.addNode( ip + ":" + port );
+					int port = getIntAttribute(attrs, "port", 6379);
+					String suffix = getAttribute(attrs, "suffix", null);
+					if(suffix == null && type == 2) {
+						throw new ConfigurationException("Customer Cluster nodes need to set unique suffix property");
+					}
+					else
+						poolCfg.addNode( ip + ":" + port + ":" + suffix);
 				}
 				map.put(id,  poolCfg);
 			}
@@ -126,45 +134,88 @@ public class ConfigLoader {
 	
 	//
 	public static ZkCfg loadZkCfg(String uri) {
-	    ZkCfg zkCfg = new ZkCfg();
-	    try {
-	        NodeList zks = loadXmlDoc( uri ).getElementsByTagName("zookeeper");
-	        if (zks.getLength() == 1) {
-	            NodeList zk = zks.item(0).getChildNodes();
-	            
-	            for (int i = 0; i < zk.getLength(); i++) {
-	                Node node = zk.item(i);
-	                if (node instanceof Element) {
-	                    Element e = (Element) node;
-	                    switch (e.getNodeName()) {
-                        case "usingZk":
-                            boolean usingZk = Boolean.valueOf(e.getAttribute("value"));
-                            zkCfg.setUsingZk(usingZk);
-                            break;
-                        case "autoActivation":
-                            boolean autoActivation = Boolean.valueOf(e.getAttribute("value"));
-                            zkCfg.setAutoAct(autoActivation);
-                            break;
-                        case "zkHome":
-                            zkCfg.setZkHome(e.getAttribute("value"));
-                            break;
-                        case "node":
-                            zkCfg.getZkServers().add(e.getAttribute("ipAndPort"));
-                            break;
-                        case "conf":
-                            zkCfg.getLocCfgNames().add(e.getAttribute("name"));
-                            break;
-                        default:
-                            LOGGER.error("load zookeeper configure error", e);
-                            return null;
-                        }
-	                }
-	            }
-	        }
-	    } catch (Exception e) {
-	        LOGGER.error("load zookeeper configure error", e);
-        }
-	    return zkCfg;
+		ZkCfg zkCfg = new ZkCfg();
+		try {
+			NodeList zks = loadXmlDoc( uri ).getElementsByTagName("zookeeper");
+			if (zks.getLength() == 1) {
+				NodeList zk = zks.item(0).getChildNodes();
+
+				for (int i = 0; i < zk.getLength(); i++) {
+					Node node = zk.item(i);
+					if (node instanceof Element) {
+						Element e = (Element) node;
+						switch (e.getNodeName()) {
+							case "usingZk":
+								String usingZk = e.getAttribute("value");
+								if (usingZk.equalsIgnoreCase("true")) {
+									zkCfg.setUsingZk(true);
+								} else if (usingZk.equalsIgnoreCase("false")) {
+									zkCfg.setUsingZk(false);
+								} else {
+									throw new Exception("parse usingZk error," + usingZk);
+								}
+								break;
+							case "autoActivation":
+								String autoActivation = e.getAttribute("value");
+
+								if (autoActivation.equalsIgnoreCase("true")) {
+									zkCfg.setAutoAct(true);
+								} else if (autoActivation.equalsIgnoreCase("false")) {
+									zkCfg.setAutoAct(false);
+								} else {
+									throw new Exception("parse autoActivation error," + autoActivation);
+								}
+								break;
+							case "zkHome":
+								String zkHome = e.getAttribute("value");
+								if (zkHome.matches("^\\/([\\w-]+\\/){1,}$")) {
+									zkCfg.setZkHome(e.getAttribute("value"));
+								} else {
+									throw new Exception("parse zkHome error," + zkHome);
+								}
+								break;
+							case "node":
+								String ipAndPort = e.getAttribute("ipAndPort");
+								if (ipAndPort.matches("^((?:(?:25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))\\.){3}(?:25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))):\\d+$")) {
+									zkCfg.getZkServers().add(ipAndPort);
+								} else {
+									throw new Exception("parse zk node error," + ipAndPort);
+								}
+								break;
+							case "conf":
+								String cfgName = e.getAttribute("name");
+								if (cfgName.matches("^[\\w_\\s-]+\\.[A-Za-z]{1,}$")) {
+									zkCfg.getLocCfgNames().add(cfgName);
+								} else {
+									throw new Exception("parse configure file name error," + cfgName);
+								}
+
+								break;
+							default:
+								LOGGER.error("load zookeeper configure error", e);
+								return null;
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			zkCfg = null;
+			LOGGER.error("load zookeeper configure error", e);
+		}
+		return zkCfg;
+	}
+	
+	/*
+	 * load mail properties
+	 */
+	public static Properties loadMailProperties(String uri) {
+		Properties props = new Properties();
+		try {
+			props.load(new FileInputStream(uri));
+		} catch (Exception e) {
+			LOGGER.error("load mail property error", e);
+		}
+		return props;
 	}
 	
 	private static Document loadXmlDoc(String uri) throws Exception {
@@ -216,4 +267,5 @@ public class ConfigLoader {
 		path.append( "conf" ).append( File.separator ).append( fileName );
         return path.toString();
 	}
+
 }

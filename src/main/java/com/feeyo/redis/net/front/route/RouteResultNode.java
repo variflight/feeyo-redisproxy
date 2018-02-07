@@ -10,7 +10,7 @@ public class RouteResultNode {
 	
 	private PhysicalNode physicalNode;
 	private List<Integer> requestIndexs;
-
+	
 	public RouteResultNode() {
 		requestIndexs = new ArrayList<Integer>();
 	}
@@ -30,4 +30,6 @@ public class RouteResultNode {
 	public void addRequestIndex(int index) {
 		requestIndexs.add(index);
 	}
+	
+	
 }

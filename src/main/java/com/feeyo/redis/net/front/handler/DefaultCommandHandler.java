@@ -1,8 +1,11 @@
 package com.feeyo.redis.net.front.handler;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
+import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
@@ -32,17 +35,15 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		
 		// 透传
 		writeToBackend(node.getPhysicalNode(), request.encode(), new DirectTransTofrontCallBack());
-
+	}
+	
+	public void writeToCustomerBackend(PhysicalNode physicalNode, ByteBuffer buffer, AbstractBackendCallback callBack) throws IOException {
+		writeToBackend(physicalNode, buffer, callBack);
 	}
 
 	@Override
 	public void frontConnectionClose(String reason) {
 		super.frontConnectionClose(reason);
-	}
-	
-	@Override
-	public void frontHandlerError(Exception e) {
-		super.frontHandlerError(e);
 	}
 	
 	
@@ -63,16 +64,6 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 
 		if( frontCon != null && !frontCon.isClosed() ) {
 			frontCon.writeErrMessage( reason );
-		}
-	}
-
-	@Override
-	public void backendHandlerError(Exception e) {
-
-		super.backendHandlerError(e);
-
-		if( frontCon != null && !frontCon.isClosed() ) {
-			frontCon.writeErrMessage(e.toString());
 		}
 	}
 	

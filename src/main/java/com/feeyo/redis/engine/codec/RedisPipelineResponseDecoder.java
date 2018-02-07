@@ -1,18 +1,47 @@
 package com.feeyo.redis.engine.codec;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class RedisPipelineResponseDecoder {
 
-	// TODO 缓存的数据在解析完成之后，并不清理，一并写入文件之后再清理
 	private byte[] _buffer;
 	private int _offset;
+	private List<Integer> index = new ArrayList<Integer>();
+	
+	// 应答
+	public class PipelineResponse {
+		
+		public static final byte ERR = 0;	// 不全
+		public static final byte OK = 1;
+		
+		private byte status;
+		private int count;
+		private byte[][] resps;
+		
+		public PipelineResponse (byte status, int count, byte[][] resps) {
+			this.status = status;
+			this.count = count;
+			this.resps = resps;
+		}
+		
+		public int getCount() {
+			return count;
+		}
+		
+		public byte[][] getResps() {
+			return resps;
+		}
+		
+		public boolean isOK () {
+			return status == OK;
+		}
+	}
 
 	/**
-	 * 解析返回数据条数
-	 * 
-	 * @param buffer
-	 * @return
+	 * 解析返回 数量、内容
 	 */
-	public int parseResponseCount(byte[] buffer) {
+	public PipelineResponse parse(byte[] buffer) {
 		int result = 0;
 		append(buffer);
 		try {
@@ -21,7 +50,7 @@ public class RedisPipelineResponseDecoder {
 
 				// 至少4字节 :1\r\n
 				if (bytesRemaining() < 4) {
-					return 0;
+					return new PipelineResponse(PipelineResponse.ERR, 0, null);
 				}
 
 				byte type = _buffer[_offset++];
@@ -34,6 +63,7 @@ public class RedisPipelineResponseDecoder {
 					// 解析，只要不抛出异常，就是完整的一条数据返回
 					parseResponse(type);
 					result ++;
+					index.add(_offset);
 				}
 
 				if (_buffer.length < _offset) {
@@ -41,14 +71,15 @@ public class RedisPipelineResponseDecoder {
 
 				} else if (_buffer.length == _offset) {
 					_offset = 0;
-					return result;
+					return new PipelineResponse(PipelineResponse.OK, result, getResponses());
 				}
 			}
 
 		} catch (IndexOutOfBoundsException e1) {
 			// 捕获这个错误（没有足够的数据），等待下一个数据包
 			_offset = 0;
-			return 0;
+			index.clear();
+			return new PipelineResponse(PipelineResponse.ERR, 0, null);
 		}
 	}
 
@@ -194,14 +225,29 @@ public class RedisPipelineResponseDecoder {
 
 		_buffer = largeBuffer;
 		_offset = 0;
+		index.clear();
 	}
 
-	public byte[] getBuffer() {
-		return _buffer;
-	}
-	
-	public void clearBuffer() {
+	// 获取分段后的response
+	private byte[][] getResponses() {
+		byte[][] result = new byte[index.size()][];
+		
+		for (int i = 0; i < index.size(); i++) {
+			int start;
+			if (i == 0) {
+				start = 0;
+			} else {
+				start = index.get(i - 1); 
+			}
+			int end = index.get(i);
+			
+			result[i] = new byte[end - start];
+			System.arraycopy(_buffer, start, result[i], 0, result[i].length);
+		}
+		
+		index.clear();
 		_buffer = null;
+		return result;
 	}
 
 	public static void main(String[] args) {
@@ -227,11 +273,8 @@ public class RedisPipelineResponseDecoder {
 		RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
 		// List<RedisResponseV3> resps = decoder.decode(buffer);
 
-		int i = decoder.parseResponseCount(buffer1);
-		System.out.println(i);
-		i = decoder.parseResponseCount(buffer2);
-		System.out.println(i);
-		// System.out.println( resps );
+		PipelineResponse result  = decoder.parse(buffer1);
+		System.out.println( result );
 	}
 
 }

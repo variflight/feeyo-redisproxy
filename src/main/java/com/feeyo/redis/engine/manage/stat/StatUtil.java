@@ -1,10 +1,11 @@
 package com.feeyo.redis.engine.manage.stat;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -15,8 +16,17 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
+import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
+import com.feeyo.util.MailUtil;
+import com.feeyo.util.NetworkUtil;
 
 /**
  * 数据埋点收集器
@@ -29,16 +39,11 @@ public class StatUtil {
 	private static Logger LOGGER = LoggerFactory.getLogger( StatUtil.class );
 	
 	public static final String STAT_KEY = "RedisProxyStat";
-	private final static String PIPELINE_CMD = "pipeline";
-	
-	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
+
+
 	
 	public static final int SLOW_COST = 50; 			  			// 50秒	
 	public static final int STATISTIC_PEROID = 30; 		  			// 30秒
-
-	// COMMAND、KEY
-	private static ConcurrentHashMap<String, Command> commandStats = new ConcurrentHashMap<String, Command>();
-	private static ConcurrentHashMap<String, BigKey> bigkeyStats = new ConcurrentHashMap<String, BigKey>();
 	
 	// ACCESS
 	private static ConcurrentHashMap<String, AccessStatInfo> accessStats = new ConcurrentHashMap<>();
@@ -49,10 +54,27 @@ public class StatUtil {
 	
 	public static long zeroTimeMillis = 0;
 	
+	// 收集器
+	private static List<StatCollector> collectors = new CopyOnWriteArrayList<>();
+	
+	private static NetFlowCollector netflowCollector = new NetFlowCollector();
+	private static CmdAccessCollector cmdAccessCollector = new CmdAccessCollector();
+	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
+	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
+	private static SlowKeyColletor slowKeyCollector = new SlowKeyColletor();
+	
 	static {
+		
+		addCollector( netflowCollector );
+		addCollector( cmdAccessCollector );
+		addCollector( bigKeyCollector );
+		addCollector( bigLengthCollector );
+		addCollector( slowKeyCollector );
+		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {		
+				
 				// 定时计算
 				long currentTimeMillis = System.currentTimeMillis();
 		        for (Map.Entry<String, AccessStatInfo> entry : accessStats.entrySet()) {     
@@ -75,25 +97,125 @@ public class StatUtil {
 					//
 					if ( zeroTimeMillis > 0 ) {
 						
-						long sum = 0;
-						Set<Entry<String, Command>> entrys = StatUtil.getCommandStats();
-						for (Entry<String, Command> entry : entrys) {	
-							Long count = entry.getValue().count.get();			
-							if ( count != null )
-								sum += count;
+						// send mail
+						// ##################################################################################
+						try {
+							
+							
+							StringBuffer subject = new StringBuffer( 50 );
+							subject.append(" ###RedisProxy report, host:" ).append( NetworkUtil.getLocalAddress() );
+							
+							StringBuffer body = new StringBuffer( 500 );
+							
+							// COMMAND 
+							long sum = 0;
+							body.append("#############   command asscess  #################\n");
+							body.append("|    cmd    |     count     |");
+							for (Command command : cmdAccessCollector.getCommandCountMap().values() ) {
+								body.append("\n");
+								body.append("|    ");
+								body.append(command.cmd).append("    |    ");
+								body.append(command.count.get() ).append("    |    ");
+	
+								sum += command.count.get();
+							}
+							body.append("\r\n");
+							body.append("\r\n");
+							
+							LOGGER.info("Through cmd count:" + sum);
+							
+							
+							// SLOW KEY
+							body.append("#############   slowkey status ( >50ms )   #################\n");
+							body.append("|    cmd    |     key     |    count    |");
+							for (SlowKey slowKey : slowKeyCollector.getSlowKeys() ) {
+								body.append("\n");
+								body.append("|    ");
+								body.append(slowKey.cmd).append("    |    ");
+								body.append(slowKey.key).append("    |    ");
+								body.append(slowKey.count).append("    |");
+							}
+							body.append("\r\n");
+							body.append("\r\n");
+							
+							// BIG KEY
+							body.append("#############   bigkey status   #################\n");
+							body.append("|    cmd    |     key     |    size    |    count    |");
+							for (BigKey bigkey : bigKeyCollector.getBigkeys() ) {
+								body.append("\n");
+								body.append("|    ");
+								body.append(bigkey.cmd).append("    |    ");
+								body.append(bigkey.key).append("    |    ");
+								body.append(bigkey.size).append("    |    ");
+								body.append(bigkey.count).append("    |");
+							}
+							body.append("\r\n");
+							body.append("\r\n");
+	
+							// BIG LENGTH
+							body.append("#############   biglenght status   #################\n");
+							body.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
+							for (BigLength bigLength : bigLengthCollector.getBigLengthMap().values() ) {
+								body.append("\n");
+								body.append("|    ");
+								body.append(bigLength.key).append("    |    ");
+								body.append(bigLength.cmd).append("    |    ");
+								body.append(bigLength.length).append("    |    ");
+								body.append(bigLength.count_1k).append("    |    ");
+								body.append(bigLength.count_10k).append("    |");
+							}
+							body.append("\r\n");
+							body.append("\r\n");
+							
+							String[] attachments = null;
+							
+							Properties prop = RedisEngineCtx.INSTANCE().getMailProperties();
+							MailUtil.send(prop, subject.toString(), body.toString(), attachments);
+							
+							
+						} catch(Throwable t) {
+							//ignore
 						}
+						// ##################################################################################
 						
-						LOGGER.info("Through cmd count:" + sum);
 						
-						commandStats.clear();
-						bigkeyStats.clear();
-						//setkeyStats.clear();
+						// 触发0 点事件
+						for(StatCollector listener: collectors) {
+							try {
+								listener.onScheduleToZore();
+							} catch(Exception e) {
+								LOGGER.error("error:",e);
+							}
+						}
 					}
 					
 					zeroTimeMillis = cal.getTimeInMillis();
-		        }				
+		        }
+		        
+		        
+		        for(StatCollector listener: collectors) {
+					try {
+						listener.onSchedulePeroid( STATISTIC_PEROID );
+					} catch(Exception e) {
+						LOGGER.error("error:",e);
+					}
+				}
+		        
+				
 			}
 		}, STATISTIC_PEROID, STATISTIC_PEROID, TimeUnit.SECONDS);
+	}
+	
+	
+	public static void addCollector(StatCollector collector) {
+		if (collector == null) {
+			throw new NullPointerException();
+		}
+		collectors.add(collector);
+	}
+	
+	public static void removeCollector(StatCollector collector) {
+		collectors.remove(collector);
 	}
 	
 	
@@ -116,38 +238,6 @@ public class StatUtil {
 			@Override
 			public void run() {
 				
-				// 只有pipeline的子命令 是这种只收集指令数据的情况。
-				if ( isCommandOnly ) {
-					
-					Command parent = commandStats.get(PIPELINE_CMD);
-					if (parent == null) {
-						parent = new Command();
-						parent.cmd = PIPELINE_CMD;
-						commandStats.put(PIPELINE_CMD, parent);
-					}
-					
-					Command child = parent.getChild( cmd);
-					if (child == null) {
-						child = new Command();
-						child.cmd = cmd;
-						parent.addChild( child );
-						
-					} else {
-						child.count.incrementAndGet();
-					}
-					return;
-				}
-				
-				// Command 
-				Command command = commandStats.get(cmd);
-				if ( command != null ) {
-					command.count.incrementAndGet();
-				} else {
-					command = new Command();
-					command.cmd = cmd;
-					commandStats.put(cmd, command);	
-				}			
-		        
 				
 				long currentTimeMillis = TimeUtil.currentTimeMillis();
 				
@@ -164,40 +254,23 @@ public class StatUtil {
 		        } catch (Exception e) {
 		        }
 		        
-				// 大key
-				if ( key != null && ( requestSize > BIGKEY_SIZE || responseSize > BIGKEY_SIZE ) ) {	
-					
-					if ( bigkeyStats.size() > 300 ) {
-						bigkeyStats.clear();
+
+		    	//
+				String keyStr = new String(key);
+				for(StatCollector listener: collectors) {
+					try {
+						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, isCommandOnly);
+					} catch(Exception e) {
+						LOGGER.error("error:",e);
 					}
-						
-					
-					String keyStr = new String( key );
-					BigKey bigkey = bigkeyStats.get( keyStr );
-					if ( bigkey == null ) {
-						bigkey = new BigKey();
-						bigkey.cmd = cmd;
-						bigkey.key = keyStr;
-						bigkey.size = requestSize > responseSize ? requestSize : responseSize;
-						
-						bigkeyStats.put(bigkey.key, bigkey);
-						
-					} else {
-						if ( bigkey.count.get() >= Integer.MAX_VALUE ) {
-							bigkey.count.set(1);
-						}
-						
-						bigkey.cmd = cmd;
-						bigkey.size = requestSize > responseSize ? requestSize : responseSize;
-						bigkey.count.incrementAndGet();
-						
-						bigkeyStats.put(bigkey.key, bigkey);
-					}
-				}
+				}	
+				
 			}
 		});
 	}
-    
+	
+	
+	
     private static AccessStatInfo getAccessStatInfo(String key, long currentTime) {
         AccessStatInfo item = accessStats.get(key);
         if (item == null) {
@@ -211,14 +284,35 @@ public class StatUtil {
         return totalResults;
     }
     
-    public static ConcurrentHashMap<String, BigKey> getBigKeyStats() {
-    	return bigkeyStats;
-    }
-
-    public static Set<Entry<String, Command>> getCommandStats() {
-    	return commandStats.entrySet();
+    public static List<BigKey> getBigKeys() {
+    	return bigKeyCollector.getBigkeys();
     }
     
+    public static ConcurrentHashMap<String, BigLength> getBigLengthMap() {
+    	return bigLengthCollector.getBigLengthMap();
+    }
+    
+    public static ConcurrentHashMap<String, AtomicLong> getCommandProcTimeMap() {
+    	return cmdAccessCollector.getCommandProcTimeMap();
+    }
+
+    public static ConcurrentHashMap<String, Command> getCommandCountMap() {
+    	return cmdAccessCollector.getCommandCountMap();
+    }
+    
+    public static ConcurrentHashMap<String, UserCommand> getUserCommandCountMap() {
+    	return cmdAccessCollector.getUserCommandCountMap();
+    }
+    
+    public static ConcurrentHashMap<String, UserNetFlow> getUserFlowMap() {
+    	return netflowCollector.getUserFlowMap();
+    }
+    
+    public static List<SlowKey> getSlowKey() {
+    	return slowKeyCollector.getSlowKeys();
+    }
+    
+  
 	public static class AccessStatInfo  {
 		
 		private String key;
@@ -383,29 +477,6 @@ public class StatUtil {
 		public long[] netOutBytes = new long[]{0,0,-1,0};
 		
 		public long created;
-	}
-	
-	public static class BigKey {
-		public String cmd;
-		public String key;
-		public int size;
-		public AtomicInteger count = new AtomicInteger(1);
-	}
-	
-	public static class Command {
-		
-		public String cmd;
-		public AtomicLong count = new AtomicLong(1);
-		
-		public Map<String, Command> childs = new ConcurrentHashMap<>();
-		
-		public Command getChild(String cmd) {
-			return childs.get(cmd);
-		}
-		
-		public void addChild(Command command) {
-			childs.put(command.cmd, command);
-		}
 	}
 	
 }

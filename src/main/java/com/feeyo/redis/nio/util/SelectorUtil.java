@@ -4,10 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.spi.SelectorProvider;
 import java.util.ConcurrentModificationException;
 
 public class SelectorUtil {
@@ -17,50 +15,12 @@ public class SelectorUtil {
     public static final int REBUILD_COUNT_THRESHOLD = 512;
     public static final long MIN_SELECT_TIME_IN_NANO_SECONDS = 500000L;
     
-    public static final String OS_NAME = System.getProperty("os.name");
-    private static boolean isLinuxPlatform = false;
-    
-    static {
-        if (OS_NAME != null && OS_NAME.toLowerCase().contains("linux")) {
-            isLinuxPlatform = true;
-        }
-    }
-    
-    // linux 层面，使用 epoll
-    public static Selector openSelector() throws IOException {
-    	
-        Selector result = null;
-        if ( isLinuxPlatform ) {
-            try {
-                final Class<?> providerClazz = Class.forName("sun.nio.ch.EPollSelectorProvider");
-                if (providerClazz != null) {
-                    try {
-                        final Method method = providerClazz.getMethod("provider");
-                        if (method != null) {
-                            final SelectorProvider selectorProvider = (SelectorProvider) method.invoke(null);
-                            if (selectorProvider != null) {
-                                result = selectorProvider.openSelector();
-                            }
-                        }
-                    } catch (final Exception e) {
-                    	LOGGER.warn("Open ePoll Selector for linux platform exception", e);
-                    }
-                }
-            } catch (final Exception e) {
-                // ignore
-            }
-        }
 
-        if (result == null) {
-            result = Selector.open();
-        }
-        return result;
-    }
 
     public static Selector rebuildSelector(final Selector oldSelector) throws IOException {
         final Selector newSelector;
         try {
-            newSelector = openSelector();
+            newSelector = Selector.open();
         } catch (Exception e) {
             LOGGER.warn("Failed to create a new Selector.", e);
             return null;

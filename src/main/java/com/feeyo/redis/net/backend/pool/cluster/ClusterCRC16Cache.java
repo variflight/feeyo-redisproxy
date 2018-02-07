@@ -18,7 +18,7 @@ public class ClusterCRC16Cache {
 			.build(new CacheLoader<String, Integer>(){
 				 @Override
 	             public Integer load(String key) throws Exception {
-					int slot = ClusterCRC16Util.getSlot( key, false );
+					int slot = ClusterCRC16Util.getSlot( key );
 					cache.put(key, slot);
 					return slot;
 				 }				
@@ -74,10 +74,10 @@ public class ClusterCRC16Cache {
 			try {				
 				slot = cache.get( key );
 			} catch (Exception e) {
-				slot = ClusterCRC16Util.getSlot( key, false );
+				slot = ClusterCRC16Util.getSlot( key );
 			}			
 		} else {
-			slot = ClusterCRC16Util.getSlot( key, false );		
+			slot = ClusterCRC16Util.getSlot( key );		
 		}
 		return slot;
 	}

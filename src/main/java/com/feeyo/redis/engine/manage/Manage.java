@@ -15,6 +15,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,10 +24,14 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
+import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
+import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
-import com.feeyo.redis.engine.manage.stat.StatUtil.BigKey;
-import com.feeyo.redis.engine.manage.stat.StatUtil.Command;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -54,6 +60,7 @@ import com.feeyo.util.Versions;
 public class Manage {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( Manage.class );
+	private static String JAVA_BIN_PATH = "/usr/local/software/jdk1.7.0_72/bin/";
 	
 	private static List<String> getOS_JVM_INFO(String cmd) {
 		
@@ -98,12 +105,20 @@ public class Manage {
 	 *  SHOW CONN
 	 *  SHOW USER_CONN
 	 *  SHOW BUFFER
+	 *  
 	 *  SHOW BIGKEY
+	 *  SHOW BIGLENGTH
+	 *  SHOW SLOWKEY
+	 *  
 	 *  SHOW CMD
+	 *  SHOW USER_CMD
+	 *  SHOW USER_CMD_DETAIL USER
 	 *  SHOW VER
 	 *  SHOW NET_IO 该指令兼容过去的 SHOW NETBYTES
 	 *  SHOW VM
 	 *  SHOW POOL
+	 *  SHOW COST
+	 *  SHOW USER_DAY_NET_IO
 	 *  
 	 *  SHOW LOG_ERROR
 	 *  SHOW LOG_WARN
@@ -136,7 +151,7 @@ public class Manage {
 				// /usr/local/software/jdk1.7.0_71/bin/jstack
 				StringBuffer cmdBuffer = new StringBuffer();
 				if ( JavaUtils.isLinux() )
-					cmdBuffer.append( "/usr/local/software/jdk1.7.0_71/bin/" );
+					cmdBuffer.append( JAVA_BIN_PATH );
 				
 				// JVM JSTACK
 				if ( arg2.equalsIgnoreCase("JSTACK") ) {
@@ -232,7 +247,7 @@ public class Manage {
 					List<Object> lines = new ArrayList<Object>();		
 					
 					long sum = 0;
-					Set<Entry<String, Command>> entrys = StatUtil.getCommandStats();
+					Set<Entry<String, Command>> entrys = StatUtil.getCommandCountMap().entrySet();
 					for (Entry<String, Command> entry : entrys) {	
 						Command parent = entry.getValue();
 						StringBuffer sBuffer = new StringBuffer();	
@@ -261,6 +276,55 @@ public class Manage {
 					
 					return encodeObject( lines );
 					
+				// SHOW USER_CMD
+				} else if (arg2.equalsIgnoreCase("USER_CMD")) {
+
+					List<String> lines = new ArrayList<String>();
+					
+					StringBuffer title = new StringBuffer();
+					title.append("USER").append("      ").append("READ").append("      ").append("WRITE").append("      ").append("TOTAL");
+					lines.add(title.toString());
+
+					Set<Entry<String, UserCommand>> entrys = StatUtil.getUserCommandCountMap().entrySet();
+					for (Entry<String, UserCommand> entry : entrys) {
+						UserCommand userCommand = entry.getValue();
+						StringBuffer sBuffer = new StringBuffer();
+						sBuffer.append(userCommand.user).append("  ").append(userCommand.readComandCount.get())
+								.append("  ").append(userCommand.writeCommandCount.get()).append("  ")
+								.append( userCommand.readComandCount.get() + userCommand.writeCommandCount.get() );
+						
+						lines.add( sBuffer.toString() );
+					}
+
+					return encode(lines);
+
+				// SHOW USER_CMD_DETAIL USER
+				} else if ( arg2.equalsIgnoreCase("USER_CMD_DETAIL") && numArgs == 3 ) {
+					String user = new String( request.getArgs()[2] );
+					
+					List<String> lines = new ArrayList<String>();
+					
+					StringBuffer title = new StringBuffer();
+					title.append("USER").append("      ").append("CMD").append("      ").append("COUNT");
+					lines.add( title.toString() );
+
+					int sum = 0;
+					ConcurrentHashMap<String, UserCommand> userCommandMap = StatUtil.getUserCommandCountMap();
+					UserCommand userCommand = userCommandMap.get(user);
+					if (userCommand != null) {
+						for (Entry<String, AtomicLong> entry : userCommand.commandCount.entrySet()) {
+							StringBuffer sBuffer = new StringBuffer();
+							sBuffer.append(user).append("  ").append(entry.getKey()).append("  ").append(entry.getValue().get());
+							lines.add( sBuffer.toString() );
+						}
+					}
+					
+					
+					StringBuffer end = new StringBuffer();
+					end.append( "------" ).append("  ").append( sum );
+					lines.add( end.toString() );
+
+					return encode( lines );
 				// SHOW VER
 				} else if ( arg2.equalsIgnoreCase("VER") ) {
 					
@@ -469,8 +533,9 @@ public class Manage {
 						for(ByteBufferBucket b: buckets) {
 							StringBuffer sBuffer = new StringBuffer();
 							sBuffer.append(" chunkSize=").append( b.getChunkSize() ).append(",");
-							sBuffer.append(" queue=").append( b.getQueueSize() ).append( ", " );
+							sBuffer.append(" queueSize=").append( b.getQueueSize() ).append( ", " );
 							sBuffer.append(" count=").append( b.getCount() ).append( ", " );
+							sBuffer.append(" useCount=").append( b.getUsedCount() ).append( ", " );
 							sBuffer.append(" shared=").append( b.getShared() );		
 							lines.add( sBuffer.toString()  );
 						}		
@@ -481,11 +546,12 @@ public class Manage {
 				} else if ( arg2.equalsIgnoreCase("BIGKEY") ) {
 					
 					List<String> lines = new ArrayList<String>();						
-					Collection<Entry<String, BigKey>> entrys = StatUtil.getBigKeyStats().entrySet();
-					for(Entry<String, BigKey> e : entrys) {
-						BigKey bigkey = e.getValue();
+					for(BigKey bigkey: StatUtil.getBigKeys()) {
 						StringBuffer sBuffer = new StringBuffer();
-						sBuffer.append( bigkey.cmd ).append("  ").append( bigkey.key ).append( "  " ).append( bigkey.size ).append( "  " ).append( bigkey.count.get() );
+						sBuffer.append( bigkey.cmd ).append("  ");
+						sBuffer.append( bigkey.key ).append( "  " );
+						sBuffer.append( bigkey.size ).append( "  " );
+						sBuffer.append( bigkey.count.get() );
 						lines.add( sBuffer.toString()  );
 					}			
 					return encode( lines );
@@ -495,14 +561,30 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
+					Map<String, AtomicInteger> poolConnections = new HashMap<String, AtomicInteger>();
 					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
 					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
 						Connection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
+							// 统计每个redis池的连接数 
+							String poolName = ((RedisBackendConnection) c).getPhysicalNode().getPoolName();
+							AtomicInteger poolConnCount = poolConnections.get(poolName);
+							if ( poolConnCount == null ) {
+								poolConnections.put(poolName, new AtomicInteger(1));
+							} else {
+								poolConnCount.incrementAndGet();
+							}
+							
 							lines.add( c.toString() );
 						}
 					}
+					
+					StringBuffer sb = new StringBuffer();
+					for (Map.Entry<String, AtomicInteger> entry : poolConnections.entrySet()) {
+						sb.append(entry.getKey()).append(":").append(entry.getValue().get()).append(". ");
+					}
+					lines.add(sb.toString());
 					
 					return encode( lines );
 					
@@ -589,9 +671,43 @@ public class Manage {
 						}
 					}
 					return encode(lines);
+				
+				//SHOW USER_DAY_NET_IO
+				} else if ( arg2.equalsIgnoreCase("USER_DAY_NET_IO") ) {
+					
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("User").append("         ");
+					titleLine.append("NetIn").append("         ");
+					titleLine.append("NetOut");
+					lines.add(titleLine.toString());
+					
+					long totalNetIn = 0;
+					long totalNetOut = 0;
+					for (Map.Entry<String, UserNetFlow> entry : StatUtil.getUserFlowMap().entrySet()) { 
+						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
+							StringBuffer sb = new StringBuffer();
+							UserNetFlow userNetIo = entry.getValue();
+							sb.append(userNetIo.password).append("  ");
+							sb.append( JavaUtils.bytesToString2( userNetIo.netIn.get() ) ).append("  ");
+							sb.append( JavaUtils.bytesToString2( userNetIo.netOut.get() ) );
+							totalNetIn = totalNetIn + userNetIo.netIn.get();
+							totalNetOut = totalNetOut + userNetIo.netOut.get();
+							
+							lines.add(sb.toString());
+						}
+					}
+					
+					StringBuffer total = new StringBuffer();
+					total.append("total").append("    ");
+					total.append( JavaUtils.bytesToString2(totalNetIn) ).append("    ");
+					total.append( JavaUtils.bytesToString2(totalNetOut) );
+					
+					lines.add(total.toString());
+					return encode(lines);
 					
 				//	SHOW LOG_ERROR
-				} else if ( arg2.equalsIgnoreCase("LOG_ERROR") ) {
+				}  else if ( arg2.equalsIgnoreCase("LOG_ERROR") ) {
 					List<String> lines = showLog(request, "error.log");
 					
 					return encode2( lines );
@@ -652,10 +768,13 @@ public class Manage {
 					Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
 					StringBuffer titleLine = new StringBuffer();
 					titleLine.append("  PoolId").append("   ");
+					titleLine.append("PoolName").append("    ");
 					titleLine.append("PoolType").append("    ");
 					titleLine.append("Address").append("               ");
-					titleLine.append("MinCom").append("   ");
+					titleLine.append("MinCom").append("    ");
 					titleLine.append("MaxCon").append("   ");
+					titleLine.append("IdlCon").append("   ");
+					titleLine.append("ActiveCon").append("   ");
 					titleLine.append("ClusterNodeState");
 					list.add(titleLine.toString());
 					
@@ -664,12 +783,18 @@ public class Manage {
 							StringBuffer sb = new StringBuffer();
 							RedisStandalonePool redisStandalonePool = (RedisStandalonePool) pool;
 							PhysicalNode physicalNode = redisStandalonePool.getPhysicalNode();
+							if (physicalNode == null) 
+								continue;
+								
 							sb.append("   ");
 							sb.append(redisStandalonePool.getId()).append("       ");
+							sb.append(physicalNode.getPoolName()).append("       ");
 							sb.append("Standalone").append("  ");
 							sb.append(physicalNode.getName()).append("       ");
 							sb.append(physicalNode.getMinCon()).append("       ");
-							sb.append(physicalNode.getMaxCon());
+							sb.append(physicalNode.getMaxCon()).append("       ");
+							sb.append(physicalNode.getIdleCount()).append("          ");
+							sb.append(physicalNode.getActiveCount());
 							list.add(sb.toString());
 							
 						} else if ( pool instanceof RedisClusterPool ) {
@@ -680,10 +805,13 @@ public class Manage {
 								PhysicalNode physicalNode = clusterNode.getPhysicalNode(); 
 								StringBuffer sb = new StringBuffer();
 								sb.append(redisClusterPool.getId()).append("       ");
+								sb.append(physicalNode.getPoolName()).append("       ");
 								sb.append("cluster").append("     ");
 								sb.append(physicalNode.getName()).append("       ");
 								sb.append(physicalNode.getMinCon()).append("       ");
-								sb.append(physicalNode.getMaxCon()).append("  ");
+								sb.append(physicalNode.getMaxCon()).append("       ");
+								sb.append(physicalNode.getIdleCount()).append("       ");
+								sb.append(physicalNode.getActiveCount()).append("          ");;
 								sb.append(!clusterNode.isFail());
 								clusterInfo.add(sb.toString());
 								sb.append(clusterNode.getConnectInfo());
@@ -692,8 +820,58 @@ public class Manage {
 						}
 					}
 					return encodeObject(list);
+
+				// SHOW COST
+				} else if (arg2.equalsIgnoreCase("COST")) {
+					Collection<Entry<String, AtomicLong>> entrys = StatUtil.getCommandProcTimeMap().entrySet();
+
+					List<String> lines = new ArrayList<String>();
+					for (Entry<String, AtomicLong> entry : entrys) {
+						StringBuffer sBuffer = new StringBuffer();
+						sBuffer.append(entry.getKey()).append(": ").append(entry.getValue().get());
+						lines.add(sBuffer.toString());
+					}
+					return encode(lines);
+				
+				// SHOW BIGLENGTH
+				} else  if(arg2.equalsIgnoreCase("BIGLENGTH")) {
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("cmd").append(",  ");
+					titleLine.append("key").append(",  ");
+					titleLine.append("length").append(",  ");
+					titleLine.append("count_1k").append(",  ");
+					titleLine.append("count_10k");
+					lines.add(titleLine.toString());
+					for (BigLength bigLength : StatUtil.getBigLengthMap().values()) { 
+						StringBuffer line1 = new StringBuffer();
+						line1.append(bigLength.cmd).append(", ");
+						line1.append(bigLength.key).append(", ");
+						line1.append(bigLength.length.get()).append(", ");
+						line1.append(bigLength.count_1k.get()).append(", ");
+						line1.append(bigLength.count_10k.get());
+						lines.add(line1.toString());
+					}
+					return encode(lines);
+				
+				// SHOW BIGLENGTH
+				} else if (arg2.equalsIgnoreCase("SLOWKEY")) {
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("cmd").append(",  ");
+					titleLine.append("key").append(",  ");
+					titleLine.append("count");
+					lines.add(titleLine.toString());
+					for (SlowKey slowKey : StatUtil.getSlowKey()) {
+						StringBuffer line1 = new StringBuffer();
+						line1.append(slowKey.cmd).append(", ");
+						line1.append(slowKey.key).append(", ");
+						line1.append(slowKey.count);
+						lines.add(line1.toString());
+					}
+					return encode(lines);
 				}
-			
+				
 			// NODE
 			} else if (  (arg1[0] == 'N' || arg1[0] == 'n' ) && 
 						 (arg1[1] == 'O' || arg1[1] == 'o' ) && 
@@ -754,6 +932,11 @@ public class Manage {
 					}
 					
 					return "+OK\r\n".getBytes();
+				} else if ( arg2.equalsIgnoreCase("PATH") ) {
+					
+					JAVA_BIN_PATH = new String( request.getArgs()[2] );
+					
+					return "+OK\r\n".getBytes();
 				}
 			}
 
@@ -786,27 +969,15 @@ public class Manage {
 				}
 				
 				try {
-					
-					// 回调
-					DirectTransTofrontCallBack callback = new DirectTransTofrontCallBack() {
-						@Override
-						public void connectionAcquired(RedisBackendConnection backendCon) {
-							try {
-								backendCon.write(request.encode());
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-					};
-					
-					RedisBackendConnection backendCon = pysicalNode.getConnection(callback, frontCon);
+				
+					RedisBackendConnection backendCon = pysicalNode.getConnection(new DirectTransTofrontCallBack(), frontCon);
 					if (backendCon == null) {
-						backendCon = pysicalNode.createNewConnection(callback, frontCon, true);
+						frontCon.writeErrMessage("not idle backend connection, pls wait !!!");
 					} else {
-						backendCon.write(request.encode());
+						backendCon.write( request.encode() );
 					}
 					
-					return null;
+					return null;	// null, not write
 				} catch (IOException e) {
 					LOGGER.error("", e);
 				}

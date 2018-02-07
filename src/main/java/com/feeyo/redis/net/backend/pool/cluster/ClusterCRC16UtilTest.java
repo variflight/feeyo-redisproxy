@@ -11,7 +11,7 @@ public class ClusterCRC16UtilTest {
 		
 		long begin = System.currentTimeMillis();
 		for (int n = 0; n <= TOTAL_OPERATIONS; n++) {
-			ClusterCRC16Util.getSlot( (TEST_SET[n % TEST_SET.length]), false );
+			ClusterCRC16Util.getSlot( (TEST_SET[n % TEST_SET.length]) );
 		}
 
 		long elapsed = System.currentTimeMillis() - begin;

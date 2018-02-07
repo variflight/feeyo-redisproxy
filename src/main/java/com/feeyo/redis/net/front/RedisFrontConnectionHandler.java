@@ -55,14 +55,5 @@ public class RedisFrontConnectionHandler implements NIOHandler<RedisFrontConnect
 		// 分发
 		conn.getSession().handle(data);	
 	}
-
-	@Override
-	public void onHandlerError(RedisFrontConnection conn, Exception e) {
-		LOGGER.warn("onHandlerError():" + conn, e);
-		conn.close( e.toString() );
-
-		if ( conn.getSession() != null)
-			conn.getSession().frontHandlerError(e);
-	}
 	
 }

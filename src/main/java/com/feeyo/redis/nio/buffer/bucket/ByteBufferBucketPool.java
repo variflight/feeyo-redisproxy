@@ -1,8 +1,8 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
-import java.util.TreeMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
@@ -24,12 +24,20 @@ public class ByteBufferBucketPool extends BufferPool {
 	
 	private long sharedOptsCount;
 	
-	
-	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int minChunkSize, int increment, int maxChunkSize) {
+	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
+			int minChunkSize, int[] increments, int maxChunkSize) {
 		
-		super(minBufferSize, maxBufferSize, minChunkSize, increment, maxChunkSize);
+		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increments, maxChunkSize);
 		
-		int bucketsCount = maxChunkSize / increment;
+//		int bucketsCount = maxChunkSize / increments;
+		
+		int bucketsCount;
+		if (increments.length > 1) {
+			bucketsCount = increments.length;
+		} else {
+			bucketsCount = maxChunkSize / increments[0];
+		}
+		
 		this._buckets = new TreeMap<Integer, ByteBufferBucket>();
 		
 		// 平均分配初始化的桶size 
@@ -38,12 +46,15 @@ public class ByteBufferBucketPool extends BufferPool {
 		// 初始化桶 
 		int chunkSize = 0;
 		for (int i = 0; i < bucketsCount; i++) {
-			chunkSize += increment;
+			chunkSize += increments[i >= increments.length ? 0 : i];
 			int chunkCount = (int) (bucketBufferSize / chunkSize);
-			ByteBufferBucket bucket = new ByteBufferBucket(this, chunkSize, chunkCount);
+			boolean isExpand =  chunkSize <= 262144 ? true: false; 	// 256K内的块 支持自动扩容
+			ByteBufferBucket bucket = new ByteBufferBucket(this, chunkSize, chunkCount, isExpand);
 			this._buckets.put(bucket.getChunkSize(), bucket);
 		}
 		
+		// 引用检测
+		ByteBufferReferenceUtil.referenceCheck(_buckets);
 	}
 	
 	//根据size寻找 桶

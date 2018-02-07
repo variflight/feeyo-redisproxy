@@ -1,7 +1,12 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,24 +23,33 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 
 	private ByteBufferBucketPool bufferPool;
 	
-	// TODO: ConcurrentLinkedQueue
-	// https://bugs.openjdk.java.net/browse/JDK-8137185
-	private final ConcurrentLinkedDeque<ByteBuffer> buffers = new ConcurrentLinkedDeque<ByteBuffer>();
+	private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<ByteBuffer>();
+	
+	private final ConcurrentHashMap<Long, ByteBufferReference> references;
 	
 	private Object _lock = new Object();
 	
-	private int count = 0;
+	private final AtomicInteger count;
+	private final AtomicInteger usedCount;
+	
 	private final int chunkSize;
 	private long _shared = 0;
+	private boolean isExpand = false;
 
-	public ByteBufferBucket(ByteBufferBucketPool pool,int chunkSize) {
-		this(pool, chunkSize, 0);
+	public ByteBufferBucket(ByteBufferBucketPool pool, int chunkSize) {
+		this(pool, chunkSize, 0, false);
 	}
 	
-	public ByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count) {
+	public ByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand) {
+		
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
-		this.count = count;
+		
+		this.count = new AtomicInteger(count);
+		this.usedCount = new AtomicInteger(0);
+		this.isExpand = isExpand;
+		
+		this.references = new ConcurrentHashMap<Long, ByteBufferReference>(  (int)(count * 1.6) );
 		
 		// 初始化
 		for(int j = 0; j < count; j++ ) {
@@ -45,30 +59,61 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	//
+	@SuppressWarnings("restriction")
 	public ByteBuffer allocate() {
 		
 		ByteBuffer bb = queuePoll();
 		if (bb != null) {
-			// Clear sets limit == capacity. Position == 0.
-			bb.clear();
-			return bb;
+			try {
+				long address = ((sun.nio.ch.DirectBuffer) bb).address();
+				ByteBufferReference reference = references.get( address );
+				if (reference == null) {
+					reference = new ByteBufferReference( address, bb );
+					references.put(address, reference);
+				}
+				
+				// 检测
+				if ( reference.isItAllocatable() ) {
+					
+					this.usedCount.incrementAndGet();
+					
+					// Clear sets limit == capacity. Position == 0.
+					bb.clear();
+					return bb;
+					
+				} else {
+					return null;
+				}
+			} catch (Exception e) {
+				LOGGER.error("allocate err", e);
+				return bb;
+			}
 		}
 		
-		// 桶内内存块不足，创建新的块
-		synchronized ( _lock ) {
-			// 容量阀值
-			long used = bufferPool.getUsedBufferSize().get();
+		// 是否支持自动扩展
+		if ( isExpand ) {
 			
-			if ( ( used + chunkSize ) < bufferPool.getMaxBufferSize()) { 
-				bb = ByteBuffer.allocateDirect( chunkSize );
-				bufferPool.getUsedBufferSize().addAndGet( chunkSize );
-			} 
-			count++;
-			return bb;
+			// 桶内内存块不足，创建新的块
+			synchronized ( _lock ) {
+				
+				// 容量阀值
+				long poolUsed = bufferPool.getUsedBufferSize().get();
+				if (  ( poolUsed + chunkSize ) < bufferPool.getMaxBufferSize()) { 
+					bb = ByteBuffer.allocateDirect( chunkSize );
+					this.count.incrementAndGet();
+					this.usedCount.incrementAndGet();
+					bufferPool.getUsedBufferSize().addAndGet( chunkSize );
+				} 
+				
+				return bb;
+			}
 		}
 		
+		return null;
+			
 	}
 
+	@SuppressWarnings("restriction")
 	public void recycle(ByteBuffer buf) {
 	
 		if ( buf.capacity() != this.chunkSize ) {
@@ -76,9 +121,69 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 			return;
 		}
 		
+		try {
+			long address = ((sun.nio.ch.DirectBuffer) buf).address();
+			ByteBufferReference reference = references.get(address);
+			if ( reference == null ) {
+				 reference = new ByteBufferReference( address, buf );
+				 references.put(address, reference);
+				 
+			} else {
+				// 如果不能回收，则返回
+				if ( !reference.isItRecyclable() ) {
+					return;
+				}
+			}
+
+		} catch (Exception e) {
+			LOGGER.error("recycle err", e);
+		}
+		
+		usedCount.decrementAndGet();
+		
 		buf.clear();
 		queueOffer( buf );
 		_shared++;
+	}
+	
+	/**
+	 * 释放超时的 buffer
+	 */
+	public void releaseTimeoutBuffer() {
+		
+		
+		List<Long> timeoutAddrs = null;
+		
+		for (Entry<Long, ByteBufferReference> entry : references.entrySet()) {
+			ByteBufferReference ref = entry.getValue();
+			if ( ref.isTimeout() ) {
+				
+				if ( timeoutAddrs == null )
+					timeoutAddrs = new ArrayList<Long>();
+				
+				timeoutAddrs.add( ref.getAddress() );
+			}
+		}
+		
+		//
+		if ( timeoutAddrs != null ) {
+			for(long addr: timeoutAddrs) {
+				boolean isRemoved = false;
+				ByteBufferReference addrRef = references.remove( addr );
+				if ( addrRef != null ) {
+					
+					ByteBuffer oldBuffer = addrRef.getByteBuffer();
+					oldBuffer.clear();
+					
+					isRemoved = queueOffer( oldBuffer );
+					_shared++;
+					usedCount.decrementAndGet();
+				} 
+		
+				//
+				LOGGER.warn("##buffer reference release addr:{}, isRemoved:{}", addrRef, isRemoved);
+			}
+		}
 	}
 
 	@SuppressWarnings("restriction")
@@ -93,24 +198,25 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 
 	public int getCount() {
-		return count;
+		return this.count.get();
+	}
+	
+	public int getUsedCount() {
+		return this.usedCount.get();
 	}
 	
 	public long getShared() {
 		return _shared;
 	}
 	
-    private void queueOffer(ByteBuffer buffer)
-    {
-        this.buffers.offerFirst(buffer);
-    }
+	private boolean queueOffer(ByteBuffer buffer) {
+		return this.buffers.offer( buffer );
+	}
 
-    private ByteBuffer queuePoll()
-    {
-        return this.buffers.poll();
-    }
+	private ByteBuffer queuePoll() {
+		return this.buffers.poll();
+	}
 
-	
 	public int getQueueSize() {
 		return this.buffers.size();
 	}

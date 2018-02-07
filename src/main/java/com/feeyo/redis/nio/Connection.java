@@ -34,7 +34,7 @@ public abstract class Connection implements ClosableConnection {
 	protected int localPort;
 	protected long id;
 	protected String reactor;
-	private Object attachement;
+	protected Object attachement;
 	protected int state = STATE_CONNECTING;
 
 	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
@@ -68,7 +68,8 @@ public abstract class Connection implements ClosableConnection {
 	
 	protected long lastReadTime;
 	protected long lastWriteTime;
-	protected long todoWriteTime;
+	protected long closeTime;											// debug
+	protected String closeReason = null;
 	
 	protected int netInBytes;
 	protected int netOutBytes;
@@ -87,7 +88,6 @@ public abstract class Connection implements ClosableConnection {
 		this.startupTime = TimeUtil.currentTimeMillis();
 		this.lastReadTime = startupTime;
 		this.lastWriteTime = startupTime;
-		this.todoWriteTime = startupTime;
 		this.id = ConnectIdGenerator.getINSTNCE().getId();
 	}
 
@@ -159,10 +159,6 @@ public abstract class Connection implements ClosableConnection {
 		return lastWriteTime;
 	}
 	
-	public long getTodoWriteTime() {
-		return todoWriteTime;
-	}
-
 	public long getNetInBytes() {
 		return netInBytes;
 	}
@@ -193,7 +189,10 @@ public abstract class Connection implements ClosableConnection {
 			closeSocket();
 			isClosed.set(true);
 			
-//			this.attachement = null; //help GC
+			this.closeTime = TimeUtil.currentTimeMillis();
+			if ( reason != null ) 
+				this.closeReason = reason;
+			
 			this.cleanup();		
 			NetSystem.getInstance().removeConnection(this);
 			
@@ -204,6 +203,8 @@ public abstract class Connection implements ClosableConnection {
 			if (handler != null) {
 				handler.onClosed(this, reason);
 			}
+			
+			this.attachement = null; //help GC
 			
 		} else {
 		    this.cleanup();
@@ -220,18 +221,6 @@ public abstract class Connection implements ClosableConnection {
 				LOGGER.debug(toString() + " idle timeout");
 			}
 			close("idle timeout ");
-		} else {
-			todoWriteCheck();
-		}
-	}
-	
-	/**
-	 * 回写检测，如果太慢，此处kill
-	 */
-	private void todoWriteCheck() {	
-		if ( (todoWriteTime - lastWriteTime) > 20000 ) {
-			LOGGER.warn(toString() + " warning, too slow.");
-			close("warning, too slow.");
 		}
 	}
 
@@ -241,7 +230,8 @@ public abstract class Connection implements ClosableConnection {
 	protected void cleanup() {
 		
 		if (readBuffer != null) {
-			readBuffer = null;
+			recycle(readBuffer);
+			this.readBuffer = null;
 		}
 		
 		if (writeBuffer != null) {
@@ -309,25 +299,11 @@ public abstract class Connection implements ClosableConnection {
 			return;
 		}
 		
-		try {	
-			
-			if ( processKey == null ) {
-				
-				LOGGER.warn( " processKey is null , Thread:" + Thread.currentThread().getName() 
-							+ ", \r\n backend: " + this.toSampleString()  + ",  " + System.nanoTime()
-							+ ", \r\n front:" +  (this.attachement != null ? ((com.feeyo.redis.net.front.RedisFrontConnection) this.attachement).toSampleString() : null)
-							+ "  \r\n");
-				return;
-			}
-			
-			//if ( processKey == null ) {
-			//	return;
-			//}
-			
+		try {
 			//利用缓存队列和写缓冲记录保证写的可靠性，返回true则为全部写入成功
 			boolean noMoreData = write0();	
 				
-			lastWriteTime = TimeUtil.currentTimeMillis();
+			//lastWriteTime = TimeUtil.currentTimeMillis();
 			
 		    //如果全部写入成功而且写入队列为空（有可能在写入过程中又有新的Bytebuffer加入到队列），则取消注册写事件
             //否则，继续注册写事件
@@ -350,9 +326,9 @@ public abstract class Connection implements ClosableConnection {
 			writing.set(false);	
 		}
 	}
+
 	
-	
-	public ByteBuffer writeToBuffer(byte[] src, ByteBuffer buffer) {
+	private ByteBuffer writeToBuffer(byte[] src, ByteBuffer buffer) {
 		int offset = 0;
 		int length = src.length;			 // 原始数据长度
 		int remaining = buffer.remaining();  // buffer 可写长度
@@ -379,9 +355,13 @@ public abstract class Connection implements ClosableConnection {
 		 writeQueue.offer(buffer);
 	}
 
-	public void write(byte[] data) throws IOException {
+	// data ->  N 个 minChunk buffer
+	public void write(byte[] data) {
+		if (data == null)
+			return;
+		
 		int size = data.length;
-		if ( size >= NetSystem.getInstance().getBufferPool().getMaxChunkSize() ) {
+		if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
 			size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
 		}
 		
@@ -389,31 +369,25 @@ public abstract class Connection implements ClosableConnection {
 		buffer = writeToBuffer(data, buffer);
 		write( buffer );
 	}
-
-	public static String getStackTrace(Throwable t) {
-	    StringWriter sw = new StringWriter();
-	    t.printStackTrace(new PrintWriter(sw));
-	    return sw.toString();
-	}
-
 	
-	public void write(ByteBuffer buffer) throws IOException {
+	public void write(ByteBuffer srcBuffer) {
 		
-		/**
-		 *  TODO: 防护，避免前端SMEMBERS key，接收延迟严重，造成writeQueue 过大，引起OOM，  
-		 *  当发生这种问题后，交由idle 检测服务 kill 前端连接， 起到回收 buffer 的作用
-		 */
-		this.todoWriteTime = TimeUtil.currentTimeMillis();
-		this.writeQueue.offer(buffer);
+		this.writeQueue.offer( srcBuffer );
 		
 		try {
 			this.doNextWriteCheck();
 			
 		} catch (Exception e) {
-			//LOGGER.warn("write err:", e);
-			//this.close("write err:" + e);
-			throw new IOException( e );
+			LOGGER.error("write err:", e);
+			this.close("write err:" + e);
+			//throw new IOException( e );
 		}
+	}
+
+	public static String getStackTrace(Throwable t) {
+	    StringWriter sw = new StringWriter();
+	    t.printStackTrace(new PrintWriter(sw));
+	    return sw.toString();
 	}
 	
 	private boolean write0() throws IOException {
@@ -570,7 +544,8 @@ public abstract class Connection implements ClosableConnection {
 		
 			//如果buffer为空，证明被回收或者是第一次读，新分配一个buffer给 Connection作为readBuffer
 			if ( readBuffer == null) {
-				readBuffer = ByteBuffer.allocate( 1024 * 16 );
+				// readBuffer = ByteBuffer.allocate( 1024 * 16 );
+				readBuffer = allocate( 1024 * 16 );
 			}
 			
 			lastReadTime = TimeUtil.currentTimeMillis();
@@ -606,11 +581,13 @@ public abstract class Connection implements ClosableConnection {
 					int newCapacity = readBuffer.capacity() << 1;
 					newCapacity = (newCapacity > maxCapacity) ? maxCapacity : newCapacity;			
 					
-					ByteBuffer newBuffer = ByteBuffer.allocate( newCapacity );
+					// ByteBuffer newBuffer = ByteBuffer.allocate( newCapacity );
+					ByteBuffer newBuffer = allocate( newCapacity );
 					
 					readBuffer.position( offset );
 					newBuffer.put( readBuffer );
 					
+					recycle(readBuffer);
 					readBuffer = newBuffer;
 					lastLargeMessageTime = TimeUtil.currentTimeMillis();
 					
@@ -628,18 +605,26 @@ public abstract class Connection implements ClosableConnection {
 				handler.handleReadEvent(this, data);
 				
 				
-				// 如果当前缓冲区不是 direct byte buffer 
+				// 存在扩大后的 byte buffer
 				// 并且最近30秒 没有接收到大的消息 
 				// 然后改为直接缓冲 direct byte buffer 提高性能
-				if (readBuffer != null && !readBuffer.isDirect() && lastLargeMessageTime != 0
-						&& lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  // used temp heap
+				
+				// if (readBuffer != null && !readBuffer.isDirect() && lastLargeMessageTime != 0
+				//		&& lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  
 					
+				if (readBuffer != null && lastLargeMessageTime != 0 && lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  
+
 					if (LOGGER.isDebugEnabled()) {
 						LOGGER.debug("change to direct con read buffer, cur temp buf size :" + readBuffer.capacity());
 					}
 					
-					ByteBuffer newBuffer = ByteBuffer.allocate( 1024 * 16 );
+					ByteBuffer oldBuffer = readBuffer;
+					ByteBuffer newBuffer = allocate( 1024 * 16 );  // ByteBuffer.allocate( 1024 * 16 );
 					readBuffer = newBuffer;
+					
+					//
+					if ( oldBuffer.isDirect() )
+						recycle( oldBuffer );
 					
 					lastLargeMessageTime = 0;
 					
@@ -651,7 +636,6 @@ public abstract class Connection implements ClosableConnection {
 				
 				// no more data ,break
 				break;
-				
 			}
 			
 			
@@ -662,7 +646,7 @@ public abstract class Connection implements ClosableConnection {
 
 	}
 
-	private void closeSocket() {
+	protected void closeSocket() {
 		if ( channel != null ) {		
 			
 			if (channel instanceof SocketChannel) {
