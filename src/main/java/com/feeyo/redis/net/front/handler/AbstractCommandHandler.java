@@ -69,7 +69,7 @@ public abstract class AbstractCommandHandler {
 				public void execute(RedisBackendConnection backendCon) throws Exception {	
 					// 集群不需要处理 select database
 					if ( poolType == 1) {
-						backendCon.write( buffer, false );
+						backendCon.write( buffer );
 					} else {
 						// 执行 SELECT 指令
 						int db = frontCon.getUserCfg().getSelectDb();
@@ -78,7 +78,7 @@ public abstract class AbstractCommandHandler {
 							backendCon.select(db, selectDbCallback);
 			
 						} else {
-							backendCon.write( buffer, false );
+							backendCon.write( buffer );
 						}
 					}
 					
@@ -91,7 +91,7 @@ public abstract class AbstractCommandHandler {
 			
 			// 集群不需要处理 select database
 			if ( poolType == 1) {
-				backendCon.write( buffer, false );
+				backendCon.write( buffer );
 
 			} else {
 				// 执行 SELECT 指令
@@ -101,7 +101,7 @@ public abstract class AbstractCommandHandler {
 					backendCon.select(db, selectDbCallback);
 
 				} else {
-					backendCon.write( buffer, false );
+					backendCon.write( buffer );
 				}
 			}
 		}

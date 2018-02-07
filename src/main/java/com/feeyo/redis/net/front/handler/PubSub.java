@@ -79,7 +79,7 @@ public class PubSub  {
 			TodoTask task = new TodoTask() {				
 				@Override
 				public void execute(RedisBackendConnection backendCon) throws Exception {	
-					backendCon.write(  request.encode(), false  );
+					backendCon.write(  request.encode()  );
 				}
 			};
 			callback.addTodoTask(task);
@@ -89,7 +89,7 @@ public class PubSub  {
 			
 		} else {
 			
-			backendCon.write(request.encode(), false);
+			backendCon.write(request.encode());
 		}
 	}
 	

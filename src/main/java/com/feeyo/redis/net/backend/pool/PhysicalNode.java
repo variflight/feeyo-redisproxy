@@ -151,6 +151,7 @@ public class PhysicalNode {
         
 		c.setBorrowed( false );
         c.setAttachement( null );
+        c.setCallback( null );
         c.setLastTime( TimeUtil.currentTimeMillis() );     
         
         ConQueue queue = this.conQueue;

@@ -1,4 +1,5 @@
 #!/bin/sh
+export JAVA_HOME=/usr/local/java1.8
 
 # about G1 http://www.oracle.com/technetwork/cn/articles/java/g1gc-1984535-zhs.html
 
@@ -44,8 +45,8 @@ pidFile="$FEEYO_HOME/bin/run.pid"
 #===========================================================================================
 # JVM Configuration
 #===========================================================================================
-JAVA_OPTS="${JAVA_OPTS} -server -Xms8g -Xmx8g -Xmn4g"
-JAVA_OPTS="${JAVA_OPTS} -XX:+UseG1GC -XX:G1HeapRegionSize=16m -XX:G1ReservePercent=25 -XX:InitiatingHeapOccupancyPercent=30 -XX:SoftRefLRUPolicyMSPerMB=0 -XX:SurvivorRatio=8"
+JAVA_OPTS="${JAVA_OPTS} -server -Xms2g -Xmx2g -Xmn1g"
+JAVA_OPTS="${JAVA_OPTS} -XX:+UseG1GC -XX:G1HeapRegionSize=16m -XX:G1ReservePercent=25 -XX:InitiatingHeapOccupancyPercent=30 -XX:SoftRefLRUPolicyMSPerMB=0 -XX:SurvivorRatio=18"
 JAVA_OPTS="${JAVA_OPTS} -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$FEEYO_HOME/logs/feeyoredisproxy_java.hprof"
 JAVA_OPTS="${JAVA_OPTS} -verbose:gc -Xloggc:$FEEYO_HOME/logs/feeyoredisproxy_gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
 JAVA_OPTS="${JAVA_OPTS} -XX:+PrintGCApplicationStoppedTime -XX:+PrintAdaptiveSizePolicy"

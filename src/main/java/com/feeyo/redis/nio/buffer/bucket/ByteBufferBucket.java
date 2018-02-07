@@ -1,7 +1,9 @@
 package com.feeyo.redis.nio.buffer.bucket;
 
 import java.nio.ByteBuffer;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -145,25 +147,41 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 	}
 	
 	/**
-	 * 错误 buffer 的释放
+	 * 释放超时的 buffer
 	 */
-	public void todoBufferRelease() {
+	public void releaseTimeoutBuffer() {
 		
-		Iterator<ByteBufferReference> it = references.values().iterator();
-		while( it.hasNext() ) {
-			ByteBufferReference ref = it.next();
+		
+		List<Long> timeoutAddrs = null;
+		
+		for (Entry<Long, ByteBufferReference> entry : references.entrySet()) {
+			ByteBufferReference ref = entry.getValue();
 			if ( ref.isTimeout() ) {
 				
-				ByteBuffer todoBuffer = ref.getByteBuffer();
-				references.remove( ref.getAddress() );
+				if ( timeoutAddrs == null )
+					timeoutAddrs = new ArrayList<Long>();
 				
-				todoBuffer.clear();
-				queueOffer( todoBuffer );
-				_shared++;
-				
-				usedCount.decrementAndGet();
+				timeoutAddrs.add( ref.getAddress() );
+			}
+		}
+		
+		//
+		if ( timeoutAddrs != null ) {
+			for(long addr: timeoutAddrs) {
+				boolean isRemoved = false;
+				ByteBufferReference addrRef = references.remove( addr );
+				if ( addrRef != null ) {
+					
+					ByteBuffer oldBuffer = addrRef.getByteBuffer();
+					oldBuffer.clear();
+					
+					isRemoved = queueOffer( oldBuffer );
+					_shared++;
+					usedCount.decrementAndGet();
+				} 
+		
 				//
-				LOGGER.warn("##buffer reference release : {}", ref);
+				LOGGER.warn("##buffer reference release addr:{}, isRemoved:{}", addrRef, isRemoved);
 			}
 		}
 	}
@@ -191,8 +209,8 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		return _shared;
 	}
 	
-	private void queueOffer(ByteBuffer buffer) {
-		this.buffers.offer( buffer );
+	private boolean queueOffer(ByteBuffer buffer) {
+		return this.buffers.offer( buffer );
 	}
 
 	private ByteBuffer queuePoll() {
