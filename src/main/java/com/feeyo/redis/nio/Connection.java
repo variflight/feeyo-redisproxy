@@ -64,19 +64,18 @@ public abstract class Connection implements ClosableConnection {
 	
 	protected final AtomicBoolean isClosed;
 	protected boolean isSocketClosed;
-	protected long startupTime;
 	
+	protected long startupTime;
 	protected long lastReadTime;
 	protected long lastWriteTime;
 	protected long closeTime;											// debug
 	protected String closeReason = null;
 	
-	protected int netInBytes;
-	protected int netOutBytes;
+	protected long netInCount;
+	protected long netInBytes;											//
+	protected long netOutBytes;
 	protected int writeAttempts;
 	
-	protected int pkgTotalSize;
-	protected int pkgTotalCount;
 	private long idleTimeout;
 	
 	@SuppressWarnings("rawtypes")
@@ -89,13 +88,6 @@ public abstract class Connection implements ClosableConnection {
 		this.lastReadTime = startupTime;
 		this.lastWriteTime = startupTime;
 		this.id = ConnectIdGenerator.getINSTNCE().getId();
-	}
-
-	public void resetPerfCollectTime() {
-		netInBytes = 0;
-		netOutBytes = 0;
-		pkgTotalCount = 0;
-		pkgTotalSize = 0;
 	}
 
 	public long getIdleTimeout() {
@@ -165,6 +157,10 @@ public abstract class Connection implements ClosableConnection {
 
 	public long getNetOutBytes() {
 		return netOutBytes;
+	}
+
+	public long getNetInCount() {
+		return netInCount;
 	}
 
 	public void setHandler(NIOHandler<? extends Connection> handler) {
@@ -568,6 +564,7 @@ public abstract class Connection implements ClosableConnection {
 					return;
 				}
 				netInBytes += length;
+				netInCount++;
 				
 				// 空间不足
 				if ( !readBuffer.hasRemaining() ) {
@@ -683,14 +680,6 @@ public abstract class Connection implements ClosableConnection {
 
 	public void setDirection(Connection.Direction in) {
 		this.direction = in;
-	}
-
-	public int getPkgTotalSize() {
-		return pkgTotalSize;
-	}
-
-	public int getPkgTotalCount() {
-		return pkgTotalCount;
 	}
 	
 	public String toSampleString() {
