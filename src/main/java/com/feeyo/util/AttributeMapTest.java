@@ -5,14 +5,19 @@ import java.util.HashMap;
 public class AttributeMapTest {
 	
 	private static final AttributeNamespace NS = AttributeNamespace.createNamespace("mynamespace");
-	private static DefaultAttributeMap attributeMap = new DefaultAttributeMap(NS, 8);
-	private static ConcurrentAttributeMap attributeMap2 = new ConcurrentAttributeMap(NS, 8);
 	
-	private static HashMap<String, String> map1 = new HashMap<String, String>();
+	private static DefaultAttributeMap attributeMap = null;
+	private static ConcurrentAttributeMap attributeMap2 = null;
+	
+	private static HashMap<String, String> map1 = null;
 	
 	public static void main(String[] args) {
 		
 		int length = 220000;
+		
+		attributeMap = new DefaultAttributeMap(NS, 220000);
+		attributeMap2 = new ConcurrentAttributeMap(NS, 220000);
+		map1 = new HashMap<String, String>(220000);
 		
 	
 		AttributeKey[] keys = new AttributeKey[length];
@@ -36,7 +41,7 @@ public class AttributeMapTest {
 		//
 		//------------------------22222-------------------------------
 		long t3 = System.nanoTime();
-		Object value1 = attributeMap.get( keys[length-2] );
+		Object value1 = attributeMap2.get( keys[length-2] );
 		long t4 = System.nanoTime();
 		
 		System.out.println( "##22#### "+ value1 + " diff="+(t4-t3)  );
