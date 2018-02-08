@@ -59,6 +59,7 @@ public abstract class Connection implements ClosableConnection {
 	protected AtomicBoolean writing = new AtomicBoolean(false);
 
 	protected long lastLargeMessageTime;
+	protected long largeCount;
 	
 	protected static final int maxCapacity = 1024 * 1024 * 16;			// 最大 16 兆
 	
@@ -161,6 +162,17 @@ public abstract class Connection implements ClosableConnection {
 
 	public long getNetInCount() {
 		return netInCount;
+	}
+	
+	
+	// 最后扩容时间
+	public long getLastLargeMessageTime() {
+		return lastLargeMessageTime;
+	}
+
+	// 扩容的次数
+	public long getLargeCount() {
+		return largeCount;
 	}
 
 	public void setHandler(NIOHandler<? extends Connection> handler) {
@@ -587,6 +599,7 @@ public abstract class Connection implements ClosableConnection {
 					recycle(readBuffer);
 					readBuffer = newBuffer;
 					lastLargeMessageTime = TimeUtil.currentTimeMillis();
+					largeCount++;
 					
 					// 拿完整包
 					continue;		
