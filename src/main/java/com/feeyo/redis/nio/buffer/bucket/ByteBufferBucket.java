@@ -49,7 +49,7 @@ public class ByteBufferBucket implements Comparable<ByteBufferBucket> {
 		this.usedCount = new AtomicInteger(0);
 		this.isExpand = isExpand;
 		
-		this.references = new ConcurrentHashMap<Long, ByteBufferReference>( count , 0.2F, 32 );
+		this.references = new ConcurrentHashMap<Long, ByteBufferReference>( count , 0.2F, 16 );
 		
 		// 初始化
 		for(int j = 0; j < count; j++ ) {
