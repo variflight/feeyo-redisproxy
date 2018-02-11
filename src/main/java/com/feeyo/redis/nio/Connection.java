@@ -376,6 +376,7 @@ public abstract class Connection implements ClosableConnection {
 		ByteBuffer buffer = allocate( size );
 		buffer = writeToBuffer(data, buffer);
 		write( buffer );
+		data = null;
 	}
 	
 	public void write(ByteBuffer srcBuffer) {
