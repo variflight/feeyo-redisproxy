@@ -7,8 +7,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
-import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineResponse;
+import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoderV2.PipelineResponse;
+import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoderV2;
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
@@ -50,10 +50,10 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	// 
 	private class PipelineDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
 
-		private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
+		private RedisPipelineResponseDecoderV2 decoder = new RedisPipelineResponseDecoderV2();
 		
 		@Override
-		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+		public void handleResponse(RedisBackendConnection backendCon, ByteBuffer byteBuff) throws IOException {
 
 			// 解析此次返回的数据条数
 			PipelineResponse pipelineResponse = decoder.parse( byteBuff );

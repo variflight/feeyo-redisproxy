@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.backend.callback;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 
@@ -27,7 +28,7 @@ public interface BackendCallback  {
     /**
      * 收到数据包的响应处理
      */
-   void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException;
+   void handleResponse(RedisBackendConnection conn, ByteBuffer byteBuff) throws IOException;
 
     /**
      * 连接关闭

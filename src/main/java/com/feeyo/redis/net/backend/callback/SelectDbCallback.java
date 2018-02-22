@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.nio.NetSystem;
 
 /**
  * 支持 select database 
@@ -25,25 +26,32 @@ public class SelectDbCallback extends AbstractBackendCallback {
     }
 	
 	@Override
-	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+	public void handleResponse(RedisBackendConnection backendCon, ByteBuffer byteBuff) throws IOException {
 
-		if ( byteBuff.length == 5 &&  byteBuff[0] == '+' &&  byteBuff[1] == 'O' &&  byteBuff[2] == 'K'  ) {
-			
-			if ( nextCallback != null ) {
-				// set database
-				backendCon.setDb( db );
+		try {
+			if ( byteBuff.position() == 5 &&  byteBuff.get(0) == '+' &&  byteBuff.get(1) == 'O' &&  byteBuff.get(2) == 'K'  ) {
 				
-				// reset callback
-				backendCon.setCallback( nextCallback );	
+				if ( nextCallback != null ) {
+					// set database
+					backendCon.setDb( db );
+					
+					// reset callback
+					backendCon.setCallback( nextCallback );	
+					
+					// write real packet
+					if ( nextCmd != null )
+						backendCon.write( nextCmd );
+					return;
+				}
 				
-				// write real packet
-				if ( nextCmd != null )
-					backendCon.write( nextCmd );
-				return;
+			} else {
+				byte[] b = new byte[byteBuff.position()];
+				byteBuff.position(0);
+				byteBuff.get(b, 0, b.length);
+				backendCon.close("select database error:" + new String( b ) );
 			}
-			
-		} else {
-			backendCon.close("select database error:" + new String( byteBuff ) );
+		} finally {
+			NetSystem.getInstance().getBufferPool().recycle(byteBuff);
 		}
 	}
 	

@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.backend.pool;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
+import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
@@ -101,17 +103,20 @@ public class ConHeartBeatHandler implements BackendCallback {
 	}
 
 	@Override
-	public void handleResponse(RedisBackendConnection conn, byte[] byteBuff)
+	public void handleResponse(RedisBackendConnection conn, ByteBuffer byteBuff)
 			throws IOException {
-		
-		removeFinished(conn);
-		
-		// +PONG\r\n
-		if ( byteBuff.length == 7 &&  byteBuff[0] == '+' &&  byteBuff[1] == 'P' &&  byteBuff[2] == 'O' &&  byteBuff[3] == 'N' &&  byteBuff[4] == 'G'  ) {
-			conn.setHeartbeatTime( TimeUtil.currentTimeMillis() );
-			conn.release();		
-		} else {
-			conn.close("heartbeat err");
+		try {
+			removeFinished(conn);
+			
+			// +PONG\r\n
+			if ( byteBuff.position() == 7 &&  byteBuff.get(0) == '+' &&  byteBuff.get(1) == 'P' &&  byteBuff.get(2) == 'O' &&  byteBuff.get(3) == 'N' &&  byteBuff.get(4) == 'G'  ) {
+				conn.setHeartbeatTime( TimeUtil.currentTimeMillis() );
+				conn.release();		
+			} else {
+				conn.close("heartbeat err");
+			}
+		} finally {
+			NetSystem.getInstance().getBufferPool().recycle(byteBuff);
 		}
 	}
 

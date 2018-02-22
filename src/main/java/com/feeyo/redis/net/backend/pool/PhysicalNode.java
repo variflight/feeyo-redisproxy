@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.backend.pool;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +68,7 @@ public class PhysicalNode {
 			}
 
 			@Override
-			public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+			public void handleResponse(RedisBackendConnection conn, ByteBuffer byteBuff) throws IOException {
 				//ignore
 			}
 

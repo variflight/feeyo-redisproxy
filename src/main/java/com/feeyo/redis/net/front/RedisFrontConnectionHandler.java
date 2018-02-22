@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.front;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,16 +45,20 @@ public class RedisFrontConnectionHandler implements NIOHandler<RedisFrontConnect
 	}
 
 	@Override
-	public void handleReadEvent(RedisFrontConnection conn, byte[] data) throws IOException {
+	public void handleReadEvent(RedisFrontConnection conn, ByteBuffer data) throws IOException {
 		// 日志HEX
-		if ( LOGGER.isDebugEnabled() ) {
-			final String hexs = StringUtil.dumpAsHex(data, 0, data.length);
-			LOGGER.debug("C#{} front request len = {}, buffer bytes\n {}", 
-					new Object[]{ conn.getId(), data.length, hexs });
+		if (LOGGER.isDebugEnabled()) {
+			int length = data.position();
+			byte[] b = new byte[length];
+			data.get(b, 0, length);
+			final String hexs = StringUtil.dumpAsHex(b, 0, b.length);
+			LOGGER.debug("C#{} front request len = {}, buffer bytes\n {}",
+					new Object[] { conn.getId(), b.length, hexs });
 		}
 
 		// 分发
-		conn.getSession().handle(data);	
+		conn.getSession().handle(data);
+		
 	}
 	
 }

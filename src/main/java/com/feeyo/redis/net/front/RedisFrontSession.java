@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.front;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
 
@@ -10,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestDecoderV5;
+import com.feeyo.redis.engine.codec.RedisRequestDecoderV6;
 import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.codec.RedisRequestUnknowException;
@@ -61,7 +62,7 @@ public class RedisFrontSession {
 	private long requestTimeMills; 
 	
     // 解析器 
-	private RedisRequestDecoderV5 requestDecoder = new RedisRequestDecoderV5();
+	private RedisRequestDecoderV6 requestDecoder = new RedisRequestDecoderV6();
 	
 	private AbstractCommandHandler defaultCommandHandler;
 	private AbstractCommandHandler segmentCommandHandler;
@@ -78,7 +79,7 @@ public class RedisFrontSession {
 		this.frontCon = frontCon;
 	}
 
-	public void handle(byte[] byteBuff) {
+	public void handle(ByteBuffer byteBuff) {
 		
 		// 默认需要立即释放
 		boolean isImmediateReleaseConReadLock = true;
@@ -444,7 +445,7 @@ public class RedisFrontSession {
 				// PUBSUB
 				pubsub = new PubSub(frontCon, new AbstractBackendCallback() {
 					@Override
-					public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+					public void handleResponse(RedisBackendConnection conn, ByteBuffer byteBuff) throws IOException {
 						if (frontCon != null && !frontCon.isClosed()) {
 							frontCon.write(byteBuff);
 						}

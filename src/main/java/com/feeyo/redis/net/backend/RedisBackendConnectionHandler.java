@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.backend;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,15 +26,17 @@ public class RedisBackendConnectionHandler implements NIOHandler<RedisBackendCon
 	}
 	
 	@Override
-	public void handleReadEvent(RedisBackendConnection con, byte[] data) throws IOException {
+	public void handleReadEvent(RedisBackendConnection con, ByteBuffer data) throws IOException {
 		
 		// 日志HEX
-		if ( LOGGER.isDebugEnabled() ) {
-			final String hexs = StringUtil.dumpAsHex(data, 0, data.length);
-			LOGGER.debug("C#{} backend response len = {},  buffer bytes\n {}", 
-					new Object[]{ con.getId(), data.length, hexs });
+		if (LOGGER.isDebugEnabled()) {
+			int length = data.position();
+			byte[] b = new byte[length];
+			data.get(b, 0, length);
+			final String hexs = StringUtil.dumpAsHex(b, 0, b.length);
+			LOGGER.debug("C#{} front request len = {}, buffer bytes\n {}",
+					new Object[] { con.getId(), b.length, hexs });
 		}
-		
 		
 		// 回调
 		con.getCallback().handleResponse(con, data);	

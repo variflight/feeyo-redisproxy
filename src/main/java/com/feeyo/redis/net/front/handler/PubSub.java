@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.front.handler;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -10,8 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.codec.RedisResponse;
-import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
@@ -59,7 +60,7 @@ public class PubSub  {
 
 			DirectTransTofrontCallBack callback = new DirectTransTofrontCallBack() {
 				@Override
-				public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+				public void handleResponse(RedisBackendConnection backendCon, ByteBuffer byteBuff) throws IOException {
 					
 					// 应答解析
 					List<RedisResponse> resps = decoder.decode(byteBuff);

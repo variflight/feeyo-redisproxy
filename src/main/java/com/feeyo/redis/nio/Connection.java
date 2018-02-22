@@ -572,7 +572,7 @@ public abstract class Connection implements ClosableConnection {
 				if ( length == -1 ) {
 					this.close("stream closed");
 		            return;
-				} else if (length == 0 && !this.channel.isOpen()  ) {
+				} else if ( length == 0 && !this.channel.isOpen() ) {
 					this.close("socket closed");
 					return;
 				}
@@ -609,12 +609,11 @@ public abstract class Connection implements ClosableConnection {
 				
 				// 负责解析报文并处理
 				int dataLength = readBuffer.position();
-				readBuffer.position( offset );
-				byte[] data = new byte[ dataLength ];
-				readBuffer.get(data, 0, dataLength);
+				ByteBuffer buf = allocate( dataLength );
+				readBuffer.flip();
+				buf.put(readBuffer);
 
-				handler.handleReadEvent(this, data);
-				
+				handler.handleReadEvent(this, buf);
 				
 				// 存在扩大后的 byte buffer
 				// 并且最近30秒 没有接收到大的消息 
