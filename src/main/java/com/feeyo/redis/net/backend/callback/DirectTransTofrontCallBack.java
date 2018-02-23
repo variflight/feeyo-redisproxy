@@ -33,6 +33,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 		int tmpSize = size;		
 		
 		if ( frontCon.isClosed() ) {
+			response.cleanup();
 			throw new IOException("front conn is closed!"); 
 		}
 		

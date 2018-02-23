@@ -1,5 +1,9 @@
 package com.feeyo.redis.engine.codec;
 
+import java.nio.ByteBuffer;
+
+import com.feeyo.redis.nio.NetSystem;
+
 public class RedisResponse {
 
 	private byte type;
@@ -76,5 +80,17 @@ public class RedisResponse {
 			}
 		}
 		return sBuffer;
+	}
+	
+	public void cleanup() {
+		if (data instanceof ByteBuffer) {
+			ByteBuffer buf = (ByteBuffer) data;
+			NetSystem.getInstance().getBufferPool().recycle(buf);
+		} else {
+			RedisResponse[] items = (RedisResponse[]) data;
+			for (RedisResponse response : items) {
+				response.cleanup();
+			}
+		}
 	}
 }
