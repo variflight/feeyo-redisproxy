@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import com.feeyo.redis.nio.NetSystem;
 
 public class AbstractDecoder {
+	private Object _lock = new Object();
 	protected ByteBuffer _buffer;
 	protected int _offset;
 	
@@ -56,6 +57,14 @@ public class AbstractDecoder {
 			result[i] = _buffer.get(offset + i);
 		}
 		return result;
+	}
+	
+	protected ByteBuffer getByteBuffer(int offset, int length) {
+		ByteBuffer buf = allocateByteBuffer(length);
+		for (int i = 0; i < length; i++) {
+			buf.put(_buffer.get(offset + i));
+		}
+		return buf;
 	}
 	
 	protected int readInt() throws IndexOutOfBoundsException {
@@ -125,5 +134,17 @@ public class AbstractDecoder {
 	
 	protected ByteBuffer allocateByteBuffer(int size) {
 		return NetSystem.getInstance().getBufferPool().allocate(size);
+	}
+	
+	public void cleanup() {
+		if (_buffer != null) {
+			synchronized (_lock) {
+				if (_buffer != null) {
+					recycleByteBuffer(_buffer);
+				}
+			}
+		}
+		_buffer = null;
+		_offset = 0;
 	}
 }

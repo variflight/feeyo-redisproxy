@@ -49,9 +49,7 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 					throw new IndexOutOfBoundsException("Not enough data.");
 					
 				} else if (_buffer.position() == _offset) {
-					recycleByteBuffer(_buffer);
-					_buffer = null;
-	            		_offset = 0;
+					cleanup();
 	            		return responses;
 				}
 			}
@@ -83,7 +81,7 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 
 			// 长度
 			len = end - start;
-			return new RedisResponse(type, getBytes(start, len));
+			return new RedisResponse(type, getByteBuffer(start, len));
 			
 		 } else if (type == '$') {
 			 
@@ -95,7 +93,7 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 		    	start = offset - 1;
 		    	end = _offset;
 		    	len = end - start;
-		        return new RedisResponse(type, getBytes(start, len));  // 此处不减
+		        return new RedisResponse(type, getByteBuffer(start, len));  // 此处不减
 		      }
 
 		      end = _offset + packetSize + 2;	// offset + data + \r\n
@@ -108,7 +106,7 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 		      
 		      start = offset - 1;
 		      len = end - start;
-		      return new RedisResponse(type, getBytes(start, len));
+		      return new RedisResponse(type, getByteBuffer(start, len));
 			 
 		 } else if (type == '*') {
 			 
@@ -120,7 +118,7 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 		    	start = offset -1;
 		    	end = _offset;
 		    	len = end - start;
-		        return new RedisResponse(type, getBytes(start, len));  // 此处不减
+		        return new RedisResponse(type, getByteBuffer(start, len));  // 此处不减
 		      }
 
 		      if (packetSize > bytesRemaining()) {
@@ -133,7 +131,7 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 		      start = offset -1;
 		      end = _offset;
 		      len = end - start;
-		      response.set(0, new RedisResponse(type, getBytes(start, len)));
+		      response.set(0, new RedisResponse(type, getByteBuffer(start, len)));
 
 		      byte ntype;
 		      RedisResponse res;

@@ -4,8 +4,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.feeyo.redis.nio.NetSystem;
-
 public class RedisPipelineResponseDecoderV2 extends AbstractDecoder {
 
 	private List<Integer> index = new ArrayList<Integer>();
@@ -71,7 +69,6 @@ public class RedisPipelineResponseDecoderV2 extends AbstractDecoder {
 					throw new IndexOutOfBoundsException("Not enough data.");
 
 				} else if (_buffer.position() == _offset) {
-					_offset = 0;
 					return new PipelineResponse(PipelineResponse.OK, result, getResponses());
 				}
 			}
@@ -163,8 +160,9 @@ public class RedisPipelineResponseDecoderV2 extends AbstractDecoder {
 		}
 
 		index.clear();
-		recycleByteBuffer(_buffer);
-		_buffer = null;
+		
+		cleanup();
+		
 		return result;
 	}
 	

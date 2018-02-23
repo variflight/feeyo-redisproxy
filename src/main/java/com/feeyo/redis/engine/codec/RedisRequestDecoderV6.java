@@ -20,9 +20,7 @@ public class RedisRequestDecoderV6 extends AbstractDecoder {
 	
 	public void reset() {
 		state = State.READ_SKIP;
-		_offset = 0;
-		recycleByteBuffer(_buffer);
-		_buffer = null;
+		cleanup();
 	}
 
 	public List<RedisRequest> decode(ByteBuffer buffer) throws RedisRequestUnknowException {

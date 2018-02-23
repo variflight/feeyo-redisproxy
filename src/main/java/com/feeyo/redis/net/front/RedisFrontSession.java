@@ -483,6 +483,7 @@ public class RedisFrontSession {
 		pipelineCommandHandler = null;
 		blockCommandHandler = null;
 		currentCommandHandler = null;
+		requestDecoder.cleanup();
 	}
 	
 	// FRONT CONNECTION EVENT 
