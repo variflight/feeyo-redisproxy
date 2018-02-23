@@ -41,8 +41,8 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				|| response.type() == ':'
 				|| response.type() == '$') {
 			
-			byte[] buf = (byte[])response.data() ;
-			tmpSize += buf.length;
+			ByteBuffer buf = (ByteBuffer)response.data() ;
+			tmpSize += buf.position();
 			
 			frontCon.write( buf );
 			
@@ -50,9 +50,9 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 			response.clear();
 			
 		} else {
-			if  ( response.data() instanceof byte[] ) {
-				byte[] buf = (byte[])response.data() ;
-				tmpSize += buf.length;
+			if  ( response.data() instanceof ByteBuffer ) {
+				ByteBuffer buf = (ByteBuffer)response.data() ;
+				tmpSize += buf.position();
 				frontCon.write( buf );
 				
 				// fast GC
@@ -62,8 +62,8 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				RedisResponse[] items = (RedisResponse[]) response.data();
 				for(int i = 0; i < items.length; i++) {
 					if ( i == 0 ) {
-						byte[] buf = (byte[])items[i].data() ;
-						tmpSize += buf.length;
+						ByteBuffer buf = (ByteBuffer)items[i].data() ;
+						tmpSize += buf.position();
 						frontCon.write( buf );
 						
 						// fast GC
@@ -137,6 +137,20 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				throw e2;
 			}
 		}	
+	}
+	
+	@Override
+	public void connectionError(Exception e, RedisBackendConnection backendCon) {
+		decoder.cleanup();
+		
+		super.connectionError(e, backendCon);
+	}
+
+	@Override
+	public void connectionClose(RedisBackendConnection backendCon, String reason) {
+		decoder.cleanup();
+
+		super.connectionClose(backendCon, reason);
 	}
 	
 }
