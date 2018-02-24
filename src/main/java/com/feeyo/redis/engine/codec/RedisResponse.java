@@ -89,7 +89,8 @@ public class RedisResponse {
 		} else {
 			RedisResponse[] items = (RedisResponse[]) data;
 			for (RedisResponse response : items) {
-				response.cleanup();
+				if (response != null)
+					response.cleanup();
 			}
 		}
 	}

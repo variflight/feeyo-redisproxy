@@ -20,10 +20,14 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 		append(buffer);
 
 		try {
-			if ( responses != null )
+			if ( responses != null ) {
+				for (RedisResponse rr : responses) {
+					rr.cleanup();
+				}
 				responses.clear();
-			else 
+			} else {
 				responses = new ArrayList<RedisResponse>(2);
+			}
 			
 			for(;;) {
 				
@@ -57,6 +61,13 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 		} catch (IndexOutOfBoundsException e1) {
 			// 捕获这个错误（没有足够的数据），等待下一个数据包 
 	        _offset = 0;
+	       
+	        if ( responses != null ) {
+				for (RedisResponse rr : responses) {
+					rr.cleanup();
+				}
+				responses.clear();
+			}
 	        return null;
 		}		
 		
@@ -137,12 +148,18 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 		      RedisResponse res;
 		      for (int i = 1; i <= packetSize; i++) {
 		        if (_offset + 1 >= _buffer.position() ) {
-		          throw new IndexOutOfBoundsException("Wait for more data.");
+		        		response.cleanup();
+		        		throw new IndexOutOfBoundsException("Wait for more data.");
 		        }
 
 		        ntype = _buffer.get(_offset++);
-		        res = parseResponse( ntype );
-		        response.set(i, res);
+		        try {
+		        		res = parseResponse( ntype );
+		        		response.set(i, res);
+		        } catch (IndexOutOfBoundsException e) {
+		        		response.cleanup();
+		        		throw e;
+		        }
 		      }
 		      return response;
 		 }
@@ -151,6 +168,16 @@ public class RedisResponseDecoderV5 extends AbstractDecoder {
 	}
 	
 	public static void main(String[] args) {
+		byte[] buf = ("*200\r\n" + 
+				"$13\r\n" + 
+				"8bqmlpagwc938\r\n" + 
+				"$827\r\n" + 
+				"xvxql7xa7dgo324getgorp8rt5p78uqjihlr6kiygo5bc0849d3cmqvurfq33r4973cj3i7it6z9u5hxdq7vjqr81whkttpas0y31642nt01ddinfwsii3evhqu5nbwmcpgmfkdu3puk6n478wfl8fyllkm2k3bq1hpumomzjxtah9gn6lfbdvw5rzgh5nctyoxk2lyvhlbatdjxe4sxokcz5e0wuoz2jfs7u12w3a6dv40oh0v3a85ktyyoa76nwprcuyaxz7hvm2ek5hnseskexlrotubkprlrrai23dxjbnkdow0l1kizfu21sq0jegi71bdj97oelrzz4kyam3cytqwjnvy5r0bdn3gxkpsflu3v3umm2fp7y8vhplgrc0vtx8nawsxri4zojdnyhbbi55dsq3dodviy8nasw4tuh1hu225uxu8r4c1gcfssq64pwwdmyze8e8z5z7kx96yqq9w4ksuv8kiaovz4lrvcwrqt97t8bxhwjxl5c5nx1m3814l6xsx7z81aarvrv0z83rgnw7u26mv0qy7kxtmswtuddlfl2k26ajptjb5fjnn90r5bf2cwno782h7vsvn6zq5k6ber4al1m5q56vmnzmxpo61pcuec8o2wxseemqcytu00imxpsvwbx0hurx34c4n4ymx8z45glg13b88xon86o8xn439nbqdx0l2lxumkps1yp33couwy917vz6pvdyi7tl65avxu5bul0imtawh0cvy8yhnqq5hd11x1js9yynihc26tq03ulry0ab3njb20ljnf9kvzrxngxyi0n0m2spojeu1yej6\r\n" + 
+				"$13").getBytes();
+		ByteBuffer bb = ByteBuffer.allocate(buf.length);
+		bb.put(buf);
+		RedisResponseDecoderV5 v5 = new RedisResponseDecoderV5();
+		v5.decode(bb);
 		
 	}
 	
