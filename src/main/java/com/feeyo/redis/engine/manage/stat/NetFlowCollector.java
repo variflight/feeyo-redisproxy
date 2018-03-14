@@ -11,6 +11,10 @@ public class NetFlowCollector implements StatCollector {
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
 			boolean isCommandOnly) {
 		
+		if (isCommandOnly) {
+			return;
+		}
+		
 		UserNetFlow userNetFlow = userNetFlowMap.get(password);
 		if ( userNetFlow == null ) {
 			userNetFlow = new UserNetFlow();

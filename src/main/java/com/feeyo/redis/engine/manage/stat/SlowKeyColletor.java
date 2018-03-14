@@ -18,6 +18,10 @@ public class SlowKeyColletor implements StatCollector {
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
 			boolean isCommandOnly) {
 		
+		if (isCommandOnly) {
+			return;
+		}
+		
 		// 小于 50毫秒不记录
 		if( procTimeMills < 50 )
 			return;
