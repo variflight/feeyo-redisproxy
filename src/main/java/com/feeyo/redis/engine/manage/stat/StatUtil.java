@@ -238,6 +238,18 @@ public class StatUtil {
 			@Override
 			public void run() {
 				
+				String keyStr = new String(key);
+				for(StatCollector listener: collectors) {
+					try {
+						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, isCommandOnly);
+					} catch(Exception e) {
+						LOGGER.error("error:",e);
+					}
+				}	
+				
+				if (isCommandOnly) {
+					return;
+				}
 				
 				long currentTimeMillis = TimeUtil.currentTimeMillis();
 				
@@ -253,18 +265,6 @@ public class StatUtil {
 		            
 		        } catch (Exception e) {
 		        }
-		        
-
-		    	//
-				String keyStr = new String(key);
-				for(StatCollector listener: collectors) {
-					try {
-						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, isCommandOnly);
-					} catch(Exception e) {
-						LOGGER.error("error:",e);
-					}
-				}	
-				
 			}
 		});
 	}
