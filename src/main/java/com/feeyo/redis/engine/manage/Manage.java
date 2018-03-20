@@ -43,7 +43,7 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.Connection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.buffer.BufferPool;
-import com.feeyo.redis.nio.buffer.bucket.ByteBufferBucket;
+import com.feeyo.redis.nio.buffer.bucket.AbstractByteBufferBucket;
 import com.feeyo.redis.nio.buffer.bucket.ByteBufferBucketPool;
 import com.feeyo.redis.nio.buffer.page.ByteBufferPagePool;
 import com.feeyo.util.JavaUtils;
@@ -481,8 +481,8 @@ public class Manage {
 					
 					if ( bufferPool instanceof ByteBufferBucketPool ) {
 						ByteBufferBucketPool p = (ByteBufferBucketPool) bufferPool;
-						ByteBufferBucket[] buckets = p.buckets();
-						for (ByteBufferBucket b : buckets) {
+						AbstractByteBufferBucket[] buckets = p.buckets();
+						for (AbstractByteBufferBucket b : buckets) {
 							capacity += b.getCount();
 						}
 						
@@ -529,9 +529,9 @@ public class Manage {
 					BufferPool bufferPool = NetSystem.getInstance().getBufferPool();
 					if ( bufferPool instanceof ByteBufferBucketPool ) {
 						ByteBufferBucketPool p = (ByteBufferBucketPool) bufferPool;
-						ByteBufferBucket[] buckets = p.buckets();
+						AbstractByteBufferBucket[] buckets = p.buckets();
 
-						for(ByteBufferBucket b: buckets) {
+						for(AbstractByteBufferBucket b: buckets) {
 							StringBuffer sBuffer = new StringBuffer();
 							sBuffer.append(" chunkSize=").append( b.getChunkSize() ).append(",");
 							sBuffer.append(" queueSize=").append( b.getQueueSize() ).append( ", " );

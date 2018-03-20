@@ -19,7 +19,7 @@ public class ByteBufferReferenceUtil {
 
 	private ByteBufferReferenceUtil() {}
 	
-	public static void referenceCheck(TreeMap<Integer, ByteBufferBucket> buckets) {
+	public static void referenceCheck(TreeMap<Integer, AbstractByteBufferBucket> buckets) {
 		
 		// 5 分钟
 		referenceExecutor.scheduleAtFixedRate(new ReleaseTask(buckets), 120L, 300L, TimeUnit.SECONDS);
@@ -27,10 +27,10 @@ public class ByteBufferReferenceUtil {
 	
 	private static final class ReleaseTask implements Runnable {
 		
-		private final TreeMap<Integer, ByteBufferBucket> buckets;
+		private final TreeMap<Integer, AbstractByteBufferBucket> buckets;
 		private final AtomicBoolean checking = new AtomicBoolean( false );
 		
-		ReleaseTask(TreeMap<Integer, ByteBufferBucket> buckets) {
+		ReleaseTask(TreeMap<Integer, AbstractByteBufferBucket> buckets) {
 			this.buckets = buckets;
 		}
 
@@ -42,9 +42,9 @@ public class ByteBufferReferenceUtil {
 			}
 
 			try {
-				Iterator<ByteBufferBucket> it = buckets.values().iterator();
+				Iterator<AbstractByteBufferBucket> it = buckets.values().iterator();
 				while( it.hasNext() ) {
-					ByteBufferBucket bucket = it.next();
+					AbstractByteBufferBucket bucket = it.next();
 					bucket.releaseTimeoutBuffer();
 				}
 			} catch (Exception e) {
