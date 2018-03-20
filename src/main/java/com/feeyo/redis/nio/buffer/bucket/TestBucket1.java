@@ -10,7 +10,7 @@ public class TestBucket1 {
 	public static void main(String[] args) {
 
 		final ByteBufferBucketPool bufferPool = new ByteBufferBucketPool(1024*1024 * 15, 50 * 1024 * 1024, 64 * 1024, 128, new int[] {1024}, 64 * 1024);
-		ByteBufferBucket[] buckets = bufferPool.buckets();
+		AbstractByteBufferBucket[] buckets = bufferPool.buckets();
 
 //		ByteBuffer buffer1 = bufferPool.allocate(100);
 //		ByteBuffer buffer2 = bufferPool.allocate(1024);
@@ -74,7 +74,7 @@ public class TestBucket1 {
 		System.out.println("t2-t1:" + (t2-t1));
 
 		int count = 0;
-		for (ByteBufferBucket bucket : buckets) {
+		for (AbstractByteBufferBucket bucket : buckets) {
 			count += bucket.getCount();
 		}
 		System.out.println(count);

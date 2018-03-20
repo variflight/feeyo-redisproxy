@@ -20,7 +20,7 @@ public class ByteBufferBucketPool extends BufferPool {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ByteBufferBucketPool.class );
 	
-	private TreeMap<Integer, ByteBufferBucket> _buckets;
+	private TreeMap<Integer, AbstractByteBufferBucket> _buckets;
 	
 	private long sharedOptsCount;
 	
@@ -38,7 +38,7 @@ public class ByteBufferBucketPool extends BufferPool {
 			bucketsCount = maxChunkSize / increments[0];
 		}
 		
-		this._buckets = new TreeMap<Integer, ByteBufferBucket>();
+		this._buckets = new TreeMap<Integer, AbstractByteBufferBucket>();
 		
 		// 平均分配初始化的桶size 
 		long bucketBufferSize = minBufferSize / bucketsCount;
@@ -49,7 +49,7 @@ public class ByteBufferBucketPool extends BufferPool {
 			chunkSize += increments[i >= increments.length ? 0 : i];
 			int chunkCount = (int) (bucketBufferSize / chunkSize);
 			boolean isExpand =  chunkSize <= 262144 ? true: false; 	// 256K内的块 支持自动扩容
-			ByteBufferBucket bucket = new ByteBufferBucket(this, chunkSize, chunkCount, isExpand);
+			AbstractByteBufferBucket bucket = new CommonByteBufferBucket(this, chunkSize, chunkCount, isExpand);
 			this._buckets.put(bucket.getChunkSize(), bucket);
 		}
 		
@@ -58,11 +58,11 @@ public class ByteBufferBucketPool extends BufferPool {
 	}
 	
 	//根据size寻找 桶
-	private ByteBufferBucket bucketFor(int size) {
+	private AbstractByteBufferBucket bucketFor(int size) {
 		if (size <= minChunkSize)
 			return null;
 		
-		Map.Entry<Integer, ByteBufferBucket> entry = this._buckets.ceilingEntry( size );
+		Map.Entry<Integer, AbstractByteBufferBucket> entry = this._buckets.ceilingEntry( size );
 		return entry == null ? null : entry.getValue();
 
 	}
@@ -75,7 +75,7 @@ public class ByteBufferBucketPool extends BufferPool {
 		ByteBuffer byteBuf = null;
 		
 		// 根据容量大小size定位到对应的桶Bucket
-		ByteBufferBucket bucket = bucketFor(size);
+		AbstractByteBufferBucket bucket = bucketFor(size);
 		if ( bucket != null) {
 			byteBuf = bucket.allocate();
 		}
@@ -98,7 +98,7 @@ public class ByteBufferBucketPool extends BufferPool {
 			return;
 		}
       	
-		ByteBufferBucket bucket = bucketFor( buf.capacity() );
+		AbstractByteBufferBucket bucket = bucketFor( buf.capacity() );
 		if (bucket != null) {
 			bucket.recycle( buf );
 			sharedOptsCount++;
@@ -108,11 +108,11 @@ public class ByteBufferBucketPool extends BufferPool {
 		}
 	}
 
-	public synchronized ByteBufferBucket[] buckets() {
+	public synchronized AbstractByteBufferBucket[] buckets() {
 		
-		ByteBufferBucket[] tmp = new ByteBufferBucket[ _buckets.size() ];
+		AbstractByteBufferBucket[] tmp = new AbstractByteBufferBucket[ _buckets.size() ];
 		int i = 0;
-		for(ByteBufferBucket b: _buckets.values()) {
+		for(AbstractByteBufferBucket b: _buckets.values()) {
 			tmp[i] = b;
 			i++;
 		}

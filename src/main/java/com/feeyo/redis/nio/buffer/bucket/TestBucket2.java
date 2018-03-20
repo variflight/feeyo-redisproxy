@@ -90,8 +90,8 @@ public class TestBucket2 {
 
 
 		int count = 0;
-		ByteBufferBucket[] buckets = bufferPool.buckets();
-		for (ByteBufferBucket bucket : buckets) {
+		AbstractByteBufferBucket[] buckets = bufferPool.buckets();
+		for (AbstractByteBufferBucket bucket : buckets) {
 			count += bucket.getCount();
 		}
 		System.out.println( count );
