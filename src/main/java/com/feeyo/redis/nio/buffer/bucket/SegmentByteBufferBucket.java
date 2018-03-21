@@ -39,12 +39,12 @@ public class SegmentByteBufferBucket extends AbstractByteBufferBucket {
 
 	@Override
 	protected boolean queueOffer(ByteBuffer buffer) {
-		return this.buffers[recycleIndex.getAndIncrement() % buffersSize].offer( buffer );
+		return this.buffers[getIndex(recycleIndex)].offer( buffer );
 	}
 
 	@Override
 	protected ByteBuffer queuePoll() {
-		return (ByteBuffer) this.buffers[allocateIndex.getAndIncrement() % buffersSize].poll();
+		return (ByteBuffer) this.buffers[getIndex(allocateIndex)].poll();
 	}
 
 	@Override
@@ -61,6 +61,15 @@ public class SegmentByteBufferBucket extends AbstractByteBufferBucket {
 			size = size + cq.size();
 		}
 		return size;
+	}
+	  
+	private final int getIndex(AtomicInteger ai) {
+		for (;;) {
+			int current = ai.get();
+			int next = current >= 15 ? 0 : current + 1;
+			if (ai.compareAndSet(current, next))
+				return current;
+		}
 	}
 
 }
