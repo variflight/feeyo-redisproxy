@@ -49,7 +49,15 @@ public class ByteBufferBucketPool extends BufferPool {
 			chunkSize += increments[i >= increments.length ? 0 : i];
 			int chunkCount = (int) (bucketBufferSize / chunkSize);
 			boolean isExpand =  chunkSize <= 262144 ? true: false; 	// 256K内的块 支持自动扩容
-			AbstractByteBufferBucket bucket = new CommonByteBufferBucket(this, chunkSize, chunkCount, isExpand);
+			
+			// 测试结果 队列长度2048的时候效果就没那么显著了。
+			AbstractByteBufferBucket bucket;
+			if (chunkCount > 2000) {
+				bucket = new SegmentByteBufferBucket(this, chunkSize, chunkCount, isExpand);
+			} else {
+				bucket = new CommonByteBufferBucket(this, chunkSize, chunkCount, isExpand);
+			}
+			
 			this._buckets.put(bucket.getChunkSize(), bucket);
 		}
 		
