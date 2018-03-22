@@ -18,12 +18,13 @@ public class TestBucket2 {
 		int minChunkSize = 0;
 		int[] increments = new int[] {16};
 		int maxChunkSize = 128;
+		int threadLocalPercent = 4;
 		
 		final ConcurrentHashMap<Long, Integer> used = new ConcurrentHashMap<>(); 
 		
 		final ByteBufferBucketPool bufferPool = new ByteBufferBucketPool(
 				minBufferSize, maxBufferSize, decomposeBufferSize,
-				minChunkSize, increments, maxChunkSize);
+				minChunkSize, increments, maxChunkSize, threadLocalPercent);
 		
 		
 		long t1 = System.currentTimeMillis();

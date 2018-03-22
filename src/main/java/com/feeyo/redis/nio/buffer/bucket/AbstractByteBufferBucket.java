@@ -25,18 +25,21 @@ public abstract class AbstractByteBufferBucket implements Comparable<ByteBufferB
 	private final int chunkSize;
 	private long _shared = 0;
 	private boolean isExpand = false;
+	
+	private final int threadLocalPercent;
 
 	public AbstractByteBufferBucket(ByteBufferBucketPool pool, int chunkSize) {
-		this(pool, chunkSize, 0, false);
+		this(pool, chunkSize, 0, false, 0);
 	}
 
-	public AbstractByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand) {
+	public AbstractByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
 
 		this.count = new AtomicInteger(count);
 		this.usedCount = new AtomicInteger(0);
 		this.isExpand = isExpand;
+		this.threadLocalPercent = threadLocalPercent;
 
 		this.references = new ConcurrentHashMap<Long, ByteBufferReference>(count, 0.2F, 32);
 	}
@@ -201,6 +204,10 @@ public abstract class AbstractByteBufferBucket implements Comparable<ByteBufferB
 
 	public int getChunkSize() {
 		return chunkSize;
+	}
+
+	public int getThreadLocalPercent() {
+		return threadLocalPercent;
 	}
 
 	@Override

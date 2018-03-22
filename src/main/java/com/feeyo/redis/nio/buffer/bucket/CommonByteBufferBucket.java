@@ -7,8 +7,8 @@ public class CommonByteBufferBucket extends AbstractByteBufferBucket {
 	
 	private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<ByteBuffer>();
 
-	public CommonByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand) {
-		super(pool, chunkSize, count, isExpand);
+	public CommonByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
+		super(pool, chunkSize, count, isExpand, threadLocalPercent);
 
 		// 初始化
 		for(int j = 0; j < count; j++ ) {
