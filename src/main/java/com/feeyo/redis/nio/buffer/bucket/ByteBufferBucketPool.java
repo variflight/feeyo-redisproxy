@@ -25,7 +25,7 @@ public class ByteBufferBucketPool extends BufferPool {
 	private long sharedOptsCount;
 	
 	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
-			int minChunkSize, int[] increments, int maxChunkSize) {
+			int minChunkSize, int[] increments, int maxChunkSize, int threadLocalPercent) {
 		
 		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increments, maxChunkSize);
 		
@@ -53,9 +53,9 @@ public class ByteBufferBucketPool extends BufferPool {
 			// 测试结果 队列长度2048的时候效果就没那么显著了。
 			AbstractByteBufferBucket bucket;
 			if (chunkCount > 2000) {
-				bucket = new SegmentByteBufferBucket(this, chunkSize, chunkCount, isExpand);
+				bucket = new SegmentByteBufferBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
 			} else {
-				bucket = new CommonByteBufferBucket(this, chunkSize, chunkCount, isExpand);
+				bucket = new CommonByteBufferBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
 			}
 			
 			this._buckets.put(bucket.getChunkSize(), bucket);
