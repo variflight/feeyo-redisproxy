@@ -10,11 +10,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractByteBufferBucket implements Comparable<ByteBufferBucket> {
-	
-	private static Logger LOGGER = LoggerFactory.getLogger(ByteBufferBucket.class);
+import com.feeyo.redis.nio.buffer.bucket.ref.ByteBufferReference;
 
-	private ByteBufferBucketPool bufferPool;
+public abstract class AbstractBucket implements Comparable<AbstractBucket> {
+	
+	private static Logger LOGGER = LoggerFactory.getLogger(AbstractBucket.class);
+
+	private BucketBufferPool bufferPool;
 
 	private final ConcurrentHashMap<Long, ByteBufferReference> references;
 
@@ -29,11 +31,11 @@ public abstract class AbstractByteBufferBucket implements Comparable<ByteBufferB
 	
 	private final int threadLocalPercent;
 
-	public AbstractByteBufferBucket(ByteBufferBucketPool pool, int chunkSize) {
+	public AbstractBucket(BucketBufferPool pool, int chunkSize) {
 		this(pool, chunkSize, 0, false, 0);
 	}
 
-	public AbstractByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
+	public AbstractBucket(BucketBufferPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
 

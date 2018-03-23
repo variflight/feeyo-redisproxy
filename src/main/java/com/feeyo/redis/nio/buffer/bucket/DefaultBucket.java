@@ -3,11 +3,12 @@ package com.feeyo.redis.nio.buffer.bucket;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class CommonByteBufferBucket extends AbstractByteBufferBucket {
+public class DefaultBucket extends AbstractBucket {
 	
 	private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<ByteBuffer>();
 
-	public CommonByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
+	public DefaultBucket(BucketBufferPool pool, int chunkSize, 
+			int count, boolean isExpand, int threadLocalPercent) {
 		super(pool, chunkSize, count, isExpand, threadLocalPercent);
 
 		// 初始化
@@ -18,7 +19,7 @@ public class CommonByteBufferBucket extends AbstractByteBufferBucket {
 	}
 
 	@Override
-	public int compareTo(ByteBufferBucket o) {
+	public int compareTo(AbstractBucket o) {
 		if (this.getChunkSize() > o.getChunkSize()) {
 			return 1;
 		} else if (this.getChunkSize() < o.getChunkSize()) {

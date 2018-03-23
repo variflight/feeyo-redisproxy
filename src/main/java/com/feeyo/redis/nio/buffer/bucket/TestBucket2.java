@@ -22,7 +22,7 @@ public class TestBucket2 {
 		
 		final ConcurrentHashMap<Long, Integer> used = new ConcurrentHashMap<>(); 
 		
-		final ByteBufferBucketPool bufferPool = new ByteBufferBucketPool(
+		final BucketBufferPool bufferPool = new BucketBufferPool(
 				minBufferSize, maxBufferSize, decomposeBufferSize,
 				minChunkSize, increments, maxChunkSize, threadLocalPercent);
 		
@@ -91,8 +91,8 @@ public class TestBucket2 {
 
 
 		int count = 0;
-		AbstractByteBufferBucket[] buckets = bufferPool.buckets();
-		for (AbstractByteBufferBucket bucket : buckets) {
+		AbstractBucket[] buckets = bufferPool.buckets();
+		for (AbstractBucket bucket : buckets) {
 			count += bucket.getCount();
 		}
 		System.out.println( count );

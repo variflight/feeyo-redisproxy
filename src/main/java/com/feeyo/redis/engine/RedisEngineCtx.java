@@ -25,7 +25,7 @@ import com.feeyo.redis.nio.NIOReactorPool;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.SystemConfig;
 import com.feeyo.redis.nio.buffer.BufferPool;
-import com.feeyo.redis.nio.buffer.bucket.ByteBufferBucketPool;
+import com.feeyo.redis.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.redis.virtualmemory.VirtualMemoryService;
 import com.feeyo.util.ExecutorUtil;
 import com.feeyo.util.keepalived.KeepAlived;
@@ -124,7 +124,7 @@ public class RedisEngineCtx {
         int timerSize = timerSizeString == null ? 6 : Integer.parseInt( timerSizeString ); 
 
         //ByteBufferPagePool ByteBufferBucketPool
-        this.bufferPool = new ByteBufferBucketPool(minBufferSize, maxBufferSize, decomposeBufferSize,
+        this.bufferPool = new BucketBufferPool(minBufferSize, maxBufferSize, decomposeBufferSize,
         		minChunkSize, increments, maxChunkSize, threadLocalPercent);   
        
         this.virtualMemoryService = new VirtualMemoryService();

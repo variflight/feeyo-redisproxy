@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.nio.buffer.BufferPool;
+import com.feeyo.redis.nio.buffer.bucket.ref.ByteBufferReferenceUtil;
 
 /**
  * 堆外内存池
@@ -16,15 +17,15 @@ import com.feeyo.redis.nio.buffer.BufferPool;
  * @author zhuam
  *
  */
-public class ByteBufferBucketPool extends BufferPool {
+public class BucketBufferPool extends BufferPool {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( ByteBufferBucketPool.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( BucketBufferPool.class );
 	
-	private TreeMap<Integer, AbstractByteBufferBucket> _buckets;
+	private TreeMap<Integer, AbstractBucket> _buckets;
 	
 	private long sharedOptsCount;
 	
-	public ByteBufferBucketPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
+	public BucketBufferPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
 			int minChunkSize, int[] increments, int maxChunkSize, int threadLocalPercent) {
 		
 		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increments, maxChunkSize);
@@ -38,7 +39,7 @@ public class ByteBufferBucketPool extends BufferPool {
 			bucketsCount = maxChunkSize / increments[0];
 		}
 		
-		this._buckets = new TreeMap<Integer, AbstractByteBufferBucket>();
+		this._buckets = new TreeMap<Integer, AbstractBucket>();
 		
 		// 平均分配初始化的桶size 
 		long bucketBufferSize = minBufferSize / bucketsCount;
@@ -51,11 +52,11 @@ public class ByteBufferBucketPool extends BufferPool {
 			boolean isExpand =  chunkSize <= 262144 ? true: false; 	// 256K内的块 支持自动扩容
 			
 			// 测试结果 队列长度2048的时候效果就没那么显著了。
-			AbstractByteBufferBucket bucket;
+			AbstractBucket bucket;
 			if (chunkCount > 2000) {
-				bucket = new SegmentByteBufferBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
+				bucket = new SegmentBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
 			} else {
-				bucket = new CommonByteBufferBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
+				bucket = new DefaultBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
 			}
 			
 			this._buckets.put(bucket.getChunkSize(), bucket);
@@ -66,11 +67,11 @@ public class ByteBufferBucketPool extends BufferPool {
 	}
 	
 	//根据size寻找 桶
-	private AbstractByteBufferBucket bucketFor(int size) {
+	private AbstractBucket bucketFor(int size) {
 		if (size <= minChunkSize)
 			return null;
 		
-		Map.Entry<Integer, AbstractByteBufferBucket> entry = this._buckets.ceilingEntry( size );
+		Map.Entry<Integer, AbstractBucket> entry = this._buckets.ceilingEntry( size );
 		return entry == null ? null : entry.getValue();
 
 	}
@@ -83,7 +84,7 @@ public class ByteBufferBucketPool extends BufferPool {
 		ByteBuffer byteBuf = null;
 		
 		// 根据容量大小size定位到对应的桶Bucket
-		AbstractByteBufferBucket bucket = bucketFor(size);
+		AbstractBucket bucket = bucketFor(size);
 		if ( bucket != null) {
 			byteBuf = bucket.allocate();
 		}
@@ -106,7 +107,7 @@ public class ByteBufferBucketPool extends BufferPool {
 			return;
 		}
       	
-		AbstractByteBufferBucket bucket = bucketFor( buf.capacity() );
+		AbstractBucket bucket = bucketFor( buf.capacity() );
 		if (bucket != null) {
 			bucket.recycle( buf );
 			sharedOptsCount++;
@@ -116,11 +117,11 @@ public class ByteBufferBucketPool extends BufferPool {
 		}
 	}
 
-	public synchronized AbstractByteBufferBucket[] buckets() {
+	public synchronized AbstractBucket[] buckets() {
 		
-		AbstractByteBufferBucket[] tmp = new AbstractByteBufferBucket[ _buckets.size() ];
+		AbstractBucket[] tmp = new AbstractBucket[ _buckets.size() ];
 		int i = 0;
-		for(AbstractByteBufferBucket b: _buckets.values()) {
+		for(AbstractBucket b: _buckets.values()) {
 			tmp[i] = b;
 			i++;
 		}

@@ -7,9 +7,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.feeyo.redis.nio.buffer.BufferPool;
 
-public class SegmentByteBufferBucket extends AbstractByteBufferBucket {
+public class SegmentBucket extends AbstractBucket {
 	
 	private final ConcurrentLinkedQueue<ByteBuffer>[] buffers;
+	
 	private final static int buffersSize = 16;
 	private final AtomicInteger allocateIndex = new AtomicInteger(0);
 	private final AtomicInteger recycleIndex = new AtomicInteger(0);
@@ -20,7 +21,7 @@ public class SegmentByteBufferBucket extends AbstractByteBufferBucket {
 
 	
 	@SuppressWarnings("unchecked")
-	public SegmentByteBufferBucket(ByteBufferBucketPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
+	public SegmentBucket(BucketBufferPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
 		super(pool, chunkSize, count, isExpand, threadLocalPercent);
 
 		this.buffers = new ConcurrentLinkedQueue[buffersSize];
@@ -41,7 +42,7 @@ public class SegmentByteBufferBucket extends AbstractByteBufferBucket {
 	}
 
 	@Override
-	public int compareTo(ByteBufferBucket o) {
+	public int compareTo(AbstractBucket o) {
 		if (this.getChunkSize() > o.getChunkSize()) {
 			return 1;
 		} else if (this.getChunkSize() < o.getChunkSize()) {

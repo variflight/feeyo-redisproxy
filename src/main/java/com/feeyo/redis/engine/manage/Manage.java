@@ -43,9 +43,9 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.Connection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.buffer.BufferPool;
-import com.feeyo.redis.nio.buffer.bucket.AbstractByteBufferBucket;
-import com.feeyo.redis.nio.buffer.bucket.ByteBufferBucketPool;
-import com.feeyo.redis.nio.buffer.page.ByteBufferPagePool;
+import com.feeyo.redis.nio.buffer.bucket.AbstractBucket;
+import com.feeyo.redis.nio.buffer.bucket.BucketBufferPool;
+import com.feeyo.redis.nio.buffer.page.PageBufferPool;
 import com.feeyo.util.JavaUtils;
 import com.feeyo.util.ProtoUtils;
 import com.feeyo.util.ShellUtils;
@@ -479,10 +479,10 @@ public class Manage {
 					
 					int capacity = 0;
 					
-					if ( bufferPool instanceof ByteBufferBucketPool ) {
-						ByteBufferBucketPool p = (ByteBufferBucketPool) bufferPool;
-						AbstractByteBufferBucket[] buckets = p.buckets();
-						for (AbstractByteBufferBucket b : buckets) {
+					if ( bufferPool instanceof BucketBufferPool ) {
+						BucketBufferPool p = (BucketBufferPool) bufferPool;
+						AbstractBucket[] buckets = p.buckets();
+						for (AbstractBucket b : buckets) {
 							capacity += b.getCount();
 						}
 						
@@ -500,7 +500,7 @@ public class Manage {
 						
 						return sBuffer.toString().getBytes();
 						
-					} else if ( bufferPool instanceof ByteBufferPagePool ) {
+					} else if ( bufferPool instanceof PageBufferPool ) {
 						
 						List<String> lines = new ArrayList<String>();
 						
@@ -527,11 +527,11 @@ public class Manage {
 					List<String> lines = new ArrayList<String>();	
 					
 					BufferPool bufferPool = NetSystem.getInstance().getBufferPool();
-					if ( bufferPool instanceof ByteBufferBucketPool ) {
-						ByteBufferBucketPool p = (ByteBufferBucketPool) bufferPool;
-						AbstractByteBufferBucket[] buckets = p.buckets();
+					if ( bufferPool instanceof BucketBufferPool ) {
+						BucketBufferPool p = (BucketBufferPool) bufferPool;
+						AbstractBucket[] buckets = p.buckets();
 
-						for(AbstractByteBufferBucket b: buckets) {
+						for(AbstractBucket b: buckets) {
 							StringBuffer sBuffer = new StringBuffer();
 							sBuffer.append(" chunkSize=").append( b.getChunkSize() ).append(",");
 							sBuffer.append(" queueSize=").append( b.getQueueSize() ).append( ", " );
