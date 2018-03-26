@@ -9,8 +9,9 @@ public class TestBucket1 {
 	// new DirectByteBufferPool(64,2048,64*1024, 500)
 	public static void main(String[] args) {
 
-		final ByteBufferBucketPool bufferPool = new ByteBufferBucketPool(1024*1024 * 15, 50 * 1024 * 1024, 64 * 1024, 128, new int[] {1024}, 64 * 1024);
-		ByteBufferBucket[] buckets = bufferPool.buckets();
+//		final ByteBufferBucketPool bufferPool = new ByteBufferBucketPool(1024*1024 * 15, 50 * 1024 * 1024, 64 * 1024, 128, new int[] {1024}, 64 * 1024);
+		final BucketBufferPool bufferPool = new BucketBufferPool(1207959552,1207959552,65536,0,new int[] {1024, 1024, 2048, 4096, 4096, 4096, 8192, 8192, 8192, 8192, 8192, 8192},65536, 4);
+		AbstractBucket[] buckets = bufferPool.buckets();
 
 //		ByteBuffer buffer1 = bufferPool.allocate(100);
 //		ByteBuffer buffer2 = bufferPool.allocate(1024);
@@ -32,29 +33,30 @@ public class TestBucket1 {
 		long t1 = System.currentTimeMillis();
 		
 		
-		int size = 100;
+		int size = 24;
 		final CountDownLatch c = new CountDownLatch( size );
 		
 		for(int i= 0; i < size; i++) {
-			Thread t = new Thread() {
+			Thread t = new Thread("$_" + i) {
 				public void run() {
-					for (int j = 0; j <= 100000; j++) {
-						int chunkSize = 1000 + j;
-						if ( chunkSize > 70000 ) {
-							chunkSize = 1000;
-						}
+					for (int j = 0; j <= 1000000; j++) {
+//						int chunkSize = 1000 + j;
+//						if ( chunkSize > 1024 ) {
+//							chunkSize = 1000;
+//						}
+						int chunkSize = 1000;
 						
 						ByteBuffer b = bufferPool.allocate( chunkSize );
-						if ( b == null) {
-							System.out.println("b is null + " + j);
-						} else {
-							if (b.position() > 0) {
-								System.err.println("eeeeeeeeeeeee " + b.isDirect() );
-							}
-						}
-						
-						String t = "b is null + ";
-						b.put( t.getBytes() );
+//						if ( b == null) {
+//							System.out.println("b is null + " + j);
+//						} else {
+//							if (b.position() > 0) {
+//								System.err.println("eeeeeeeeeeeee " + b.isDirect() );
+//							}
+//						}
+//						
+//						String t = "b is null + ";
+//						b.put( t.getBytes() );
 						bufferPool.recycle(b);
 					}
 					c.countDown();
@@ -74,7 +76,7 @@ public class TestBucket1 {
 		System.out.println("t2-t1:" + (t2-t1));
 
 		int count = 0;
-		for (ByteBufferBucket bucket : buckets) {
+		for (AbstractBucket bucket : buckets) {
 			count += bucket.getCount();
 		}
 		System.out.println(count);

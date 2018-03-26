@@ -7,7 +7,7 @@ public class TestPage2 {
 	public static void main(String[] args) {
 		
 		
-	        ByteBufferPagePool pool = new ByteBufferPagePool(1024*100*100*10, 1024*100*200*10, 64 * 1024, 256, new int[] {1024},2048);
+	        PageBufferPool pool = new PageBufferPool(1024*100*100*10, 1024*100*200*10, 64 * 1024, 256, new int[] {1024},2048);
 	        ByteBuffer byteBuffer = pool.allocate(1024);
 	        String str = "DirectByteBufferPool pool = new DirectByteBufferPool(pageSize, (short) 256, (short) 8)";
 	        ByteBuffer newByteBuffer = null;

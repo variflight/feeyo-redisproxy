@@ -25,7 +25,7 @@ import com.feeyo.redis.nio.NIOReactorPool;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.SystemConfig;
 import com.feeyo.redis.nio.buffer.BufferPool;
-import com.feeyo.redis.nio.buffer.bucket.ByteBufferBucketPool;
+import com.feeyo.redis.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.redis.virtualmemory.VirtualMemoryService;
 import com.feeyo.util.ExecutorUtil;
 import com.feeyo.util.keepalived.KeepAlived;
@@ -84,6 +84,7 @@ public class RedisEngineCtx {
         String minChunkSizeString = this.serverMap.get("minChunkSize"); 
         String incrementString = this.serverMap.get("increment"); 
         String maxChunkSizeString = this.serverMap.get("maxChunkSize"); 
+        String bufferLocalPercentString = this.serverMap.get("bufferLocalPercent"); 
         
         String bossSizeString = this.serverMap.get("bossSize");
         String timerSizeString = this.serverMap.get("timerSize"); 
@@ -116,13 +117,15 @@ public class RedisEngineCtx {
 		}
         
         int maxChunkSize = maxChunkSizeString == null ? 64 * 1024 : Integer.parseInt( maxChunkSizeString ); 
+        int bufferLocalPercent = bufferLocalPercentString == null ? 100 : Integer.parseInt( bufferLocalPercentString ); 
+        int threadLocalPercent = bufferLocalPercent / reactorSize;
         
         int bossSize = bossSizeString == null ? 10 : Integer.parseInt( bossSizeString ); 
         int timerSize = timerSizeString == null ? 6 : Integer.parseInt( timerSizeString ); 
 
         //ByteBufferPagePool ByteBufferBucketPool
-        this.bufferPool = new ByteBufferBucketPool(minBufferSize, maxBufferSize, decomposeBufferSize,
-        		minChunkSize, increments, maxChunkSize);   
+        this.bufferPool = new BucketBufferPool(minBufferSize, maxBufferSize, decomposeBufferSize,
+        		minChunkSize, increments, maxChunkSize, threadLocalPercent);   
        
         this.virtualMemoryService = new VirtualMemoryService();
         this.virtualMemoryService.start();
@@ -146,7 +149,7 @@ public class RedisEngineCtx {
         
         // 2、 NIO 反应器配置 
 		// ---------------------------------------------------------------------------
-        NIOReactorPool reactorPool = new NIOReactorPool("NioReactor", reactorSize);        
+        NIOReactorPool reactorPool = new NIOReactorPool(BufferPool.LOCAL_BUF_THREAD_PREX + "NioReactor", reactorSize);        
         NIOReactor[] reactors = reactorPool.getAllReactors();
         for (NIOReactor r : reactors) {
 			this.reactorMap.put(r.getName(), r);

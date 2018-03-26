@@ -47,6 +47,10 @@ public class BigKeyCollector implements StatCollector {
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
 			int procTimeMills, boolean isCommandOnly ) {
 		
+		if (isCommandOnly) {
+			return;
+		}
+		
 		// 大key 校验
 		if (  requestSize < BIGKEY_SIZE && responseSize < BIGKEY_SIZE  ) {	
 			return;

@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
  * @author zhuam
  *
  */
-public class ByteBufferPool extends BufferPool {
+public class DefaultBufferPool extends BufferPool {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( BufferPool.class );
 	
@@ -35,7 +35,7 @@ public class ByteBufferPool extends BufferPool {
 	//
 	private AtomicLong count = new AtomicLong(0);
 	
-	public ByteBufferPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
+	public DefaultBufferPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize,
 			int minChunkSize, int[] increments, int maxChunkSize  ) {
 		super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increments, maxChunkSize);
 		
@@ -165,7 +165,7 @@ public class ByteBufferPool extends BufferPool {
 	}
 	
 	public static void main(String[] args) {
-		ByteBufferPool pool = new ByteBufferPool(1024*1024 * 10, 100*1024*1024, 128, 1024, new int[] {64 * 1024}, 64 * 1024);
+		DefaultBufferPool pool = new DefaultBufferPool(1024*1024 * 10, 100*1024*1024, 128, 1024, new int[] {64 * 1024}, 64 * 1024);
 		long i = pool.capacity();		
 		System.out.println(i);
 		

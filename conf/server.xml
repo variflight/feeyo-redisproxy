@@ -15,6 +15,7 @@
 	 -->
 	<property name="increment">1024</property>
 	<property name="maxChunkSize">65536</property>
+	<property name="bufferLocalPercent">100</property>
 
 	
 	<!-- Boss/Timer size -->

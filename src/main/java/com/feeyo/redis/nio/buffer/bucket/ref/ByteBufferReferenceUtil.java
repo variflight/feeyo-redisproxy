@@ -1,4 +1,4 @@
-package com.feeyo.redis.nio.buffer.bucket;
+package com.feeyo.redis.nio.buffer.bucket.ref;
 
 import java.util.Iterator;
 import java.util.TreeMap;
@@ -10,6 +10,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.nio.buffer.bucket.AbstractBucket;
+
 public class ByteBufferReferenceUtil {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ByteBufferReferenceUtil.class );
@@ -19,7 +21,7 @@ public class ByteBufferReferenceUtil {
 
 	private ByteBufferReferenceUtil() {}
 	
-	public static void referenceCheck(TreeMap<Integer, ByteBufferBucket> buckets) {
+	public static void referenceCheck(TreeMap<Integer, AbstractBucket> buckets) {
 		
 		// 5 分钟
 		referenceExecutor.scheduleAtFixedRate(new ReleaseTask(buckets), 120L, 300L, TimeUnit.SECONDS);
@@ -27,10 +29,10 @@ public class ByteBufferReferenceUtil {
 	
 	private static final class ReleaseTask implements Runnable {
 		
-		private final TreeMap<Integer, ByteBufferBucket> buckets;
+		private final TreeMap<Integer, AbstractBucket> buckets;
 		private final AtomicBoolean checking = new AtomicBoolean( false );
 		
-		ReleaseTask(TreeMap<Integer, ByteBufferBucket> buckets) {
+		ReleaseTask(TreeMap<Integer, AbstractBucket> buckets) {
 			this.buckets = buckets;
 		}
 
@@ -42,9 +44,9 @@ public class ByteBufferReferenceUtil {
 			}
 
 			try {
-				Iterator<ByteBufferBucket> it = buckets.values().iterator();
+				Iterator<AbstractBucket> it = buckets.values().iterator();
 				while( it.hasNext() ) {
-					ByteBufferBucket bucket = it.next();
+					AbstractBucket bucket = it.next();
 					bucket.releaseTimeoutBuffer();
 				}
 			} catch (Exception e) {

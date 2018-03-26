@@ -23,13 +23,13 @@ import sun.nio.ch.DirectBuffer;
  * @author zagnix
  * @author zhuam
  */
-public class ByteBufferPagePool extends BufferPool {
+public class PageBufferPool extends BufferPool {
 	
-    private static final Logger LOGGER = LoggerFactory.getLogger(ByteBufferPagePool.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PageBufferPool.class);
     
     private ScheduledExecutorService expandExecutor = null;
     
-    private ByteBufferPage[] allPages;
+    private PageBuffer[] allPages;
     private final int chunkSize;
     private AtomicInteger prevAllocatedPage;
     private final int pageSize;
@@ -45,7 +45,7 @@ public class ByteBufferPagePool extends BufferPool {
      */
     private final ConcurrentHashMap<Long, Long> memoryUsage = new ConcurrentHashMap<Long, Long>();
     
-    public ByteBufferPagePool(long minBufferSize, final long maxBufferSize, int decomposeBufferSize,
+    public PageBufferPool(long minBufferSize, final long maxBufferSize, int decomposeBufferSize,
     		int minChunkSize, int[] increments, int maxChunkSize) {
     	
     	super(minBufferSize, maxBufferSize, decomposeBufferSize, minChunkSize, increments, maxChunkSize);
@@ -59,9 +59,9 @@ public class ByteBufferPagePool extends BufferPool {
     	this.pageCount = 10;
     	this.pageSize = (int) (minBufferSize / pageCount);
     	this.prevAllocatedPage = new AtomicInteger(0);
-    	this.allPages = new ByteBufferPage[this.pageCount];
+    	this.allPages = new PageBuffer[this.pageCount];
     	for (int i = 0; i < this.pageCount; i++) {
-          allPages[i] = new ByteBufferPage(ByteBuffer.allocateDirect(pageSize), this.chunkSize);
+          allPages[i] = new PageBuffer(ByteBuffer.allocateDirect(pageSize), this.chunkSize);
       }
       
      
@@ -95,8 +95,8 @@ public class ByteBufferPagePool extends BufferPool {
 						
 						if ( usedPercentage > 0.85 && expectAllocateMem < maxBufferSize) {
 							
-							ByteBufferPage newPage = new ByteBufferPage(ByteBuffer.allocateDirect(pageSize), chunkSize);
-							ByteBufferPage[] newAllPages = new ByteBufferPage[allPages.length + 1];
+							PageBuffer newPage = new PageBuffer(ByteBuffer.allocateDirect(pageSize), chunkSize);
+							PageBuffer[] newAllPages = new PageBuffer[allPages.length + 1];
 							for(int i =0 ; i < allPages.length; i++) {
 								newAllPages[i] = allPages[i];
 							}
@@ -215,7 +215,7 @@ public class ByteBufferPagePool extends BufferPool {
 		return sharedOptsCount;
 	}
 
-    public ByteBufferPage[] getAllPages() {
+    public PageBuffer[] getAllPages() {
 		return allPages;
 	}
 

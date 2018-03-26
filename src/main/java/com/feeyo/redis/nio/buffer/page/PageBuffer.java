@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /*
  * 用来保存一个一个ByteBuffer为底层存储的内存页
  */
-public class ByteBufferPage {
+public class PageBuffer {
 
     private final ByteBuffer buf;
     private final int chunkSize;
@@ -16,7 +16,7 @@ public class ByteBufferPage {
     private final AtomicBoolean allocLockStatus = new AtomicBoolean(false);
     //private final long startAddress;
 
-    public ByteBufferPage(ByteBuffer buf, int chunkSize) {
+    public PageBuffer(ByteBuffer buf, int chunkSize) {
         super();
         this.chunkSize = chunkSize;
         chunkCount = buf.capacity() / chunkSize;

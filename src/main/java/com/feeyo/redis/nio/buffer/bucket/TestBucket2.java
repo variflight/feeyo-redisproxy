@@ -18,12 +18,13 @@ public class TestBucket2 {
 		int minChunkSize = 0;
 		int[] increments = new int[] {16};
 		int maxChunkSize = 128;
+		int threadLocalPercent = 4;
 		
 		final ConcurrentHashMap<Long, Integer> used = new ConcurrentHashMap<>(); 
 		
-		final ByteBufferBucketPool bufferPool = new ByteBufferBucketPool(
+		final BucketBufferPool bufferPool = new BucketBufferPool(
 				minBufferSize, maxBufferSize, decomposeBufferSize,
-				minChunkSize, increments, maxChunkSize);
+				minChunkSize, increments, maxChunkSize, threadLocalPercent);
 		
 		
 		long t1 = System.currentTimeMillis();
@@ -90,8 +91,8 @@ public class TestBucket2 {
 
 
 		int count = 0;
-		ByteBufferBucket[] buckets = bufferPool.buckets();
-		for (ByteBufferBucket bucket : buckets) {
+		AbstractBucket[] buckets = bufferPool.buckets();
+		for (AbstractBucket bucket : buckets) {
 			count += bucket.getCount();
 		}
 		System.out.println( count );

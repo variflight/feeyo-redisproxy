@@ -18,6 +18,7 @@ public abstract class BufferPool {
 	protected int[] increments;
 	protected int maxChunkSize;
 	protected int decomposeBufferSize;	// 用于大buffer 分解
+	public static final String LOCAL_BUF_THREAD_PREX = "$_";
 	
 	public BufferPool(long minBufferSize, long maxBufferSize, int decomposeBufferSize, 
 			int minChunkSize, int[] increments, int maxChunkSize) {
