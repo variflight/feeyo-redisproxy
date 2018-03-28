@@ -92,6 +92,8 @@ public final class NIOReactor {
 						processPendingQueue(selector); 		// 处理注册队列
 					}
 					
+				
+					
 
 					ioTimes++;
 					for (final SelectionKey key : keys) {

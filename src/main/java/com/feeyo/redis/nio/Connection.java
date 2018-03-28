@@ -554,7 +554,11 @@ public abstract class Connection implements ClosableConnection {
 			//如果buffer为空，证明被回收或者是第一次读，新分配一个buffer给 Connection作为readBuffer
 			if ( readBuffer == null) {
 				// readBuffer = ByteBuffer.allocate( 1024 * 16 );
-				readBuffer = allocate( 1024 * 16 );
+				
+				if ( direction == Direction.in )
+					readBuffer = allocate( 1024 * 16 );
+				else
+					readBuffer = allocate( 1024 * 64 );
 			}
 			
 			lastReadTime = TimeUtil.currentTimeMillis();

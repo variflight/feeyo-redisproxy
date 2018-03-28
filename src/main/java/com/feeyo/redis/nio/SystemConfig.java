@@ -14,10 +14,10 @@ public final class SystemConfig {
 	private int frontIdleTimeout    = 5 * 60 * 1000;	// 单位毫秒
 	private int backendIdleTimeout	= 30 * 60 * 1000;	
 	
-	private int frontSocketSoRcvbuf = 2 * 1024 * 1024;
-	private int frontSocketSoSndbuf = 8 * 1024 * 1024;		//
+	private int frontSocketSoRcvbuf = 4 * 1024 * 1024;
+	private int frontSocketSoSndbuf = 2 * 1024 * 1024;		//
 	
-	private int backSocketSoRcvbuf  = 8 * 1024 * 1024;		//
+	private int backSocketSoRcvbuf  = 4 * 1024 * 1024;		//
 	private int backSocketSoSndbuf =  2 * 1024 * 1024;
 	
 	private int frontSocketNoDelay = 1; 				// 0=false

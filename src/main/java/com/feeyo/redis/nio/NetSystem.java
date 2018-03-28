@@ -163,23 +163,25 @@ public class NetSystem {
 	}
 	
 	public void setSocketParams(Connection con, boolean isFrontChannel) throws IOException {
-		int sorcvbuf = 0;
+		//int sorcvbuf = 0;
 		int sosndbuf = 0;
-		int soNoDelay = 0;
+		
 		if (isFrontChannel) {
-			sorcvbuf = netConfig.getFrontsocketsorcvbuf();
+			//sorcvbuf = netConfig.getFrontsocketsorcvbuf();
 			sosndbuf = netConfig.getFrontsocketsosndbuf();
-			soNoDelay = netConfig.getFrontSocketNoDelay();
 		} else {
-			sorcvbuf = netConfig.getBacksocketsorcvbuf();
+			//sorcvbuf = netConfig.getBacksocketsorcvbuf();
 			sosndbuf = netConfig.getBacksocketsosndbuf();
-			soNoDelay = netConfig.getBackSocketNoDelay();
 		}
+		
 		NetworkChannel channel = con.getChannel();
-		channel.setOption(StandardSocketOptions.SO_RCVBUF, sorcvbuf);
+		
+		// LINUX 2.6 该 RCVBUF 会自动调节
+		//channel.setOption(StandardSocketOptions.SO_RCVBUF, sorcvbuf);
 		channel.setOption(StandardSocketOptions.SO_SNDBUF, sosndbuf);
-		channel.setOption(StandardSocketOptions.TCP_NODELAY, soNoDelay == 1);
+		channel.setOption(StandardSocketOptions.TCP_NODELAY, true);
 		channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
 		channel.setOption(StandardSocketOptions.SO_KEEPALIVE, true);
+		
 	}
 }
