@@ -105,8 +105,10 @@ public final class NIOReactor {
 								
 								con = (Connection) att;
 								
+								int ops = key.readyOps();
+								
 								// 处理读
-								if (key.isValid() && key.isReadable()) {									
+								if ( (ops & SelectionKey.OP_READ) == SelectionKey.OP_READ ) {									
 									try {
 										con.asynRead();
 									} catch (IOException  e) {
@@ -121,7 +123,7 @@ public final class NIOReactor {
 								}								
 								
 								// 处理写
-								if (key.isValid() && key.isWritable()) {
+								if ( (ops & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE ) {
 									con.doNextWriteCheck();
 								}
 								
