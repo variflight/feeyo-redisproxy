@@ -26,7 +26,9 @@ public class RedisRequestDecoder {
 	}
 
 	public List<RedisRequest> decode(byte[] buffer) throws RedisRequestUnknowException {
+		
 		append(buffer);
+		
 		// pipeline
 		List<RedisRequest> pipeline = new ArrayList<RedisRequest>();
 		
@@ -54,6 +56,7 @@ public class RedisRequestDecoder {
 					if (_buffer[_offset] == '*') {
 						_offset++;
 						state = State.READ_ARG_COUNT;
+						
 					} else if (_buffer[_offset] == '$') {
 						_offset++;
 						state = State.READ_ARG_LENGTH;
@@ -204,6 +207,7 @@ public class RedisRequestDecoder {
 	public static void main(String[] args) {
 		RedisRequestDecoder decoder = new RedisRequestDecoder();
 		long t = System.currentTimeMillis();
+
 	    for(int j = 0; j < 10000000; j++) {	    	
 	    	try {	    		
 	    		byte[] buff = "*2\r\n$3\r\nGET\r\n$2\r\naa\r\n".getBytes();

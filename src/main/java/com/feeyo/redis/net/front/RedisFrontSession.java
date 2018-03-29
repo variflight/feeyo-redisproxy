@@ -172,7 +172,7 @@ public class RedisFrontSession {
 			// 执行路由
 			try {
 				
-				// 管理指令
+				// 管理指令检测
 				if ( frontCon.getUserCfg().isAdmin() && requests.size() == 1 ) {
 					
 					String cmd = new String( firstRequest.getArgs()[0] ).toUpperCase();
@@ -186,6 +186,7 @@ public class RedisFrontSession {
 					}
 				}
 				
+				// 指令路由
 				RouteResult routeResult = RouteService.route(requests, frontCon);
 				if ( routeResult == null ) {
 					frontCon.write( "-ERR unkonw command \r\n".getBytes() );

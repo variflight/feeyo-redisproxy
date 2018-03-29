@@ -123,9 +123,12 @@ public class RedisEngineCtx {
         int bossSize = bossSizeString == null ? 10 : Integer.parseInt( bossSizeString ); 
         int timerSize = timerSizeString == null ? 6 : Integer.parseInt( timerSizeString ); 
 
-        //ByteBufferPagePool ByteBufferBucketPool
+        //PageBufferPool BucketBufferPool
         this.bufferPool = new BucketBufferPool(minBufferSize, maxBufferSize, decomposeBufferSize,
         		minChunkSize, increments, maxChunkSize, threadLocalPercent);   
+        
+//        this.bufferPool = new PageBufferPool(minBufferSize, maxBufferSize, decomposeBufferSize,
+//        		minChunkSize, increments, maxChunkSize);
        
         this.virtualMemoryService = new VirtualMemoryService();
         this.virtualMemoryService.start();

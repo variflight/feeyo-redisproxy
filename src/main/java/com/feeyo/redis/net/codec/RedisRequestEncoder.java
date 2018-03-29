@@ -107,12 +107,14 @@ public class RedisRequestEncoder {
 		
 		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( bufferSize );
 		for (RedisRequest request : RedisRequests) {
+			
 			byte[][] lens = new byte[ request.getArgs().length + 1 ][];
 			lens[0] = ProtoUtils.convertIntToByteArray( request.getArgs().length );
 			
 			for(int i = 0; i < request.getArgs().length; i++) {
 				lens[i+1] = ProtoUtils.convertIntToByteArray( request.getArgs()[i].length );
 			}
+			
 			try {	
 				
 				buffer.put( ASTERISK );
@@ -130,12 +132,14 @@ public class RedisRequestEncoder {
 				lens = null;
 				//request.clear();
 				request = null;
-			} catch(BufferOverflowException e) {			
+			} catch(BufferOverflowException e) {		
+				
 				try {
 					StringBuffer msgBuffer = new StringBuffer();
 					for (int i = 0; i < request.getArgs().length; i++) {  
 						msgBuffer.append( new String( request.getArgs()[i] ) ).append("\r\n");  
 					}	
+					
 					LOGGER.warn("request enc err: culc size={}, msg={}, buffer limit={}, capacity={}, postion={}",
 							new Object[] { bufferSize, msgBuffer.toString(), buffer == null ? 0 : buffer.limit(),
 									buffer == null ? 0 : buffer.capacity(), buffer == null ? 0 : buffer.position() });

@@ -3,9 +3,9 @@ package com.feeyo.redis.net.codec;
 import java.nio.ByteBuffer;
 
 public class RedisRequest {
-
-	private RedisRequestEncoder encode = new RedisRequestEncoder();
 	
+	private static RedisRequestEncoder encode = new RedisRequestEncoder();
+
 	private byte[][] args;
 	private boolean inline = false;
 	
