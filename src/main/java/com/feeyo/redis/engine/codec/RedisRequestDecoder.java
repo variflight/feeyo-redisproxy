@@ -3,7 +3,7 @@ package com.feeyo.redis.engine.codec;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RedisRequestDecoderV5 {
+public class RedisRequestDecoder {
 	
 	private enum State {
 		READ_SKIP, 			// 跳过空格
@@ -202,7 +202,7 @@ public class RedisRequestDecoderV5 {
 	}
 	
 	public static void main(String[] args) {
-		RedisRequestDecoderV5 decoder = new RedisRequestDecoderV5();
+		RedisRequestDecoder decoder = new RedisRequestDecoder();
 		long t = System.currentTimeMillis();
 	    for(int j = 0; j < 10000000; j++) {	    	
 	    	try {	    		

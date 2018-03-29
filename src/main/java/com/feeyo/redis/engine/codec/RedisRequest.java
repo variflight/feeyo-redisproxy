@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 public class RedisRequest {
 
-	private RedisRequestEncoderV2 encode = new RedisRequestEncoderV2();
+	private RedisRequestEncoder encode = new RedisRequestEncoder();
 	
 	private byte[][] args;
 	private boolean inline = false;

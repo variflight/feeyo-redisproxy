@@ -20,9 +20,9 @@ import com.feeyo.util.ProtoUtils;
 	<参数N的数据> CR LF
 --------------------------------------------------------
 */
-public class RedisRequestEncoderV2 {
+public class RedisRequestEncoder {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( RedisRequestEncoderV2.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( RedisRequestEncoder.class );
 	
 	private static final byte ASTERISK = '*';
 	private static final byte DOLLAR = '$';

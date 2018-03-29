@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestDecoderV5;
+import com.feeyo.redis.engine.codec.RedisRequestDecoder;
 import com.feeyo.redis.engine.codec.RedisRequestPolicy;
 import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.codec.RedisRequestUnknowException;
@@ -61,7 +61,7 @@ public class RedisFrontSession {
 	private long requestTimeMills; 
 	
     // 解析器 
-	private RedisRequestDecoderV5 requestDecoder = new RedisRequestDecoderV5();
+	private RedisRequestDecoder requestDecoder = new RedisRequestDecoder();
 	
 	private AbstractCommandHandler defaultCommandHandler;
 	private AbstractCommandHandler segmentCommandHandler;

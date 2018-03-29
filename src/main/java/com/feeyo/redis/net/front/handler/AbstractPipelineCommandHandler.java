@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestEncoderV2;
-import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
+import com.feeyo.redis.engine.codec.RedisRequestEncoder;
+import com.feeyo.redis.engine.codec.RedisResponseDecoder;
 import com.feeyo.redis.engine.codec.RedisResponse;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -131,7 +131,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		}
 	}
 
-	protected RedisRequestEncoderV2 encoder = new RedisRequestEncoderV2();
+	protected RedisRequestEncoder encoder = new RedisRequestEncoder();
 	protected RouteResult rrs;
 	
 	private ConcurrentHashMap<String, ResponseNode> allResponseNode =  new ConcurrentHashMap<String, ResponseNode>(); 
@@ -296,7 +296,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			break;
 		case MDEL:
 		case MEXISTS:
-			RedisResponseDecoderV4 responseDecoder = new RedisResponseDecoderV4();
+			RedisResponseDecoder responseDecoder = new RedisResponseDecoder();
 			int okCount = 0;
 			for (DataOffset offset : offsets) {
 				byte[] data = offset.getData();

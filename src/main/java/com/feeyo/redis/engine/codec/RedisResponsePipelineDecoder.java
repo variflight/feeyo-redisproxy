@@ -3,7 +3,7 @@ package com.feeyo.redis.engine.codec;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RedisPipelineResponseDecoder {
+public class RedisResponsePipelineDecoder {
 
 	private byte[] _buffer;
 	private int _offset;
@@ -270,7 +270,7 @@ public class RedisPipelineResponseDecoder {
 		System.arraycopy(buffer, 0, buffer1, 0, buffer1.length);
 		System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
 
-		RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
+		RedisResponsePipelineDecoder decoder = new RedisResponsePipelineDecoder();
 		// List<RedisResponseV3> resps = decoder.decode(buffer);
 
 		PipelineResponse result  = decoder.parse(buffer1);

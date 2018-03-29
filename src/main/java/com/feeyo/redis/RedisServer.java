@@ -18,6 +18,8 @@ import com.feeyo.util.Log4jInitializer;
  * redis-benchmark -p 8066 -c 100 -t set,get,lpush,LPOP,sAdd,spop,incr -n 500000 -a pwd01 --dbnum 1
  * redis-benchmark -p 8066 -c 100 -n 500000 -a pwd01
  * 
+ * redis-benchmark -p 6379 -c 100 -t set,get,lpush,LPOP,sAdd,spop,incr -n 500000
+ * 
  * @author zhuam 
  *
  */

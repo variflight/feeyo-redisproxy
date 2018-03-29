@@ -1,47 +1,67 @@
 package com.feeyo.redis.engine.codec;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 返回  type+data+\r\n 字节流， 避免 encode   
  * 
  * @see https://redis.io/topics/protocol
  *
  */
-public class RedisResponseDecoderV3 {
+public class RedisResponseDecoder {
 	
 	private byte[] _buffer;
 	private int _offset;
 	
-	public RedisResponse decode(byte[] buffer) {
+	private List<RedisResponse> responses = null;
+	
+	public List<RedisResponse> decode(byte[] buffer) {
 
 		append(buffer);
 
 		try {
-			// 至少4字节  :1\r\n
-	        if (bytesRemaining() < 4) {
-	          return null;
-	        }
+			if ( responses != null )
+				responses.clear();
+			else 
+				responses = new ArrayList<RedisResponse>(2);
 			
-	        byte type = _buffer [ _offset++ ];
-	        switch (type) {
-	          case '*':					// 数组(Array), 以 "*" 开头,表示消息体总共有多少行（不包括当前行）, "*" 是具体行数
-	          case '+':					// 正确, 表示正确的状态信息, "+" 后就是具体信息		
-	          case '-':					// 错误, 表示错误的状态信息, "-" 后就是具体信息
-	          case ':':					// 整数, 以 ":" 开头, 返回
-	          case '$':					// 批量字符串, 以 "$" 开头,表示下一行的字符串长度,具体字符串在下一行中,字符串最大能达到512MB
-	        	  
-	            RedisResponse resp = parseResponse(type);
-	            if ( resp != null ) {
-	            	_buffer = null;
+			for(;;) {
+				
+				// 至少4字节  :1\r\n
+		        if (bytesRemaining() < 4) {
+		          return null;
+		        }
+				
+		        byte type = _buffer [ _offset++ ];
+		        switch (type) {
+		          case '*':					// 数组(Array), 以 "*" 开头,表示消息体总共有多少行（不包括当前行）, "*" 是具体行数
+		          case '+':					// 正确, 表示正确的状态信息, "+" 后就是具体信息		
+		          case '-':					// 错误, 表示错误的状态信息, "-" 后就是具体信息
+		          case ':':					// 整数, 以 ":" 开头, 返回
+		          case '$':					// 批量字符串, 以 "$" 开头,表示下一行的字符串长度,具体字符串在下一行中,字符串最大能达到512MB  
+		            RedisResponse resp = parseResponse(type);
+		            if ( resp != null ) {
+		            	responses.add( resp );
+		            }
+		        }
+		        
+		        if (_buffer.length < _offset) {
+					throw new IndexOutOfBoundsException("Not enough data.");
+					
+				} else if (_buffer.length == _offset) {
+					_buffer = null;
 	            	_offset = 0;
-	            }
-	            return resp;
-	        }
+	            	return responses;
+				}
+			}
 			
 		} catch (IndexOutOfBoundsException e1) {
 			// 捕获这个错误（没有足够的数据），等待下一个数据包 
 	        _offset = 0;
+	        return null;
 		}		
-		return null;
+		
 	}
 	
 	private RedisResponse parseResponse(byte type) {
@@ -54,14 +74,15 @@ public class RedisResponseDecoderV3 {
 			start = offset - 1;
 			end = readCRLFOffset();	// 分隔符 \r\n			
 			_offset = end; 			// 调整偏移值
-
+			
 			if (end > _buffer.length ) {
 				_offset = offset;
 				throw new IndexOutOfBoundsException("Wait for more data.");
 			}
 			
+
 			// 长度
-			len = end - start + 1;
+			len = end - start;
 			return new RedisResponse(type, getBytes(start, len));
 			
 		 } else if (type == '$') {
@@ -175,7 +196,6 @@ public class RedisResponseDecoderV3 {
 	}
 	
 	private int readCRLFOffset() throws IndexOutOfBoundsException {
-		
 		int offset = _offset;
 		
 	    if (offset + 1 >= _buffer.length ) {
@@ -189,6 +209,7 @@ public class RedisResponseDecoderV3 {
 	        			+ offset + " => " + _buffer.length + ", " + _offset + ")");	        
 	      }
 	    }
+	    offset++;
 	    offset++;
 	    return offset;
 	}
@@ -228,23 +249,35 @@ public class RedisResponseDecoderV3 {
 		//buffer = "$-1\r\n".getBytes();
 		buffer = "*2\r\n$7\r\npre1_bb\r\n$7\r\npre1_aa\r\n".getBytes();
 		
-		buffer = "*3\r\n$9\r\nsubscribe\r\n$7\r\npre1_aa\r\n:1\r\n*3\r\n$9\r\nsubscribe\r\n$7\r\npre1_zz\r\n:2\r\n".getBytes();
-
+//		buffer = "*3\r\n$9\r\nsubscribe\r\n$7\r\npre1_aa\r\n:1\r\n*3\r\n$9\r\nsubscribe\r\n$7\r\npre1_zz\r\n:2\r\n".getBytes();
 		
-		byte[] buffer1 = new byte[ buffer.length / 2 ];
+		buffer = ("*3\r\n*4\r\n:5461\r\n:10922\r\n*3\r\n$15\r\n192.168.219.131\r\n:7003\r\n$40\r\n1fd8af2aa246c5adf00a25d1b6a0c1f4743bae5c\r\n"
+				+ "*3\r\n$15\r\n192.168.219.132\r\n:7002\r\n$40\r\ne0b1c5791694fdc2ede655023e80f0e57b3d86b4\r\n*4\r\n:0\r\n:5460\r\n"
+				+ "*3\r\n$15\r\n192.168.219.132\r\n:7000\r\n$40\r\nbee6866a13093c4411dea443ca8d901ea5d1e2f3\r\n"
+				+ "*3\r\n$15\r\n192.168.219.131\r\n:7004\r\n$40\r\nb3ba9c1af0fa7296fe1e32f2a955879bcf79108b\r\n*4\r\n:10923\r\n:16383\r\n"
+				+ "*3\r\n$15\r\n192.168.219.132\r\n:7001\r\n$40\r\n9c86ec8088050f837c490aeda15aca5a2c85d7ef\r\n"
+				+ "*3\r\n$15\r\n192.168.219.131\r\n:7005\r\n$40\r\nb0e22eccf79ced356e54a92ecbaa8d22757765d4\r\n").getBytes();
+		
+		byte[] buff = new byte[ buffer.length * 2 ];
+		System.arraycopy(buffer, 0, buff, 0, buffer.length);
+		System.arraycopy(buffer, 0, buff, buffer.length, buffer.length);
+		buffer = buff;
+		System.out.println(buffer.length);
+		System.out.println(buff.length);
+		byte[] buffer1 = new byte[ buffer.length / 3 ];
 		byte[] buffer2 = new byte[ buffer.length - buffer1.length ];
 		
 		System.arraycopy(buffer, 0, buffer1, 0, buffer1.length);
 		System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
 		System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
 		
-		RedisResponseDecoderV3 decoder = new RedisResponseDecoderV3();
-		RedisResponse resp = decoder.decode(buffer);
+		RedisResponseDecoder decoder = new RedisResponseDecoder();
+		//List<RedisResponseV3> resps = decoder.decode(buffer);
 		
-		//RedisResponseV3 resp = decoder.decode(buffer1);
-		//resp = decoder.decode(buffer2);
-		
-		System.out.println( resp );
+		List<RedisResponse> resps = decoder.decode(buffer);
+		System.out.println( resps );
+		resps = decoder.decode(buffer2);
+//		System.out.println( resps );
 	}
 	
 }
