@@ -3,9 +3,9 @@ package com.feeyo.redis.net.front.route.strategy;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
-import com.feeyo.redis.engine.codec.RedisRequestType;
+import com.feeyo.redis.net.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisRequestPolicy;
+import com.feeyo.redis.net.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.segment.Segment;
 import com.feeyo.redis.net.front.handler.segment.SegmentType;

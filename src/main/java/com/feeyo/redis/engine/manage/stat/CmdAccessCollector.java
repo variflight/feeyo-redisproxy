@@ -4,8 +4,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
-import com.feeyo.redis.engine.codec.RedisRequestType;
+import com.feeyo.redis.net.codec.RedisRequestPolicy;
+import com.feeyo.redis.net.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
 
 public class CmdAccessCollector implements StatCollector {

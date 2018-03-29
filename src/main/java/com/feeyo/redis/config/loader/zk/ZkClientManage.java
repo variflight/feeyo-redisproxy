@@ -1,6 +1,6 @@
 package com.feeyo.redis.config.loader.zk;
 
-import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisRequest;
 
 /**
  * redis proxy's zk command handler
