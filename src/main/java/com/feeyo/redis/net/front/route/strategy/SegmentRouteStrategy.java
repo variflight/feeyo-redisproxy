@@ -27,6 +27,8 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			throws InvalidRequestExistsException {
 
 		byte[][] args = request.getArgs();
+		
+		// 此处待优化
 		String cmd = new String(args[0]).toUpperCase();
 		
 		// mset 分包

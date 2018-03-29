@@ -260,7 +260,6 @@ public class CommandParse {
 		RedisRequestPolicy policy = _cmds.get( cmd );
 		return policy == null ? new RedisRequestPolicy(UNKNOW_CMD, UNKNOW_CMD, UNKNOW_CMD) : policy;		
 	}
-	
 }
 
 
