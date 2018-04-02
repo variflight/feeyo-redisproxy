@@ -119,11 +119,13 @@ public class ConfigLoader {
 				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);
 				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
+				int routeLevel = getIntAttribute(nameNodeMap, "routeLevel", 0);
+				int flowLimit = getIntAttribute(nameNodeMap, "flowLimit", 0);
 					
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
-				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, isReadonly);
+				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, isReadonly, routeLevel, flowLimit);
 				map.put(password, userCfg);
 			}
 		} catch (Exception e) {

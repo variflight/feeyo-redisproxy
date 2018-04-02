@@ -3,6 +3,8 @@ package com.feeyo.redis.net.front.route;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.feeyo.redis.engine.manage.stat.StatUtil;
+import com.feeyo.redis.engine.manage.stat.StatUtil.FlowLimitInfo;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -38,7 +40,13 @@ public class RouteService {
 	
 	// 路由计算, 必须认证后
 	public static RouteResult route(List<RedisRequest> requests, RedisFrontConnection frontCon) 
-			throws InvalidRequestExistsException, FullRequestNoThroughtException, PhysicalNodeUnavailableException {
+			throws InvalidRequestExistsException, FullRequestNoThroughtException, PhysicalNodeUnavailableException, UserFlowLimitException {
+		
+		// 判断是否限流
+		FlowLimitInfo limitInfo = StatUtil.getLimitInfo();
+		if (limitInfo.isLimited(frontCon.getUserCfg())) {
+			throw new UserFlowLimitException("user flow limit..");
+		}
 		
 		int poolId = frontCon.getUserCfg().getPoolId();
 		int poolType = frontCon.getUserCfg().getPoolType();
