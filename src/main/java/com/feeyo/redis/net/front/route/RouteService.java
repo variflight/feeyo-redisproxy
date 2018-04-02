@@ -25,16 +25,16 @@ public class RouteService {
 	
 	
 	private static AbstractRouteStrategy getStrategy(int poolType, boolean isNeedSegment) {
-    	// 集群情况下，需要对 Mset、Mget、Del mulitKey 分片
-    	switch( poolType ) {
-    	case 1:
-    	case 2:
-    		if ( isNeedSegment )
-    			 return _SEGMENT;
-    		break;
-    	}
-    	return _DEFAULT;
-    }
+		// 集群情况下，需要对 Mset、Mget、Del mulitKey 分片
+		if (isNeedSegment) {
+			switch (poolType) {
+			case 1:
+			case 2:
+				return _SEGMENT;
+			}
+		}
+		return _DEFAULT;
+	}
 	
 	// 路由计算, 必须认证后
 	public static RouteResult route(List<RedisRequest> requests, RedisFrontConnection frontCon) 

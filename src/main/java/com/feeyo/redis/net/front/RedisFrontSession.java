@@ -98,7 +98,6 @@ public class RedisFrontSession {
 			// 非pipeline 情况下， 特殊指令前置优化性能
 			if ( requests.size() ==  1 ) {
 				
-			
 				byte[] cmd = firstRequest.getArgs()[0];
 				int len = cmd.length;
 				if ( len == 4 ) {
@@ -414,24 +413,22 @@ public class RedisFrontSession {
 	
 	// 拦截 PUBSUB
 	public boolean interceptPubsub(RouteResult routeResult) throws IOException {
+		RedisRequest request = routeResult.getRequests().get(0);
 		
-		
-		if ( routeResult.getRequestType() != RedisRequestType.DEFAULT  ) {
+		if ( request.getPolicy().getHandleType() != CommandParse.PUBSUB_CMD || routeResult.getRequestType() != RedisRequestType.DEFAULT ) {
 			
 			if ( pubsub == null ) {
 				return false;
 			}
 			
-			frontCon.write("-ERR not support pipeline to channel.\r\n".getBytes());
+			frontCon.write("-ERR not support commond to channel.\r\n".getBytes());
 			return true;
 			
 		}
 		
 		boolean isIntercepted = false;
 		
-		//
 		RouteResultNode node = routeResult.getRouteResultNodes().get(0);
-		RedisRequest request = routeResult.getRequests().get(0);
 		
 		String cmd = new String(request.getArgs()[0]).toUpperCase();
 		if ( cmd.startsWith("SUBSCRIBE") || cmd.startsWith("PSUBSCRIBE") ) {
