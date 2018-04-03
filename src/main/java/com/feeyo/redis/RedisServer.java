@@ -34,6 +34,10 @@ public class RedisServer {
 	
 	public static void main(String[] args) throws IOException {
 		
+		//System.setProperty("com.sun.management.jmxremote.port", "8099");
+		//System.setProperty("com.sun.management.jmxremote.ssl", "false");
+		//System.setProperty("com.sun.management.jmxremote.authenticate", "false");
+		
 	    /**
          * 检查 FEEYO_HOME
          */
