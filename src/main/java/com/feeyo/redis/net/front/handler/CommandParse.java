@@ -1,6 +1,6 @@
 package com.feeyo.redis.net.front.handler;
 
-import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.feeyo.redis.net.codec.RedisRequestPolicy;
@@ -34,7 +34,7 @@ public class CommandParse {
 	public static final byte READ_CMD = 2;
 	
 	
-	private static final Map<String, RedisRequestPolicy> _cmds = new IdentityHashMap<String, RedisRequestPolicy>( 220 );
+	private static final Map<String, RedisRequestPolicy> _cmds = new HashMap<String, RedisRequestPolicy>( 220 );
 	static {		
 		// Manage
 		_cmds.put("SHOW", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, READ_CMD));
