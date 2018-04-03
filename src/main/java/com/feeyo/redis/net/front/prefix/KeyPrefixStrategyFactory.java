@@ -1,6 +1,6 @@
 package com.feeyo.redis.net.front.prefix;
 
-import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.feeyo.redis.net.front.prefix.impl.AllKey;
@@ -14,7 +14,7 @@ import com.feeyo.redis.net.front.prefix.impl.FristSecondKey;
 
 public class KeyPrefixStrategyFactory {
 	
-	private static Map<String, Integer> keyStrategys = new IdentityHashMap<String, Integer>();
+	private static Map<String, Integer> keyStrategys = new HashMap<String, Integer>();
 	
 	// thread local
 	// -------------------------------------------------------------------------
