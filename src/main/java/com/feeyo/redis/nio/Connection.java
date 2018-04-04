@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.net.FlowController;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
@@ -81,6 +82,7 @@ public abstract class Connection implements ClosableConnection {
 	
 	@SuppressWarnings("rawtypes")
 	protected NIOHandler handler;
+	protected FlowController flowController;
 
 	public Connection(SocketChannel channel) {
 		this.channel = channel;
@@ -182,6 +184,14 @@ public abstract class Connection implements ClosableConnection {
 	@SuppressWarnings("rawtypes")
 	public NIOHandler getHandler() {
 		return this.handler;
+	}
+	
+	public void setFlowController(FlowController fc) {
+		this.flowController = fc;
+	}
+	
+	public FlowController getFlowController() {
+		return this.flowController;
 	}
 
 	public boolean isConnected() {
@@ -581,6 +591,13 @@ public abstract class Connection implements ClosableConnection {
 					return;
 				}
 				netInBytes += length;
+				
+				// 如果资源不够，并且需要限流
+				if (!flowController.pool(length) && isNeedFlowLimit()) {
+					flowLimit();
+					return;
+				}
+				
 				netInCount++;
 				
 				// 空间不足

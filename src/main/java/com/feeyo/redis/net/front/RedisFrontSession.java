@@ -30,7 +30,6 @@ import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.net.front.route.RouteService;
-import com.feeyo.redis.net.front.route.UserFlowLimitException;
 
 public class RedisFrontSession {
 	
@@ -44,12 +43,12 @@ public class RedisFrontSession {
 	public static final byte[] ERR_NO_AUTH_NO_PASSWORD = "-ERR Client sent AUTH, but no password is set\r\n".getBytes();
 	public static final byte[] ERR_PIPELINE_BACKEND = "-ERR pipeline error\r\n".getBytes();
 	public static final byte[] ERR_INVALID_COMMAND = "-ERR invalid command exist.\r\n".getBytes();
-	public static final byte[] ERR_FLOWLIMIT = "-ERR user flow limit.\r\n".getBytes();
 	
 	public static final String NOT_SUPPORTED = "Not supported.";
 	public static final String NOT_ADMIN_USER = "Not supported:manage cmd but not admin user.";
 	public static final String UNKNOW_COMMAND = "Unknow command.";
 	public static final String NOT_READ_COMMAND = "Not read command.";
+	public static final byte[] FLOW_LIMIT = "-ERR flow limit.\r\n".getBytes();
 
 	
 	
@@ -244,11 +243,6 @@ public class RedisFrontSession {
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
-			} catch (UserFlowLimitException e) {
-				// 流量限制
-				frontCon.write( ERR_FLOWLIMIT );
-				LOGGER.warn("flow limit ..user: {}, routeLever: {}, flowlimit: {}", 
-						this.frontCon.getUserCfg().getPassword(), this.frontCon.getUserCfg().getRouteLevel(), this.frontCon.getUserCfg().getFlowLimit());
 			}
 			
 		} catch (RedisRequestUnknowException e0) {

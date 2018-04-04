@@ -3,6 +3,7 @@ package com.feeyo.redis.net.backend;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.NetSystem;
@@ -22,6 +23,7 @@ public class RedisBackendConnectionFactory {
 
 		// 设置NIOHandlers
 		c.setHandler( new RedisBackendConnectionHandler() );
+		c.setFlowController(RedisEngineCtx.INSTANCE().getFlowController());
 		c.setHost( host );
 		c.setPort( port );
 		c.setPhysicalNode( physicalNode );

@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
@@ -55,14 +54,6 @@ public class StatUtil {
 	
 	public static long zeroTimeMillis = 0;
 	
-	// slow 占用比
-	private static double slowRatio = 0.025;
-	// slow 超过占比的连续次数 （与slowRatio结合使用，用于限流）
-	private static int consecutiveSlowCount = 4;
-	// 限流状态
-	private static FlowLimitInfo limitInfo = new FlowLimitInfo();
-	
-	
 	// 收集器
 	private static List<StatCollector> collectors = new CopyOnWriteArrayList<>();
 	
@@ -93,9 +84,6 @@ public class StatUtil {
 					
 					totalResults.put(result.key, result);
 		        }  
-		        
-		        // 限流状态计算
-		        limitInfoCalculate();
 		        
 		        // 凌晨清理
 		        if ( TimeUtil.currentTimeMillis() > zeroTimeMillis ) {
@@ -292,15 +280,6 @@ public class StatUtil {
         return item;
     }
     
-    private static void limitInfoCalculate() {
-    		AccessStatInfoResult accessStatInfoResult = totalResults.get(STAT_KEY);
-    		if ( accessStatInfoResult.totalCount * slowRatio < accessStatInfoResult.slowCount ) {
-    			limitInfo.add();
-    		} else {
-    			limitInfo.reset();
-    		}
-    }
-    
     public static ConcurrentHashMap<String, AccessStatInfoResult> getTotalAccessStatInfo() {
         return totalResults;
     }
@@ -333,9 +312,6 @@ public class StatUtil {
     	return slowKeyCollector.getSlowKeys();
     }
     
-    public static FlowLimitInfo getLimitInfo() {
-    		return limitInfo;
-    }
   
 	public static class AccessStatInfo  {
 		
@@ -501,49 +477,6 @@ public class StatUtil {
 		public long[] netOutBytes = new long[]{0,0,-1,0};
 		
 		public long created;
-	}
-	
-	public static class FlowLimitInfo {
-		
-		public AtomicInteger slowCount = new AtomicInteger(0);
-		public boolean limit = false;
-		
-		public void add() {
-			int count = slowCount.incrementAndGet();
-			if (count >= consecutiveSlowCount) {
-				limit = true;
-			}
-		}
-		
-		public void reset() {
-			slowCount.set(0);
-			limit = false;
-		}
-		
-		public boolean isLimited(UserCfg userCfg) {
-			if (userCfg.getRouteLevel() == 1) {
-				if(limit) {
-		           return isRouteLimited(userCfg);
-				} 
-			} else if (userCfg.getRouteLevel() == 2) {
-				return isRouteLimited(userCfg);
-			}
-			return false;
-		}
-
-		private boolean isRouteLimited(UserCfg userCfg) {
-			AccessStatInfo stat1 = accessStats.get(userCfg.getPassword());
-			if (stat1 != null) {
-				int index = stat1.getIndex(TimeUtil.currentTimeMillis(), stat1.length);
-				long netInBytes = stat1.netInBytes[index].get();
-				long netOutBytes = stat1.netOutBytes[index].get();
-				if (netInBytes >= userCfg.getFlowLimit() || netOutBytes >= userCfg.getFlowLimit()) {
-					return true;
-				}
-			}
-			return false;
-		}
-		
 	}
 	
 }

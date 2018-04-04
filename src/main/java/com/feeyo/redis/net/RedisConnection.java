@@ -43,5 +43,14 @@ public class RedisConnection extends Connection {
 	public void setLastTime(long currentTimeMillis) {
 		this.lastTime = currentTimeMillis;
 	}
+
+	@Override
+	public boolean isNeedFlowLimit() {
+		return false;
+	}
+
+	@Override
+	public void flowLimit() {
+	}
 	
 }

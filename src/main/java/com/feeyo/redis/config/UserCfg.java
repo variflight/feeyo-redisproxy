@@ -1,6 +1,7 @@
 package com.feeyo.redis.config;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class UserCfg {
 	
@@ -12,16 +13,13 @@ public class UserCfg {
 	private int selectDb;
 	private boolean isAdmin = false;
 	private boolean isReadonly = false;
-	// 路由限流等级（0:不限流。1:达到条件后限流。2:时刻限流）
-	private int routeLevel;
-	// 路由限制每秒最大流量
-	private int flowLimit;
 	
 	// 通过管理指令 use pool 改变
 	private int usePoolId;
 	private int usePoolType = -1;
+	private LimitCfg limitCfg;
 	
-	public UserCfg(int poolId, int poolType, String password,  String prefix, int selectDb, boolean isAdmin, boolean isReadonly, int routeLevel, int flowLimit) {
+	public UserCfg(int poolId, int poolType, String password,  String prefix, int selectDb, boolean isAdmin, boolean isReadonly, int throughPercentage) {
 		super();
 		this.poolId = poolId;
 		this.poolType = poolType;
@@ -34,22 +32,13 @@ public class UserCfg {
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
 		
-		if (isAdmin) {
-			// 管理用户不限流，防止配置错
-			this.routeLevel = 0;
+		if (throughPercentage == 100 || isAdmin) {
+			limitCfg = null;
 		} else {
-			this.routeLevel = routeLevel;
+			limitCfg = new LimitCfg(throughPercentage);
 		}
-		this.flowLimit = flowLimit;
 	}
 	
-	public int getRouteLevel() {
-		return this.routeLevel;
-	}
-	
-	public int getFlowLimit() {
-		return this.flowLimit;
-	}
 
 	public int getPoolId() {
 		return isAdmin ? usePoolId : poolId;
@@ -86,6 +75,10 @@ public class UserCfg {
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
 	}
+	
+	public LimitCfg getLimitCfg() {
+		return this.limitCfg;
+	}
 
 	@Override
 	public int hashCode() {
@@ -120,5 +113,27 @@ public class UserCfg {
 	    } else {
 	        return false;
 	    }
+	}
+	
+	public class LimitCfg {
+		private AtomicInteger index = new AtomicInteger(0);
+		private int throughPercentage;
+		public LimitCfg(int throughPercentage) {
+			this.throughPercentage = throughPercentage;
+		}
+		
+		public boolean isOk() {
+			return getIndex() < throughPercentage;
+		}
+		
+		private int getIndex() {
+			for (;;) {
+				int current = index.get();
+				int next = current >= 99 ? 0 : current + 1;
+				if (index.compareAndSet(current, next))
+					return current;
+			}
+		}
+		
 	}
 }

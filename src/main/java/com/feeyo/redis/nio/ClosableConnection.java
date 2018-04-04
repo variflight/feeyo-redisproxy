@@ -22,4 +22,8 @@ public interface ClosableConnection {
 	long getNetInBytes();
 
 	long getNetOutBytes();
+	
+	boolean isNeedFlowLimit();
+	
+	void flowLimit();
 }

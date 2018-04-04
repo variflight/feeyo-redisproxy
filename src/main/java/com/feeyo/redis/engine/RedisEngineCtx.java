@@ -14,6 +14,7 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.loader.zk.ZkClient;
+import com.feeyo.redis.net.FlowController;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PoolFactory;
@@ -43,7 +44,6 @@ public class RedisEngineCtx {
 	private VirtualMemoryService virtualMemoryService;
 	private BufferPool bufferPool;	
 	private RedisBackendConnectionFactory backendRedisConFactory;
-	
 	// 
 	private volatile Map<String, NIOReactor> reactorMap = new HashMap<String, NIOReactor>();
 	
@@ -52,6 +52,7 @@ public class RedisEngineCtx {
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
 	private volatile Properties mailProperty = null;
+	private volatile FlowController flowController;
 
 	// backup
 	private volatile  Map<Integer, AbstractPool> _poolMap = null;
@@ -88,6 +89,7 @@ public class RedisEngineCtx {
         
         String bossSizeString = this.serverMap.get("bossSize");
         String timerSizeString = this.serverMap.get("timerSize"); 
+        String expectedFlowString = this.serverMap.get("expectedFlow");
         
         int processors = Runtime.getRuntime().availableProcessors();
         int port = portString == null ? 8066: Integer.parseInt( portString );
@@ -99,6 +101,8 @@ public class RedisEngineCtx {
         
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
+        long expectedFlow = expectedFlowString == null ? -1 : Long.parseLong(expectedFlowString);
+        this.flowController = new FlowController(expectedFlow);
         
 		int[] increments = null;
 		if ( incrementString == null ) {
@@ -474,6 +478,10 @@ public class RedisEngineCtx {
 
 	public VirtualMemoryService getVirtualMemoryService() {
 		return virtualMemoryService;
+	}
+
+	public FlowController getFlowController() {
+		return flowController;
 	}
 
 }
