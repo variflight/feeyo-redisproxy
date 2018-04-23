@@ -3,6 +3,7 @@ package com.feeyo.redis.net.front.route.strategy;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.codec.RedisRequestType;
@@ -114,7 +115,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 	}
 
 	@Override
-	public RouteResult route(int poolId, List<RedisRequest> requests)
+	public RouteResult route(UserCfg userCfg, List<RedisRequest> requests)
 			throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
 
 		List<Segment> segments = new ArrayList<Segment>();
@@ -142,7 +143,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			}
 		}
 
-		List<RouteResultNode> nodes = doSharding(poolId, newRequests);
+		List<RouteResultNode> nodes = doSharding(userCfg.getPoolId(), newRequests);
 		requestType = requests.size() > 1 ? RedisRequestType.PIPELINE : requestType;
 
 		RouteResult result = new RouteResult(requestType, newRequests, nodes);

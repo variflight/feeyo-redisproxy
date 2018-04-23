@@ -8,7 +8,8 @@ public enum RedisRequestType {
 	MGET("MGET"),
 	MSET("MSET"),
 	MEXISTS("EXISTS"),
-	DEL_MULTIKEY("MULTI_DEL");
+	DEL_MULTIKEY("MULTI_DEL"),
+	KAFKA("KAFKA");
 	
 	private final String cmd;
 	

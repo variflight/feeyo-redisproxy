@@ -59,6 +59,7 @@ public abstract class AbstractPool {
 	public abstract PhysicalNode getPhysicalNode();		
 	public abstract PhysicalNode getPhysicalNode(String cmd, String key);
 	public abstract PhysicalNode getPhysicalNode(String cmd, byte[] key);
+	public abstract PhysicalNode getPhysicalNode(int id);
 	
 	/**
 	 * 测试连通性

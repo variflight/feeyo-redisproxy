@@ -7,10 +7,9 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.nio.util.TimeUtil;
-
+import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
-import com.feeyo.util.jedis.JedisConnection;
 
 /**
  * 单节点, Redis 连接池
@@ -238,6 +237,11 @@ public class RedisStandalonePool extends AbstractPool {
 		sbuf.append(']')
 		.append(']');
 		return (sbuf.toString());
+	}
+
+	@Override
+	public PhysicalNode getPhysicalNode(int id) {
+		return null;
 	}	
 	
 }

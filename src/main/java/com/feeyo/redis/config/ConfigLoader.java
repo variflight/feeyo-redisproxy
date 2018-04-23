@@ -14,12 +14,14 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
+import com.feeyo.redis.config.kafka.KafkaCfg;
+import com.feeyo.redis.config.kafka.OffsetCfg;
 
 public class ConfigLoader {
 	
@@ -30,8 +32,9 @@ public class ConfigLoader {
 	 * 
 	 * @param uri
 	 * @return
+	 * @throws Exception 
 	 */
-	public static Map<String, String> loadServerMap(String uri) {	
+	public static Map<String, String> loadServerMap(String uri) throws Exception {	
 		Map<String, String> map = new HashMap<String, String>();
 		try {
 			Element element = loadXmlDoc(uri).getDocumentElement();
@@ -51,6 +54,7 @@ public class ConfigLoader {
 
 		} catch (Exception e) {
 			LOGGER.error("loadServerCfg err " + e);
+			throw e;
 		}		
 		return map;
 		
@@ -61,8 +65,9 @@ public class ConfigLoader {
 	 * 
 	 * @param uri
 	 * @return
+	 * @throws Exception 
 	 */
-	public static Map<Integer, PoolCfg> loadPoolMap(String uri) {
+	public static Map<Integer, PoolCfg> loadPoolMap(String uri) throws Exception {
 
 		Map<Integer, PoolCfg> map = new HashMap<Integer, PoolCfg>();
 		
@@ -87,21 +92,22 @@ public class ConfigLoader {
 					String ip = getAttribute(attrs, "ip", null);
 					int port = getIntAttribute(attrs, "port", 6379);
 					String suffix = getAttribute(attrs, "suffix", null);
-					if(suffix == null && type == 2) {
+					if(type == 2 && suffix == null) {
 						throw new ConfigurationException("Customer Cluster nodes need to set unique suffix property");
-					}
-					else
+					} else {
 						poolCfg.addNode( ip + ":" + port + ":" + suffix);
+					}
 				}
 				map.put(id,  poolCfg);
 			}
 		} catch (Exception e) {
 			LOGGER.error("loadPoolCfg err " + e);
+			throw e;
 		}
 		return map;
 	}
 	
-	public static Map<String, UserCfg> loadUserMap(Map<Integer, PoolCfg> poolMap, String uri) {
+	public static Map<String, UserCfg> loadUserMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception  {
 
 		Map<String, UserCfg> map = new HashMap<String, UserCfg>();
 		try {
@@ -126,6 +132,42 @@ public class ConfigLoader {
 				
 				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, isReadonly, throughPercentage);
 				map.put(password, userCfg);
+			}
+		} catch (Exception e) {
+			LOGGER.error("loadUsers err " + e);
+			throw e;
+		}
+		return map;
+	}
+	
+	public static Map<String, KafkaCfg> loadKafkaMap(Map<Integer, PoolCfg> poolMap, String uri) {
+		
+		Map<String, KafkaCfg> map = new HashMap<String, KafkaCfg>();
+		try {
+			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("property");
+			for (int i = 0; i < nodeList.getLength(); i++) {
+				Node node = nodeList.item(i);
+				NamedNodeMap nameNodeMap = node.getAttributes();		
+//				<topic name="test" poolId="3" partitions="1" replicationFactor="1" producer="pwd01" consumer="pwd01,pwd02"/>
+				String topic = getAttribute(nameNodeMap, "name", null);
+				if (topic == null) {
+					LOGGER.warn("kafka topic null...please check kafka.xml...");
+					continue;
+				}
+				int poolId = getIntAttribute(nameNodeMap, "poolId", -1);
+				int partitions = getIntAttribute(nameNodeMap, "partitions", 1);
+				short replicationFactor = getShortAttribute(nameNodeMap, "replicationFactor", (short)0);
+				String[] producers = getAttribute(nameNodeMap, "producer", "").split(",");
+				String[] consumers = getAttribute(nameNodeMap, "consumer", "").split(",");
+				
+				PoolCfg poolCfg = poolMap.get(poolId);
+				if ( poolCfg.getType() != 3 ) {
+					LOGGER.warn("topic:{} is not a kafka pool...please check kafka.xml...", topic);
+					continue;
+				}
+				KafkaCfg kafkaCfg = new KafkaCfg(topic, poolId, partitions, replicationFactor, producers, consumers);
+				
+				map.put(topic, kafkaCfg);
 			}
 		} catch (Exception e) {
 			LOGGER.error("loadUsers err " + e);
@@ -206,15 +248,39 @@ public class ConfigLoader {
 		return zkCfg;
 	}
 	
+	public static OffsetCfg loadKafkaOffsetCfg(String uri) {
+		OffsetCfg offsetCfg = null;
+		try {
+			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("offset");
+			if (nodeList.getLength() != 1) {
+				throw new Exception("kafka offset configure error...");
+			}
+			Node node = nodeList.item(0);
+			NamedNodeMap nameNodeMap = node.getAttributes();
+			String server = getAttribute(nameNodeMap, "server", null);
+			String path = getAttribute(nameNodeMap, "path", "/root/redis-proxy/kafka/data/topic");
+			int index = path.lastIndexOf('/');
+			if (index > 0 && index == path.length() - 1) {
+				path = path.substring(0, index);
+			}
+			offsetCfg = new OffsetCfg(server, path);
+		} catch (Exception e) {
+			LOGGER.error("", e);
+		}
+		return offsetCfg;
+	}
+	
 	/*
 	 * load mail properties
 	 */
-	public static Properties loadMailProperties(String uri) {
+	public static Properties loadMailProperties(String uri) throws Exception {
 		Properties props = new Properties();
 		try {
 			props.load(new FileInputStream(uri));
 		} catch (Exception e) {
 			LOGGER.error("load mail property error", e);
+			throw e;
+			
 		}
 		return props;
 	}
@@ -234,6 +300,10 @@ public class ConfigLoader {
 		return getIntValue(map.getNamedItem(attr), defaultVal);
 	}
 	
+	private static short getShortAttribute(NamedNodeMap map, String attr, short defaultVal) {
+		return getShortValue(map.getNamedItem(attr), defaultVal);
+	}
+	
 	private static boolean getBooleanAttribute(NamedNodeMap map, String attr, boolean defaultVal) {
 		return getBooleanValue(map.getNamedItem(attr), defaultVal);
 	}
@@ -245,6 +315,10 @@ public class ConfigLoader {
 
 	private static int getIntValue(Node node, int defaultVal) {
 		return node == null ? defaultVal : Integer.valueOf(node.getNodeValue());
+	}
+	
+	private static short getShortValue(Node node, short defaultVal) {
+		return node == null ? defaultVal : Short.valueOf(node.getNodeValue());
 	}
 	
 	private static boolean getBooleanValue(Node node, boolean defaultVal) {

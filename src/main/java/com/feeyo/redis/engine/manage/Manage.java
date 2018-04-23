@@ -34,6 +34,7 @@ import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
+import com.feeyo.redis.net.backend.pool.KafkaPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
@@ -597,7 +598,6 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
-					Map<String, AtomicInteger> poolConnections = new HashMap<String, AtomicInteger>();
 					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
 					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
 					long minStartupTime = -1;
@@ -871,6 +871,8 @@ public class Manage {
 								sb.append(clusterNode.getConnectInfo());
 							}
 							list.add(clusterInfo);
+						} else if (pool instanceof KafkaPool) {
+							// TODO 待完善
 						}
 					}
 					return encodeObject(list);

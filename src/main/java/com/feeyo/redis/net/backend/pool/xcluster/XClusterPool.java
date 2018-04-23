@@ -180,4 +180,9 @@ public class XClusterPool extends AbstractPool{
     	PhysicalNode node = nodes.get( suffix ).getPhysicalNode();
         return node;
     }
+
+	@Override
+	public PhysicalNode getPhysicalNode(int id) {
+		return null;
+	}
 }

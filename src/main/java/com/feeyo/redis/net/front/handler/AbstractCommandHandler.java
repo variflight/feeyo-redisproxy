@@ -90,7 +90,7 @@ public abstract class AbstractCommandHandler {
 		} else {
 			
 			// 集群不需要处理 select database
-			if ( poolType == 1) {
+			if ( poolType == 1 || poolType == 3) {
 				backendCon.write( buffer );
 
 			} else {

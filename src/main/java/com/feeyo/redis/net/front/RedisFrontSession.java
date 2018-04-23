@@ -21,6 +21,7 @@ import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
 import com.feeyo.redis.net.front.handler.BlockCommandHandler;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
+import com.feeyo.redis.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
@@ -68,6 +69,7 @@ public class RedisFrontSession {
 	private AbstractCommandHandler segmentCommandHandler;
 	private AbstractCommandHandler pipelineCommandHandler;
 	private AbstractCommandHandler blockCommandHandler;
+	private AbstractCommandHandler kafkaCommandHandler;
 	
 	private AbstractCommandHandler currentCommandHandler;
 	
@@ -310,6 +312,17 @@ public class RedisFrontSession {
 			}
 			return blockCommandHandler;
 			
+		case KAFKA: 
+			
+			if (kafkaCommandHandler == null) {
+				synchronized (_lock) {
+					if (kafkaCommandHandler == null) {
+						kafkaCommandHandler = new KafkaCommandHandler(frontCon);
+					}
+				}
+			}
+			return kafkaCommandHandler;
+			
 		default:
 			return defaultCommandHandler;
 		}
@@ -480,6 +493,7 @@ public class RedisFrontSession {
 		segmentCommandHandler = null;
 		pipelineCommandHandler = null;
 		blockCommandHandler = null;
+		kafkaCommandHandler = null;
 		currentCommandHandler = null;
 	}
 	

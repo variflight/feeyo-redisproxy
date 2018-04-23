@@ -19,6 +19,7 @@ public class CommandParse {
 	public static final byte NO_CLUSTER_CMD 	= 1;		// 非集群指令
 	public static final byte COMMON_CMD 		= 2;		// 通用指令
 	public static final byte MANAGE_CMD 		= 3;		// 管理指令
+	public static final byte KAFKA_CMD 		= 4;		// kafka指令
 	
 	// 处理策略 THROUGH
 	public static final byte NO_THROUGH_CMD		= 7;		// 中间件不透传指令
@@ -28,6 +29,9 @@ public class CommandParse {
 	public static final byte DEL_CMD			= 11;		// 中间件加强指令 del
 	public static final byte EXISTS_CMD			= 12;		// 中间件加强指令 exists
 	public static final byte BLOCK_CMD 	    	= 13;		// 中间件加强指令, 阻塞指令特殊处理
+	public static final byte PRODUCE_CMD     = 14;       // 生产指令
+	public static final byte CONSUMER_CMD    = 15;       // 消费指令
+	
 	
 	// RW 
 	public static final byte WRITE_CMD = 1;
@@ -43,6 +47,10 @@ public class CommandParse {
 		_cmds.put("ZK", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
 		_cmds.put("NODE", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
 		_cmds.put("USE", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
+		
+		// kafka
+		_cmds.put("KPUSH", 				new RedisRequestPolicy(KAFKA_CMD, PRODUCE_CMD, WRITE_CMD));
+		_cmds.put("KPOP", 				new RedisRequestPolicy(KAFKA_CMD, CONSUMER_CMD, WRITE_CMD));
 		
 		// Cluster
 		_cmds.put("CLUSTER", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));

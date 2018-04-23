@@ -558,5 +558,10 @@ public class RedisClusterPool extends AbstractPool {
 	public Map<String, ClusterNode> getMasters() {
 		return masters;
 	}
+
+	@Override
+	public PhysicalNode getPhysicalNode(int id) {
+		return null;
+	}
 	
 }

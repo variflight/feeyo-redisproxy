@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<kafka>
+	<topic>
+		<property name="test" poolId="3" partitions="3" replicationFactor="2" producer="pwd01" consumer="pwd01,pwd02"/>
+		<property name="test2" poolId="3" partitions="3" replicationFactor="2" producer="pwd01" consumer="pwd01,pwd02"/>
+	</topic>
+	<offset server="127.0.0.1:2181" path="/root/redis-proxy/kafka/data/topic/"/>
+</kafka>

@@ -13,7 +13,10 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
+import com.feeyo.redis.config.kafka.KafkaCfg;
+import com.feeyo.redis.config.loader.kafka.KafkaLoad;
 import com.feeyo.redis.config.loader.zk.ZkClient;
+import com.feeyo.redis.kafka.admin.OffsetAdmin;
 import com.feeyo.redis.net.FlowController;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -53,6 +56,7 @@ public class RedisEngineCtx {
 	private volatile Map<Integer, AbstractPool> poolMap = null;
 	private volatile Properties mailProperty = null;
 	private volatile FlowController flowController;
+	private volatile Map<String, KafkaCfg> kafkaMap = null;
 
 	// backup
 	private volatile  Map<Integer, AbstractPool> _poolMap = null;
@@ -68,11 +72,14 @@ public class RedisEngineCtx {
 		this.lock = new ReentrantLock();
 
 		//
-		this.serverMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
-		this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
-		this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
-		this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
-		
+		try {
+			this.serverMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
+			this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
+			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
+			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
+		} catch (Exception e) {
+		}
+		this.kafkaMap = ConfigLoader.loadKafkaMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
 		
 		// 1、Buffer 配置
 		// ---------------------------------------------------------------------------		
@@ -192,9 +199,21 @@ public class RedisEngineCtx {
         String authString  = it.hasNext() ? it.next() : "";
         KeepAlived.check(port, authString);
         
-		// 7, zk startup
+        // 7, kafka 配置加载
+        KafkaLoad.instance().load(kafkaMap);
+        OffsetAdmin.getInstance().startUp();
+
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				OffsetAdmin.getInstance().close();
+			}
+		});
+        
+//		// 7, zk startup
 //		ZkClient.INSTANCE().init();
 //		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
+        
+        
 	}
 	
 	public byte[] reloadAll() {
@@ -323,6 +342,10 @@ public class RedisEngineCtx {
 			// 切换 new
 			this.userMap = newUserMap;	
 			
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
 		} finally {
 			lock.unlock();
 		}		
@@ -354,6 +377,10 @@ public class RedisEngineCtx {
 //			ZkClient.INSTANCE().reloadZkCfg();
 			
 			return "+OK\r\n".getBytes();
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
 		} finally {
 			lock.unlock();
 		}
@@ -367,7 +394,11 @@ public class RedisEngineCtx {
 			ZkClient.INSTANCE().reloadZkCfg();
 			
 			return "+OK\r\n".getBytes();
-		}finally {
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
+		} finally {
 			lock.unlock();
 		}
 	}
@@ -415,6 +446,10 @@ public class RedisEngineCtx {
 				LOGGER.error("reload pool failed");
 				return "-ERR reload pool failed\r\n".getBytes();
 			}
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
 		} finally {
 			lock.unlock();
 		}
@@ -446,6 +481,10 @@ public class RedisEngineCtx {
 	
 	public Properties getMailProperties() {
 		return this.mailProperty;
+	}
+	
+	public Map<String, KafkaCfg> getKafkaMap() {
+		return this.kafkaMap;
 	}
 	
 	public Map<Integer, AbstractPool> getBackupPoolMap() {
