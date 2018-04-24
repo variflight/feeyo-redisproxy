@@ -49,7 +49,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			callBack = new KafkaProduceCmdCallback();
 		} else {
 			String consumer = frontCon.getPassword();
-			this.offset = metaDataOffset.getOffset(consumer);
+			this.offset = metaDataOffset.getConsumerOffset(consumer);
 			buffer = consumerEncode(request, metaDataOffset.getPartition(), this.offset);
 			callBack = new KafkaConsumerCmdCallback();
 		} 

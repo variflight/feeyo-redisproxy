@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -21,10 +22,12 @@ import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartitionInfo;
 
+import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.kafka.KafkaCfg;
-import com.feeyo.redis.config.kafka.MetaDataNode;
 import com.feeyo.redis.config.kafka.MetaData;
+import com.feeyo.redis.config.kafka.MetaDataNode;
+import com.feeyo.redis.config.kafka.MetaDataOffset;
 import com.feeyo.redis.config.kafka.MetaDataPartition;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.kafka.admin.KafkaAdmin;
@@ -124,10 +127,42 @@ public class KafkaLoad {
 		}
 		return topics;
 	}
+	
+	// 重新加载
+	public void reLoad() {
+		
+		Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
+		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
+		// 重新加载kafkamap
+		Map<String, KafkaCfg> newKafkaMap = ConfigLoader.loadKafkaMap( poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
+		load(newKafkaMap);
+		
+		for (Entry<String, KafkaCfg> entry : newKafkaMap.entrySet()) {
+			String key = entry.getKey();
+			KafkaCfg newKafkaCfg = entry.getValue();
+			KafkaCfg oldKafkaCfg = kafkaMap.get(key);
+			if (oldKafkaCfg != null) {
+				// 迁移原来的offset
+				newKafkaCfg.getMetaData().setOffsets( oldKafkaCfg.getMetaData().getOffsets() );
+				
+			// 新建的topic
+			} else {
+				Map<Integer, MetaDataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, MetaDataOffset>();
+				
+				for (MetaDataPartition partition : newKafkaCfg.getMetaData().getPartitions()) {
+					MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0);
+					metaDataOffsets.put(partition.getPartition(), metaDataOffset);
+				}
+				
+				newKafkaCfg.getMetaData().setOffsets(metaDataOffsets);
+			}
+		}
+		RedisEngineCtx.INSTANCE().setKafkaMap(newKafkaMap);
+	}
 	 
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
 		Properties props = new Properties();
-		props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "localhost:9090");
+		props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "localhost:9090,localhost:9091,localhost:9092");
 		AdminClient adminClient = AdminClient.create(props);
 		
 		// 创建topic
@@ -142,7 +177,7 @@ public class KafkaLoad {
 		// 查询topic
 		ListTopicsResult ss = adminClient.listTopics();
 		// 删除topic
-		adminClient.deleteTopics(ss.names().get());
+//		adminClient.deleteTopics(ss.names().get());
 		// 查询topic配置信息
 		DescribeTopicsResult dtr = adminClient.describeTopics(ss.names().get());
 		KafkaFuture<Map<String, TopicListing>> a = ss.namesToListings();

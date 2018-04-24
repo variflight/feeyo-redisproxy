@@ -8,6 +8,7 @@ public class MetaDataOffset {
 	private final int partition;
 	private volatile long producerOffset;
 	private Map<String, ConsumerOffset> offsets;
+	private volatile boolean isClosed = false;
 	
 	public MetaDataOffset (int partition, long producerOffset) {
 		this.producerOffset = producerOffset;
@@ -35,12 +36,18 @@ public class MetaDataOffset {
 		return partition;
 	}
 	
-	public long getOffset(String consumer) {
+	public long getConsumerOffset(String consumer) {
+		if (isClosed) {
+			return -1L;
+		}
 		ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
 		return consumerOffset.poolOffset();
 	}
 	
 	public void sendDefaultOffsetBack(long offset, String consumer) {
+		if (offset < 0) {
+			return;
+		}
 		ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
 		consumerOffset.offerOffset(offset);
 	}
@@ -52,5 +59,13 @@ public class MetaDataOffset {
 			offsets.put(consumer, consumerOffset);
 		}
 		return consumerOffset;
+	}
+	
+	public void close() {
+		this.isClosed = true;
+	}
+	
+	public void reset() {
+		this.isClosed = false;
 	}
 }

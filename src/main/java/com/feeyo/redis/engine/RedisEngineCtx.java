@@ -487,6 +487,10 @@ public class RedisEngineCtx {
 		return this.kafkaMap;
 	}
 	
+	public void setKafkaMap(Map<String, KafkaCfg> map) {
+		this.kafkaMap = map;
+	}
+	
 	public Map<Integer, AbstractPool> getBackupPoolMap() {
 		return this._poolMap;
 	}

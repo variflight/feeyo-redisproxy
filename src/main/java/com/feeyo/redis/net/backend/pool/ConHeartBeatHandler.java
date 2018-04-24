@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.backend.pool;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -44,6 +45,23 @@ public class ConHeartBeatHandler implements BackendCallback {
 		}
 	}
 	
+	public void doHeartBeat(RedisBackendConnection conn, ByteBuffer buff) {
+		
+		if (LOGGER.isDebugEnabled()) {
+			LOGGER.debug("do heartbeat check for con " + conn);
+		}
+		
+		try {
+			HeartbeatCon hbCon = new HeartbeatCon(conn);
+			boolean notExist = (allCons.putIfAbsent(hbCon.conn.getId(), hbCon) == null);
+			if (notExist) {				
+				conn.setCallback( this );
+				conn.write( buff );
+			}
+		} catch (Exception e) {
+			executeException(conn, e);
+		}
+	}
 	
 	/**
 	 * remove timeout connections
@@ -109,12 +127,34 @@ public class ConHeartBeatHandler implements BackendCallback {
 		// +PONG\r\n
 		if ( byteBuff.length == 7 &&  byteBuff[0] == '+' &&  byteBuff[1] == 'P' &&  byteBuff[2] == 'O' &&  byteBuff[3] == 'N' &&  byteBuff[4] == 'G'  ) {
 			conn.setHeartbeatTime( TimeUtil.currentTimeMillis() );
+			conn.release();	
+			
+		// kafka heartbeat
+		} else if (byteBuff.length >= 4 && isOk(byteBuff)) {
+			conn.setHeartbeatTime( TimeUtil.currentTimeMillis() );
 			conn.release();		
 		} else {
 			conn.close("heartbeat err");
 		}
 	}
 
+	private boolean isOk(byte[] buffer) {
+		int len = buffer.length;
+		if (len < 4) {
+			return false;
+		}
+		int v0 = (buffer[0] & 0xff) << 24;
+		int v1 = (buffer[1] & 0xff) << 16;  
+		int v2 = (buffer[2] & 0xff) << 8;  
+	    int v3 = (buffer[3] & 0xff); 
+	    
+	    if (v0 + v1 + v2 + v3 > len - 4) {
+	    		return false;
+	    }
+		
+		return true;
+	}
+	
 	@Override
 	public void connectionClose(RedisBackendConnection conn, String reason) {
 		removeFinished(conn);		

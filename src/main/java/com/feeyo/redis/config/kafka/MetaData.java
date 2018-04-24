@@ -1,6 +1,7 @@
 package com.feeyo.redis.config.kafka;
 
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MetaData {
@@ -68,6 +69,18 @@ public class MetaData {
 			next = next < partitionsCount ? next : 0;
 			if (ai.compareAndSet(current, next))
 				return next;
+		}
+	}
+	
+	public void close() {
+		for (Entry<Integer, MetaDataOffset> entry : offsets.entrySet()) {
+			entry.getValue().close();
+		}
+	}
+	
+	public void reset() {
+		for (Entry<Integer, MetaDataOffset> entry : offsets.entrySet()) {
+			entry.getValue().reset();
 		}
 	}
 }

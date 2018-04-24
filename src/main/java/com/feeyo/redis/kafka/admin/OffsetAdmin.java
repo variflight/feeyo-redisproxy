@@ -229,12 +229,12 @@ public class OffsetAdmin {
 		// 关闭定时任务
 		executorService.shutdown();
 		
-		// 停止获取新的offset  TODO 后续再看要不要做这个
-//		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
-//		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-//			KafkaCfg kafkaCfg = entry.getValue();
-//			kafkaCfg.getMetaData().close();
-//		}
+		// 停止获取新的offset 
+		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
+		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
+			KafkaCfg kafkaCfg = entry.getValue();
+			kafkaCfg.getMetaData().close();
+		}
 		
 		// 提交本地剩余offset
 		offsetPersistent();
