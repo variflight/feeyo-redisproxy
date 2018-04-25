@@ -1,7 +1,11 @@
 package com.feeyo.redis.config.kafka;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.alibaba.fastjson.annotation.JSONField;
 
 public class MetaDataOffset {
 	
@@ -44,7 +48,18 @@ public class MetaDataOffset {
 		return consumerOffset.poolOffset();
 	}
 	
-	public void sendDefaultOffsetBack(long offset, String consumer) {
+	@JSONField(serialize=false)
+	public List<String> getAllConsumerOffset() {
+		List<String> list = new ArrayList<>();
+		for (ConsumerOffset consumerOffset : offsets.values()) {
+			StringBuffer sb = new StringBuffer();
+			sb.append(consumerOffset.getConsumer()).append(":").append(consumerOffset.getOffset());
+			list.add(sb.toString());
+		}
+		return list;
+	}
+	
+	public void sendDefaultConsumerOffsetBack(long offset, String consumer) {
 		if (offset < 0) {
 			return;
 		}

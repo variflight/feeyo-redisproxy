@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -34,6 +35,7 @@ import com.feeyo.redis.kafka.admin.KafkaAdmin;
 
 public class KafkaLoad {
 	 private final static KafkaLoad instance = new KafkaLoad();
+	 private ReentrantLock lock = new ReentrantLock();
 	 
 	 public static KafkaLoad instance() {
 		 return instance;
@@ -129,35 +131,47 @@ public class KafkaLoad {
 	}
 	
 	// 重新加载
-	public void reLoad() {
+	public byte[] reLoad() {
+		final ReentrantLock lock = this.lock;
+		lock.lock();
 		
 		Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
-		// 重新加载kafkamap
-		Map<String, KafkaCfg> newKafkaMap = ConfigLoader.loadKafkaMap( poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
-		load(newKafkaMap);
-		
-		for (Entry<String, KafkaCfg> entry : newKafkaMap.entrySet()) {
-			String key = entry.getKey();
-			KafkaCfg newKafkaCfg = entry.getValue();
-			KafkaCfg oldKafkaCfg = kafkaMap.get(key);
-			if (oldKafkaCfg != null) {
-				// 迁移原来的offset
-				newKafkaCfg.getMetaData().setOffsets( oldKafkaCfg.getMetaData().getOffsets() );
-				
-			// 新建的topic
-			} else {
-				Map<Integer, MetaDataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, MetaDataOffset>();
-				
-				for (MetaDataPartition partition : newKafkaCfg.getMetaData().getPartitions()) {
-					MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0);
-					metaDataOffsets.put(partition.getPartition(), metaDataOffset);
+		try {
+			// 重新加载kafkamap
+			Map<String, KafkaCfg> newKafkaMap = ConfigLoader.loadKafkaMap( poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
+			load(newKafkaMap);
+			
+			for (Entry<String, KafkaCfg> entry : newKafkaMap.entrySet()) {
+				String key = entry.getKey();
+				KafkaCfg newKafkaCfg = entry.getValue();
+				KafkaCfg oldKafkaCfg = kafkaMap.get(key);
+				if (oldKafkaCfg != null) {
+					// 迁移原来的offset
+					newKafkaCfg.getMetaData().setOffsets( oldKafkaCfg.getMetaData().getOffsets() );
+					
+					// 新建的topic
+				} else {
+					Map<Integer, MetaDataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, MetaDataOffset>();
+					
+					for (MetaDataPartition partition : newKafkaCfg.getMetaData().getPartitions()) {
+						MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0);
+						metaDataOffsets.put(partition.getPartition(), metaDataOffset);
+					}
+					
+					newKafkaCfg.getMetaData().setOffsets(metaDataOffsets);
 				}
-				
-				newKafkaCfg.getMetaData().setOffsets(metaDataOffsets);
 			}
+			RedisEngineCtx.INSTANCE().setKafkaMap(newKafkaMap);
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
+		} finally {
+			lock.unlock();
 		}
-		RedisEngineCtx.INSTANCE().setKafkaMap(newKafkaMap);
+		
+		return "+OK\r\n".getBytes();
 	}
 	 
 	public static void main(String[] args) throws InterruptedException, ExecutionException {

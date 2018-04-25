@@ -77,9 +77,9 @@ public class RedisEngineCtx {
 			this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
+			this.kafkaMap = ConfigLoader.loadKafkaMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
 		} catch (Exception e) {
 		}
-		this.kafkaMap = ConfigLoader.loadKafkaMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
 		
 		// 1、Buffer 配置
 		// ---------------------------------------------------------------------------		

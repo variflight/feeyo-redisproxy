@@ -21,6 +21,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.config.kafka.KafkaCfg;
+import com.feeyo.redis.config.kafka.MetaDataOffset;
+import com.feeyo.redis.config.kafka.MetaDataPartition;
+import com.feeyo.redis.config.loader.kafka.KafkaLoad;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
@@ -88,6 +92,8 @@ public class Manage {
 	 *  RELOAD USER
 	 *  RELOAD ALL
 	 *  RELOAD FRONT
+	 *  RELOAD PATH
+	 *  RELOAD KAFKA
 	 *  
 	 *  JVM 指令依赖 JAVA_HOME 
 	 *  ----------------------------------------
@@ -121,6 +127,7 @@ public class Manage {
 	 *  SHOW COST
 	 *  SHOW USER_DAY_NET_IO
 	 *  SHOW POOL_NET_IO POOLNAME
+	 *  SHOW TOPIC
 	 *  
 	 *  SHOW LOG_ERROR
 	 *  SHOW LOG_WARN
@@ -872,7 +879,22 @@ public class Manage {
 							}
 							list.add(clusterInfo);
 						} else if (pool instanceof KafkaPool) {
-							// TODO 待完善
+							KafkaPool kafkaPool =  (KafkaPool) pool;
+							Map<Integer, PhysicalNode> physicalNodes = kafkaPool.getPhysicalNodes();
+							for (PhysicalNode physicalNode : physicalNodes.values()) {
+								StringBuffer sb = new StringBuffer();
+								sb.append("   ");
+								sb.append(kafkaPool.getId()).append("       ");
+								sb.append(physicalNode.getPoolName()).append("       ");
+								sb.append("kafka").append("       ");
+								sb.append(physicalNode.getName()).append("       ");
+								sb.append(physicalNode.getMinCon()).append("       ");
+								sb.append(physicalNode.getMaxCon()).append("       ");
+								sb.append(physicalNode.getIdleCount()).append("          ");
+								sb.append(physicalNode.getActiveCount());
+								list.add(sb.toString());
+							}
+							
 						}
 					}
 					return encodeObject(list);
@@ -926,6 +948,65 @@ public class Manage {
 						lines.add(line1.toString());
 					}
 					return encode(lines);
+					
+				// SHOW TOPIC 
+				} else if (arg2.equalsIgnoreCase("TOPIC") && (numArgs == 3 || numArgs == 2) ) {
+					Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
+					List<String> lines = new ArrayList<String>();
+					// 查看所有topic
+					if (numArgs == 2) {
+						StringBuffer titleLine = new StringBuffer();
+						titleLine.append("TOPIC").append(",  ");
+						titleLine.append("POOLID").append(",  ");
+						titleLine.append("PARTITION").append(",  ");
+						titleLine.append("REPLICATION").append(",  ");
+						titleLine.append("PRODUCER").append(",  ");
+						titleLine.append("CONSUMER");
+						lines.add(titleLine.toString());
+
+						for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
+							KafkaCfg kafkaCfg = entry.getValue();
+							StringBuffer line = new StringBuffer();
+							line.append(kafkaCfg.getTopic()).append(", ");
+							line.append(kafkaCfg.getPoolId()).append(", ");
+							line.append(kafkaCfg.getPartitions()).append(", ");
+							line.append(kafkaCfg.getReplicationFactor()).append(", ");
+							line.append(kafkaCfg.getProducers()).append(", ");
+							line.append(kafkaCfg.getConsumers());
+							lines.add(line.toString());
+						}
+
+						// 查看topic详情
+					} else {
+						StringBuffer titleLine = new StringBuffer();
+						titleLine.append("TOPIC").append(",  ");
+						titleLine.append("HOST").append(",  ");
+						titleLine.append("PARTITION").append(",  ");
+						titleLine.append("PRODUCER").append(",  ");
+						titleLine.append("CONSUMER");
+						lines.add(titleLine.toString());
+						
+						String topic = new String( request.getArgs()[2] );
+						KafkaCfg kafkaCfg = kafkaMap.get(topic);
+						Map<Integer, MetaDataOffset> offsets = kafkaCfg.getMetaData().getOffsets();
+						MetaDataPartition[] partitions = kafkaCfg.getMetaData().getPartitions();
+						
+						for (MetaDataPartition partition : partitions) {
+							int pt = partition.getPartition();
+							MetaDataOffset offset = offsets.get(pt);
+							
+							StringBuffer line = new StringBuffer();
+							line.append(kafkaCfg.getTopic()).append(", ");
+							line.append(partition.getLeader().getHost()).append(partition.getLeader().getPort()).append(", ");
+							line.append(pt).append(", ");
+							line.append(offset.getProducerOffset()).append(", ");
+							line.append(offset.getAllConsumerOffset());
+							lines.add(line.toString());
+						}
+						
+					}
+					
+					return encode(lines);
 				}
 				
 			// NODE
@@ -955,7 +1036,6 @@ public class Manage {
 
 		// RELOAD
 		} else if ( arg1.length == 6 ) {
-			
 			
 			if ( (arg1[0] == 'R' || arg1[0] == 'r' ) && 
 				 (arg1[1] == 'E' || arg1[1] == 'e' ) && 
@@ -988,11 +1068,18 @@ public class Manage {
 					}
 					
 					return "+OK\r\n".getBytes();
+					
+				// reload path
 				} else if ( arg2.equalsIgnoreCase("PATH") ) {
 					
 					JAVA_BIN_PATH = new String( request.getArgs()[2] );
 					
 					return "+OK\r\n".getBytes();
+					
+				// reload kafka
+				} else if ( arg2.equalsIgnoreCase("KAFKA") ) {
+					byte[] buff = KafkaLoad.instance().reLoad();
+					return buff;
 				}
 			}
 

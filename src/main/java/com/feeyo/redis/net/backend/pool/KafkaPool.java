@@ -288,4 +288,7 @@ public class KafkaPool extends AbstractPool {
 		return physicalNodes.get(id);
 	}
 
+	public Map<Integer, PhysicalNode> getPhysicalNodes(){
+		return physicalNodes;
+	}
 }

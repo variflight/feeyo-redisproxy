@@ -128,9 +128,4 @@ public enum ApiKeys {
 	public Struct parseResponse(short version, ByteBuffer buffer) {
         return responseSchema(version).read(buffer);
     }
-	
-	public static void main(String[] args) {
-		System.out.println(ApiKeys.FETCH);
-		System.out.println(111);
-	}
 }

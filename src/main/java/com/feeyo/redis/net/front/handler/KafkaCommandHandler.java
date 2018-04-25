@@ -89,8 +89,6 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	private ByteBuffer consumerEncode(RedisRequest request, int partition, long offset) {
 		TopicAndPartitionData<PartitionData> topicAndPartitionData = new TopicAndPartitionData<PartitionData>(new String(request.getArgs()[1]));
-//		public FetchRequest(short version, int replicaId, int maxWait, int minBytes, int maxBytes,
-//                byte isolationLevel, TopicAndPartitionData<PartitionData> topicAndPartitionData)
 		FetchRequest fr = new FetchRequest((short)6, -1, 500, 1, 1024*1024, (byte)0, topicAndPartitionData);
 		PartitionData pd = new PartitionData(offset, -1, 1);
 		topicAndPartitionData.addData(partition, pd);
@@ -141,6 +139,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			ProduceResponse pr = new ProduceResponse(response);
 			if (pr.isCorrect()) {
 				frontCon.write(OK);
+				metaDataOffset.setProducerOffset(pr.getOffset());
 			} else {
 				StringBuffer sb = new StringBuffer();
 				sb.append("-ERR ").append(pr.getErrorMessage()).append("\r\n");
@@ -158,7 +157,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			if (fr.isCorrect()) {
 				byte[] value = fr.getRecord().getValue();
 				if (value == null) {
-					metaDataOffset.sendDefaultOffsetBack(offset, frontCon.getPassword());
+					metaDataOffset.sendDefaultConsumerOffsetBack(offset, frontCon.getPassword());
 					frontCon.write(NULL);
 					return;
 				}
@@ -174,12 +173,12 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 				
 			// 消费offset超出范围
 			} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
-				metaDataOffset.sendDefaultOffsetBack(offset, frontCon.getPassword());
+				metaDataOffset.sendDefaultConsumerOffsetBack(offset, frontCon.getPassword());
 				frontCon.write(NULL);
 				
 			// 其他错误
 			} else {
-				metaDataOffset.sendDefaultOffsetBack(offset, frontCon.getPassword());
+				metaDataOffset.sendDefaultConsumerOffsetBack(offset, frontCon.getPassword());
 				StringBuffer sb = new StringBuffer();
 				sb.append("-ERR ").append(fr.getErrorMessage()).append("\r\n");
 				frontCon.write(sb.toString().getBytes());

@@ -140,7 +140,7 @@ public class ConfigLoader {
 		return map;
 	}
 	
-	public static Map<String, KafkaCfg> loadKafkaMap(Map<Integer, PoolCfg> poolMap, String uri) {
+	public static Map<String, KafkaCfg> loadKafkaMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception {
 		
 		Map<String, KafkaCfg> map = new HashMap<String, KafkaCfg>();
 		try {
@@ -171,6 +171,7 @@ public class ConfigLoader {
 			}
 		} catch (Exception e) {
 			LOGGER.error("loadUsers err " + e);
+			throw e;
 		}
 		return map;
 	}
