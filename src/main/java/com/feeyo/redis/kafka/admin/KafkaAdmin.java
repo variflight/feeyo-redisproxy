@@ -126,10 +126,4 @@ public class KafkaAdmin {
 	public void close() {
 		adminClient.close();
 	}
-	
-	public static void main(String[] args) {
-		Properties props = new Properties();
-		props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:2181");
-		AdminClient adminClient = AdminClient.create(props); 
-	}
 }

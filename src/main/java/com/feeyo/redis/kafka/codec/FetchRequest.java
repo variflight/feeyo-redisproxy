@@ -174,6 +174,7 @@ public class FetchRequest {
     public static final int DEFAULT_RESPONSE_MAX_BYTES = Integer.MAX_VALUE;
     public static final long INVALID_LOG_START_OFFSET = -1L;
 
+    private final short version;
     private final int replicaId;
     private final int maxWait;
     private final int minBytes;
@@ -235,12 +236,13 @@ public class FetchRequest {
     * @param replicaId
     * @param maxWait
     * @param minBytes
-    * @param maxBytes   一次最多返回多少条数据
+    * @param maxBytes  
     * @param isolationLevel
     * @param topicAndPartitionData
     */
     public FetchRequest(short version, int replicaId, int maxWait, int minBytes, int maxBytes,
                         byte isolationLevel, TopicAndPartitionData<PartitionData> topicAndPartitionData) {
+    		this.version = version;
         this.replicaId = replicaId;
         this.maxWait = maxWait;
         this.minBytes = minBytes;
@@ -266,7 +268,7 @@ public class FetchRequest {
     }
 
     public Struct toStruct() {
-        Struct struct = new Struct(ApiKeys.FETCH.requestSchema((short) 6));
+        Struct struct = new Struct(ApiKeys.FETCH.requestSchema(version));
 
         struct.set(REPLICA_ID_KEY_NAME, replicaId);
         struct.set(MAX_WAIT_KEY_NAME, maxWait);

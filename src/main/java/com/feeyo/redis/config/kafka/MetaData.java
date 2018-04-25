@@ -4,6 +4,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.kafka.common.protocol.ApiKeys;
+
+import com.feeyo.redis.kafka.codec.ApiVersionsResponse.ApiVersion;
+
 public class MetaData {
 	private final String name;
 	private final boolean internal;
@@ -13,6 +17,7 @@ public class MetaData {
 	private AtomicInteger consumerIndex;
 	private final int partitionsCount;
 	private Map<Integer, MetaDataOffset> offsets;
+	private static Map<Short, ApiVersion> apiVersions = null;
 
 	public MetaData(String name, boolean internal, MetaDataPartition[] partitions) {
 		this.name = name;
@@ -82,5 +87,39 @@ public class MetaData {
 		for (Entry<Integer, MetaDataOffset> entry : offsets.entrySet()) {
 			entry.getValue().reset();
 		}
+	}
+	
+	public static void setApiVersions(Map<Short, ApiVersion> apiVersions) {
+		MetaData.apiVersions = apiVersions;
+	}
+	
+	public static ApiVersion getApiVersion(short key) {
+		return MetaData.apiVersions.get(key);
+	}
+	
+	public static short getProduceVersion() {
+		// 现在代码最多支持到5
+		short version = 5;
+		ApiVersion apiVersion = apiVersions.get(ApiKeys.PRODUCE.id);
+		if (apiVersion.maxVersion < version){
+			version =  apiVersion.maxVersion;
+		} else if (apiVersion.minVersion > version) {
+			version = -1;
+		}
+		
+		return version;
+	}
+	
+	public static short getConsumerVersion() {
+		// 现在代码最多支持到7
+		short version = 7;
+		ApiVersion apiVersion = apiVersions.get(ApiKeys.FETCH.id);
+		if (apiVersion.maxVersion < version) {
+			version = apiVersion.maxVersion;
+		} else if (apiVersion.minVersion > version) {
+			version = -1;
+		}
+		
+		return version;
 	}
 }

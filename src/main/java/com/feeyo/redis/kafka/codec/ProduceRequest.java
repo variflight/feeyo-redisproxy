@@ -102,6 +102,7 @@ public class ProduceRequest {
     }
 
 
+    private final short version;
     private final short acks;
     private final int timeout;
     private final String transactionalId;
@@ -111,6 +112,7 @@ public class ProduceRequest {
     private boolean idempotent = false;
 
     public ProduceRequest(short version, short acks, int timeout, String transactionalId, int partitionId, Record record) {
+    		this.version = version;
         this.acks = acks;
         this.timeout = timeout;
         this.transactionalId = transactionalId;
@@ -122,7 +124,7 @@ public class ProduceRequest {
      * Visible for testing.
      */
     public Struct toStruct() {
-        Struct struct = new Struct(ApiKeys.PRODUCE.requestSchema((short)3));
+        Struct struct = new Struct(ApiKeys.PRODUCE.requestSchema(version));
         struct.set(ACKS_KEY_NAME, acks);
         struct.set(TIMEOUT_KEY_NAME, timeout);
         struct.setIfExists(NULLABLE_TRANSACTIONAL_ID, transactionalId);
@@ -142,8 +144,6 @@ public class ProduceRequest {
         struct.set(TOPIC_DATA_KEY_NAME, topicDatas.toArray());
         return struct;
     }
-
-
 
     public short acks() {
         return acks;

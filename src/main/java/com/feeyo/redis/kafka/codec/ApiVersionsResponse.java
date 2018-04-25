@@ -20,9 +20,17 @@ import static com.feeyo.redis.kafka.protocol.CommonFields.ERROR_CODE;
 import static com.feeyo.redis.kafka.protocol.CommonFields.THROTTLE_TIME_MS;
 import static com.feeyo.redis.kafka.protocol.types.Type.INT16;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.kafka.common.protocol.ApiKeys;
+
 import com.feeyo.redis.kafka.protocol.types.ArrayOf;
 import com.feeyo.redis.kafka.protocol.types.Field;
 import com.feeyo.redis.kafka.protocol.types.Schema;
+import com.feeyo.redis.kafka.protocol.types.Struct;
 
 public class ApiVersionsResponse {
     private static final String API_VERSIONS_KEY_NAME = "api_versions";
@@ -46,6 +54,62 @@ public class ApiVersionsResponse {
     public static Schema[] schemaVersions() {
         return new Schema[]{API_VERSIONS_RESPONSE_V0, API_VERSIONS_RESPONSE_V1};
     }
+    
+    private Errors error;
+    private final Map<Short, ApiVersion> apiKeyToApiVersion;
+    
+    public ApiVersionsResponse(Struct struct) {
+        this.error = Errors.forCode(struct.get(ERROR_CODE));
+        List<ApiVersion> tempApiVersions = new ArrayList<>();
+        for (Object apiVersionsObj : struct.getArray(API_VERSIONS_KEY_NAME)) {
+            Struct apiVersionStruct = (Struct) apiVersionsObj;
+            short apiKey = apiVersionStruct.getShort(API_KEY_NAME);
+            short minVersion = apiVersionStruct.getShort(MIN_VERSION_KEY_NAME);
+            short maxVersion = apiVersionStruct.getShort(MAX_VERSION_KEY_NAME);
+            tempApiVersions.add(new ApiVersion(apiKey, minVersion, maxVersion));
+        }
+        this.apiKeyToApiVersion = buildApiKeyToApiVersion(tempApiVersions);
+    }
+    
+    private Map<Short, ApiVersion> buildApiKeyToApiVersion(List<ApiVersion> apiVersions) {
+        Map<Short, ApiVersion> tempApiIdToApiVersion = new HashMap<>();
+        for (ApiVersion apiVersion : apiVersions) {
+            tempApiIdToApiVersion.put(apiVersion.apiKey, apiVersion);
+        }
+        return tempApiIdToApiVersion;
+    }
+    
+    public boolean isCorrect() {
+		return error.getCode() == (short)0;
+	}
+	
+	public String getErrorMessage() {
+		return error.getMessage();
+	}
+	
+	public Map<Short, ApiVersion> getApiKeyToApiVersion() {
+		return apiKeyToApiVersion;
+	}
+    
+    public static final class ApiVersion {
+        public final short apiKey;
+        public final short minVersion;
+        public final short maxVersion;
 
+        public ApiVersion(ApiKeys apiKey) {
+            this(apiKey.id, apiKey.oldestVersion(), apiKey.latestVersion());
+        }
+
+        public ApiVersion(short apiKey, short minVersion, short maxVersion) {
+            this.apiKey = apiKey;
+            this.minVersion = minVersion;
+            this.maxVersion = maxVersion;
+        }
+
+        @Override
+		public String toString() {
+			return "ApiVersion(" + "apiKey=" + apiKey + ", minVersion=" + minVersion + ", maxVersion= " + maxVersion + ")";
+		}
+    }
 
 }

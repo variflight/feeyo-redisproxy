@@ -3,6 +3,7 @@ package com.feeyo.redis.net.front.handler;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import com.feeyo.redis.config.kafka.MetaData;
 import com.feeyo.redis.config.kafka.MetaDataOffset;
 import com.feeyo.redis.kafka.codec.Errors;
 import com.feeyo.redis.kafka.codec.FetchRequest;
@@ -27,6 +28,20 @@ import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.ProtoUtils;
 
 public class KafkaCommandHandler extends AbstractCommandHandler {
+	// 0表示producer无需等待leader的确认，1代表需要leader确认写入它的本地log并立即确认，-1代表所有的备份都完成后确认。
+	private static final short ACKS = 1;
+	private static final int TIME_OUT = 1000;
+	private static final int MINBYTES = 1;
+	private static final int MAXBYTES = 1024 * 1024 * 4;
+	// (isolation_level = 0) makes all records visible. With READ_COMMITTED (isolation_level = 1)
+	private static final byte ISOLATION_LEVEL = 0;
+	// Broker id of the follower. For normal consumers, use -1.
+	private static final int REPLICA_ID = -1;
+	private static final long LOG_START_OFFSET = -1;
+	// 一次消费的条数
+	private static final int FETCH_LOG_COUNT = 1;
+	private static final int LENGTH_BYTE_COUNT = 4;
+	
 	private MetaDataOffset metaDataOffset;
 	private long offset;
 	
@@ -68,6 +83,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	}
 
 	private ByteBuffer produceEncode(RedisRequest request, int partition) {
+		short version = MetaData.getProduceVersion();
+		
 		Record record = new Record();
 		record.setOffset(0);
 		record.setKey(request.getArgs()[1]);
@@ -75,12 +92,12 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		record.setTopic(new String(request.getArgs()[1]));
 		record.setTimestamp(TimeUtil.currentTimeMillis());
 		record.setTimestampDelta(0);
-		ProduceRequest pr = new ProduceRequest((short)5, (short)1, 30000, null, partition, record);
+		ProduceRequest pr = new ProduceRequest(version, ACKS, TIME_OUT, null, partition, record);
 		Struct body = pr.toStruct();
-		RequestHeader rh = new RequestHeader(ApiKeys.PRODUCE.id, (short)5, Thread.currentThread().getName(), Utils.getCorrelationId());
+		RequestHeader rh = new RequestHeader(ApiKeys.PRODUCE.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
 		Struct header = rh.toStruct();
 		
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( body.sizeOf() + header.sizeOf() + 4);
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT);
 		buffer.putInt(body.sizeOf() + header.sizeOf());
 		header.writeTo(buffer);
 		body.writeTo(buffer);
@@ -88,15 +105,17 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	}
 	
 	private ByteBuffer consumerEncode(RedisRequest request, int partition, long offset) {
+		short version = MetaData.getConsumerVersion();
+		
 		TopicAndPartitionData<PartitionData> topicAndPartitionData = new TopicAndPartitionData<PartitionData>(new String(request.getArgs()[1]));
-		FetchRequest fr = new FetchRequest((short)6, -1, 500, 1, 1024*1024, (byte)0, topicAndPartitionData);
-		PartitionData pd = new PartitionData(offset, -1, 1);
+		FetchRequest fr = new FetchRequest(version, REPLICA_ID, TIME_OUT, MINBYTES, MAXBYTES, ISOLATION_LEVEL, topicAndPartitionData);
+		PartitionData pd = new PartitionData(offset, LOG_START_OFFSET, FETCH_LOG_COUNT);
 		topicAndPartitionData.addData(partition, pd);
-		RequestHeader rh = new RequestHeader(ApiKeys.FETCH.id, (short)6, Thread.currentThread().getName(), 1);
+		RequestHeader rh = new RequestHeader(ApiKeys.FETCH.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
 		Struct header = rh.toStruct();
 		Struct body = fr.toStruct();
 		
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(body.sizeOf() + header.sizeOf() + 4);
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT);
 		buffer.putInt(body.sizeOf() + header.sizeOf());
 		header.writeTo(buffer);
 		body.writeTo(buffer);
@@ -185,5 +204,4 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			}
 		}
 	}
-	
 }

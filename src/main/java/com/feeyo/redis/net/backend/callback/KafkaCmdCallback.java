@@ -34,7 +34,8 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 			buffer.flip();
 			
 			this.buffer = null;
-			ResponseHeader responseHeader = ResponseHeader.parse(buffer);
+			// header
+			ResponseHeader.parse(buffer);
 			handle(buffer);
 			
 			RedisFrontConnection frontCon = getFrontCon( conn );
