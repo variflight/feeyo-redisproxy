@@ -3,10 +3,12 @@ package com.feeyo.redis.net.backend.callback;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.kafka.codec.ResponseHeader;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.NetSystem;
+import com.feeyo.redis.nio.util.TimeUtil;
 
 public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 	
@@ -33,6 +35,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 			buffer.put(this.buffer, 4, this.buffer.length - 4);
 			buffer.flip();
 			
+			int responseSize = this.buffer.length;
 			this.buffer = null;
 			// header
 			ResponseHeader.parse(buffer);
@@ -41,11 +44,21 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 			RedisFrontConnection frontCon = getFrontCon( conn );
 			// 后段链接释放
 			conn.release();	
-			frontCon.releaseLock();
-			// 数据收集
-//				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
+			if (frontCon != null) {
+				frontCon.releaseLock();
+				
+				String password = frontCon.getPassword();
+				String cmd = frontCon.getSession().getRequestCmd();
+				byte[] key = frontCon.getSession().getRequestKey();
+				int requestSize = frontCon.getSession().getRequestSize();
+				long requestTimeMills = frontCon.getSession().getRequestTimeMills();			
+				long responseTimeMills = TimeUtil.currentTimeMillis();
+				// 数据收集
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
+			}
 			
 		} catch (Exception e) {
+			e.printStackTrace();
 		} finally {
 			NetSystem.getInstance().getBufferPool().recycle(buffer);
 			
