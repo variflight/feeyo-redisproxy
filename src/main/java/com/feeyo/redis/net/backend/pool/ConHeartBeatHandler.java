@@ -133,6 +133,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 		} else if (byteBuff.length >= 4 && isOk(byteBuff)) {
 			conn.setHeartbeatTime( TimeUtil.currentTimeMillis() );
 			conn.release();		
+			
 		} else {
 			conn.close("heartbeat err");
 		}
