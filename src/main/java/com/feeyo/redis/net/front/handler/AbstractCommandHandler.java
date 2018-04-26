@@ -6,6 +6,7 @@ import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
+import com.feeyo.redis.net.backend.pool.PoolType;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 
@@ -70,7 +71,7 @@ public abstract class AbstractCommandHandler {
 				public void execute(BackendConnection conn) throws Exception {	
 					
 					switch (poolType) {
-					case 0: // 非集群
+					case PoolType.REDIS_STANDALONE: // 非集群
 						{ 
 							// 执行 SELECT 指令
 							RedisBackendConnection bkCon = (RedisBackendConnection)conn;
@@ -84,9 +85,9 @@ public abstract class AbstractCommandHandler {
 							}
 						}
 						break;
-					case 1:	// 集群
-					case 2:	// 自定义集群
-					case 3: // KAFKA 集群
+					case PoolType.REDIS_CLUSTER:	// 集群
+					case PoolType.REDIS_X_CLUSTER:	// 自定义集群
+					case PoolType.KAFKA_CLUSTER:	// KAFKA 集群
 						conn.write(buffer);
 						break;
 
@@ -99,7 +100,7 @@ public abstract class AbstractCommandHandler {
 		} else {
 			
 			switch (poolType) {
-			case 0: // 非集群
+			case PoolType.REDIS_STANDALONE: // 非集群
 				{
 					// 执行 SELECT 指令
 					RedisBackendConnection bkCon = (RedisBackendConnection)backendCon;
@@ -113,9 +114,9 @@ public abstract class AbstractCommandHandler {
 					}
 				}
 				break;
-			case 1:	// 集群
-			case 2:	// 自定义集群
-			case 3: // KAFKA 集群
+			case PoolType.REDIS_CLUSTER:	// 集群
+			case PoolType.REDIS_X_CLUSTER:	// 自定义集群
+			case PoolType.KAFKA_CLUSTER: 	// KAFKA 集群
 				backendCon.write( buffer );
 				break;
 			}

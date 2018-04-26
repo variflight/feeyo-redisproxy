@@ -28,7 +28,6 @@ public class KafkaBackendConnectionHandler implements NIOHandler<KafkaBackendCon
 					new Object[]{ con.getId(), data.length, hexs });
 		}
 		
-		
 		// 回调
 		con.getCallback().handleResponse(con, data);	
 		return;	

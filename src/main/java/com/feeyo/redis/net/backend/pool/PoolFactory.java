@@ -15,16 +15,16 @@ public class PoolFactory {
     public static AbstractPool createPoolByCfg(PoolCfg poolCfg) {
         AbstractPool pool;
         switch (poolCfg.getType()) {
-            case 0:
+            case PoolType.REDIS_STANDALONE:
                 pool = new RedisStandalonePool( poolCfg );
                 break;
-            case 1:
+            case PoolType.REDIS_CLUSTER:
                 pool = new RedisClusterPool( poolCfg );
                 break;
-            case 2:
+            case PoolType.REDIS_X_CLUSTER:
                 pool = new XClusterPool( poolCfg );
                 break;
-            case 3:
+            case PoolType.KAFKA_CLUSTER:
 	            pool = new KafkaPool( poolCfg );
 	            break;
             default:
