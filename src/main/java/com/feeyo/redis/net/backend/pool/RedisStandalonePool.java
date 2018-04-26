@@ -3,7 +3,6 @@ package com.feeyo.redis.net.backend.pool;
 import java.util.LinkedList;
 
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -20,6 +19,7 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
 public class RedisStandalonePool extends AbstractPool {
 	
 	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
+	protected RedisBackendConnectionFactory backendConFactory = new RedisBackendConnectionFactory();
 	
 	private PhysicalNode physicalNode;
 
@@ -45,9 +45,9 @@ public class RedisStandalonePool extends AbstractPool {
 		int minCon = poolCfg.getMinCon();
 		int maxCon = poolCfg.getMaxCon();
 		
-		String[] ipAndPort = poolCfg.getNodes().get(0).split(":");
-		final RedisBackendConnectionFactory bcFactory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();		
-		this.physicalNode = new PhysicalNode(bcFactory, poolType, poolName, minCon, maxCon, ipAndPort[0], Integer.parseInt( ipAndPort[1] ) );
+		String[] ipAndPort = poolCfg.getNodes().get(0).split(":");	
+		this.physicalNode = new PhysicalNode(backendConFactory, 
+				poolType, poolName, minCon, maxCon, ipAndPort[0], Integer.parseInt( ipAndPort[1] ) );
 		this.physicalNode.initConnections();		
 		return true;
 	}

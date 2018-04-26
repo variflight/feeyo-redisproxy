@@ -18,7 +18,6 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.loader.zk.ZkClient;
-import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PoolFactory;
 import com.feeyo.redis.net.front.RedisFrontendConnectionFactory;
@@ -47,7 +46,6 @@ public class RedisEngineCtx {
 	
 	private VirtualMemoryService virtualMemoryService;
 	private BufferPool bufferPool;	
-	private RedisBackendConnectionFactory backendRedisConFactory;
 	
 	private volatile NetFlowMonitor flowMonitor;
 	
@@ -183,8 +181,6 @@ public class RedisEngineCtx {
         
 		// 4、后端物理连接池
 		// ---------------------------------------------------------------------------
-        this.backendRedisConFactory = new RedisBackendConnectionFactory();
-        
 		this.poolMap = new HashMap<Integer, AbstractPool>( poolCfgMap.size() );
 		for (final PoolCfg poolCfg : poolCfgMap.values()) {
 			AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
@@ -518,10 +514,6 @@ public class RedisEngineCtx {
 	
 	public static RedisEngineCtx INSTANCE() {
 		return instance;
-	}
-
-	public RedisBackendConnectionFactory getBackendRedisConFactory() {
-		return backendRedisConFactory;
 	}
 
 	public VirtualMemoryService getVirtualMemoryService() {

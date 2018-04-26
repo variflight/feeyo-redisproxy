@@ -5,7 +5,6 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -23,6 +22,7 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
 public class XClusterPool extends AbstractPool{
 	
 	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
+	protected RedisBackendConnectionFactory backendConFactory = new RedisBackendConnectionFactory();
 	
     private Map<String, XNode> nodes = new HashMap<>();
 
@@ -47,8 +47,8 @@ public class XClusterPool extends AbstractPool{
             xNode.setPort( Integer.parseInt(attrs[1]) );
             xNode.setSuffix( attrs[2] );
 
-            RedisBackendConnectionFactory factory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();
-            PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, xNode.getIp(), xNode.getPort());
+            PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
+            		type, name, minCon, maxCon, xNode.getIp(), xNode.getPort());
             physicalNode.initConnections();
             xNode.setPhysicalNode(physicalNode);
             

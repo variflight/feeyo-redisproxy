@@ -30,16 +30,20 @@ import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.ProtoUtils;
 
 public class KafkaCommandHandler extends AbstractCommandHandler {
+	
 	// 0表示producer无需等待leader的确认，1代表需要leader确认写入它的本地log并立即确认，-1代表所有的备份都完成后确认。
 	private static final short ACKS = 1;
 	private static final int TIME_OUT = 1000;
 	private static final int MINBYTES = 1;
 	private static final int MAXBYTES = 1024 * 1024 * 4;
+	
 	// (isolation_level = 0) makes all records visible. With READ_COMMITTED (isolation_level = 1)
 	private static final byte ISOLATION_LEVEL = 0;
+	
 	// Broker id of the follower. For normal consumers, use -1.
 	private static final int REPLICA_ID = -1;
 	private static final long LOG_START_OFFSET = -1;
+	
 	// 一次消费的条数
 	private static final int FETCH_LOG_COUNT = 1;
 	private static final int LENGTH_BYTE_COUNT = 4;

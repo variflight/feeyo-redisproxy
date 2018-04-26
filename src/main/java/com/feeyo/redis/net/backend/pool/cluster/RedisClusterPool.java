@@ -10,7 +10,6 @@ import java.util.Random;
 import java.util.Set;
 
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -31,6 +30,7 @@ import com.google.common.collect.Sets;
 public class RedisClusterPool extends AbstractPool {
 	
 	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
+	protected RedisBackendConnectionFactory backendConFactory = new RedisBackendConnectionFactory();
 	
 	public static final String LOCALHOST_STR = getLocalHostQuietly();
 	
@@ -239,8 +239,7 @@ public class RedisClusterPool extends AbstractPool {
 				String host = clusterNode.getHost();
 				int port = clusterNode.getPort();
 				
-				RedisBackendConnectionFactory factory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();		
-				PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, host, port );
+				PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port );
 				physicalNode.initConnections();
 				clusterNode.setPhysicalNode(physicalNode);				
 			}			
@@ -457,9 +456,8 @@ public class RedisClusterPool extends AbstractPool {
 						int maxCon = poolCfg.getMaxCon();
 						String host = clusterNode.getHost();
 						int port = clusterNode.getPort();
-						
-						RedisBackendConnectionFactory factory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();		
-						PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, host, port );
+							
+						PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port );
 						physicalNode.initConnections();
 						clusterNode.setPhysicalNode( physicalNode );
 					}

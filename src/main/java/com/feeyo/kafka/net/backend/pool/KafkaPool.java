@@ -12,15 +12,13 @@ import org.apache.kafka.common.Node;
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.loader.KafkaLoad;
+import com.feeyo.kafka.net.backend.KafkaBackendConnectionFactory;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
-import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
-import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -30,7 +28,8 @@ public class KafkaPool extends AbstractPool {
 	
 	protected static final byte[] PING = "*1\r\n$4\r\nPING\r\n".getBytes();
 	
-	protected ConHeartBeatHandler conHeartBeatHanler = new KafkaConHeartBeatHandler();
+	protected KafkaConHeartBeatHandler conHeartBeatHanler = new KafkaConHeartBeatHandler();
+	protected KafkaBackendConnectionFactory backendConFactory = new KafkaBackendConnectionFactory();
 
 	private Map<Integer, PhysicalNode> physicalNodes = new HashMap<Integer, PhysicalNode>(3);
 	public volatile int heartbeatStatus = 1;
@@ -59,13 +58,12 @@ public class KafkaPool extends AbstractPool {
 		String poolName = poolCfg.getName();
 		int minCon = poolCfg.getMinCon();
 		int maxCon = poolCfg.getMaxCon();
-		final RedisBackendConnectionFactory bcFactory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();
 
 		availableHostList.clear();
 		backupHostList.clear();
 		for (Node node : nodeData) {
-			PhysicalNode physicalNode = new PhysicalNode(bcFactory, poolType, poolName, minCon, maxCon, node.host(),
-					node.port());
+			PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
+					poolType, poolName, minCon, maxCon, node.host(), node.port());
 			physicalNode.initConnections();
 			physicalNodes.put(node.id(), physicalNode);
 
@@ -152,10 +150,10 @@ public class KafkaPool extends AbstractPool {
 				String poolName = poolCfg.getName();
 				int minCon = poolCfg.getMinCon();
 				int maxCon = poolCfg.getMaxCon();
-				final RedisBackendConnectionFactory bcFactory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();
+
 				for (Node node : nodeData) {
-					PhysicalNode physicalNode = new PhysicalNode(bcFactory, poolType, poolName, minCon, maxCon, node.host(),
-							node.port());
+					PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
+							poolType, poolName, minCon, maxCon, node.host(), node.port());
 					newPhysicalNodes.put(node.id(), physicalNode);
 				}
 				
