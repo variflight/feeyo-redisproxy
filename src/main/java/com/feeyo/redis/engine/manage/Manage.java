@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.kafka.KafkaCfg;
 import com.feeyo.redis.config.kafka.MetaDataOffset;
 import com.feeyo.redis.config.kafka.MetaDataPartition;
@@ -38,7 +39,6 @@ import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
-import com.feeyo.redis.net.backend.pool.KafkaPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;

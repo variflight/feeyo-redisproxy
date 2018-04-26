@@ -3,6 +3,7 @@ package com.feeyo.redis.net.front.route;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.feeyo.kafka.net.front.route.strategy.KafkaRouteStrategy;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestPolicy;
@@ -12,7 +13,6 @@ import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategyFactory;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.DefaultRouteStrategy;
-import com.feeyo.redis.net.front.route.strategy.KafkaRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.SegmentRouteStrategy;
 
 /**

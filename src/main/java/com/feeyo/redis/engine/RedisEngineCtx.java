@@ -10,13 +10,13 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.admin.OffsetAdmin;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.kafka.KafkaCfg;
 import com.feeyo.redis.config.loader.kafka.KafkaLoad;
 import com.feeyo.redis.config.loader.zk.ZkClient;
-import com.feeyo.redis.kafka.admin.OffsetAdmin;
 import com.feeyo.redis.net.FlowController;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;

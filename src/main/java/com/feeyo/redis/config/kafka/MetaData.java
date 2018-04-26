@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.kafka.common.protocol.ApiKeys;
 
-import com.feeyo.redis.kafka.codec.ApiVersionsResponse.ApiVersion;
+import com.feeyo.kafka.codec.ApiVersionsResponse.ApiVersion;
 
 public class MetaData {
 	private final String name;
