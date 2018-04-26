@@ -16,9 +16,10 @@ public class NetFlowMonitor {
 	
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 	
+	private volatile boolean overproof = false;
+	
 	private AtomicLong[] net;
 	private volatile int index;
-	private volatile boolean overproof = false;
 	private boolean isOpen;
 	private final long size;
 	

@@ -49,7 +49,7 @@ public class RedisEngineCtx {
 	private BufferPool bufferPool;	
 	private RedisBackendConnectionFactory backendRedisConFactory;
 	
-	private volatile NetFlowMonitor netflowMonitor;
+	private volatile NetFlowMonitor flowMonitor;
 	
 	// 
 	private volatile Map<String, NIOReactor> reactorMap = new HashMap<String, NIOReactor>();
@@ -114,7 +114,7 @@ public class RedisEngineCtx {
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
         long expectedFlow = expectedFlowString == null ? -1 : Long.parseLong(expectedFlowString);
-        this.netflowMonitor = new NetFlowMonitor(expectedFlow);
+        this.flowMonitor = new NetFlowMonitor(expectedFlow);
         
 		int[] increments = null;
 		if ( incrementString == null ) {
@@ -528,8 +528,8 @@ public class RedisEngineCtx {
 		return virtualMemoryService;
 	}
 
-	public NetFlowMonitor getNetFlowMonitor() {
-		return netflowMonitor;
+	public NetFlowMonitor getFlowMonitor() {
+		return flowMonitor;
 	}
 
 }

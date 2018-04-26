@@ -19,7 +19,7 @@ public interface ClosableConnection {
 
 	// 限流 ( 限流开关、流量清洗 )
 	//++++++++++++++++++++++++
-	boolean isNetflowLimit();	
-	void netflowCleaning();
+	boolean isFlowLimit();	
+	void flowClean();
 	
 }

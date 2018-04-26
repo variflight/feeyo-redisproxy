@@ -593,8 +593,8 @@ public abstract class Connection implements ClosableConnection {
 				netInBytes += length;
 				
 				// 如果资源不够，并且需要限流
-				if (!flowMonitor.pool(length) && isNetflowLimit()) {
-					netflowCleaning();
+				if ( !flowMonitor.pool(length) && isFlowLimit() ) {
+					flowClean();
 					return;
 				}
 				
@@ -715,6 +715,17 @@ public abstract class Connection implements ClosableConnection {
 
 	public void setDirection(Connection.Direction in) {
 		this.direction = in;
+	}
+	
+	
+	@Override
+	public boolean isFlowLimit() {
+		return false;
+	}
+
+	@Override
+	public void flowClean() {
+		// ignore
 	}
 	
 	public String toSampleString() {
