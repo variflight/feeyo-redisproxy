@@ -3,10 +3,10 @@ package com.feeyo.kafka.net.front.route.strategy;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.feeyo.kafka.config.KafkaCfg;
+import com.feeyo.kafka.config.MetaDataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.config.kafka.KafkaCfg;
-import com.feeyo.redis.config.kafka.MetaDataPartition;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.codec.RedisRequest;

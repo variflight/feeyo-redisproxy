@@ -20,8 +20,7 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.feeyo.redis.config.kafka.KafkaCfg;
-import com.feeyo.redis.config.kafka.OffsetCfg;
+
 
 public class ConfigLoader {
 	
@@ -140,41 +139,7 @@ public class ConfigLoader {
 		return map;
 	}
 	
-	public static Map<String, KafkaCfg> loadKafkaMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception {
-		
-		Map<String, KafkaCfg> map = new HashMap<String, KafkaCfg>();
-		try {
-			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("property");
-			for (int i = 0; i < nodeList.getLength(); i++) {
-				Node node = nodeList.item(i);
-				NamedNodeMap nameNodeMap = node.getAttributes();		
-//				<topic name="test" poolId="3" partitions="1" replicationFactor="1" producer="pwd01" consumer="pwd01,pwd02"/>
-				String topic = getAttribute(nameNodeMap, "name", null);
-				if (topic == null) {
-					LOGGER.warn("kafka topic null...please check kafka.xml...");
-					continue;
-				}
-				int poolId = getIntAttribute(nameNodeMap, "poolId", -1);
-				int partitions = getIntAttribute(nameNodeMap, "partitions", 1);
-				short replicationFactor = getShortAttribute(nameNodeMap, "replicationFactor", (short)0);
-				String[] producers = getAttribute(nameNodeMap, "producer", "").split(",");
-				String[] consumers = getAttribute(nameNodeMap, "consumer", "").split(",");
-				
-				PoolCfg poolCfg = poolMap.get(poolId);
-				if ( poolCfg.getType() != 3 ) {
-					LOGGER.warn("topic:{} is not a kafka pool...please check kafka.xml...", topic);
-					continue;
-				}
-				KafkaCfg kafkaCfg = new KafkaCfg(topic, poolId, partitions, replicationFactor, producers, consumers);
-				
-				map.put(topic, kafkaCfg);
-			}
-		} catch (Exception e) {
-			LOGGER.error("loadUsers err " + e);
-			throw e;
-		}
-		return map;
-	}
+
 	
 	//
 	public static ZkCfg loadZkCfg(String uri) {
@@ -249,27 +214,7 @@ public class ConfigLoader {
 		return zkCfg;
 	}
 	
-	public static OffsetCfg loadKafkaOffsetCfg(String uri) {
-		OffsetCfg offsetCfg = null;
-		try {
-			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("offset");
-			if (nodeList.getLength() != 1) {
-				throw new Exception("kafka offset configure error...");
-			}
-			Node node = nodeList.item(0);
-			NamedNodeMap nameNodeMap = node.getAttributes();
-			String server = getAttribute(nameNodeMap, "server", null);
-			String path = getAttribute(nameNodeMap, "path", "/root/redis-proxy/kafka/data/topic");
-			int index = path.lastIndexOf('/');
-			if (index > 0 && index == path.length() - 1) {
-				path = path.substring(0, index);
-			}
-			offsetCfg = new OffsetCfg(server, path);
-		} catch (Exception e) {
-			LOGGER.error("", e);
-		}
-		return offsetCfg;
-	}
+	
 	
 	/*
 	 * load mail properties
@@ -301,7 +246,7 @@ public class ConfigLoader {
 		return getIntValue(map.getNamedItem(attr), defaultVal);
 	}
 	
-	private static short getShortAttribute(NamedNodeMap map, String attr, short defaultVal) {
+	static short getShortAttribute(NamedNodeMap map, String attr, short defaultVal) {
 		return getShortValue(map.getNamedItem(attr), defaultVal);
 	}
 	

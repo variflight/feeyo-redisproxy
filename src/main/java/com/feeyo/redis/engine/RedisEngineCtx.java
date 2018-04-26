@@ -11,11 +11,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.OffsetAdmin;
+import com.feeyo.kafka.config.KafkaCfg;
+import com.feeyo.kafka.config.loader.KafkaConfigLoader;
+import com.feeyo.kafka.config.loader.KafkaLoad;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.config.kafka.KafkaCfg;
-import com.feeyo.redis.config.loader.kafka.KafkaLoad;
 import com.feeyo.redis.config.loader.zk.ZkClient;
 import com.feeyo.redis.net.FlowController;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
@@ -77,7 +78,8 @@ public class RedisEngineCtx {
 			this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
-			this.kafkaMap = ConfigLoader.loadKafkaMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
+			
+			this.kafkaMap = KafkaConfigLoader.loadKafkaMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
 		} catch (Exception e) {
 		}
 		

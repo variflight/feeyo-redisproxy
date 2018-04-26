@@ -11,11 +11,11 @@ import org.apache.kafka.common.Node;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.codec.RequestHeader;
+import com.feeyo.kafka.config.loader.KafkaLoad;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.config.loader.kafka.KafkaLoad;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;

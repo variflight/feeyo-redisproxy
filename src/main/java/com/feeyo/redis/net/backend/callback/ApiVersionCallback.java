@@ -3,9 +3,9 @@ package com.feeyo.redis.net.backend.callback;
 import java.nio.ByteBuffer;
 
 import com.feeyo.kafka.codec.ApiVersionsResponse;
+import com.feeyo.kafka.config.MetaData;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
-import com.feeyo.redis.config.kafka.MetaData;
 
 public class ApiVersionCallback extends KafkaCmdCallback {
 

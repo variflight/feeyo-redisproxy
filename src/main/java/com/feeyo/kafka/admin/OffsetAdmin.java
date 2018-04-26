@@ -21,13 +21,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSONObject;
+import com.feeyo.kafka.config.ConsumerOffset;
+import com.feeyo.kafka.config.KafkaCfg;
+import com.feeyo.kafka.config.MetaDataOffset;
+import com.feeyo.kafka.config.MetaDataPartition;
+import com.feeyo.kafka.config.OffsetCfg;
+import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.ConfigLoader;
-import com.feeyo.redis.config.kafka.ConsumerOffset;
-import com.feeyo.redis.config.kafka.KafkaCfg;
-import com.feeyo.redis.config.kafka.MetaDataOffset;
-import com.feeyo.redis.config.kafka.MetaDataPartition;
-import com.feeyo.redis.config.kafka.OffsetCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 /**
@@ -52,7 +53,7 @@ public class OffsetAdmin {
 	
 	private OffsetAdmin() {
 
-		offsetCfg = ConfigLoader.loadKafkaOffsetCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
+		offsetCfg = KafkaConfigLoader.loadKafkaOffsetCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
 		CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder().connectString(offsetCfg.getServer())
 				.retryPolicy(new RetryNTimes(3, 1000)).connectionTimeoutMs(3000);
 

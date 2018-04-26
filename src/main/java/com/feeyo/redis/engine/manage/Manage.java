@@ -21,11 +21,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.config.KafkaCfg;
+import com.feeyo.kafka.config.MetaDataOffset;
+import com.feeyo.kafka.config.MetaDataPartition;
+import com.feeyo.kafka.config.loader.KafkaLoad;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
-import com.feeyo.redis.config.kafka.KafkaCfg;
-import com.feeyo.redis.config.kafka.MetaDataOffset;
-import com.feeyo.redis.config.kafka.MetaDataPartition;
-import com.feeyo.redis.config.loader.kafka.KafkaLoad;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;

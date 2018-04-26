@@ -1,4 +1,4 @@
-package com.feeyo.redis.config.loader.kafka;
+package com.feeyo.kafka.config.loader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,17 +29,17 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.codec.RequestHeader;
+import com.feeyo.kafka.config.KafkaCfg;
+import com.feeyo.kafka.config.MetaData;
+import com.feeyo.kafka.config.MetaDataNode;
+import com.feeyo.kafka.config.MetaDataOffset;
+import com.feeyo.kafka.config.MetaDataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.config.kafka.KafkaCfg;
-import com.feeyo.redis.config.kafka.MetaData;
-import com.feeyo.redis.config.kafka.MetaDataNode;
-import com.feeyo.redis.config.kafka.MetaDataOffset;
-import com.feeyo.redis.config.kafka.MetaDataPartition;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.TodoTask;
@@ -201,7 +201,7 @@ public class KafkaLoad {
 		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
 		try {
 			// 重新加载kafkamap
-			Map<String, KafkaCfg> newKafkaMap = ConfigLoader.loadKafkaMap(poolCfgMap,
+			Map<String, KafkaCfg> newKafkaMap = KafkaConfigLoader.loadKafkaMap(poolCfgMap,
 					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
 			load(newKafkaMap);
 

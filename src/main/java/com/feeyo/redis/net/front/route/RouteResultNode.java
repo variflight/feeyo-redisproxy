@@ -3,7 +3,7 @@ package com.feeyo.redis.net.front.route;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.feeyo.redis.config.kafka.MetaDataOffset;
+import com.feeyo.kafka.config.MetaDataOffset;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 
 

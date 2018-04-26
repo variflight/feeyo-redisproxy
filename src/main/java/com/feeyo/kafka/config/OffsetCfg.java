@@ -1,4 +1,4 @@
-package com.feeyo.redis.config.kafka;
+package com.feeyo.kafka.config;
 
 /**
  * offset备份地址配置
