@@ -49,6 +49,7 @@ import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.NetSystem;
 
 public class KafkaLoad {
+	
 	private static Logger LOGGER = LoggerFactory.getLogger(KafkaLoad.class);
 
 	private final static KafkaLoad instance = new KafkaLoad();

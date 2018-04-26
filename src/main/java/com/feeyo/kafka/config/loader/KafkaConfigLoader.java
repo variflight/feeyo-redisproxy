@@ -84,18 +84,18 @@ public class KafkaConfigLoader {
 		return offsetCfg;
 	}
 	
-	private static Document loadXmlDoc(String uri) throws Exception {
+	static Document loadXmlDoc(String uri) throws Exception {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db = dbf.newDocumentBuilder();
 		Document doc = db.parse(uri);
 		return doc;
 	}
 
-	private static String getAttribute(NamedNodeMap map, String attr, String defaultVal) {
+	static String getAttribute(NamedNodeMap map, String attr, String defaultVal) {
 		return getValue(map.getNamedItem(attr), defaultVal);
 	}
 
-	private static int getIntAttribute(NamedNodeMap map, String attr, int defaultVal) {
+	static int getIntAttribute(NamedNodeMap map, String attr, int defaultVal) {
 		return getIntValue(map.getNamedItem(attr), defaultVal);
 	}
 	
@@ -108,23 +108,23 @@ public class KafkaConfigLoader {
 	}
 
 
-	private static String getValue(Node node, String defaultVal) {
+	static String getValue(Node node, String defaultVal) {
 		return node == null ? defaultVal : node.getNodeValue();
 	}
 
-	private static int getIntValue(Node node, int defaultVal) {
+	static int getIntValue(Node node, int defaultVal) {
 		return node == null ? defaultVal : Integer.valueOf(node.getNodeValue());
 	}
 	
-	private static short getShortValue(Node node, short defaultVal) {
+	static short getShortValue(Node node, short defaultVal) {
 		return node == null ? defaultVal : Short.valueOf(node.getNodeValue());
 	}
 	
-	private static boolean getBooleanValue(Node node, boolean defaultVal) {
+	static boolean getBooleanValue(Node node, boolean defaultVal) {
 		return node == null ? defaultVal : Boolean.valueOf(node.getNodeValue());
 	}
 
-	private static List<Node> getChildNodes(Node theNode, String childElName) {
+	static List<Node> getChildNodes(Node theNode, String childElName) {
 		LinkedList<Node> nodes = new LinkedList<Node>();
 		NodeList childs = theNode.getChildNodes();
 		for (int j = 0; j < childs.getLength(); j++) {
