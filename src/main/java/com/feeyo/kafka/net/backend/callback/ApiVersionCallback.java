@@ -10,11 +10,13 @@ import com.feeyo.kafka.protocol.types.Struct;
 public class ApiVersionCallback extends KafkaCmdCallback {
 
 	@Override
-	public void handle(ByteBuffer buffer) {
+	public void continueParsing(ByteBuffer buffer) {
+		
 		Struct response = ApiKeys.API_VERSIONS.parseResponse((short) 1, buffer);
 		ApiVersionsResponse ar = new ApiVersionsResponse(response);
 		if (ar.isCorrect()) {
 			MetaData.setApiVersions( ar.getApiKeyToApiVersion() );
 		}
+		
 	}
 }

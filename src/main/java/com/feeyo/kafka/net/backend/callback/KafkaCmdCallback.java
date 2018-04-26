@@ -42,8 +42,11 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 			
 			// header
 			ResponseHeader.parse(buffer);
-			handle(buffer);
 			
+			// parse
+			continueParsing(buffer);
+			
+			// release
 			RedisFrontConnection frontCon = getFrontCon( conn );
 			if (frontCon != null) {
 				frontCon.releaseLock();
@@ -65,12 +68,14 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
+			
 			NetSystem.getInstance().getBufferPool().recycle(buffer);
 			
 		}
 		
 	}
-	public abstract void handle(ByteBuffer buffer);
+
+	public abstract void continueParsing(ByteBuffer buffer);
 
 	private void append(byte[] buf) {
 		if (buffer == null) {

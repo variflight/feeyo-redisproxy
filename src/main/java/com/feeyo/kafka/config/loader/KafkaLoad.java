@@ -152,14 +152,19 @@ public class KafkaLoad {
 		PhysicalNode physicalNode = pool.getPhysicalNode(id);
 		if (physicalNode != null) {
 			try {
-				AbstractBackendCallback callback = new ApiVersionCallback();
-				BackendConnection backendCon = physicalNode.getConnection(callback, null);
-				RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short)1, Thread.currentThread().getName(), Utils.getCorrelationId());
+				
+				RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short)1, 
+						Thread.currentThread().getName(), Utils.getCorrelationId());
+				
 				Struct struct = requestHeader.toStruct();
 				final ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( struct.sizeOf() + 4 );
 				buffer.putInt(struct.sizeOf());
 				struct.writeTo(buffer);
 				
+				//
+				AbstractBackendCallback callback = new ApiVersionCallback();
+				
+				BackendConnection backendCon = physicalNode.getConnection(callback, null);
 				if ( backendCon == null ) {
 					TodoTask task = new TodoTask() {				
 						@Override
@@ -169,6 +174,7 @@ public class KafkaLoad {
 					};
 					callback.addTodoTask(task);
 					backendCon = physicalNode.createNewConnection(callback, null);
+					
 				} else {
 					backendCon.write(buffer);
 				}

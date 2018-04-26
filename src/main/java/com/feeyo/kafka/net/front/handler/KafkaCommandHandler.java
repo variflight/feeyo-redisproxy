@@ -159,7 +159,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private class KafkaProduceCmdCallback extends KafkaCmdCallback {
 		
 		@Override
-		public void handle(ByteBuffer buffer) {
+		public void continueParsing(ByteBuffer buffer) {
 			Struct response = ApiKeys.PRODUCE.parseResponse((short)5, buffer);
 			ProduceResponse pr = new ProduceResponse(response);
 			if (pr.isCorrect()) {
@@ -176,7 +176,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 		
 		@Override
-		public void handle(ByteBuffer buffer) {
+		public void continueParsing(ByteBuffer buffer) {
+			
 			Struct response = ApiKeys.FETCH.parseResponse((short)6, buffer);
 			FetchResponse fr = new FetchResponse(response);
 			if (fr.isCorrect()) {
