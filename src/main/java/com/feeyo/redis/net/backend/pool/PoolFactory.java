@@ -25,8 +25,8 @@ public class PoolFactory {
                 pool = new XClusterPool( poolCfg );
                 break;
             case 3:
-	            	pool = new KafkaPool( poolCfg );
-	            	break;
+	            pool = new KafkaPool( poolCfg );
+	            break;
             default:
                 pool = new RedisStandalonePool( poolCfg );
         }
