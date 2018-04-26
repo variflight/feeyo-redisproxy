@@ -1,6 +1,5 @@
 package com.feeyo.kafka.config.loader;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,7 +31,6 @@ public class KafkaConfigLoader {
 			for (int i = 0; i < nodeList.getLength(); i++) {
 				Node node = nodeList.item(i);
 				NamedNodeMap nameNodeMap = node.getAttributes();		
-//				<topic name="test" poolId="3" partitions="1" replicationFactor="1" producer="pwd01" consumer="pwd01,pwd02"/>
 				String topic = getAttribute(nameNodeMap, "name", null);
 				if (topic == null) {
 					LOGGER.warn("kafka topic null...please check kafka.xml...");
@@ -54,7 +52,7 @@ public class KafkaConfigLoader {
 				map.put(topic, kafkaCfg);
 			}
 		} catch (Exception e) {
-			LOGGER.error("loadUsers err " + e);
+			LOGGER.error("load kafka.xml err: " + e);
 			throw e;
 		}
 		return map;
@@ -135,11 +133,4 @@ public class KafkaConfigLoader {
 		return nodes;
 	}
 	
-	public static String buidCfgAbsPathFor(String fileName) {
-		StringBuffer path = new StringBuffer();
-		path.append( System.getProperty("FEEYO_HOME") ).append( File.separator );
-		path.append( "conf" ).append( File.separator ).append( fileName );
-        return path.toString();
-	}
-
 }

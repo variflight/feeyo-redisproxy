@@ -12,7 +12,8 @@ public class KafkaCfg {
 	private final HashSet<String> consumers = new HashSet<String>(); 
 	private MetaData metaData;
 	
-	public KafkaCfg(String topic, int poolId, int partitions, short replicationFactor, String[] producers, String[] consumers) {
+	public KafkaCfg(String topic, int poolId, int partitions, short replicationFactor, 
+			String[] producers, String[] consumers) {
 		this.topic = topic;
 		this.poolId = poolId;
 		this.partitions = partitions;
