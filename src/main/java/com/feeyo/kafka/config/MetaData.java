@@ -9,8 +9,10 @@ import org.apache.kafka.common.protocol.ApiKeys;
 import com.feeyo.kafka.codec.ApiVersionsResponse.ApiVersion;
 
 public class MetaData {
+	
 	private final String name;
 	private final boolean internal;
+	
 	// 分区信息
 	private final MetaDataPartition[] partitions;
 	private AtomicInteger producerIndex;
