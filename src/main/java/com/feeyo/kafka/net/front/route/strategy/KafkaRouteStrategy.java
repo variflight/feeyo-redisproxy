@@ -10,7 +10,6 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
@@ -26,55 +25,52 @@ import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
  */
 public class KafkaRouteStrategy extends AbstractRouteStrategy {
 	
+	
+	//
+	private KafkaCfg getKafkaCfg(String password, RedisRequest request) throws InvalidRequestExistsException {
+		
+		String topic = new String(request.getArgs()[1]);
+		
+		KafkaCfg kafkaCfg = RedisEngineCtx.INSTANCE().getKafkaMap().get(topic);
+		if (kafkaCfg == null) {
+			throw new InvalidRequestExistsException("topic not exists");
+		}
+		
+		if (!kafkaCfg.isProducer( password )) {
+			throw new InvalidRequestExistsException("no authority");
+		}
+		
+		if (kafkaCfg.getMetaData() == null) {
+			throw new InvalidRequestExistsException("topic not create or not load to kafka...");
+		} 
+		
+		return kafkaCfg;
+	}
+	
     @Override
     public RouteResult route(UserCfg userCfg, List<RedisRequest> requests) 
 			throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
 
 		RedisRequest request = requests.get(0);
-		RedisRequestPolicy policy = request.getPolicy();
 
 		KafkaCfg kafkaCfg;
 		MetaDataPartition partition;
-		if (policy.getHandleType() == CommandParse.PRODUCE_CMD) {
+		if ( request.getPolicy().getHandleType() == CommandParse.PRODUCE_CMD) {
 			if (request.getNumArgs() != 3) {
 				throw new InvalidRequestExistsException("wrong number of arguments");
 			}
 
-			String topic = new String(request.getArgs()[1]);
-			kafkaCfg = RedisEngineCtx.INSTANCE().getKafkaMap().get(topic);
-			
-			if (kafkaCfg == null) {
-				throw new InvalidRequestExistsException("topic not exists");
-			}
-			
-			if (!kafkaCfg.isProducer(userCfg.getPassword())) {
-				throw new InvalidRequestExistsException("no authority");
-			}
-			
-			if (kafkaCfg.getMetaData() == null) {
-				throw new InvalidRequestExistsException("topic not create or not load to kafka...");
-			} 
-			
+
+			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request);
 			partition = kafkaCfg.getMetaData().getProducerMetaDataPartition();
+			
 		} else {
+			
 			if (request.getNumArgs() != 2) {
 				throw new InvalidRequestExistsException("wrong number of arguments");
 			}
 
-			String topic = new String(request.getArgs()[1]);
-			kafkaCfg = RedisEngineCtx.INSTANCE().getKafkaMap().get(topic);
-			if (kafkaCfg == null) {
-				throw new InvalidRequestExistsException("topic not exists");
-			}
-
-			if (!kafkaCfg.isConsumer(userCfg.getPassword())) {
-				throw new InvalidRequestExistsException("no authority");
-			}
-			
-			if (kafkaCfg.getMetaData() == null) {
-				throw new InvalidRequestExistsException("topic not create or not load to kafka...");
-			} 
-			
+			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request);
 			partition = kafkaCfg.getMetaData().getConsumerMetaDataPartition();
 		}
 

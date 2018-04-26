@@ -3,6 +3,7 @@ package com.feeyo.kafka.config;
 import java.util.HashSet;
 
 public class KafkaCfg {
+	
 	private final String topic;
 	private final int poolId;
 	private final int partitions;
