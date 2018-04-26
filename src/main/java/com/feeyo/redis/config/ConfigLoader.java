@@ -52,7 +52,7 @@ public class ConfigLoader {
 			}
 
 		} catch (Exception e) {
-			LOGGER.error("loadServerCfg err " + e);
+			LOGGER.error("load server.xml err " + e);
 			throw e;
 		}		
 		return map;
@@ -121,19 +121,23 @@ public class ConfigLoader {
 					prefix = null;
 				}
 				int selectDb = getIntAttribute(nameNodeMap, "selectDb", -1);
-				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);
-				int throughPercentage = getIntAttribute(nameNodeMap, "throughPercentage", 100);
-				
+				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
+				
+				int throughPercentage = getIntAttribute(nameNodeMap, "throughPercentage", 100);
+				if ( throughPercentage > 100 || throughPercentage < 0 )
+					throughPercentage = 100;
 					
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
-				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, isReadonly, throughPercentage);
+				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, 
+						isReadonly, throughPercentage);
+				
 				map.put(password, userCfg);
 			}
 		} catch (Exception e) {
-			LOGGER.error("loadUsers err " + e);
+			LOGGER.error("load user.xml err " + e);
 			throw e;
 		}
 		return map;

@@ -17,8 +17,8 @@
 	<property name="maxChunkSize">65536</property>
 	<property name="bufferLocalPercent">100</property>
 	
-	<!-- flow limit -->
-	<property name="expectedFlow">1024</property>
+	<!-- network flow, networkFlowLimitSize -->
+	<property name="networkFlowLimitSize">104857600</property>
 
 	
 	<!-- Boss/Timer size -->

@@ -99,7 +99,7 @@ public class RedisEngineCtx {
         
         String bossSizeString = this.serverMap.get("bossSize");
         String timerSizeString = this.serverMap.get("timerSize"); 
-        String expectedFlowString = this.serverMap.get("expectedFlow");
+        String networkFlowLimitSizeString = this.serverMap.get("networkFlowLimitSize");
         
         int processors = Runtime.getRuntime().availableProcessors();
         int port = portString == null ? 8066: Integer.parseInt( portString );
@@ -111,8 +111,9 @@ public class RedisEngineCtx {
         
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
-        long expectedFlow = expectedFlowString == null ? -1 : Long.parseLong(expectedFlowString);
-        this.flowMonitor = new NetFlowMonitor(expectedFlow);
+        
+        long networkFlowLimitSize = networkFlowLimitSizeString == null ? -1 : Long.parseLong(networkFlowLimitSizeString);
+        this.flowMonitor = new NetFlowMonitor(networkFlowLimitSize);
         
 		int[] increments = null;
 		if ( incrementString == null ) {

@@ -22,7 +22,6 @@ public class KafkaCfg {
 		this.partitions = partitions;
 		this.replicationFactor = replicationFactor;
 		
-		
 		Collections.addAll(producers, producerArr);
 		Collections.addAll(consumers, consumerArr);
 	}
