@@ -26,8 +26,6 @@ public abstract class AbstractPool {
 
 	protected static final byte[] PING = "*1\r\n$4\r\nPING\r\n".getBytes();
 	
-	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
-	
 	// 有效性检测标记
 	protected AtomicBoolean availableCheckFlag = new AtomicBoolean( false );
 	

@@ -14,6 +14,7 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
+import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.jedis.RedisCommand;
@@ -28,6 +29,8 @@ import com.google.common.collect.Sets;
  */
 
 public class RedisClusterPool extends AbstractPool {
+	
+	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
 	
 	public static final String LOCALHOST_STR = getLocalHostQuietly();
 	

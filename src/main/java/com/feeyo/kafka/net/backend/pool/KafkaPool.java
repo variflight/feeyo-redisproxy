@@ -20,12 +20,17 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
+import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 import com.google.common.collect.Sets;
 
 public class KafkaPool extends AbstractPool {
+	
+	protected static final byte[] PING = "*1\r\n$4\r\nPING\r\n".getBytes();
+	
+	protected ConHeartBeatHandler conHeartBeatHanler = new KafkaConHeartBeatHandler();
 
 	private Map<Integer, PhysicalNode> physicalNodes = new HashMap<Integer, PhysicalNode>(3);
 	public volatile int heartbeatStatus = 1;

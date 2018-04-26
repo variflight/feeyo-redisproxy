@@ -9,6 +9,7 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
+import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
@@ -20,6 +21,8 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
  * @author Tr!bf wangyamin@variflight.com
  */
 public class XClusterPool extends AbstractPool{
+	
+	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
 	
     private Map<String, XNode> nodes = new HashMap<>();
 

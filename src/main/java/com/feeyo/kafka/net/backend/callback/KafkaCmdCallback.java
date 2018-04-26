@@ -23,6 +23,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 	
 	@Override
 	public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+		
 		// 防止断包
 		this.append(byteBuff);
 		
@@ -38,13 +39,12 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 			
 			int responseSize = this.buffer.length;
 			this.buffer = null;
+			
 			// header
 			ResponseHeader.parse(buffer);
 			handle(buffer);
 			
 			RedisFrontConnection frontCon = getFrontCon( conn );
-			// 后段链接释放
-			conn.release();	
 			if (frontCon != null) {
 				frontCon.releaseLock();
 				
@@ -54,9 +54,13 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 				int requestSize = frontCon.getSession().getRequestSize();
 				long requestTimeMills = frontCon.getSession().getRequestTimeMills();			
 				long responseTimeMills = TimeUtil.currentTimeMillis();
+				
 				// 数据收集
 				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
 			}
+			
+			// 后端链接释放
+			conn.release();	
 			
 		} catch (Exception e) {
 			e.printStackTrace();

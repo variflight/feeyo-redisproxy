@@ -19,6 +19,8 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
  */
 public class RedisStandalonePool extends AbstractPool {
 	
+	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
+	
 	private PhysicalNode physicalNode;
 
 	public volatile int heartbeatRetry = 0;

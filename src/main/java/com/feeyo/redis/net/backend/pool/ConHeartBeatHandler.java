@@ -25,7 +25,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ConHeartBeatHandler.class );
 	
-	private final ConcurrentHashMap<Long, HeartbeatCon> allCons = new ConcurrentHashMap<Long, HeartbeatCon>();
+	protected final ConcurrentHashMap<Long, HeartbeatCon> allCons = new ConcurrentHashMap<Long, HeartbeatCon>();
 
 	public void doHeartBeat(RedisBackendConnection conn, byte[] buff) {
 		
@@ -97,12 +97,12 @@ public class ConHeartBeatHandler implements BackendCallback {
 
 	}
 	
-	private void removeFinished(RedisBackendConnection con) {
+	protected void removeFinished(RedisBackendConnection con) {
 		Long id = ((RedisBackendConnection) con).getId();
 		this.allCons.remove(id);
 	}
 	
-	private void executeException(RedisBackendConnection c, Throwable e) {
+	protected void executeException(RedisBackendConnection c, Throwable e) {
 		removeFinished(c);
 		LOGGER.error("executeException: ", e);
 		c.close("heatbeat exception:" + e);
@@ -128,32 +128,10 @@ public class ConHeartBeatHandler implements BackendCallback {
 		if ( byteBuff.length == 7 &&  byteBuff[0] == '+' &&  byteBuff[1] == 'P' &&  byteBuff[2] == 'O' &&  byteBuff[3] == 'N' &&  byteBuff[4] == 'G'  ) {
 			conn.setHeartbeatTime( TimeUtil.currentTimeMillis() );
 			conn.release();	
-			
-		// kafka heartbeat
-		} else if (byteBuff.length >= 4 && isOk(byteBuff)) {
-			conn.setHeartbeatTime( TimeUtil.currentTimeMillis() );
-			conn.release();		
-			
+
 		} else {
 			conn.close("heartbeat err");
 		}
-	}
-
-	private boolean isOk(byte[] buffer) {
-		int len = buffer.length;
-		if (len < 4) {
-			return false;
-		}
-		int v0 = (buffer[0] & 0xff) << 24;
-		int v1 = (buffer[1] & 0xff) << 16;  
-		int v2 = (buffer[2] & 0xff) << 8;  
-	    int v3 = (buffer[3] & 0xff); 
-	    
-	    if (v0 + v1 + v2 + v3 > len - 4) {
-	    		return false;
-	    }
-		
-		return true;
 	}
 	
 	@Override
