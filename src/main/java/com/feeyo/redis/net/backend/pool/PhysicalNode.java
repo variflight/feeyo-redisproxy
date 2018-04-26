@@ -12,7 +12,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
 
 
 /**
- * Redis 物理节点的连接池
+ * 后端物理节点的 connection 连接池
  * 
  * @author zhuam
  *
