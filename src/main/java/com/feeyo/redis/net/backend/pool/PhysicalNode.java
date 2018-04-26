@@ -6,8 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.net.backend.BackendConnection;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
+import com.feeyo.redis.net.backend.BackendConnectionFactory;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -36,9 +35,9 @@ public class PhysicalNode {
 	protected int minCon;
 	protected int maxCon;
 	
-	protected final RedisBackendConnectionFactory factory;
+	protected final BackendConnectionFactory factory;
 	
-	public PhysicalNode(RedisBackendConnectionFactory factory, int poolType, String poolName, 
+	public PhysicalNode(BackendConnectionFactory factory, int poolType, String poolName, 
 			int minCon, int maxCon, String host, int port) {
 		
 		this.factory = factory;
@@ -79,7 +78,7 @@ public class PhysicalNode {
 		}, null);
 	}
 	
-	public RedisBackendConnection createNewConnection(BackendCallback callback, Object attachment) throws IOException {
+	public BackendConnection createNewConnection(BackendCallback callback, Object attachment) throws IOException {
 		
 		 int activeCons = this.getActiveCount();// 当前最大活动连接
          if ( activeCons + 1 > size ) {// 下一个连接大于最大连接数
@@ -91,7 +90,7 @@ public class PhysicalNode {
          		LOGGER.debug( " no ilde connection in pool, create new connection for " + this.name + " of " + poolName);           
              
          	// create connection
-        	RedisBackendConnection con = factory.make(this, callback, attachment);
+        	BackendConnection con = factory.make(this, callback, attachment);
     		con.setLastTime( TimeUtil.currentTimeMillis() );
     		return con;
          }

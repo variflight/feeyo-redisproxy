@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestType;
@@ -36,7 +35,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
     	// 写出
 		for (RouteResultNode rrn : rrs.getRouteResultNodes()) {
 			ByteBuffer buffer =  getRequestBufferByRRN(rrn);
-			RedisBackendConnection backendConn = writeToBackend(rrn.getPhysicalNode(), buffer, new PipelineDirectTransTofrontCallBack());
+			BackendConnection backendConn = writeToBackend(rrn.getPhysicalNode(), buffer, new PipelineDirectTransTofrontCallBack());
 			if ( backendConn != null )
 				this.holdBackendConnection( backendConn );
 		}

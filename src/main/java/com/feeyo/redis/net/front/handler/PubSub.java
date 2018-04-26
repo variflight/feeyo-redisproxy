@@ -86,7 +86,7 @@ public class PubSub  {
 			callback.addTodoTask(task);
 			
 			// 创建新连接
-			this.backendCon = node.createNewConnection(callback, frontCon);
+			this.backendCon = (RedisBackendConnection)node.createNewConnection(callback, frontCon);
 			
 		} else {
 			

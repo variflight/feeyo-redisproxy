@@ -57,35 +57,40 @@ public abstract class AbstractCommandHandler {
 	 * 1、从连接池，没有闲置的需要手动新建
 	 * 2、新建及闲置连接都需要考虑 非集群情况下的自动 select database 问题
 	 */
-	protected RedisBackendConnection writeToBackend(PhysicalNode node, final ByteBuffer buffer, 
+	protected BackendConnection writeToBackend(PhysicalNode node, final ByteBuffer buffer, 
 			AbstractBackendCallback callback) throws IOException {
 		
 		//选择后端连接
 		final int poolType = node.getPoolType();
-		RedisBackendConnection backendCon = (RedisBackendConnection)node.getConnection(callback, frontCon);
+		BackendConnection backendCon = node.getConnection(callback, frontCon);
 		if ( backendCon == null ) {
 			
 			TodoTask task = new TodoTask() {				
 				@Override
 				public void execute(BackendConnection conn) throws Exception {	
 					
-					RedisBackendConnection backendCon = (RedisBackendConnection)conn;
-					
-					// 集群不需要处理 select database
-					if ( poolType == 1) {
-						backendCon.write( buffer );
-					} else {
-						// 执行 SELECT 指令
-						int db = frontCon.getUserCfg().getSelectDb();
-						if (backendCon.needSelectIf(db)) {
-							SelectDbCallback selectDbCallback = new SelectDbCallback(db, backendCon.getCallback(), buffer);
-							backendCon.select(db, selectDbCallback);
-			
-						} else {
-							backendCon.write( buffer );
+					switch (poolType) {
+					case 0: // 非集群
+						{ 
+							// 执行 SELECT 指令
+							RedisBackendConnection bkCon = (RedisBackendConnection)conn;
+							int db = frontCon.getUserCfg().getSelectDb();
+							if (bkCon.needSelectIf(db)) {
+								SelectDbCallback selectDbCallback = new SelectDbCallback(db, bkCon.getCallback(), buffer);
+								bkCon.select(db, selectDbCallback);
+				
+							} else {
+								bkCon.write( buffer );
+							}
 						}
+						break;
+					case 1:	// 集群
+					case 2:	// 自定义集群
+					case 3: // KAFKA 集群
+						conn.write(buffer);
+						break;
+
 					}
-					
 				}
 			};
 			callback.addTodoTask(task);
@@ -93,20 +98,26 @@ public abstract class AbstractCommandHandler {
 			
 		} else {
 			
-			// 集群不需要处理 select database
-			if ( poolType == 1 || poolType == 3) {
-				backendCon.write( buffer );
-
-			} else {
-				// 执行 SELECT 指令
-				int db = frontCon.getUserCfg().getSelectDb();
-				if (backendCon.needSelectIf(db)) {
-					SelectDbCallback selectDbCallback = new SelectDbCallback(db, backendCon.getCallback(), buffer);
-					backendCon.select(db, selectDbCallback);
-
-				} else {
-					backendCon.write( buffer );
+			switch (poolType) {
+			case 0: // 非集群
+				{
+					// 执行 SELECT 指令
+					RedisBackendConnection bkCon = (RedisBackendConnection)backendCon;
+					int db = frontCon.getUserCfg().getSelectDb();
+					if (bkCon.needSelectIf(db)) {
+						SelectDbCallback selectDbCallback = new SelectDbCallback(db, bkCon.getCallback(), buffer);
+						bkCon.select(db, selectDbCallback);
+	
+					} else {
+						bkCon.write( buffer );
+					}
 				}
+				break;
+			case 1:	// 集群
+			case 2:	// 自定义集群
+			case 3: // KAFKA 集群
+				backendCon.write( buffer );
+				break;
 			}
 		}
 		return backendCon;

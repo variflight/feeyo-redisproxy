@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder;
 import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder.PipelineResponse;
@@ -50,7 +49,7 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
 			
 			ByteBuffer buffer = getRequestBufferByRRN(rrn);
 			
-		    RedisBackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new SegmentCallBack()); 
+		    BackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new SegmentCallBack()); 
 		    
 		    if ( backendConn != null )
 				this.holdBackendConnection(backendConn);
