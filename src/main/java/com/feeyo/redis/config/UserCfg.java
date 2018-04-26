@@ -1,7 +1,6 @@
 package com.feeyo.redis.config;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class UserCfg {
 	
@@ -17,9 +16,10 @@ public class UserCfg {
 	// 通过管理指令 use pool 改变
 	private int usePoolId;
 	private int usePoolType = -1;
-	private LimitCfg limitCfg;
+	private UserFlowLimitCfg limitCfg;
 	
-	public UserCfg(int poolId, int poolType, String password,  String prefix, int selectDb, boolean isAdmin, boolean isReadonly, int throughPercentage) {
+	public UserCfg(int poolId, int poolType, String password,  String prefix, 
+			int selectDb, boolean isAdmin, boolean isReadonly, int throughPercentage) {
 		super();
 		this.poolId = poolId;
 		this.poolType = poolType;
@@ -35,7 +35,7 @@ public class UserCfg {
 		if (throughPercentage == 100 || isAdmin) {
 			limitCfg = null;
 		} else {
-			limitCfg = new LimitCfg(throughPercentage);
+			limitCfg = new UserFlowLimitCfg(throughPercentage);
 		}
 	}
 	
@@ -76,7 +76,7 @@ public class UserCfg {
 		this.usePoolType = poolType;
 	}
 	
-	public LimitCfg getLimitCfg() {
+	public UserFlowLimitCfg getLimitCfg() {
 		return this.limitCfg;
 	}
 
@@ -113,27 +113,5 @@ public class UserCfg {
 	    } else {
 	        return false;
 	    }
-	}
-	
-	public class LimitCfg {
-		private AtomicInteger index = new AtomicInteger(0);
-		private int throughPercentage;
-		public LimitCfg(int throughPercentage) {
-			this.throughPercentage = throughPercentage;
-		}
-		
-		public boolean isOk() {
-			return getIndex() < throughPercentage;
-		}
-		
-		private int getIndex() {
-			for (;;) {
-				int current = index.get();
-				int next = current >= 99 ? 0 : current + 1;
-				if (index.compareAndSet(current, next))
-					return current;
-			}
-		}
-		
 	}
 }

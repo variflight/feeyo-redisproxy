@@ -5,7 +5,7 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.config.UserCfg.LimitCfg;
+import com.feeyo.redis.config.UserFlowLimitCfg;
 import com.feeyo.redis.net.RedisConnection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -134,7 +134,7 @@ public class RedisFrontConnection extends RedisConnection {
 		if (_limitLock.compareAndSet(false, true)) {
 			UserCfg uc = this.getUserCfg();
 			if (uc != null) {
-				LimitCfg lc = uc.getLimitCfg();
+				UserFlowLimitCfg lc = uc.getLimitCfg();
 				if (lc != null && !lc.isOk())
 					return true;
 			}
