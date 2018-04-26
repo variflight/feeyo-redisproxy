@@ -1,5 +1,6 @@
 package com.feeyo.kafka.config;
 
+import java.util.Collections;
 import java.util.HashSet;
 
 public class KafkaCfg {
@@ -8,22 +9,22 @@ public class KafkaCfg {
 	private final int poolId;
 	private final int partitions;
 	private final short replicationFactor;
+	
 	private final HashSet<String> producers = new HashSet<String>(); 
 	private final HashSet<String> consumers = new HashSet<String>(); 
 	private MetaData metaData;
 	
 	public KafkaCfg(String topic, int poolId, int partitions, short replicationFactor, 
-			String[] producers, String[] consumers) {
+			String[] producerArr, String[] consumerArr) {
+		
 		this.topic = topic;
 		this.poolId = poolId;
 		this.partitions = partitions;
 		this.replicationFactor = replicationFactor;
-		for (String producer : producers) {
-			this.producers.add(producer);
-		}
-		for (String consumer : consumers) {
-			this.consumers.add(consumer);
-		}
+		
+		
+		Collections.addAll(producers, producerArr);
+		Collections.addAll(consumers, consumerArr);
 	}
 
 	public String getTopic() {
