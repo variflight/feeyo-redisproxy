@@ -22,8 +22,10 @@ public interface ClosableConnection {
 	long getNetInBytes();
 
 	long getNetOutBytes();
+
+	// 限流 ( 限流开关、流量清洗 )
+	//++++++++++++++++++++++++
+	boolean isNetflowLimit();	
+	void netflowCleaning();
 	
-	boolean isNeedFlowLimit();
-	
-	void flowLimit();
 }

@@ -1,4 +1,4 @@
-package com.feeyo.redis.net;
+package com.feeyo.redis.nio;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -7,15 +7,22 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.feeyo.redis.nio.util.TimeUtil;
 
-public class FlowController {
+
+/**
+ * 流量监控
+ *
+ */
+public class NetFlowMonitor {
+	
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+	
 	private AtomicLong[] net;
 	private volatile int index;
-	private volatile boolean isOutOfFlow = false;
+	private volatile boolean overproof = false;
 	private boolean isOpen;
 	private final long size;
 	
-	public FlowController(long size) {
+	public NetFlowMonitor(long size) {
 		this.size = size;
 		this.isOpen = this.size >= 0;
 		// 开启流量控制
@@ -24,11 +31,12 @@ public class FlowController {
 			for (int i = 0; i < this.net.length; i++)
 				this.net[i] = new AtomicLong(size);
 			
-			this.init();
+			this.start();
 		}
 	}
 		
-	private void init() {
+	private void start() {
+		
 		executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
@@ -37,9 +45,9 @@ public class FlowController {
 
 				// 判定是否需要限流
 				if (index == 0) {
-					isOutOfFlow = net[59].get() < 0;
+					overproof = net[59].get() < 0;
 				} else {
-					isOutOfFlow = net[index - 1].get() < 0;
+					overproof = net[index - 1].get() < 0;
 				}
 				
 				// 更新其他容量
@@ -59,8 +67,8 @@ public class FlowController {
 		return true;
 	}
 	
-	public boolean isOutOfFlow() {
-		return isOutOfFlow;
+	public boolean isOverproof() {
+		return overproof;
 	}
 	
 	private int getIndex() {
@@ -68,13 +76,7 @@ public class FlowController {
         return (int) ((currentTimeMillis / 1000) % 60);
 	}
 	
-	/**
-     * Atomically adds the given value to the current value.
-     *
-     * @param delta the value to add
-     * @return the updated value
-     */
-    public final long decrement(AtomicLong al, long delta) {
+    private final long decrement(AtomicLong al, long delta) {
         for (;;) {
             long current = al.get();
             long next = current - delta;

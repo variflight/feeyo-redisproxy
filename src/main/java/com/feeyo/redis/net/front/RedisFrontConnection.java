@@ -25,6 +25,7 @@ public class RedisFrontConnection extends RedisConnection {
 	private boolean isAuthenticated;
 	
 	private RedisFrontSession session;
+	
 	private AtomicBoolean _readLock = new AtomicBoolean(false);
 	private AtomicBoolean _limitLock = new AtomicBoolean(false);
 	
@@ -41,8 +42,8 @@ public class RedisFrontConnection extends RedisConnection {
 	@Override
 	protected void asynRead() throws IOException {
 		// 流量超过 已经登录过 有限流配置
-		if (this.getFlowController().isOutOfFlow() && isNeedFlowLimit()) {
-			flowLimit();
+		if (this.getFlowMonitor().isOverproof() && isNetflowLimit()) {
+			netflowCleaning();
 			return;
 		}
 		
@@ -128,7 +129,7 @@ public class RedisFrontConnection extends RedisConnection {
 	}
 	
 	@Override
-	public boolean isNeedFlowLimit() {
+	public boolean isNetflowLimit() {
 		if (_limitLock.compareAndSet(false, true)) {
 			UserCfg uc = this.getUserCfg();
 			if (uc != null) {
@@ -142,7 +143,7 @@ public class RedisFrontConnection extends RedisConnection {
 	}
 	
 	@Override
-	public void flowLimit() {
+	public void netflowCleaning() {
 		this.write(RedisFrontSession.FLOW_LIMIT);
 		this.close("flow limit");
 	}

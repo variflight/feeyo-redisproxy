@@ -45,12 +45,12 @@ public class RedisConnection extends Connection {
 	}
 
 	@Override
-	public boolean isNeedFlowLimit() {
+	public boolean isNetflowLimit() {
 		return false;
 	}
 
 	@Override
-	public void flowLimit() {
+	public void netflowCleaning() {
 	}
 	
 }

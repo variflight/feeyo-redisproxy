@@ -23,7 +23,8 @@ public class RedisBackendConnectionFactory {
 
 		// 设置NIOHandlers
 		c.setHandler( new RedisBackendConnectionHandler() );
-		c.setFlowController(RedisEngineCtx.INSTANCE().getFlowController());
+		c.setFlowMonitor( RedisEngineCtx.INSTANCE().getNetFlowMonitor() );
+		
 		c.setHost( host );
 		c.setPort( port );
 		c.setPhysicalNode( physicalNode );

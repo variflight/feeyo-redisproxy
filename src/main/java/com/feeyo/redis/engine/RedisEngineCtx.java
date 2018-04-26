@@ -18,11 +18,11 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.loader.zk.ZkClient;
-import com.feeyo.redis.net.FlowController;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PoolFactory;
 import com.feeyo.redis.net.front.RedisFrontendConnectionFactory;
+import com.feeyo.redis.nio.NetFlowMonitor;
 import com.feeyo.redis.nio.NIOAcceptor;
 import com.feeyo.redis.nio.NIOConnector;
 import com.feeyo.redis.nio.NIOReactor;
@@ -48,6 +48,9 @@ public class RedisEngineCtx {
 	private VirtualMemoryService virtualMemoryService;
 	private BufferPool bufferPool;	
 	private RedisBackendConnectionFactory backendRedisConFactory;
+	
+	private volatile NetFlowMonitor netflowMonitor;
+	
 	// 
 	private volatile Map<String, NIOReactor> reactorMap = new HashMap<String, NIOReactor>();
 	
@@ -55,9 +58,9 @@ public class RedisEngineCtx {
 	private volatile Map<String, UserCfg> userMap = null;
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
-	private volatile Properties mailProperty = null;
-	private volatile FlowController flowController;
 	private volatile Map<String, KafkaCfg> kafkaMap = null;
+	
+	private volatile Properties mailProperty = null;
 
 	// backup
 	private volatile  Map<Integer, AbstractPool> _poolMap = null;
@@ -111,7 +114,7 @@ public class RedisEngineCtx {
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
         long expectedFlow = expectedFlowString == null ? -1 : Long.parseLong(expectedFlowString);
-        this.flowController = new FlowController(expectedFlow);
+        this.netflowMonitor = new NetFlowMonitor(expectedFlow);
         
 		int[] increments = null;
 		if ( incrementString == null ) {
@@ -525,8 +528,8 @@ public class RedisEngineCtx {
 		return virtualMemoryService;
 	}
 
-	public FlowController getFlowController() {
-		return flowController;
+	public NetFlowMonitor getNetFlowMonitor() {
+		return netflowMonitor;
 	}
 
 }
