@@ -1,5 +1,19 @@
 package com.feeyo.kafka.net.backend;
 
-public class KafkaBackendConnection {
+import java.nio.channels.SocketChannel;
+
+import com.feeyo.redis.net.backend.BackendConnection;
+
+/**
+ * Kafka Connection
+ * 
+ * @author zhuam
+ *
+ */
+public class KafkaBackendConnection extends BackendConnection {
+
+	public KafkaBackendConnection(SocketChannel channel) {
+		super(channel);
+	}
 
 }
