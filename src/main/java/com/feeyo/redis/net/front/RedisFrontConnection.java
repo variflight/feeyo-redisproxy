@@ -41,7 +41,8 @@ public class RedisFrontConnection extends RedisConnection {
 	
 	@Override
 	protected void asynRead() throws IOException {
-		// 流量超过 已经登录过 有限流配置
+		
+		// 流量超标，执行流量清洗
 		if (this.getFlowMonitor().isOverproof() && isFlowLimit()) {
 			flowClean();
 			return;
