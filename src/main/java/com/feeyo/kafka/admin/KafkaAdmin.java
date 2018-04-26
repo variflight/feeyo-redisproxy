@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class KafkaAdmin {
+	
     private static Logger LOGGER = LoggerFactory.getLogger( KafkaAdmin.class );
 	
 	private AdminClient adminClient;

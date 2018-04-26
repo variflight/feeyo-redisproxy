@@ -32,11 +32,12 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 /**
- * 管理topic offset
+ * 管理 topic offset
+ * 
  * @author yangtao
- *
  */
 public class OffsetAdmin {
+	
 	private static Logger LOGGER = LoggerFactory.getLogger(OffsetAdmin.class);
 
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
@@ -201,32 +202,28 @@ public class OffsetAdmin {
 			LOGGER.warn("kafka cmd offset commit err:", e);
 		}
 	}
-	
-
-	/**
-	 * offset 数据持久化
-	 */
-	public void offsetPersistent() {
-		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
-		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-			KafkaCfg kafkaCfg = entry.getValue();
-			setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
-		}
-	}
 
 	public void startUp() {
+		
 		this.load();
 		
 		// 定时持久化offset
 		executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
-				offsetPersistent();
+				
+				// offset 数据持久化
+				Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
+				for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
+					KafkaCfg kafkaCfg = entry.getValue();
+					setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
+				}
 			}
 		}, 30, 30, TimeUnit.SECONDS);
 	}
 	
 	public void close() {
+		
 		// 关闭定时任务
 		executorService.shutdown();
 		
@@ -238,6 +235,9 @@ public class OffsetAdmin {
 		}
 		
 		// 提交本地剩余offset
-		offsetPersistent();
+		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
+			KafkaCfg kafkaCfg = entry.getValue();
+			setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
+		}
 	}
 }

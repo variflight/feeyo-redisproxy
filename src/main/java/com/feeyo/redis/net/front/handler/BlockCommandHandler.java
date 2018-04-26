@@ -2,6 +2,7 @@ package com.feeyo.redis.net.front.handler;
 
 import java.io.IOException;
 
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.codec.RedisRequest;
@@ -42,7 +43,7 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 	private class BlockDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
 		
 		@Override
-		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+		public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 			// handler释放后端链接
 			keepConnection = null;
 			

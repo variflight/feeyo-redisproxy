@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.codec.RedisResponse;
 import com.feeyo.redis.net.codec.RedisResponseDecoder;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -96,7 +96,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 	}
 	
 	@Override
-	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+	public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 		// 应答解析
 		List<RedisResponse> resps = decoder.decode( byteBuff );

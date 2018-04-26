@@ -45,7 +45,7 @@ import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.nio.Connection;
+import com.feeyo.redis.nio.AbstractConnection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.buffer.BufferPool;
 import com.feeyo.redis.nio.buffer.bucket.AbstractBucket;
@@ -377,10 +377,10 @@ public class Manage {
 					
 					int frontSize = 0;
 					int backendSize = 0;
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							frontSize++;
 						} else {
@@ -398,10 +398,10 @@ public class Manage {
 				// SHOW USER_CONN
 				} else if ( arg2.equalsIgnoreCase("USER_CONN") ) {
 					Map<String, Integer> userMap = new HashMap<String, Integer>();
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if (c instanceof RedisFrontConnection) {
 							userMap.put(((RedisFrontConnection) c).getPassword(),
 									1 + (userMap.get(((RedisFrontConnection) c).getPassword()) == null ? 0
@@ -465,10 +465,10 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							lines.add( c.toString() );
 						}
@@ -571,10 +571,10 @@ public class Manage {
 					List<String> lines = new ArrayList<String>();
 					
 					Map<String, AtomicInteger> poolConnections = new HashMap<String, AtomicInteger>();
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
 							// 统计每个redis池的连接数 
 							String poolName = ((RedisBackendConnection) c).getPhysicalNode().getPoolName();
@@ -605,8 +605,8 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					long minStartupTime = -1;
 					long maxLastLargeMessageTime = -1;
 					long totalLargeCount = 0;
@@ -615,7 +615,7 @@ public class Manage {
 					long totalNetOutBytes = 0;
 					
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
 							// 统计每个redis池的连接数 
 							if (((RedisBackendConnection) c).getPhysicalNode().getPoolName().equals(poolName)) {
@@ -1057,10 +1057,10 @@ public class Manage {
 				// reload front
 				} else if ( arg2.equalsIgnoreCase("FRONT") ) {
 					
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							LOGGER.info("close: {}", c);
 							c.close("manage close");
@@ -1113,7 +1113,7 @@ public class Manage {
 				
 				try {
 				
-					RedisBackendConnection backendCon = pysicalNode.getConnection(new DirectTransTofrontCallBack(), frontCon);
+					RedisBackendConnection backendCon = (RedisBackendConnection)pysicalNode.getConnection(new DirectTransTofrontCallBack(), frontCon);
 					if (backendCon == null) {
 						frontCon.writeErrMessage("not idle backend connection, pls wait !!!");
 					} else {

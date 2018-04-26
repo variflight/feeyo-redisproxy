@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.manage.stat.StatUtil;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.codec.RedisRequest;
@@ -53,7 +54,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		private RedisResponsePipelineDecoder decoder = new RedisResponsePipelineDecoder();
 		
 		@Override
-		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+		public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 			// 解析此次返回的数据条数
 			PipelineResponse pipelineResponse = decoder.parse( byteBuff );

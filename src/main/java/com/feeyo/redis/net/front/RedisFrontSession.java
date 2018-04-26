@@ -11,7 +11,7 @@ import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.Manage;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestDecoder;
@@ -456,7 +456,7 @@ public class RedisFrontSession {
 				// PUBSUB
 				pubsub = new PubSub(frontCon, new AbstractBackendCallback() {
 					@Override
-					public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+					public void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException {
 						if (frontCon != null && !frontCon.isClosed()) {
 							frontCon.write(byteBuff);
 						}

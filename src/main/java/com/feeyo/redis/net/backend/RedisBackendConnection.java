@@ -3,10 +3,8 @@ package com.feeyo.redis.net.backend;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import com.feeyo.redis.net.RedisConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
-import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
@@ -15,58 +13,18 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * @author zhuam
  *
  */
-public class RedisBackendConnection extends RedisConnection {
-	
-    private BackendCallback callback;
-    private PhysicalNode physicalNode;
+public class RedisBackendConnection extends BackendConnection {
+
+	private volatile int db = 0;				//REDIS select database, default 0
     
-    private volatile int db = 0;				//REDIS select database, default 0
-    private volatile boolean borrowed = false;
-    
-    private volatile long heartbeatTime = 0;	//心跳应答时间
-    
-	public RedisBackendConnection(SocketChannel channel) {
+    public RedisBackendConnection(SocketChannel channel) {
 		super(channel);
 	}
-	
-	public BackendCallback getCallback() {
-		return callback;
-	}
-
-	public void setCallback(BackendCallback callback) {
-		this.callback = callback;
-	}
-
-	public PhysicalNode getPhysicalNode() {
-		return physicalNode;
-	}
-
-	public void setPhysicalNode(PhysicalNode node) {
-		this.physicalNode = node;
-	}
-	
-	public void release() {
-		this.setBorrowed( false );
-		this.physicalNode.releaseConnection(this);
-	}
-
-	public void setBorrowed(boolean borrowed) {
-		this.borrowed = borrowed;
-	}
-	
-	public boolean isBorrowed() {
-        return this.borrowed;
-    }
 
 	public void setDb(int db) {
 		this.db = db;
 	}
 	
-	@Override
-	public void close(String reason) {
-		super.close(reason);
-	}
-
 	public boolean needSelectIf(int db) {
 		if ( db == -1 && this.db == 0 ) {
 			return false;			

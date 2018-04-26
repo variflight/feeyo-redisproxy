@@ -11,7 +11,7 @@ import java.util.Set;
 
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
@@ -503,9 +503,9 @@ public class RedisClusterPool extends AbstractPool {
 		long heartbeatTime = TimeUtil.currentTimeMillis() - timeout;		
 		long closeTime = TimeUtil.currentTimeMillis() - (timeout * 2);
 		
-		LinkedList<RedisBackendConnection> heartBeatCons = getNeedHeartbeatCons(physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
+		LinkedList<BackendConnection> heartBeatCons = getNeedHeartbeatCons(physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
 		if ( !heartBeatCons.isEmpty() ) { 			
-			for (RedisBackendConnection conn : heartBeatCons) {
+			for (BackendConnection conn : heartBeatCons) {
 				conHeartBeatHanler.doHeartBeat(conn, PING);
 			}
 		}

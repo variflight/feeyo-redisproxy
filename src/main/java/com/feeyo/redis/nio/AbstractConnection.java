@@ -20,7 +20,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * @author wuzh
  * @author zhuam
  */
-public abstract class Connection implements ClosableConnection {
+public abstract class AbstractConnection implements ClosableConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( "Connection" );
 
@@ -84,7 +84,7 @@ public abstract class Connection implements ClosableConnection {
 	
 	protected NetFlowMonitor flowMonitor;
 
-	public Connection(SocketChannel channel) {
+	public AbstractConnection(SocketChannel channel) {
 		this.channel = channel;
 		this.isClosed = new AtomicBoolean(false);
 		this.startupTime = TimeUtil.currentTimeMillis();
@@ -177,7 +177,7 @@ public abstract class Connection implements ClosableConnection {
 		return largeCount;
 	}
 
-	public void setHandler(NIOHandler<? extends Connection> handler) {
+	public void setHandler(NIOHandler<? extends AbstractConnection> handler) {
 		this.handler = handler;
 	}
 
@@ -286,7 +286,7 @@ public abstract class Connection implements ClosableConnection {
 			}
 			
 			// 已连接、默认不需要认证
-	        this.setState( Connection.STATE_CONNECTED );  
+	        this.setState( AbstractConnection.STATE_CONNECTED );  
 			NetSystem.getInstance().addConnection(this);
 
 			// 往后通知
@@ -713,7 +713,7 @@ public abstract class Connection implements ClosableConnection {
 		return direction;
 	}
 
-	public void setDirection(Connection.Direction in) {
+	public void setDirection(AbstractConnection.Direction in) {
 		this.direction = in;
 	}
 	

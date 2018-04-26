@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 
 /**
  *  抽象连接池
@@ -77,15 +77,15 @@ public abstract class AbstractPool {
 	
 	//TODO: 此处几个方法待进一步优化
 	//-------------------------------------------------
-	protected LinkedList<RedisBackendConnection> getNeedHeartbeatCons(
-			ConcurrentLinkedQueue<RedisBackendConnection> checkLis, long heartbeatTime, long closeTime) {
+	protected LinkedList<BackendConnection> getNeedHeartbeatCons(
+			ConcurrentLinkedQueue<BackendConnection> checkLis, long heartbeatTime, long closeTime) {
 		
 		int maxConsInOneCheck = 10;
-		LinkedList<RedisBackendConnection> heartbeatCons = new LinkedList<RedisBackendConnection>();
+		LinkedList<BackendConnection> heartbeatCons = new LinkedList<BackendConnection>();
 		
-		Iterator<RedisBackendConnection> checkListItor = checkLis.iterator();
+		Iterator<BackendConnection> checkListItor = checkLis.iterator();
 		while (checkListItor.hasNext()) {
-			RedisBackendConnection con = checkListItor.next();
+			BackendConnection con = checkListItor.next();
 			if ( con.isClosed() ) {
 				checkListItor.remove();
 				continue;
@@ -117,10 +117,10 @@ public abstract class AbstractPool {
 		if ( LOGGER.isDebugEnabled() )
 			LOGGER.debug("too many ilde cons, close some for pool  " + this.getName() );
 		
-		List<RedisBackendConnection> readyCloseCons = new ArrayList<RedisBackendConnection>( ildeCloseCount);
+		List<BackendConnection> readyCloseCons = new ArrayList<BackendConnection>( ildeCloseCount);
 		readyCloseCons.addAll( physicalNode.conQueue.getIdleConsToClose(ildeCloseCount));
 
-		for (RedisBackendConnection idleCon : readyCloseCons) {
+		for (BackendConnection idleCon : readyCloseCons) {
 			if ( idleCon.isBorrowed() ) {
 				LOGGER.warn("find idle con is using " + idleCon);
 			}

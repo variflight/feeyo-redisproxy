@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 
 import com.feeyo.kafka.codec.ResponseHeader;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.NetSystem;
@@ -22,7 +22,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 	private byte[] buffer;
 	
 	@Override
-	public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+	public void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException {
 		
 		// 防止断包
 		this.append(byteBuff);

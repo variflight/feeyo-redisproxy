@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.net.backend.TodoTask;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 
 /**
@@ -29,7 +29,7 @@ public abstract class AbstractBackendCallback implements BackendCallback {
 	}
 	
 	// 获取前端连接
-	protected RedisFrontConnection getFrontCon(RedisBackendConnection backendCon) {
+	protected RedisFrontConnection getFrontCon(BackendConnection backendCon) {
 		if (backendCon.getAttachement() instanceof RedisFrontConnection)
 			return (RedisFrontConnection) backendCon.getAttachement();
 		else 
@@ -39,7 +39,7 @@ public abstract class AbstractBackendCallback implements BackendCallback {
 	// 后端连接异常 & 错误
 	// ===================================================
 	@Override
-	public void connectionAcquired(RedisBackendConnection backendCon) {
+	public void connectionAcquired(BackendConnection backendCon) {
 		
 		// 执行挂起的任务
 		if ( todoTasks == null || todoTasks.isEmpty()) {
@@ -61,14 +61,14 @@ public abstract class AbstractBackendCallback implements BackendCallback {
 	}
 
 	@Override
-	public void connectionError(Exception e, RedisBackendConnection backendCon) {
+	public void connectionError(Exception e, BackendConnection backendCon) {
 		RedisFrontConnection frontCon = getFrontCon(backendCon);
 		if (frontCon != null)
 			frontCon.getSession().backendConnectionError(e);
 	}
 
 	@Override
-	public void connectionClose(RedisBackendConnection backendCon, String reason) {
+	public void connectionClose(BackendConnection backendCon, String reason) {
 
 		RedisFrontConnection frontCon = getFrontCon(backendCon);
 		if (frontCon != null)

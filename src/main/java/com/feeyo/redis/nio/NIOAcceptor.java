@@ -90,8 +90,8 @@ public final class NIOAcceptor extends Thread {
 			channel.configureBlocking( false );
 			
 			// 构建Connection
-			Connection c = factory.make(channel);
-			c.setDirection( Connection.Direction.in );
+			AbstractConnection c = factory.make(channel);
+			c.setDirection( AbstractConnection.Direction.in );
 			//c.setId( ConnectIdGenerator.getINSTNCE().getId() );
 			
 			InetSocketAddress remoteAddr = (InetSocketAddress) channel.getRemoteAddress();

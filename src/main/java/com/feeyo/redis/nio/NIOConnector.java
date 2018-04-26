@@ -23,7 +23,7 @@ public final class NIOConnector extends Thread {
 	
 	private final String name;
 	private final Selector selector;
-	private final BlockingQueue<Connection> connectQueue;
+	private final BlockingQueue<AbstractConnection> connectQueue;
 	private long connectCount;
 	private final NIOReactorPool reactorPool;
 
@@ -32,7 +32,7 @@ public final class NIOConnector extends Thread {
 		this.name = name;
 		this.selector = Selector.open();
 		this.reactorPool = reactorPool;
-		this.connectQueue = new LinkedBlockingQueue<Connection>();
+		this.connectQueue = new LinkedBlockingQueue<AbstractConnection>();
 	}
 
 	public long getConnectCount() {
@@ -42,9 +42,9 @@ public final class NIOConnector extends Thread {
 	/**
 	 * 添加一个需要异步连接的Connection到队列中，等待连接
 	 * 
-	 * @param Connection
+	 * @param AbstractConnection
 	 */
-	public void postConnect(Connection c) {
+	public void postConnect(AbstractConnection c) {
 		connectQueue.offer(c);
 		selector.wakeup();
 	}
@@ -79,7 +79,7 @@ public final class NIOConnector extends Thread {
 
 
 	private void connect(Selector selector) {
-		Connection c = null;
+		AbstractConnection c = null;
 		while ((c = connectQueue.poll()) != null) {
 			try {
 				SocketChannel channel = (SocketChannel) c.getChannel();
@@ -96,7 +96,7 @@ public final class NIOConnector extends Thread {
 
 	@SuppressWarnings("unchecked")
 	private void finishConnect(SelectionKey key, Object att) {
-		Connection c = (Connection) att;
+		AbstractConnection c = (AbstractConnection) att;
 		try {
 			 //做原生NIO连接是否完成的判断和操作
 			if (finishConnect(c, (SocketChannel) c.channel)) {
@@ -119,7 +119,7 @@ public final class NIOConnector extends Thread {
 		}
 	}
 
-	private boolean finishConnect(Connection c, SocketChannel channel) throws IOException {
+	private boolean finishConnect(AbstractConnection c, SocketChannel channel) throws IOException {
 		if (channel.isConnectionPending()) {
 			channel.finishConnect();
 			c.setLocalPort(channel.socket().getLocalPort());

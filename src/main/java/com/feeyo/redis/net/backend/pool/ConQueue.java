@@ -5,18 +5,19 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.nio.Connection;
+import com.feeyo.redis.nio.AbstractConnection;
 import com.feeyo.redis.nio.NetSystem;
 
 public class ConQueue {
 
 	//后端连接
-	private final ConcurrentLinkedQueue<RedisBackendConnection> cons = new ConcurrentLinkedQueue<RedisBackendConnection>();
+	private final ConcurrentLinkedQueue<BackendConnection> cons = new ConcurrentLinkedQueue<BackendConnection>();
 
-	public RedisBackendConnection takeIdleCon() {		
-		ConcurrentLinkedQueue<RedisBackendConnection> f1 = cons;
-		RedisBackendConnection con = f1.poll();
+	public BackendConnection takeIdleCon() {		
+		ConcurrentLinkedQueue<BackendConnection> f1 = cons;
+		BackendConnection con = f1.poll();
 		if (con == null || con.isClosed() || !con.isConnected() ) {
 			return null;
 		} else {
@@ -24,18 +25,18 @@ public class ConQueue {
 		}
 	}
 
-	public void removeCon(RedisBackendConnection con) {
+	public void removeCon(BackendConnection con) {
 		cons.remove(con);
 	}
 
-	public ConcurrentLinkedQueue<RedisBackendConnection> getCons() {
+	public ConcurrentLinkedQueue<BackendConnection> getCons() {
 		return cons;
 	}
 
-	public ArrayList<RedisBackendConnection> getIdleConsToClose(int count) {
-		ArrayList<RedisBackendConnection> readyCloseCons = new ArrayList<RedisBackendConnection>(count);
+	public ArrayList<BackendConnection> getIdleConsToClose(int count) {
+		ArrayList<BackendConnection> readyCloseCons = new ArrayList<BackendConnection>(count);
 		while (!cons.isEmpty() && readyCloseCons.size() < count) {
-			RedisBackendConnection theCon = cons.poll();
+			BackendConnection theCon = cons.poll();
 			if (theCon != null) {
 				readyCloseCons.add(theCon);
 			}
@@ -45,7 +46,7 @@ public class ConQueue {
 	
 	public int getActiveCountForNode(PhysicalNode node) {
         int total = 0;
-        for (Connection conn : NetSystem.getInstance().getAllConnectios().values()) {
+        for (AbstractConnection conn : NetSystem.getInstance().getAllConnectios().values()) {
             if (conn instanceof RedisBackendConnection) {
             	RedisBackendConnection theCon = (RedisBackendConnection) conn;
                 if (theCon.getPhysicalNode() == node) {
@@ -59,10 +60,10 @@ public class ConQueue {
     }
 
     public void clearConnections(String reason, PhysicalNode node) {
-        Iterator<Entry<Long, Connection>> itor = NetSystem.getInstance().getAllConnectios().entrySet().iterator();
+        Iterator<Entry<Long, AbstractConnection>> itor = NetSystem.getInstance().getAllConnectios().entrySet().iterator();
         while ( itor.hasNext() ) {
-            Entry<Long, Connection> entry = itor.next();
-            Connection con = entry.getValue();
+            Entry<Long, AbstractConnection> entry = itor.next();
+            AbstractConnection con = entry.getValue();
             if (con instanceof RedisBackendConnection) {
                 if (((RedisBackendConnection) con).getPhysicalNode() == node) {
                     con.close(reason);
@@ -73,10 +74,10 @@ public class ConQueue {
     }
     
     public void setIdleTimeConnections(PhysicalNode node, long idleTimeout) {    	
-        Iterator<Entry<Long, Connection>> itor = NetSystem.getInstance().getAllConnectios().entrySet().iterator();
+        Iterator<Entry<Long, AbstractConnection>> itor = NetSystem.getInstance().getAllConnectios().entrySet().iterator();
         while ( itor.hasNext() ) {
-            Entry<Long, Connection> entry = itor.next();
-            Connection con = entry.getValue();
+            Entry<Long, AbstractConnection> entry = itor.next();
+            AbstractConnection con = entry.getValue();
             if (con instanceof RedisBackendConnection) {
                 if (((RedisBackendConnection) con).getPhysicalNode() == node) {
                 	con.setIdleTimeout( idleTimeout );

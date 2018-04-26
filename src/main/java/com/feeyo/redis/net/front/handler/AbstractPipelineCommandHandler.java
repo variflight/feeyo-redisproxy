@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestEncoder;
 import com.feeyo.redis.net.codec.RedisResponse;
@@ -137,7 +137,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	private ConcurrentHashMap<String, ResponseNode> allResponseNode =  new ConcurrentHashMap<String, ResponseNode>(); 
 	private AtomicInteger allResponseCount = new AtomicInteger(0); 					// 接收到返回数据的条数
 	
-	private ConcurrentHashMap<Long, RedisBackendConnection> backendConnections = new ConcurrentHashMap<Long, RedisBackendConnection>();
+	private ConcurrentHashMap<Long, BackendConnection> backendConnections = new ConcurrentHashMap<Long, BackendConnection>();
 	
 
 
@@ -372,8 +372,8 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	// 持有连接、 处理（正确、异常）、释放连接
 	// ------------------------------------------------------------
 	private void clearBackendConnections() {
-        for(Map.Entry<Long, RedisBackendConnection> entry: backendConnections.entrySet()) {
-        	RedisBackendConnection backendConn = entry.getValue();
+        for(Map.Entry<Long, BackendConnection> entry: backendConnections.entrySet()) {
+        	BackendConnection backendConn = entry.getValue();
         	if (backendConnections.remove(entry.getKey()) != null )
         		backendConn.release();
         } 
@@ -382,11 +382,11 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	}
 	
 	
-	protected void holdBackendConnection(RedisBackendConnection backendConn) {
+	protected void holdBackendConnection(BackendConnection backendConn) {
 		backendConnections.put(backendConn.getId(), backendConn);
 	}
 	
-	protected void releaseBackendConnection(RedisBackendConnection backendConn) {
+	protected void releaseBackendConnection(BackendConnection backendConn) {
 		if (backendConnections.remove(backendConn.getId()) != null) {
 			backendConn.release();
 		}

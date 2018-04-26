@@ -42,7 +42,7 @@ import com.feeyo.kafka.util.Utils;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
@@ -153,7 +153,7 @@ public class KafkaLoad {
 		if (physicalNode != null) {
 			try {
 				AbstractBackendCallback callback = new ApiVersionCallback();
-				RedisBackendConnection backendCon = physicalNode.getConnection(callback, null);
+				BackendConnection backendCon = physicalNode.getConnection(callback, null);
 				RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short)1, Thread.currentThread().getName(), Utils.getCorrelationId());
 				Struct struct = requestHeader.toStruct();
 				final ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( struct.sizeOf() + 4 );
@@ -163,7 +163,7 @@ public class KafkaLoad {
 				if ( backendCon == null ) {
 					TodoTask task = new TodoTask() {				
 						@Override
-						public void execute(RedisBackendConnection backendCon) throws Exception {	
+						public void execute(BackendConnection backendCon) throws Exception {	
 							backendCon.write( buffer );
 						}
 					};

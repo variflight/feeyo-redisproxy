@@ -3,15 +3,15 @@ package com.feeyo.redis.net;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import com.feeyo.redis.nio.Connection;
+import com.feeyo.redis.nio.AbstractConnection;
 
-public class RedisConnection extends Connection {
+public class Connection extends AbstractConnection {
 
 	private volatile long lastTime;
 	
 	protected String password;
 
-	public RedisConnection(SocketChannel channel) {
+	public Connection(SocketChannel channel) {
 		super(channel);
 	}
 

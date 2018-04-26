@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.front.handler;
 
 import com.feeyo.redis.net.backend.TodoTask;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
@@ -61,12 +62,15 @@ public abstract class AbstractCommandHandler {
 		
 		//选择后端连接
 		final int poolType = node.getPoolType();
-		RedisBackendConnection backendCon = node.getConnection(callback, frontCon);
+		RedisBackendConnection backendCon = (RedisBackendConnection)node.getConnection(callback, frontCon);
 		if ( backendCon == null ) {
 			
 			TodoTask task = new TodoTask() {				
 				@Override
-				public void execute(RedisBackendConnection backendCon) throws Exception {	
+				public void execute(BackendConnection conn) throws Exception {	
+					
+					RedisBackendConnection backendCon = (RedisBackendConnection)conn;
+					
 					// 集群不需要处理 select database
 					if ( poolType == 1) {
 						backendCon.write( buffer );

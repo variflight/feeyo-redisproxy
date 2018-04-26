@@ -7,7 +7,7 @@ import java.io.IOException;
  * 
  * @author wuzh
  */
-public interface NIOHandler<T extends Connection> {
+public interface NIOHandler<T extends AbstractConnection> {
 
 	/**
 	 * 连接建立成功的通知事件

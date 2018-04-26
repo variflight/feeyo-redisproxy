@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -27,7 +28,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 	
 	protected final ConcurrentHashMap<Long, HeartbeatCon> allCons = new ConcurrentHashMap<Long, HeartbeatCon>();
 
-	public void doHeartBeat(RedisBackendConnection conn, byte[] buff) {
+	public void doHeartBeat(BackendConnection conn, byte[] buff) {
 		
 		if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug("do heartbeat check for con " + conn);
@@ -45,7 +46,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 		}
 	}
 	
-	public void doHeartBeat(RedisBackendConnection conn, ByteBuffer buff) {
+	public void doHeartBeat(BackendConnection conn, ByteBuffer buff) {
 		
 		if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug("do heartbeat check for con " + conn);
@@ -72,7 +73,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 			return;
 		}
 		
-		Collection<RedisBackendConnection> abandCons = new LinkedList<RedisBackendConnection>();
+		Collection<BackendConnection> abandCons = new LinkedList<BackendConnection>();
 		long curTime = System.currentTimeMillis();
 		Iterator<Entry<Long, HeartbeatCon>> itors = allCons.entrySet().iterator();
 		while (itors.hasNext()) {
@@ -84,7 +85,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 		}
 
 		if (!abandCons.isEmpty()) {
-			for (RedisBackendConnection con : abandCons) {
+			for (BackendConnection con : abandCons) {
 				try {
 					// if(con.isBorrowed())
 					con.close("heartbeat check, backend conn is timeout !!! ");
@@ -97,29 +98,29 @@ public class ConHeartBeatHandler implements BackendCallback {
 
 	}
 	
-	protected void removeFinished(RedisBackendConnection con) {
+	protected void removeFinished(BackendConnection con) {
 		Long id = ((RedisBackendConnection) con).getId();
 		this.allCons.remove(id);
 	}
 	
-	protected void executeException(RedisBackendConnection c, Throwable e) {
+	protected void executeException(BackendConnection c, Throwable e) {
 		removeFinished(c);
 		LOGGER.error("executeException: ", e);
 		c.close("heatbeat exception:" + e);
 	}
 
 	@Override
-	public void connectionError(Exception e, RedisBackendConnection conn) {
+	public void connectionError(Exception e, BackendConnection conn) {
 		// not called
 	}
 
 	@Override
-	public void connectionAcquired(RedisBackendConnection conn) {
+	public void connectionAcquired(BackendConnection conn) {
 		// not called
 	}
 
 	@Override
-	public void handleResponse(RedisBackendConnection conn, byte[] byteBuff)
+	public void handleResponse(BackendConnection conn, byte[] byteBuff)
 			throws IOException {
 		
 		removeFinished(conn);
@@ -135,21 +136,22 @@ public class ConHeartBeatHandler implements BackendCallback {
 	}
 	
 	@Override
-	public void connectionClose(RedisBackendConnection conn, String reason) {
+	public void connectionClose(BackendConnection conn, String reason) {
 		removeFinished(conn);		
 		if ( LOGGER.isDebugEnabled() ) {
 			LOGGER.debug("connection closed " + conn + " reason:" + reason);
 		}
 	}
+
 }
 
 
 class HeartbeatCon {
 	
 	public final long timeoutTimestamp;
-	public final RedisBackendConnection conn;
+	public final BackendConnection conn;
 
-	public HeartbeatCon(RedisBackendConnection conn) {
+	public HeartbeatCon(BackendConnection conn) {
 		super();
 		this.timeoutTimestamp = System.currentTimeMillis() + ( 20 * 1000L );
 		this.conn = conn;

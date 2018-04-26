@@ -17,7 +17,7 @@ import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
@@ -237,10 +237,10 @@ public class KafkaPool extends AbstractPool {
 			long heartbeatTime = TimeUtil.currentTimeMillis() - timeout;
 			long closeTime = TimeUtil.currentTimeMillis() - (timeout * 2);
 
-			LinkedList<RedisBackendConnection> heartBeatCons = getNeedHeartbeatCons(physicalNode.conQueue.getCons(),
+			LinkedList<BackendConnection> heartBeatCons = getNeedHeartbeatCons(physicalNode.conQueue.getCons(),
 					heartbeatTime, closeTime);
 			if (!heartBeatCons.isEmpty()) {
-				for (RedisBackendConnection conn : heartBeatCons) {
+				for (BackendConnection conn : heartBeatCons) {
 					RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short)1, Thread.currentThread().getName(), Utils.getCorrelationId());
 					Struct struct = requestHeader.toStruct();
 					ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( struct.sizeOf() + 4);

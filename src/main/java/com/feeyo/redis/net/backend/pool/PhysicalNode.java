@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
@@ -58,21 +59,21 @@ public class PhysicalNode {
 		
 		createNewConnection(new BackendCallback() {
 			@Override
-			public void connectionAcquired(RedisBackendConnection conn) {
+			public void connectionAcquired(BackendConnection conn) {
 				conQueue.getCons().add( conn ); 
 			}	
 			
-			public void connectionClose(RedisBackendConnection conn, String reason) {
+			public void connectionClose(BackendConnection conn, String reason) {
 				conQueue.getCons().remove( conn );  
 			}
 
 			@Override
-			public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+			public void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException {
 				//ignore
 			}
 
 			@Override
-			public void connectionError(Exception e, RedisBackendConnection conn) {
+			public void connectionError(Exception e, BackendConnection conn) {
 				//ignore
 			}
 		}, null);
@@ -132,10 +133,10 @@ public class PhysicalNode {
     	}
     }
 
-    public RedisBackendConnection getConnection(BackendCallback callback, Object attachment)
+    public BackendConnection getConnection(BackendCallback callback, Object attachment)
             throws IOException {
     	
-    	RedisBackendConnection con = this.conQueue.takeIdleCon();
+    	BackendConnection con = this.conQueue.takeIdleCon();
         if (con != null) {
         	con.setAttachement( attachment );
         	con.setCallback( callback );        	
@@ -147,7 +148,7 @@ public class PhysicalNode {
         return null;
     }
 	
-	public void releaseConnection(RedisBackendConnection c) {
+	public void releaseConnection(BackendConnection c) {
         
 		c.setBorrowed( false );
         c.setAttachement( null );
@@ -167,7 +168,7 @@ public class PhysicalNode {
         }
     }
 	
-	public void removeConnection(RedisBackendConnection conn) {
+	public void removeConnection(BackendConnection conn) {
 		
 		ConQueue queue = this.conQueue;
 		if (queue != null) {

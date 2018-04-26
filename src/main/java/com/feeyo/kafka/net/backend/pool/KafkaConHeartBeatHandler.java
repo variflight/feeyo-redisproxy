@@ -2,14 +2,14 @@ package com.feeyo.kafka.net.backend.pool;
 
 import java.io.IOException;
 
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class KafkaConHeartBeatHandler extends ConHeartBeatHandler {
 	
 	@Override
-	public void handleResponse(RedisBackendConnection conn, byte[] byteBuff)
+	public void handleResponse(BackendConnection conn, byte[] byteBuff)
 			throws IOException {
 		
 		removeFinished(conn);
