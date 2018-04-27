@@ -66,12 +66,21 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			
 		} else {
 			
-			if (request.getNumArgs() != 2) {
+			if (request.getNumArgs() != 2 && request.getNumArgs() != 4 ) {
 				throw new InvalidRequestExistsException("wrong number of arguments");
 			}
-
+			
 			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request);
-			partition = kafkaCfg.getMetaData().getConsumerMetaDataPartition();
+			
+			if (request.getNumArgs() == 4) {
+				int pt = Integer.parseInt(new String(request.getArgs()[2]));
+				partition = kafkaCfg.getMetaData().getConsumerMetaDataPartition(pt);
+				if (partition == null) {
+					throw new InvalidRequestExistsException("wrong partition");
+				}
+			} else {
+				partition = kafkaCfg.getMetaData().getConsumerMetaDataPartition();
+			}
 		}
 
 		List<RouteResultNode> nodes = new ArrayList<RouteResultNode>();

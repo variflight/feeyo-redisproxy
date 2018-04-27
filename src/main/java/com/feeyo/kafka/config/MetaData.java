@@ -51,6 +51,15 @@ public class MetaData {
 		int index = getIndex(consumerIndex);
 		return this.partitions[index];
 	}
+	
+	public MetaDataPartition getConsumerMetaDataPartition(int partition) {
+		for (MetaDataPartition p : partitions) {
+			if (p.getPartition() == partition) {
+				return p;
+			}
+		}
+		return null;
+	}
 
 	public Map<Integer, MetaDataOffset> getOffsets() {
 		return offsets;

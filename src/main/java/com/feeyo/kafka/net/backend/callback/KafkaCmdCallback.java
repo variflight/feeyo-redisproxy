@@ -3,6 +3,9 @@ package com.feeyo.kafka.net.backend.callback;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.feeyo.kafka.codec.ResponseHeader;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
@@ -12,7 +15,8 @@ import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public abstract class KafkaCmdCallback extends AbstractBackendCallback {
-	
+	private static Logger LOGGER = LoggerFactory.getLogger( KafkaCmdCallback.class );
+
 	protected static final byte ASTERISK = '*';
 	protected static final byte DOLLAR = '$';
 	protected static final byte[] CRLF = "\r\n".getBytes();		
@@ -66,7 +70,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 			conn.release();	
 			
 		} catch (Exception e) {
-			e.printStackTrace();
+			LOGGER.error("", e);
 		} finally {
 			
 			NetSystem.getInstance().getBufferPool().recycle(buffer);

@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.net.backend.BackendConnection;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -99,7 +98,7 @@ public class ConHeartBeatHandler implements BackendCallback {
 	}
 	
 	protected void removeFinished(BackendConnection con) {
-		Long id = ((RedisBackendConnection) con).getId();
+		Long id = con.getId();
 		this.allCons.remove(id);
 	}
 	

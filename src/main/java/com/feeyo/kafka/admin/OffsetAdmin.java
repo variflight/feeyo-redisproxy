@@ -211,13 +211,17 @@ public class OffsetAdmin {
 		executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
-				
-				// offset 数据持久化
-				Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
-				for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-					KafkaCfg kafkaCfg = entry.getValue();
-					setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
+				try {
+					// offset 数据持久化
+					Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
+					for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
+						KafkaCfg kafkaCfg = entry.getValue();
+						setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
+					}
+				} catch (Exception e) {
+					LOGGER.warn("offset admin warn", e);
 				}
+				
 			}
 		}, 30, 30, TimeUnit.SECONDS);
 	}
