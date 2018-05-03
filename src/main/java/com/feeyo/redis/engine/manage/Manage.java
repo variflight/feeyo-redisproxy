@@ -1000,22 +1000,23 @@ public class Manage {
 						
 						String topic = new String( request.getArgs()[2] );
 						KafkaCfg kafkaCfg = kafkaMap.get(topic);
-						Map<Integer, MetaDataOffset> offsets = kafkaCfg.getMetaData().getOffsets();
-						MetaDataPartition[] partitions = kafkaCfg.getMetaData().getPartitions();
-						
-						for (MetaDataPartition partition : partitions) {
-							int pt = partition.getPartition();
-							MetaDataOffset offset = offsets.get(pt);
+						if (kafkaCfg != null) {
+							Map<Integer, MetaDataOffset> offsets = kafkaCfg.getMetaData().getOffsets();
+							MetaDataPartition[] partitions = kafkaCfg.getMetaData().getPartitions();
 							
-							StringBuffer line = new StringBuffer();
-							line.append(kafkaCfg.getTopic()).append(", ");
-							line.append(partition.getLeader().getHost()).append(partition.getLeader().getPort()).append(", ");
-							line.append(pt).append(", ");
-							line.append(offset.getProducerOffset()).append(", ");
-							line.append(offset.getAllConsumerOffset());
-							lines.add(line.toString());
+							for (MetaDataPartition partition : partitions) {
+								int pt = partition.getPartition();
+								MetaDataOffset offset = offsets.get(pt);
+								
+								StringBuffer line = new StringBuffer();
+								line.append(kafkaCfg.getTopic()).append(", ");
+								line.append(partition.getLeader().getHost()).append(partition.getLeader().getPort()).append(", ");
+								line.append(pt).append(", ");
+								line.append(offset.getProducerOffset()).append(", ");
+								line.append(offset.getAllConsumerOffset());
+								lines.add(line.toString());
+							}
 						}
-						
 					}
 					
 					return encode(lines);
