@@ -25,6 +25,7 @@ import com.feeyo.kafka.config.KafkaCfg;
 import com.feeyo.kafka.config.MetaDataOffset;
 import com.feeyo.kafka.config.MetaDataPartition;
 import com.feeyo.kafka.config.loader.KafkaLoad;
+import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -586,6 +587,15 @@ public class Manage {
 							}
 							
 							lines.add( c.toString() );
+						} else if ( c instanceof KafkaBackendConnection ) {
+							// 统计每个redis池的连接数 
+							String poolName = ((KafkaBackendConnection) c).getPhysicalNode().getPoolName();
+							AtomicInteger poolConnCount = poolConnections.get(poolName);
+							if ( poolConnCount == null ) {
+								poolConnections.put(poolName, new AtomicInteger(1));
+							} else {
+								poolConnCount.incrementAndGet();
+							}
 						}
 					}
 					
