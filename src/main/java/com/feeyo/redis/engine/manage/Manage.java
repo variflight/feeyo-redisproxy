@@ -596,6 +596,8 @@ public class Manage {
 							} else {
 								poolConnCount.incrementAndGet();
 							}
+							
+							lines.add( c.toString() );
 						}
 					}
 					
