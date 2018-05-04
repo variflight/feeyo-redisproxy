@@ -60,6 +60,9 @@ public class KafkaLoad {
 	}
 
 	public void load(Map<String, KafkaCfg> kafkaMap) {
+		if (kafkaMap == null || kafkaMap.isEmpty()) {
+			return;
+		}
 		Map<Integer, List<KafkaCfg>> topics = groupBy(kafkaMap);
 		for (Entry<Integer, List<KafkaCfg>> entry : topics.entrySet()) {
 			// 获取kafka地址
