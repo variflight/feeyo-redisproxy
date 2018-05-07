@@ -89,11 +89,8 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			}
 		}
 
-		List<RouteNode> nodes = new ArrayList<RouteNode>();
+		
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
-		
-		
-
 		PhysicalNode physicalNode = pool.getPhysicalNode(partition.getLeader().getId());
 		if (physicalNode == null)
 			throw new PhysicalNodeUnavailableException("node unavailable.");
@@ -101,8 +98,9 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);
-		node.setMetaDataOffset( topicCfg.getMetaData().getMetaDataOffsetByPartition(partition.getPartition()) );
+		node.setDataOffset( topicCfg.getMetaData().getMetaDataOffsetByPartition(partition.getPartition()) );
 
+		List<RouteNode> nodes = new ArrayList<RouteNode>(1);
 		nodes.add(node);
 
 		RouteResult routeResult = new RouteResult(RedisRequestType.KAFKA, requests, nodes);

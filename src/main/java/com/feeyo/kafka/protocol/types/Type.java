@@ -8,6 +8,8 @@ import com.feeyo.kafka.util.Utils;
 
 /**
  * A serializable type
+ * 
+ * @see https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/protocol/types/Type.java
  */
 public abstract class Type {
 

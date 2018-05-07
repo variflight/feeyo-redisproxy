@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 
 /**
  * Represents a type for an array of a particular type
+ * 
+ * @see https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/protocol/types/ArrayOf.java
  */
 public class ArrayOf extends Type {
 

@@ -8,6 +8,8 @@ import com.feeyo.kafka.codec.Record;
 
 /**
  * A record that can be serialized and deserialized according to a pre-defined schema
+ * 
+ * @see https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/protocol/types/Struct.java
  */
 public class Struct {
     private final Schema schema;

@@ -67,7 +67,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		ByteBuffer buffer;
 		RedisRequestPolicy policy = request.getPolicy();
 		KafkaCmdCallback callBack;
-		this.metaDataOffset = node.getMetaDataOffset();
+		this.metaDataOffset = node.getDataOffset();
 		if (policy.getHandleType() == CommandParse.PRODUCE_CMD) {
 			buffer = produceEncode(request, metaDataOffset.getPartition());
 			callBack = new KafkaProduceCmdCallback();

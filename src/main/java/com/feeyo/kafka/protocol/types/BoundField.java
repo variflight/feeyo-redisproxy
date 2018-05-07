@@ -2,6 +2,8 @@ package com.feeyo.kafka.protocol.types;
 
 /**
  * A field definition bound to a particular schema.
+ * 
+ * @see https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/protocol/types/BoundField.java
  */
 public class BoundField {
     public final Field def;

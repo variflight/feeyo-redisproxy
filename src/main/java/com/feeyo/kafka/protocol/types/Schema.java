@@ -7,6 +7,8 @@ import java.util.Objects;
 
 /**
  * The schema for a compound record definition
+ * 
+ * @see https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/protocol/types/Schema.java
  */
 public class Schema extends Type {
 

@@ -1,5 +1,10 @@
 package com.feeyo.kafka.protocol.types;
 
+/**
+ * 
+ * @see https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/protocol/types/Field.java
+ *
+ */
 public class Field {
     public final String name;
     public final String docString;

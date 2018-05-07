@@ -2,6 +2,13 @@ package com.feeyo.kafka.protocol;
 
 import com.feeyo.kafka.protocol.types.Field;
 
+/**
+ 
+ @see https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/protocol/CommonFields.java
+
+ *
+ */
+
 public class CommonFields {
     public static final Field.Int32 THROTTLE_TIME_MS = new Field.Int32("throttle_time_ms",
             "Duration in milliseconds for which the request was throttled due to quota violation (Zero if the " +
