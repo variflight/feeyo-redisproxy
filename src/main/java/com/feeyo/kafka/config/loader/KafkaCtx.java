@@ -72,6 +72,7 @@ public class KafkaCtx {
 		
 		Map<Integer, List<TopicCfg>> topics = groupBy(topicCfgMap);
 		for (Entry<Integer, List<TopicCfg>> entry : topics.entrySet()) {
+			
 			// 获取kafka地址
 			int poolId = entry.getKey();
 			PoolCfg poolCfg = RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
