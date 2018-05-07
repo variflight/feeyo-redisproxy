@@ -202,7 +202,7 @@ public class RedisEngineCtx {
         KeepAlived.check(port, authString);
         
         // 7, kafka 配置加载
-        if (kafkaMap != null && kafkaMap.isEmpty()) {
+        if (kafkaMap != null && !kafkaMap.isEmpty()) {
 	        	KafkaLoad.instance().load(kafkaMap);
 	        	OffsetAdmin.getInstance().startUp();
         }

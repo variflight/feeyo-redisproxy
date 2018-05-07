@@ -27,7 +27,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 	
 	
 	//
-	private KafkaCfg getKafkaCfg(String password, RedisRequest request) throws InvalidRequestExistsException {
+	private KafkaCfg getKafkaCfg(String password, RedisRequest request, boolean isConsumer) throws InvalidRequestExistsException {
 		
 		String topic = new String(request.getArgs()[1]);
 		
@@ -36,7 +36,11 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throw new InvalidRequestExistsException("topic not exists");
 		}
 		
-		if (!kafkaCfg.isProducer( password )) {
+		if (!isConsumer && !kafkaCfg.isProducer( password )) {
+			throw new InvalidRequestExistsException("no authority");
+		}
+		
+		if (isConsumer && !kafkaCfg.isConsumer( password )) {
 			throw new InvalidRequestExistsException("no authority");
 		}
 		
@@ -61,7 +65,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			}
 
 
-			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request);
+			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request, false);
 			partition = kafkaCfg.getMetaData().getProducerMetaDataPartition();
 			
 		} else {
@@ -70,7 +74,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				throw new InvalidRequestExistsException("wrong number of arguments");
 			}
 			
-			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request);
+			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request, true);
 			
 			if (request.getNumArgs() == 4) {
 				int pt = Integer.parseInt(new String(request.getArgs()[2]));
