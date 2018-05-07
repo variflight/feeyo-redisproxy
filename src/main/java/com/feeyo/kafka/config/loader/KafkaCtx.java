@@ -128,6 +128,7 @@ public class KafkaCtx {
 			return;
 		}
 		List<TopicPartitionInfo> partitions = topicDescription.partitions();
+		
 		DataPartition[] metaDataPartitions = new DataPartition[partitions.size()];
 		MetaData metaData = new MetaData(topicDescription.name(), topicDescription.isInternal(), metaDataPartitions);
 

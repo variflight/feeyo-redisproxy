@@ -58,10 +58,12 @@ public class KafkaAdmin {
 	 * @return
 	 */
 	public Map<String, TopicDescription> getTopicAndDescriptions() {
+		
 		// 查询topic
 		ListTopicsOptions lto = new ListTopicsOptions();
 		lto.timeoutMs(10 * 1000);
 		ListTopicsResult ltr = adminClient.listTopics(lto);
+		
 		// 查询topic配置信息
 		try {
 			DescribeTopicsOptions dto = new DescribeTopicsOptions();

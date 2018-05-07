@@ -44,13 +44,7 @@ public class DataOffset {
 		return partition;
 	}
 	
-	public long getConsumerOffset(String consumer) {
-		if (isClosed) {
-			return -1L;
-		}
-		ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
-		return consumerOffset.poolOffset();
-	}
+
 	
 	@JSONField(serialize=false)
 	public List<String> getAllConsumerOffset() {
@@ -64,12 +58,16 @@ public class DataOffset {
 	}
 	
 	public void sendDefaultConsumerOffsetBack(long offset, String consumer) {
+		
 		if (offset < 0) {
 			return;
 		}
 		
 		ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
-		// 点位超出范围两种可能。1:日志被kafka自动清除，2:消费快过生产。
+		
+		// 点位超出范围两种可能。
+		// 1:日志被kafka自动清除，
+		// 2:消费快过生产。
 		if ( offset < logStartOffset ) {
 			// 如果是日志被kafka自动清除的点位超出范围，把点位设置成kafka日志开始的点位
 			consumerOffset.setOffsetToLogStartOffset(logStartOffset);
@@ -77,6 +75,14 @@ public class DataOffset {
 			consumerOffset.offerOffset(offset);
 		}
 
+	}
+	
+	public long getConsumerOffset(String consumer) {
+		if (isClosed) {
+			return -1L;
+		}
+		ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
+		return consumerOffset.poolOffset();
 	}
 	
 	private ConsumerOffset getConsumerOffsetByConsumer(String consumer) {

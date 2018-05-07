@@ -1,6 +1,7 @@
 package com.feeyo.kafka.config;
 
 public class DataPartition {
+	
 	private final int partition;
 	private final DataNode leader;
 	private final DataNode[] replicas;

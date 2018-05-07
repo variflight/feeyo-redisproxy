@@ -121,15 +121,15 @@ public class OffsetAdmin {
 				// base node 
 				createZkNode(path, null);
 				
-				Map<Integer, DataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
+				Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
 				byte[] data = curator.getData().forPath(path);
 				if (data == null) {
 					
 					for (DataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
-						DataOffset metaDataOffset = new DataOffset(partition.getPartition(), 0, 0);
-						metaDataOffsets.put(partition.getPartition(), metaDataOffset);
+						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
+						dataOffsets.put(partition.getPartition(), dataOffset);
 					}
-					setTopicOffsets(topic, metaDataOffsets);
+					setTopicOffsets(topic, dataOffsets);
 					
 				} else {
 					
@@ -144,50 +144,50 @@ public class OffsetAdmin {
 					JSONObject obj = JsonUtils.unmarshalFromString(str, JSONObject.class);
 					
 					for (DataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
-						DataOffset metaDataOffset;
+
 						Object metaDataOffsetObject = obj.get(String.valueOf(partition.getPartition()));
 						if (metaDataOffsetObject == null) {
-							metaDataOffset = new DataOffset(partition.getPartition(), 0, 0);
+							DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
+							dataOffsets.put(partition.getPartition(), dataOffset);
 						} else {
-							JSONObject metaDataOffsetJSONObject = JsonUtils.unmarshalFromString(String.valueOf(metaDataOffsetObject), JSONObject.class);
-							metaDataOffset = new DataOffset(partition.getPartition(),
-									metaDataOffsetJSONObject.get("producerOffset") == null ? 0
-											: Integer.parseInt(metaDataOffsetJSONObject.getString("producerOffset")),
-											metaDataOffsetJSONObject.get("logStartOffset") == null ? 0
-													: Integer.parseInt(metaDataOffsetJSONObject.getString("logStartOffset")));
+							JSONObject jsonObject = JsonUtils.unmarshalFromString(String.valueOf(metaDataOffsetObject), JSONObject.class);
+							DataOffset dataOffset = new DataOffset(partition.getPartition(),
+									jsonObject.get("producerOffset") == null ? 0 : Integer.parseInt(jsonObject.getString("producerOffset")),
+									jsonObject.get("logStartOffset") == null ? 0 : Integer.parseInt(jsonObject.getString("logStartOffset")));
 							Map<String, ConsumerOffset> offsets = new ConcurrentHashMap<String, ConsumerOffset>();
 							
-							JSONObject offsetsObject = JsonUtils.unmarshalFromString(metaDataOffsetJSONObject.getString("offsets"),
-									JSONObject.class);
+							JSONObject offsetsObject = JsonUtils.unmarshalFromString(jsonObject.getString("offsets"), JSONObject.class);
 							HashSet<String> consumers = kafkaCfg.getConsumers();
 							for (String consumer : consumers) {
-								ConsumerOffset co;
+
 								if (offsetsObject.get(consumer) != null) {
-									JSONObject consumerOffsetObj = JsonUtils.unmarshalFromString(offsetsObject.getString(consumer),
-											JSONObject.class);
-									co = new ConsumerOffset(consumer, consumerOffsetObj.getString("offset") == null ? 0
-											: Integer.parseInt(consumerOffsetObj.getString("offset")));
-									
-									if (consumerOffsetObj.get("defaultOffset") != null) {
-										List<Object> defaultOffsets = JsonUtils.unmarshalFromString(consumerOffsetObj.getString("defaultOffset"), List.class);
+									JSONObject consumeJson = JsonUtils.unmarshalFromString(offsetsObject.getString(consumer), JSONObject.class);
+									ConsumerOffset cOffset = new ConsumerOffset(consumer, consumeJson.getString("offset") == null ? 0 
+											: Integer.parseInt(consumeJson.getString("offset")));
+									if (consumeJson.get("defaultOffset") != null) {
+										List<Object> defaultOffsets = JsonUtils.unmarshalFromString(consumeJson.getString("defaultOffset"), List.class);
 										for (Object defaultOffset : defaultOffsets) {
-											co.offerOffset(Long.parseLong(String.valueOf(defaultOffset)));
+											cOffset.offerOffset(Long.parseLong(String.valueOf(defaultOffset)));
 										}
 									}
 									
+									offsets.put(consumer, cOffset);
+									
 								} else {
-									co = new ConsumerOffset(consumer, 0);
+									ConsumerOffset cOffset = new ConsumerOffset(consumer, 0);
+									offsets.put(consumer, cOffset);
 								}
-								offsets.put(consumer, co);
+								
 							}
-							metaDataOffset.setOffsets(offsets);
+							dataOffset.setOffsets(offsets);
+							dataOffsets.put(partition.getPartition(), dataOffset);
 						}
-						metaDataOffsets.put(partition.getPartition(), metaDataOffset);
+						
 					}
 					
 				}
 				
-				kafkaCfg.getMetaData().setOffsets(metaDataOffsets);
+				kafkaCfg.getMetaData().setOffsets(dataOffsets);
 				
 			} catch (Exception e) {
 				LOGGER.warn("", e);
@@ -226,10 +226,10 @@ public class OffsetAdmin {
 			public void run() {
 				try {
 					// offset 数据持久化
-					Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
-					for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
-						TopicCfg kafkaCfg = entry.getValue();
-						setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
+					Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
+					for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
+						TopicCfg topicCfg = entry.getValue();
+						setTopicOffsets(topicCfg.getTopic(), topicCfg.getMetaData().getOffsets());
 					}
 				} catch (Exception e) {
 					LOGGER.warn("offset admin warn", e);
@@ -245,16 +245,16 @@ public class OffsetAdmin {
 		executorService.shutdown();
 		
 		// 停止获取新的offset 
-		Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
-		for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
-			TopicCfg kafkaCfg = entry.getValue();
-			kafkaCfg.getMetaData().close();
+		Map<String, TopicCfg> kafkaTopicMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
+		for (Entry<String, TopicCfg> entry : kafkaTopicMap.entrySet()) {
+			TopicCfg topicCfg = entry.getValue();
+			topicCfg.getMetaData().close();
 		}
 		
 		// 提交本地剩余offset
-		for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
-			TopicCfg kafkaCfg = entry.getValue();
-			setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
+		for (Entry<String, TopicCfg> entry : kafkaTopicMap.entrySet()) {
+			TopicCfg topicCfg = entry.getValue();
+			setTopicOffsets(topicCfg.getTopic(), topicCfg.getMetaData().getOffsets());
 		}
 	}
 }

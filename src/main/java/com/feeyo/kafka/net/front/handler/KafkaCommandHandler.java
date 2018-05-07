@@ -20,7 +20,6 @@ import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
 import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
 import com.feeyo.redis.net.front.handler.CommandParse;
@@ -48,8 +47,11 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private static final int FETCH_LOG_COUNT = 1;
 	private static final int LENGTH_BYTE_COUNT = 4;
 	
-	private DataOffset metaDataOffset;
-	private long offset;
+	//
+	private DataOffset dataOffset;
+	
+	//
+	private long oldOffset;
 	
 	// 消费失败是否把消费点位归还（指定点位消费时，不需要归还）
 	private boolean isFailCallback = true;
@@ -65,24 +67,31 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		RedisRequest request = routeResult.getRequests().get(0);
 		
 		ByteBuffer buffer;
-		RedisRequestPolicy policy = request.getPolicy();
-		KafkaCmdCallback callBack;
-		this.metaDataOffset = node.getDataOffset();
-		if (policy.getHandleType() == CommandParse.PRODUCE_CMD) {
-			buffer = produceEncode(request, metaDataOffset.getPartition());
-			callBack = new KafkaProduceCmdCallback();
+		KafkaCmdCallback backendCallback;
+		
+		this.dataOffset = node.getDataOffset();
+		
+		if ( request.getPolicy().getHandleType() == CommandParse.PRODUCE_CMD ) {
+			buffer = produceEncode(request, dataOffset.getPartition());
+			backendCallback = new KafkaProduceCmdCallback();
+			
 		} else {
+			
 			String consumer = frontCon.getPassword();
+			
 			// 指定点位消费
+			long offset;
 			if (request.getNumArgs() == 4) {
-				this.offset = Long.parseLong(new String(request.getArgs()[3]));
+				offset = Long.parseLong(new String(request.getArgs()[3]));
 				this.isFailCallback = false;
 			} else {
-				this.offset = metaDataOffset.getConsumerOffset(consumer);
+				offset = dataOffset.getConsumerOffset(consumer);
 			}
 			
-			buffer = consumerEncode(request, metaDataOffset.getPartition(), this.offset);
-			callBack = new KafkaConsumerCmdCallback();
+			this.oldOffset = offset;
+			
+			buffer = consumerEncode(request, dataOffset.getPartition(), offset);
+			backendCallback = new KafkaConsumerCmdCallback();
 		} 
 		
 		byte[] requestKey = request.getArgs()[1];
@@ -95,7 +104,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestSize( buffer.position() );
 		
 		// 透传
-		writeToBackend(node.getPhysicalNode(), buffer, callBack);
+		writeToBackend(node.getPhysicalNode(), buffer, backendCallback);
 	}
 
 	private ByteBuffer produceEncode(RedisRequest request, int partition) {
@@ -174,7 +183,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			ProduceResponse pr = new ProduceResponse(response);
 			if (pr.isCorrect()) {
 				frontCon.write(OK);
-				metaDataOffset.setProducerOffset(pr.getOffset(), pr.getLogStartOffset());
+				dataOffset.setProducerOffset(pr.getOffset(), pr.getLogStartOffset());
 			} else {
 				StringBuffer sb = new StringBuffer();
 				sb.append("-ERR ").append(pr.getErrorMessage()).append("\r\n");
@@ -195,14 +204,14 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 					byte[] value = fr.getRecord().getValue();
 					if (value == null) {
 						if (isFailCallback)
-							metaDataOffset.sendDefaultConsumerOffsetBack(offset, frontCon.getPassword());
+							dataOffset.sendDefaultConsumerOffsetBack(oldOffset, frontCon.getPassword());
 						frontCon.write(NULL);
 						return;
 					}
 					byte[] size = ProtoUtils.convertIntToByteArray(3);
-					byte[] partitonArr = ProtoUtils.convertIntToByteArray(metaDataOffset.getPartition());
+					byte[] partitonArr = ProtoUtils.convertIntToByteArray(dataOffset.getPartition());
 					byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
-					byte[] offsetArr = String.valueOf(offset).getBytes();
+					byte[] offsetArr = String.valueOf(oldOffset).getBytes();
 					byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
 					byte[] valueLenght = ProtoUtils.convertIntToByteArray(value.length);
 					
@@ -222,13 +231,13 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 					// 消费offset超出范围
 				} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
 					if (isFailCallback)
-						metaDataOffset.sendDefaultConsumerOffsetBack(offset, frontCon.getPassword());
+						dataOffset.sendDefaultConsumerOffsetBack(oldOffset, frontCon.getPassword());
 					frontCon.write(NULL);
 					
 					// 其他错误
 				} else {
 					if (isFailCallback)
-						metaDataOffset.sendDefaultConsumerOffsetBack(offset, frontCon.getPassword());
+						dataOffset.sendDefaultConsumerOffsetBack(oldOffset, frontCon.getPassword());
 					StringBuffer sb = new StringBuffer();
 					sb.append("-ERR ").append(fr.getErrorMessage()).append("\r\n");
 					frontCon.write(sb.toString().getBytes());

@@ -67,7 +67,6 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 
 
 			topicCfg = getTopicCfg(userCfg.getPassword(), request, false);
-			
 			partition = topicCfg.getMetaData().getProducerMetaDataPartition();
 			
 		} else {
