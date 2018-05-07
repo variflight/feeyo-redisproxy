@@ -17,7 +17,7 @@
 	 KPOP {topic}
 	 KPOP {topic} {offset}
 	 KPARTITION {topic}
-	 KOFFSET {topic} {time
+	 KOFFSET {topic} {time}
 
 
 ### 扩展的 Redis 运维指令
