@@ -994,7 +994,8 @@ public class Manage {
 						titleLine.append("TOPIC").append(",  ");
 						titleLine.append("HOST").append(",  ");
 						titleLine.append("PARTITION").append(",  ");
-						titleLine.append("PRODUCER").append(",  ");
+						titleLine.append("PRODUCER_START").append(",  ");
+						titleLine.append("PRODUCER_END").append(",  ");
 						titleLine.append("CONSUMER");
 						lines.add(titleLine.toString());
 						
@@ -1012,6 +1013,7 @@ public class Manage {
 								line.append(kafkaCfg.getTopic()).append(", ");
 								line.append(partition.getLeader().getHost()).append(partition.getLeader().getPort()).append(", ");
 								line.append(pt).append(", ");
+								line.append(offset.getLogStartOffset()).append(", ");
 								line.append(offset.getProducerOffset()).append(", ");
 								line.append(offset.getAllConsumerOffset());
 								lines.add(line.toString());
