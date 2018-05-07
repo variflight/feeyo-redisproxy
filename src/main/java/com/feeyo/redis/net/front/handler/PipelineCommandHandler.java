@@ -16,7 +16,7 @@ import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder;
 import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder.PipelineResponse;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
@@ -33,7 +33,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		super.commonHandle(rrs);
 		
     	// 写出
-		for (RouteResultNode rrn : rrs.getRouteResultNodes()) {
+		for (RouteNode rrn : rrs.getRouteNodes()) {
 			ByteBuffer buffer =  getRequestBufferByRRN(rrn);
 			BackendConnection backendConn = writeToBackend(rrn.getPhysicalNode(), buffer, new PipelineDirectTransTofrontCallBack());
 			if ( backendConn != null )

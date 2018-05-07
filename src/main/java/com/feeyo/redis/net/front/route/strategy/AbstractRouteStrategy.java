@@ -15,7 +15,7 @@ import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 
 /**
  * The abstract route strategy
@@ -26,15 +26,15 @@ public abstract class AbstractRouteStrategy {
 	
 	
 	// 分片
-	protected List<RouteResultNode> doSharding(int poolId, List<RedisRequest> requests) 
+	protected List<RouteNode> doSharding(int poolId, List<RedisRequest> requests) 
 			throws PhysicalNodeUnavailableException {
 		
-		List<RouteResultNode> nodes = new ArrayList<RouteResultNode>();
+		List<RouteNode> nodes = new ArrayList<RouteNode>();
 		
 		// 非集群池
 		AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get( poolId );
 		if ( pool.getType() == 0) {
-			RouteResultNode node = new RouteResultNode();
+			RouteNode node = new RouteNode();
 			
 			PhysicalNode physicalNode = pool.getPhysicalNode();
 			if ( physicalNode == null )
@@ -94,9 +94,9 @@ public abstract class AbstractRouteStrategy {
 		return nodes;
 	}
 
-	private void arrangePhyNode(List<RouteResultNode> nodes, int requestIdx, PhysicalNode physicalNode) {
+	private void arrangePhyNode(List<RouteNode> nodes, int requestIdx, PhysicalNode physicalNode) {
 		boolean isFind = false;
-		for (RouteResultNode node: nodes) {
+		for (RouteNode node: nodes) {
 			if ( node.getPhysicalNode() == physicalNode ) {
 				node.addRequestIndex(requestIdx);
 				isFind = true;
@@ -105,7 +105,7 @@ public abstract class AbstractRouteStrategy {
 		}
 
 		if ( !isFind ) {
-			RouteResultNode node = new RouteResultNode();
+			RouteNode node = new RouteNode();
 			node.setPhysicalNode( physicalNode );
 			node.addRequestIndex(requestIdx);
 			nodes.add( node );

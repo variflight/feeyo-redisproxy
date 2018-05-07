@@ -1,9 +1,9 @@
 package com.feeyo.kafka.net.front.route;
 
 import com.feeyo.kafka.config.MetaDataOffset;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 
-public class KafkaRouteResultNode extends RouteResultNode {
+public class KafkaRouteNode extends RouteNode {
 	
 	private MetaDataOffset metaDataOffset;
 	

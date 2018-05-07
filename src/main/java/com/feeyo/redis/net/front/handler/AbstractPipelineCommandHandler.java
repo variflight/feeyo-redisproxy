@@ -23,7 +23,7 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.segment.Segment;
 import com.feeyo.redis.net.front.handler.segment.SegmentType;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.virtualmemory.Message;
 import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.redis.virtualmemory.Util;
@@ -121,12 +121,12 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	// 应答节点
 	public class ResponseNode {
 
-		private RouteResultNode sourceNode;
+		private RouteNode sourceNode;
 		
 		private int count = 0;		//应答数
 		private ConcurrentLinkedQueue<DataOffset> dataOffsetQueue = new ConcurrentLinkedQueue<DataOffset>();
 		
-		public ResponseNode(RouteResultNode node) {
+		public ResponseNode(RouteNode node) {
 			this.sourceNode = node;
 		}
 	}
@@ -153,7 +153,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		this.allResponseNode.clear();
 		
 		//
-		for(RouteResultNode node: rrs.getRouteResultNodes()) {
+		for(RouteNode node: rrs.getRouteNodes()) {
 			String address = node.getPhysicalNode().getName();
 			ResponseNode reponseNode = new ResponseNode( node );
 			allResponseNode.put( address, reponseNode );
@@ -161,7 +161,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	}
 	
 	
-	protected ByteBuffer getRequestBufferByRRN(RouteResultNode rrn) {
+	protected ByteBuffer getRequestBufferByRRN(RouteNode rrn) {
 		ByteBuffer buffer = null;
 		List<RedisRequest> requests = rrs.getRequests();
 		

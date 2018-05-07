@@ -15,7 +15,7 @@ import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.MetaData;
 import com.feeyo.kafka.config.MetaDataOffset;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
-import com.feeyo.kafka.net.front.route.KafkaRouteResultNode;
+import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
@@ -61,7 +61,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	@Override
 	protected void commonHandle(RouteResult routeResult) throws IOException {
 		
-		KafkaRouteResultNode node = (KafkaRouteResultNode) routeResult.getRouteResultNodes().get(0);
+		KafkaRouteNode node = (KafkaRouteNode) routeResult.getRouteNodes().get(0);
 		RedisRequest request = routeResult.getRequests().get(0);
 		
 		ByteBuffer buffer;

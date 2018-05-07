@@ -9,7 +9,7 @@ import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class DefaultCommandHandler extends AbstractCommandHandler {
@@ -21,7 +21,7 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 	@Override
 	protected void commonHandle(RouteResult routeResult) throws IOException {
 		
-		RouteResultNode node = routeResult.getRouteResultNodes().get(0);
+		RouteNode node = routeResult.getRouteNodes().get(0);
 		RedisRequest request = routeResult.getRequests().get(0);
 		
 		String cmd = new String(request.getArgs()[0]).toUpperCase();

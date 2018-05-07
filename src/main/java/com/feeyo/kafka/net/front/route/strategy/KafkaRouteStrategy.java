@@ -6,7 +6,7 @@ import java.util.List;
 import com.feeyo.kafka.config.KafkaCfg;
 import com.feeyo.kafka.config.MetaDataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
-import com.feeyo.kafka.net.front.route.KafkaRouteResultNode;
+import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
@@ -16,7 +16,7 @@ import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 
 /**
@@ -88,13 +88,16 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			}
 		}
 
-		List<RouteResultNode> nodes = new ArrayList<RouteResultNode>();
+		List<RouteNode> nodes = new ArrayList<RouteNode>();
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(kafkaCfg.getPoolId());
-		KafkaRouteResultNode node = new KafkaRouteResultNode();
+		
+		
 
 		PhysicalNode physicalNode = pool.getPhysicalNode(partition.getLeader().getId());
 		if (physicalNode == null)
 			throw new PhysicalNodeUnavailableException("node unavailable.");
+		
+		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);
 		node.setMetaDataOffset( kafkaCfg.getMetaData().getMetaDataOffsetByPartition(partition.getPartition()) );

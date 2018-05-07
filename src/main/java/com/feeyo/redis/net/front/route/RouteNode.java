@@ -6,12 +6,12 @@ import java.util.List;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 
 
-public class RouteResultNode {
+public class RouteNode {
 	
 	private PhysicalNode physicalNode;
 	private List<Integer> requestIndexs;
 	
-	public RouteResultNode() {
+	public RouteNode() {
 		requestIndexs = new ArrayList<Integer>();
 	}
 

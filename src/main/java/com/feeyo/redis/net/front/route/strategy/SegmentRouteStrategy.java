@@ -13,7 +13,7 @@ import com.feeyo.redis.net.front.handler.segment.SegmentType;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 
 /**
  * pipeline && mget and mset and del and exists and default command route
@@ -143,7 +143,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			}
 		}
 
-		List<RouteResultNode> nodes = doSharding(userCfg.getPoolId(), newRequests);
+		List<RouteNode> nodes = doSharding(userCfg.getPoolId(), newRequests);
 		requestType = requests.size() > 1 ? RedisRequestType.PIPELINE : requestType;
 
 		RouteResult result = new RouteResult(requestType, newRequests, nodes);

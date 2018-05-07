@@ -9,7 +9,7 @@ import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 
 /**
  * default route strategy servers for no default command and pipeline command
@@ -24,7 +24,7 @@ public class DefaultRouteStrategy extends AbstractRouteStrategy {
     	
     		int poolId = userCfg.getPoolId();
     		// 切片
-        List<RouteResultNode> nodes = doSharding(poolId, requests);
+        List<RouteNode> nodes = doSharding(poolId, requests);
         
 		RedisRequestType requestType;
 		if (requests.size() == 1) {

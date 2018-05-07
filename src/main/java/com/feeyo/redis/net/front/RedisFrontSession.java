@@ -29,7 +29,7 @@ import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.RouteService;
 
 public class RedisFrontSession {
@@ -442,7 +442,7 @@ public class RedisFrontSession {
 		
 		boolean isIntercepted = false;
 		
-		RouteResultNode node = routeResult.getRouteResultNodes().get(0);
+		RouteNode node = routeResult.getRouteNodes().get(0);
 		
 		String cmd = new String(request.getArgs()[0]).toUpperCase();
 		if ( cmd.startsWith("SUBSCRIBE") || cmd.startsWith("PSUBSCRIBE") ) {
