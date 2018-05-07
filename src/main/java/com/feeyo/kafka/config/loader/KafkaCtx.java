@@ -30,11 +30,11 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.codec.RequestHeader;
-import com.feeyo.kafka.config.KafkaCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.MetaData;
-import com.feeyo.kafka.config.MetaDataNode;
-import com.feeyo.kafka.config.MetaDataOffset;
-import com.feeyo.kafka.config.MetaDataPartition;
+import com.feeyo.kafka.config.DataNode;
+import com.feeyo.kafka.config.DataOffset;
+import com.feeyo.kafka.config.DataPartition;
 import com.feeyo.kafka.net.backend.callback.ApiVersionCallback;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.protocol.ApiKeys;
@@ -49,28 +49,29 @@ import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.NetSystem;
 
-public class KafkaLoad {
+public class KafkaCtx {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger(KafkaLoad.class);
+	private static Logger LOGGER = LoggerFactory.getLogger(KafkaCtx.class);
 
-	private final static KafkaLoad instance = new KafkaLoad();
+	private final static KafkaCtx INSTANCE = new KafkaCtx();
+	
 	private ReentrantLock lock = new ReentrantLock();
 	
-	private KafkaLoad() {
+	private KafkaCtx() {
 	}
 
-	public static KafkaLoad instance() {
-		return instance;
+	public static KafkaCtx getInstance() {
+		return INSTANCE;
 	}
 
-	public void load(Map<String, KafkaCfg> kafkaMap) {
+	public void load(Map<String, TopicCfg> topicCfgMap) {
 		
-		if (kafkaMap == null || kafkaMap.isEmpty()) {
+		if (topicCfgMap == null || topicCfgMap.isEmpty()) {
 			return;
 		}
 		
-		Map<Integer, List<KafkaCfg>> topics = groupBy(kafkaMap);
-		for (Entry<Integer, List<KafkaCfg>> entry : topics.entrySet()) {
+		Map<Integer, List<TopicCfg>> topics = groupBy(topicCfgMap);
+		for (Entry<Integer, List<TopicCfg>> entry : topics.entrySet()) {
 			// 获取kafka地址
 			int poolId = entry.getKey();
 			PoolCfg poolCfg = RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
@@ -88,24 +89,25 @@ public class KafkaLoad {
 			// 获取kafka管理对象
 			KafkaAdmin kafkaAdmin = new KafkaAdmin(servers.toString());
 			Map<String, TopicDescription> existsTopics = kafkaAdmin.getTopicAndDescriptions();
-			List<KafkaCfg> kafkaCfgs = entry.getValue();
-			for (KafkaCfg kafkaCfg : kafkaCfgs) {
-				if (existsTopics.containsKey(kafkaCfg.getTopic())) {
-					TopicDescription topicDescription = existsTopics.get(kafkaCfg.getTopic());
+			List<TopicCfg> topicCfgs = entry.getValue();
+			for (TopicCfg topicCfg : topicCfgs) {
+				if (existsTopics.containsKey(topicCfg.getTopic())) {
+					TopicDescription topicDescription = existsTopics.get(topicCfg.getTopic());
 					List<TopicPartitionInfo> partitions = topicDescription.partitions();
 					// 如果增加分区
-					if (partitions.size() < kafkaCfg.getPartitions()) {
-						kafkaAdmin.addPartitionsForTopic(kafkaCfg.getTopic(), kafkaCfg.getPartitions());
-						topicDescription = kafkaAdmin.getDescriptionByTopic(kafkaCfg.getTopic());
+					if (partitions.size() < topicCfg.getPartitions()) {
+						kafkaAdmin.addPartitionsForTopic(topicCfg.getTopic(), topicCfg.getPartitions());
+						topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getTopic());
 					}
 
-					initKafkaCfgMetaData(kafkaCfg, topicDescription);
+					initKafkaCfgMetaData(topicCfg, topicDescription);
+					
 				} else {
-					kafkaAdmin.createTopic(kafkaCfg.getTopic(), kafkaCfg.getPartitions(),
-							kafkaCfg.getReplicationFactor());
-					TopicDescription topicDescription = kafkaAdmin.getDescriptionByTopic(kafkaCfg.getTopic());
+					kafkaAdmin.createTopic(topicCfg.getTopic(), topicCfg.getPartitions(), topicCfg.getReplicationFactor());
+					TopicDescription topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getTopic());
+					
 					// 初始化metadata
-					initKafkaCfgMetaData(kafkaCfg, topicDescription);
+					initKafkaCfgMetaData(topicCfg, topicDescription);
 				}
 			}
 
@@ -117,47 +119,49 @@ public class KafkaLoad {
 	/**
 	 * 初始化kafka配置。metadata
 	 * 
-	 * @param kafkaCfg
+	 * @param topicCfg
 	 * @param topicDescription
 	 */
-	private void initKafkaCfgMetaData(KafkaCfg kafkaCfg, TopicDescription topicDescription) {
+	private void initKafkaCfgMetaData(TopicCfg topicCfg, TopicDescription topicDescription) {
 		if (topicDescription == null) {
-			kafkaCfg.setMetaData(null);
+			topicCfg.setMetaData(null);
 			return;
 		}
 		List<TopicPartitionInfo> partitions = topicDescription.partitions();
-		MetaDataPartition[] metaDataPartitions = new MetaDataPartition[partitions.size()];
+		DataPartition[] metaDataPartitions = new DataPartition[partitions.size()];
 		MetaData metaData = new MetaData(topicDescription.name(), topicDescription.isInternal(), metaDataPartitions);
 
 		int id = -1;
 		for (int i = 0; i < partitions.size(); i++) {
 			TopicPartitionInfo topicPartitionInfo = partitions.get(i);
 			List<Node> replicas = topicPartitionInfo.replicas();
-			MetaDataNode[] replicasData = new MetaDataNode[replicas.size()];
+			DataNode[] replicasData = new DataNode[replicas.size()];
 			for (int j = 0; j < replicas.size(); j++) {
-				replicasData[j] = new MetaDataNode(replicas.get(j).id(), replicas.get(j).host(),
+				replicasData[j] = new DataNode(replicas.get(j).id(), replicas.get(j).host(),
 						replicas.get(j).port());
 			}
-			MetaDataNode leader = new MetaDataNode(topicPartitionInfo.leader().id(), topicPartitionInfo.leader().host(),
+			
+			DataNode leader = new DataNode(topicPartitionInfo.leader().id(), topicPartitionInfo.leader().host(),
 					topicPartitionInfo.leader().port());
 
-			MetaDataPartition mdp = new MetaDataPartition(topicPartitionInfo.partition(), leader, replicasData);
+			DataPartition mdp = new DataPartition(topicPartitionInfo.partition(), leader, replicasData);
 			metaDataPartitions[i] = mdp;
 			id = leader.getId();
 		}
 
-		loadApiVersion(kafkaCfg, id);
+		loadApiVersion(topicCfg, id);
 
-		kafkaCfg.setMetaData(metaData);
+		topicCfg.setMetaData(metaData);
 	}
 
 	/**
 	 * 加载apiversion
-	 * @param kafkaCfg
+	 * @param topicCfg
 	 * @param id
 	 */
-	private void loadApiVersion(KafkaCfg kafkaCfg, int id) {
-		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(kafkaCfg.getPoolId());
+	private void loadApiVersion(TopicCfg topicCfg, int id) {
+		
+		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
 		PhysicalNode physicalNode = pool.getPhysicalNode(id);
 		if (physicalNode != null) {
 			try {
@@ -193,55 +197,56 @@ public class KafkaLoad {
 		}
 	}
 
-	private Map<Integer, List<KafkaCfg>> groupBy(Map<String, KafkaCfg> kafkaMap) {
-		Map<Integer, List<KafkaCfg>> topics = new HashMap<Integer, List<KafkaCfg>>();
-		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-			KafkaCfg kafkaCfg = entry.getValue();
-			int poolId = kafkaCfg.getPoolId();
-			List<KafkaCfg> kafkaCfgs = topics.get(poolId);
-			if (kafkaCfgs == null) {
-				kafkaCfgs = new ArrayList<KafkaCfg>();
-				topics.put(poolId, kafkaCfgs);
+	private Map<Integer, List<TopicCfg>> groupBy(Map<String, TopicCfg> topicCfgMap) {
+		Map<Integer, List<TopicCfg>> topics = new HashMap<Integer, List<TopicCfg>>();
+		for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
+			TopicCfg topicCfg = entry.getValue();
+			int poolId = topicCfg.getPoolId();
+			
+			List<TopicCfg> topicCfgs = topics.get(poolId);
+			if (topicCfgs == null) {
+				topicCfgs = new ArrayList<TopicCfg>();
+				topics.put(poolId, topicCfgs);
 			}
-			kafkaCfgs.add(kafkaCfg);
+			topicCfgs.add(topicCfg);
 		}
 		return topics;
 	}
 
 	// 重新加载
-	public byte[] reLoad() {
+	public byte[] reload() {
 		final ReentrantLock lock = this.lock;
 		lock.lock();
 
 		Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
-		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
+		Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 		try {
 			// 重新加载kafkamap
-			Map<String, KafkaCfg> newKafkaMap = KafkaConfigLoader.loadKafkaCfgMap(poolCfgMap,
+			Map<String, TopicCfg> newKafkaMap = KafkaConfigLoader.loadTopicCfgMap(poolCfgMap,
 					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
 			load(newKafkaMap);
 
-			for (Entry<String, KafkaCfg> entry : newKafkaMap.entrySet()) {
+			for (Entry<String, TopicCfg> entry : newKafkaMap.entrySet()) {
 				String key = entry.getKey();
-				KafkaCfg newKafkaCfg = entry.getValue();
-				KafkaCfg oldKafkaCfg = kafkaMap.get(key);
+				TopicCfg newKafkaCfg = entry.getValue();
+				TopicCfg oldKafkaCfg = kafkaMap.get(key);
 				if (oldKafkaCfg != null) {
 					// 迁移原来的offset
 					newKafkaCfg.getMetaData().setOffsets(oldKafkaCfg.getMetaData().getOffsets());
 
 					// 新建的topic
 				} else {
-					Map<Integer, MetaDataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, MetaDataOffset>();
+					Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
 
-					for (MetaDataPartition partition : newKafkaCfg.getMetaData().getPartitions()) {
-						MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0, 0);
-						metaDataOffsets.put(partition.getPartition(), metaDataOffset);
+					for (DataPartition partition : newKafkaCfg.getMetaData().getPartitions()) {
+						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
+						dataOffsets.put(partition.getPartition(), dataOffset);
 					}
 
-					newKafkaCfg.getMetaData().setOffsets(metaDataOffsets);
+					newKafkaCfg.getMetaData().setOffsets(dataOffsets);
 				}
 			}
-			RedisEngineCtx.INSTANCE().setKafkaMap(newKafkaMap);
+			RedisEngineCtx.INSTANCE().setKafkaTopicMap(newKafkaMap);
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");

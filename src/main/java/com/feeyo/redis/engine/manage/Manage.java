@@ -21,10 +21,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.kafka.config.KafkaCfg;
-import com.feeyo.kafka.config.MetaDataOffset;
-import com.feeyo.kafka.config.MetaDataPartition;
-import com.feeyo.kafka.config.loader.KafkaLoad;
+import com.feeyo.kafka.config.TopicCfg;
+import com.feeyo.kafka.config.DataOffset;
+import com.feeyo.kafka.config.DataPartition;
+import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
@@ -963,7 +963,7 @@ public class Manage {
 					
 				// SHOW TOPIC 
 				} else if (arg2.equalsIgnoreCase("TOPIC") && (numArgs == 3 || numArgs == 2) ) {
-					Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
+					Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 					List<String> lines = new ArrayList<String>();
 					// 查看所有topic
 					if (numArgs == 2) {
@@ -976,8 +976,8 @@ public class Manage {
 						titleLine.append("CONSUMER");
 						lines.add(titleLine.toString());
 
-						for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-							KafkaCfg kafkaCfg = entry.getValue();
+						for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
+							TopicCfg kafkaCfg = entry.getValue();
 							StringBuffer line = new StringBuffer();
 							line.append(kafkaCfg.getTopic()).append(", ");
 							line.append(kafkaCfg.getPoolId()).append(", ");
@@ -1000,14 +1000,14 @@ public class Manage {
 						lines.add(titleLine.toString());
 						
 						String topic = new String( request.getArgs()[2] );
-						KafkaCfg kafkaCfg = kafkaMap.get(topic);
+						TopicCfg kafkaCfg = kafkaMap.get(topic);
 						if (kafkaCfg != null) {
-							Map<Integer, MetaDataOffset> offsets = kafkaCfg.getMetaData().getOffsets();
-							MetaDataPartition[] partitions = kafkaCfg.getMetaData().getPartitions();
+							Map<Integer, DataOffset> offsets = kafkaCfg.getMetaData().getOffsets();
+							DataPartition[] partitions = kafkaCfg.getMetaData().getPartitions();
 							
-							for (MetaDataPartition partition : partitions) {
+							for (DataPartition partition : partitions) {
 								int pt = partition.getPartition();
-								MetaDataOffset offset = offsets.get(pt);
+								DataOffset offset = offsets.get(pt);
 								
 								StringBuffer line = new StringBuffer();
 								line.append(kafkaCfg.getTopic()).append(", ");
@@ -1093,7 +1093,7 @@ public class Manage {
 					
 				// reload kafka
 				} else if ( arg2.equalsIgnoreCase("KAFKA") ) {
-					byte[] buff = KafkaLoad.instance().reLoad();
+					byte[] buff = KafkaCtx.getInstance().reload();
 					return buff;
 				}
 			}

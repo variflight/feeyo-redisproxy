@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ConsumerOffset {
+	
 	private String consumer;
 	private AtomicLong offset;
 	private ConcurrentLinkedQueue<Long> defaultOffset;

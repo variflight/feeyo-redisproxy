@@ -11,7 +11,7 @@ import org.apache.kafka.common.Node;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.codec.RequestHeader;
-import com.feeyo.kafka.config.loader.KafkaLoad;
+import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.KafkaBackendConnectionFactory;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
@@ -206,7 +206,7 @@ public class KafkaPool extends AbstractPool {
 					}
 					
 					// 重新加载kafka topic信息
-					KafkaLoad.instance().reLoad();
+					KafkaCtx.getInstance().reload();
 					
 					// 备份old
 					Map<Integer, PhysicalNode> oldPhysicalNodes = this.physicalNodes;

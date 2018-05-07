@@ -22,9 +22,9 @@ import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSONObject;
 import com.feeyo.kafka.config.ConsumerOffset;
-import com.feeyo.kafka.config.KafkaCfg;
-import com.feeyo.kafka.config.MetaDataOffset;
-import com.feeyo.kafka.config.MetaDataPartition;
+import com.feeyo.kafka.config.TopicCfg;
+import com.feeyo.kafka.config.DataOffset;
+import com.feeyo.kafka.config.DataPartition;
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.util.JsonUtils;
@@ -111,22 +111,22 @@ public class OffsetAdmin {
 	 */
 	@SuppressWarnings("unchecked")
 	private void load() {
-		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
+		Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 		
-		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-			KafkaCfg kafkaCfg = entry.getValue();
+		for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
+			TopicCfg kafkaCfg = entry.getValue();
 			String topic  = kafkaCfg.getTopic();
 			String path = offsetManageCfg.getPath() + File.separator + topic;
 			try {
 				// base node 
 				createZkNode(path, null);
 				
-				Map<Integer, MetaDataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, MetaDataOffset>();
+				Map<Integer, DataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
 				byte[] data = curator.getData().forPath(path);
 				if (data == null) {
 					
-					for (MetaDataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
-						MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0, 0);
+					for (DataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
+						DataOffset metaDataOffset = new DataOffset(partition.getPartition(), 0, 0);
 						metaDataOffsets.put(partition.getPartition(), metaDataOffset);
 					}
 					setTopicOffsets(topic, metaDataOffsets);
@@ -143,14 +143,14 @@ public class OffsetAdmin {
 					String str = new String(data);
 					JSONObject obj = JsonUtils.unmarshalFromString(str, JSONObject.class);
 					
-					for (MetaDataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
-						MetaDataOffset metaDataOffset;
+					for (DataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
+						DataOffset metaDataOffset;
 						Object metaDataOffsetObject = obj.get(String.valueOf(partition.getPartition()));
 						if (metaDataOffsetObject == null) {
-							metaDataOffset = new MetaDataOffset(partition.getPartition(), 0, 0);
+							metaDataOffset = new DataOffset(partition.getPartition(), 0, 0);
 						} else {
 							JSONObject metaDataOffsetJSONObject = JsonUtils.unmarshalFromString(String.valueOf(metaDataOffsetObject), JSONObject.class);
-							metaDataOffset = new MetaDataOffset(partition.getPartition(),
+							metaDataOffset = new DataOffset(partition.getPartition(),
 									metaDataOffsetJSONObject.get("producerOffset") == null ? 0
 											: Integer.parseInt(metaDataOffsetJSONObject.getString("producerOffset")),
 											metaDataOffsetJSONObject.get("logStartOffset") == null ? 0
@@ -201,7 +201,7 @@ public class OffsetAdmin {
 	 * @param topic
 	 * @param offset
 	 */
-	private void setTopicOffsets(String topic,  Map<Integer, MetaDataOffset> offset) {
+	private void setTopicOffsets(String topic,  Map<Integer, DataOffset> offset) {
 		String path = offsetManageCfg.getPath() + File.separator + topic;
 		Stat stat;
 		try {
@@ -226,9 +226,9 @@ public class OffsetAdmin {
 			public void run() {
 				try {
 					// offset 数据持久化
-					Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
-					for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-						KafkaCfg kafkaCfg = entry.getValue();
+					Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
+					for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
+						TopicCfg kafkaCfg = entry.getValue();
 						setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
 					}
 				} catch (Exception e) {
@@ -245,15 +245,15 @@ public class OffsetAdmin {
 		executorService.shutdown();
 		
 		// 停止获取新的offset 
-		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
-		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-			KafkaCfg kafkaCfg = entry.getValue();
+		Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
+		for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
+			TopicCfg kafkaCfg = entry.getValue();
 			kafkaCfg.getMetaData().close();
 		}
 		
 		// 提交本地剩余offset
-		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
-			KafkaCfg kafkaCfg = entry.getValue();
+		for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
+			TopicCfg kafkaCfg = entry.getValue();
 			setTopicOffsets(kafkaCfg.getTopic(), kafkaCfg.getMetaData().getOffsets());
 		}
 	}

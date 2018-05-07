@@ -11,9 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.OffsetAdmin;
-import com.feeyo.kafka.config.KafkaCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
-import com.feeyo.kafka.config.loader.KafkaLoad;
+import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
@@ -56,7 +56,8 @@ public class RedisEngineCtx {
 	private volatile Map<String, UserCfg> userMap = null;
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
-	private volatile Map<String, KafkaCfg> kafkaMap = null;
+	
+	private volatile Map<String, TopicCfg> kafkaTopicMap = null;
 	
 	private volatile Properties mailProperty = null;
 
@@ -80,7 +81,7 @@ public class RedisEngineCtx {
 			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 			
-			this.kafkaMap = KafkaConfigLoader.loadKafkaCfgMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
+			this.kafkaTopicMap = KafkaConfigLoader.loadTopicCfgMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
 		} catch (Exception e) {
 		}
 		
@@ -202,8 +203,8 @@ public class RedisEngineCtx {
         KeepAlived.check(port, authString);
         
         // 7, kafka 配置加载
-        if (kafkaMap != null && !kafkaMap.isEmpty()) {
-	        	KafkaLoad.instance().load(kafkaMap);
+        if (kafkaTopicMap != null && !kafkaTopicMap.isEmpty()) {
+	        	KafkaCtx.getInstance().load(kafkaTopicMap);
 	        	OffsetAdmin.getInstance().startUp();
         }
 
@@ -487,12 +488,12 @@ public class RedisEngineCtx {
 		return this.mailProperty;
 	}
 	
-	public Map<String, KafkaCfg> getKafkaMap() {
-		return this.kafkaMap;
+	public Map<String, TopicCfg> getKafkaTopicMap() {
+		return this.kafkaTopicMap;
 	}
 	
-	public void setKafkaMap(Map<String, KafkaCfg> map) {
-		this.kafkaMap = map;
+	public void setKafkaTopicMap(Map<String, TopicCfg> map) {
+		this.kafkaTopicMap = map;
 	}
 	
 	public Map<Integer, AbstractPool> getBackupPoolMap() {

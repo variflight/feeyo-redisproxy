@@ -7,15 +7,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.alibaba.fastjson.annotation.JSONField;
 
-public class MetaDataOffset {
+public class DataOffset {
 	
 	private final int partition;
 	private volatile long producerOffset;
 	private volatile long logStartOffset;
+	
 	private Map<String, ConsumerOffset> offsets;
 	private volatile boolean isClosed = false;
 	
-	public MetaDataOffset (int partition, long producerOffset, long logStartOffset) {
+	public DataOffset (int partition, long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
 		this.offsets = new ConcurrentHashMap<>();
 		this.partition = partition;

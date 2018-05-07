@@ -27,6 +27,10 @@ import org.apache.kafka.common.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+/**
+ * @see http://kafka.apache.org/protocol.html#protocol_api_keys
+ */
 public class KafkaAdmin {
 	
     private static Logger LOGGER = LoggerFactory.getLogger( KafkaAdmin.class );

@@ -3,7 +3,7 @@ package com.feeyo.kafka.config;
 import java.util.Collections;
 import java.util.HashSet;
 
-public class KafkaCfg {
+public class TopicCfg {
 	
 	private final int poolId;
 	
@@ -16,7 +16,7 @@ public class KafkaCfg {
 	
 	private MetaData metaData;
 	
-	public KafkaCfg(String topic, int poolId, int partitions, short replicationFactor, 
+	public TopicCfg(String topic, int poolId, int partitions, short replicationFactor, 
 			String[] producerArr, String[] consumerArr) {
 		
 		this.poolId = poolId;

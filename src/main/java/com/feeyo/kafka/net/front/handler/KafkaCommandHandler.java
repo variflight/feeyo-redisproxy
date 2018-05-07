@@ -13,7 +13,7 @@ import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.MetaData;
-import com.feeyo.kafka.config.MetaDataOffset;
+import com.feeyo.kafka.config.DataOffset;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
@@ -48,7 +48,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private static final int FETCH_LOG_COUNT = 1;
 	private static final int LENGTH_BYTE_COUNT = 4;
 	
-	private MetaDataOffset metaDataOffset;
+	private DataOffset metaDataOffset;
 	private long offset;
 	
 	// 消费失败是否把消费点位归还（指定点位消费时，不需要归还）

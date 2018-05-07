@@ -14,14 +14,14 @@ public class MetaData {
 	private final boolean internal;
 	
 	// 分区信息
-	private final MetaDataPartition[] partitions;
+	private final DataPartition[] partitions;
 	private AtomicInteger producerIndex;
 	private AtomicInteger consumerIndex;
 	private final int partitionsCount;
-	private Map<Integer, MetaDataOffset> offsets;
+	private Map<Integer, DataOffset> offsets;
 	private static Map<Short, ApiVersion> apiVersions = null;
 
-	public MetaData(String name, boolean internal, MetaDataPartition[] partitions) {
+	public MetaData(String name, boolean internal, DataPartition[] partitions) {
 		this.name = name;
 		this.internal = internal;
 		this.partitions = partitions;
@@ -38,22 +38,22 @@ public class MetaData {
 		return internal;
 	}
 
-	public MetaDataPartition[] getPartitions() {
+	public DataPartition[] getPartitions() {
 		return partitions;
 	}
 
-	public MetaDataPartition getProducerMetaDataPartition() {
+	public DataPartition getProducerMetaDataPartition() {
 		int index = getIndex(producerIndex);
 		return this.partitions[index];
 	}
 
-	public MetaDataPartition getConsumerMetaDataPartition() {
+	public DataPartition getConsumerMetaDataPartition() {
 		int index = getIndex(consumerIndex);
 		return this.partitions[index];
 	}
 	
-	public MetaDataPartition getConsumerMetaDataPartition(int partition) {
-		for (MetaDataPartition p : partitions) {
+	public DataPartition getConsumerMetaDataPartition(int partition) {
+		for (DataPartition p : partitions) {
 			if (p.getPartition() == partition) {
 				return p;
 			}
@@ -61,20 +61,20 @@ public class MetaData {
 		return null;
 	}
 
-	public Map<Integer, MetaDataOffset> getOffsets() {
+	public Map<Integer, DataOffset> getOffsets() {
 		return offsets;
 	}
 	
-	public MetaDataOffset getMetaDataOffsetByPartition(int partition) {
-		MetaDataOffset metaDataOffset = offsets.get(partition);
+	public DataOffset getMetaDataOffsetByPartition(int partition) {
+		DataOffset metaDataOffset = offsets.get(partition);
 		if (metaDataOffset == null) {
-			metaDataOffset = new MetaDataOffset(partition, 0, 0);
+			metaDataOffset = new DataOffset(partition, 0, 0);
 			offsets.put(partition, metaDataOffset);
 		}
 		return metaDataOffset;
 	}
 
-	public void setOffsets(Map<Integer, MetaDataOffset> offsets) {
+	public void setOffsets(Map<Integer, DataOffset> offsets) {
 		this.offsets = offsets;
 	}
 
@@ -89,13 +89,13 @@ public class MetaData {
 	}
 	
 	public void close() {
-		for (Entry<Integer, MetaDataOffset> entry : offsets.entrySet()) {
+		for (Entry<Integer, DataOffset> entry : offsets.entrySet()) {
 			entry.getValue().close();
 		}
 	}
 	
 	public void reset() {
-		for (Entry<Integer, MetaDataOffset> entry : offsets.entrySet()) {
+		for (Entry<Integer, DataOffset> entry : offsets.entrySet()) {
 			entry.getValue().reset();
 		}
 	}

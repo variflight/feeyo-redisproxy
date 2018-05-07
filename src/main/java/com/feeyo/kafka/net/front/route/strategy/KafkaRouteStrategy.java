@@ -3,8 +3,8 @@ package com.feeyo.kafka.net.front.route.strategy;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.feeyo.kafka.config.KafkaCfg;
-import com.feeyo.kafka.config.MetaDataPartition;
+import com.feeyo.kafka.config.TopicCfg;
+import com.feeyo.kafka.config.DataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
@@ -26,30 +26,30 @@ import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
  */
 public class KafkaRouteStrategy extends AbstractRouteStrategy {
 	
-	
 	//
-	private KafkaCfg getKafkaCfg(String password, RedisRequest request, boolean isConsumer) throws InvalidRequestExistsException {
+	private TopicCfg getTopicCfg(String password, RedisRequest request, boolean isConsumer) 
+			throws InvalidRequestExistsException {
 		
 		String topic = new String(request.getArgs()[1]);
 		
-		KafkaCfg kafkaCfg = RedisEngineCtx.INSTANCE().getKafkaMap().get(topic);
-		if (kafkaCfg == null) {
+		TopicCfg topicCfg = RedisEngineCtx.INSTANCE().getKafkaTopicMap().get(topic);
+		if (topicCfg == null) {
 			throw new InvalidRequestExistsException("topic not exists");
 		}
 		
-		if (!isConsumer && !kafkaCfg.isProducer( password )) {
+		if (!isConsumer && !topicCfg.isProducer( password )) {
 			throw new InvalidRequestExistsException("no authority");
 		}
 		
-		if (isConsumer && !kafkaCfg.isConsumer( password )) {
+		if (isConsumer && !topicCfg.isConsumer( password )) {
 			throw new InvalidRequestExistsException("no authority");
 		}
 		
-		if (kafkaCfg.getMetaData() == null) {
+		if (topicCfg.getMetaData() == null) {
 			throw new InvalidRequestExistsException("topic not create or not load to kafka...");
 		} 
 		
-		return kafkaCfg;
+		return topicCfg;
 	}
 	
     @Override
@@ -58,16 +58,17 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 
 		RedisRequest request = requests.get(0);
 
-		KafkaCfg kafkaCfg;
-		MetaDataPartition partition;
+		TopicCfg topicCfg;
+		DataPartition partition;
 		if ( request.getPolicy().getHandleType() == CommandParse.PRODUCE_CMD) {
 			if (request.getNumArgs() != 3) {
 				throw new InvalidRequestExistsException("wrong number of arguments");
 			}
 
 
-			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request, false);
-			partition = kafkaCfg.getMetaData().getProducerMetaDataPartition();
+			topicCfg = getTopicCfg(userCfg.getPassword(), request, false);
+			
+			partition = topicCfg.getMetaData().getProducerMetaDataPartition();
 			
 		} else {
 			
@@ -75,21 +76,21 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				throw new InvalidRequestExistsException("wrong number of arguments");
 			}
 			
-			kafkaCfg = getKafkaCfg(userCfg.getPassword(), request, true);
+			topicCfg = getTopicCfg(userCfg.getPassword(), request, true);
 			
 			if (request.getNumArgs() == 4) {
 				int pt = Integer.parseInt(new String(request.getArgs()[2]));
-				partition = kafkaCfg.getMetaData().getConsumerMetaDataPartition(pt);
+				partition = topicCfg.getMetaData().getConsumerMetaDataPartition(pt);
 				if (partition == null) {
 					throw new InvalidRequestExistsException("wrong partition");
 				}
 			} else {
-				partition = kafkaCfg.getMetaData().getConsumerMetaDataPartition();
+				partition = topicCfg.getMetaData().getConsumerMetaDataPartition();
 			}
 		}
 
 		List<RouteNode> nodes = new ArrayList<RouteNode>();
-		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(kafkaCfg.getPoolId());
+		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
 		
 		
 
@@ -100,7 +101,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);
-		node.setMetaDataOffset( kafkaCfg.getMetaData().getMetaDataOffsetByPartition(partition.getPartition()) );
+		node.setMetaDataOffset( topicCfg.getMetaData().getMetaDataOffsetByPartition(partition.getPartition()) );
 
 		nodes.add(node);
 

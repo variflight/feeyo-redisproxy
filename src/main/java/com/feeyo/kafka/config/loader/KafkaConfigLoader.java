@@ -15,7 +15,7 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.feeyo.kafka.config.KafkaCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.redis.config.PoolCfg;
 
@@ -23,9 +23,9 @@ public class KafkaConfigLoader {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaConfigLoader.class );
 	
-	public static Map<String, KafkaCfg> loadKafkaCfgMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception {
+	public static Map<String, TopicCfg> loadTopicCfgMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception {
 		
-		Map<String, KafkaCfg> map = new HashMap<String, KafkaCfg>();
+		Map<String, TopicCfg> map = new HashMap<String, TopicCfg>();
 		try {
 			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("property");
 			for (int i = 0; i < nodeList.getLength(); i++) {
@@ -47,7 +47,7 @@ public class KafkaConfigLoader {
 					LOGGER.warn("topic:{} is not a kafka pool...please check kafka.xml...", topic);
 					continue;
 				}
-				KafkaCfg kafkaCfg = new KafkaCfg(topic, poolId, partitions, replicationFactor, producers, consumers);
+				TopicCfg kafkaCfg = new TopicCfg(topic, poolId, partitions, replicationFactor, producers, consumers);
 				
 				map.put(topic, kafkaCfg);
 			}
