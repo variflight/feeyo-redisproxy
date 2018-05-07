@@ -228,7 +228,7 @@ public class KafkaLoad {
 					Map<Integer, MetaDataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, MetaDataOffset>();
 
 					for (MetaDataPartition partition : newKafkaCfg.getMetaData().getPartitions()) {
-						MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0);
+						MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0, 0);
 						metaDataOffsets.put(partition.getPartition(), metaDataOffset);
 					}
 

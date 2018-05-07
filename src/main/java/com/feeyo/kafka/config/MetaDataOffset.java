@@ -11,21 +11,24 @@ public class MetaDataOffset {
 	
 	private final int partition;
 	private volatile long producerOffset;
+	private volatile long logStartOffset;
 	private Map<String, ConsumerOffset> offsets;
 	private volatile boolean isClosed = false;
 	
-	public MetaDataOffset (int partition, long producerOffset) {
+	public MetaDataOffset (int partition, long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
 		this.offsets = new ConcurrentHashMap<>();
 		this.partition = partition;
+		this.logStartOffset = logStartOffset;
 	}
 	
 	public long getProducerOffset() {
 		return producerOffset;
 	}
 
-	public void setProducerOffset(long producerOffset) {
+	public void setProducerOffset(long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
+		this.logStartOffset = logStartOffset;
 	}
 
 	public Map<String, ConsumerOffset> getOffsets() {
@@ -63,8 +66,16 @@ public class MetaDataOffset {
 		if (offset < 0) {
 			return;
 		}
+		
 		ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
-		consumerOffset.offerOffset(offset);
+		// 点位超出范围两种可能。1:日志被kafka自动清除，2:消费快过生产。
+		if ( offset < logStartOffset ) {
+			// 如果是日志被kafka自动清除的点位超出范围，把点位设置成kafka日志开始的点位
+			consumerOffset.setOffsetToLogStartOffset(logStartOffset);
+		} else {
+			consumerOffset.offerOffset(offset);
+		}
+
 	}
 	
 	private ConsumerOffset getConsumerOffsetByConsumer(String consumer) {
@@ -83,4 +94,13 @@ public class MetaDataOffset {
 	public void reset() {
 		this.isClosed = false;
 	}
+
+	public long getLogStartOffset() {
+		return logStartOffset;
+	}
+
+	public void setLogStartOffset(long logStartOffset) {
+		this.logStartOffset = logStartOffset;
+	}
+	
 }

@@ -23,6 +23,23 @@ public class ConsumerOffset {
 		return offset.get();
 	}
 	
+	/**
+	 * offset设置成kafka的logstartoffset
+	 * @param update
+	 */
+	public void setOffsetToLogStartOffset(long update) {
+		
+		while (true) {
+            long current = offset.get();
+            if (current >= update) {
+            		break;
+            }
+            if (offset.compareAndSet(current, update))
+                break;
+        }
+		
+	}
+	
 	public long poolOffset() {
 		Long defaultOff = defaultOffset.poll();
 		if ( defaultOff == null ) {

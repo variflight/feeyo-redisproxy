@@ -68,7 +68,7 @@ public class MetaData {
 	public MetaDataOffset getMetaDataOffsetByPartition(int partition) {
 		MetaDataOffset metaDataOffset = offsets.get(partition);
 		if (metaDataOffset == null) {
-			metaDataOffset = new MetaDataOffset(partition, 0);
+			metaDataOffset = new MetaDataOffset(partition, 0, 0);
 			offsets.put(partition, metaDataOffset);
 		}
 		return metaDataOffset;

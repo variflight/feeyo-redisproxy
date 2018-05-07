@@ -5,13 +5,13 @@ import java.nio.ByteBuffer;
 
 import com.feeyo.kafka.codec.Errors;
 import com.feeyo.kafka.codec.FetchRequest;
+import com.feeyo.kafka.codec.FetchRequest.PartitionData;
+import com.feeyo.kafka.codec.FetchRequest.TopicAndPartitionData;
 import com.feeyo.kafka.codec.FetchResponse;
 import com.feeyo.kafka.codec.ProduceRequest;
 import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
-import com.feeyo.kafka.codec.FetchRequest.PartitionData;
-import com.feeyo.kafka.codec.FetchRequest.TopicAndPartitionData;
 import com.feeyo.kafka.config.MetaData;
 import com.feeyo.kafka.config.MetaDataOffset;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
@@ -173,7 +173,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			ProduceResponse pr = new ProduceResponse(response);
 			if (pr.isCorrect()) {
 				frontCon.write(OK);
-				metaDataOffset.setProducerOffset(pr.getOffset());
+				metaDataOffset.setProducerOffset(pr.getOffset(), pr.getLogStartOffset());
 			} else {
 				StringBuffer sb = new StringBuffer();
 				sb.append("-ERR ").append(pr.getErrorMessage()).append("\r\n");

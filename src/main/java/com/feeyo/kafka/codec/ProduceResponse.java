@@ -120,6 +120,7 @@ public class ProduceResponse {
     
     private Errors error;
     private long offset;
+    private long logStartOffset;
     private String topic;
 
 	public ProduceResponse(Struct struct) {
@@ -132,7 +133,7 @@ public class ProduceResponse {
 				error = Errors.forCode(partRespStruct.get(ERROR_CODE));
 				offset = partRespStruct.getLong(BASE_OFFSET_KEY_NAME);
 //				long logAppendTime = partRespStruct.getLong(LOG_APPEND_TIME_KEY_NAME);
-//				long logStartOffset = partRespStruct.getOrElse(LOG_START_OFFSET_FIELD, INVALID_OFFSET);
+				logStartOffset = partRespStruct.getOrElse(LOG_START_OFFSET_FIELD, INVALID_OFFSET);
 			}
 		}
 	}
@@ -153,5 +154,7 @@ public class ProduceResponse {
 		return error.getMessage();
 	}
 	
-	
+	public long getLogStartOffset() {
+		return logStartOffset;
+	}
 }

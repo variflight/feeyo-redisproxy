@@ -121,7 +121,7 @@ public class OffsetAdmin {
 				byte[] data = curator.getData().forPath(path);
 				if (data == null) {
 					for (MetaDataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
-						MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0);
+						MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0, 0);
 						metaDataOffsets.put(partition.getPartition(), metaDataOffset);
 					}
 					setTopicOffsets(topic, metaDataOffsets);
@@ -136,12 +136,14 @@ public class OffsetAdmin {
 						MetaDataOffset metaDataOffset;
 						Object metaDataOffsetObject = obj.get(String.valueOf(partition.getPartition()));
 						if (metaDataOffsetObject == null) {
-							metaDataOffset = new MetaDataOffset(partition.getPartition(), 0);
+							metaDataOffset = new MetaDataOffset(partition.getPartition(), 0, 0);
 						} else {
 							JSONObject metaDataOffsetJSONObject = JsonUtils.unmarshalFromString(String.valueOf(metaDataOffsetObject), JSONObject.class);
 							metaDataOffset = new MetaDataOffset(partition.getPartition(),
 									metaDataOffsetJSONObject.get("producerOffset") == null ? 0
-											: Integer.parseInt(metaDataOffsetJSONObject.getString("producerOffset")));
+											: Integer.parseInt(metaDataOffsetJSONObject.getString("producerOffset")),
+											metaDataOffsetJSONObject.get("logStartOffset") == null ? 0
+													: Integer.parseInt(metaDataOffsetJSONObject.getString("logStartOffset")));
 							Map<String, ConsumerOffset> offsets = new ConcurrentHashMap<String, ConsumerOffset>();
 							
 							JSONObject offsetsObject = JsonUtils.unmarshalFromString(metaDataOffsetJSONObject.getString("offsets"),
