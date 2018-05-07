@@ -5,20 +5,23 @@ import java.util.HashSet;
 
 public class KafkaCfg {
 	
-	private final String topic;
 	private final int poolId;
+	
+	private final String topic;
 	private final int partitions;
 	private final short replicationFactor;
 	
 	private final HashSet<String> producers = new HashSet<String>(); 
 	private final HashSet<String> consumers = new HashSet<String>(); 
+	
 	private MetaData metaData;
 	
 	public KafkaCfg(String topic, int poolId, int partitions, short replicationFactor, 
 			String[] producerArr, String[] consumerArr) {
 		
-		this.topic = topic;
 		this.poolId = poolId;
+		
+		this.topic = topic;
 		this.partitions = partitions;
 		this.replicationFactor = replicationFactor;
 		

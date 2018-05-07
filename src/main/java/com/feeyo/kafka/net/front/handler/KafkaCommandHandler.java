@@ -15,6 +15,7 @@ import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.MetaData;
 import com.feeyo.kafka.config.MetaDataOffset;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
+import com.feeyo.kafka.net.front.route.KafkaRouteResultNode;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
@@ -24,7 +25,6 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.ProtoUtils;
@@ -50,6 +50,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	private MetaDataOffset metaDataOffset;
 	private long offset;
+	
 	// 消费失败是否把消费点位归还（指定点位消费时，不需要归还）
 	private boolean isFailCallback = true;
 	
@@ -60,13 +61,13 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	@Override
 	protected void commonHandle(RouteResult routeResult) throws IOException {
 		
-		RouteResultNode node = routeResult.getRouteResultNodes().get(0);
+		KafkaRouteResultNode node = (KafkaRouteResultNode) routeResult.getRouteResultNodes().get(0);
 		RedisRequest request = routeResult.getRequests().get(0);
 		
 		ByteBuffer buffer;
 		RedisRequestPolicy policy = request.getPolicy();
 		KafkaCmdCallback callBack;
-		this.metaDataOffset = node.getKafkaMetaDataOffset();
+		this.metaDataOffset = node.getMetaDataOffset();
 		if (policy.getHandleType() == CommandParse.PRODUCE_CMD) {
 			buffer = produceEncode(request, metaDataOffset.getPartition());
 			callBack = new KafkaProduceCmdCallback();

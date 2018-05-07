@@ -25,7 +25,7 @@ import com.feeyo.kafka.config.ConsumerOffset;
 import com.feeyo.kafka.config.KafkaCfg;
 import com.feeyo.kafka.config.MetaDataOffset;
 import com.feeyo.kafka.config.MetaDataPartition;
-import com.feeyo.kafka.config.OffsetCfg;
+import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.ConfigLoader;
@@ -39,14 +39,17 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 public class OffsetAdmin {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger(OffsetAdmin.class);
+	
+	private static final String ZK_CFG_FILE = "kafka.xml"; // zk settings is in server.xml
+	
 
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 	
 	private static OffsetAdmin INSTANCE = new OffsetAdmin();
 
 	private CuratorFramework curator;
-	private static final String ZK_CFG_FILE = "kafka.xml"; // zk settings is in server.xml
-	private OffsetCfg offsetCfg;
+	private OffsetManageCfg offsetManageCfg;
+	
 	
 	public static OffsetAdmin getInstance() {
 		return INSTANCE;
@@ -54,8 +57,9 @@ public class OffsetAdmin {
 	
 	private OffsetAdmin() {
 
-		offsetCfg = KafkaConfigLoader.loadKafkaOffsetCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
-		CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder().connectString(offsetCfg.getServer())
+		offsetManageCfg = KafkaConfigLoader.loadOffsetManageCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
+		
+		CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder().connectString(offsetManageCfg.getServer())
 				.retryPolicy(new RetryNTimes(3, 1000)).connectionTimeoutMs(3000);
 
 		curator = builder.build();
@@ -112,7 +116,7 @@ public class OffsetAdmin {
 		for (Entry<String, KafkaCfg> entry : kafkaMap.entrySet()) {
 			KafkaCfg kafkaCfg = entry.getValue();
 			String topic  = kafkaCfg.getTopic();
-			String path = offsetCfg.getPath() + File.separator + topic;
+			String path = offsetManageCfg.getPath() + File.separator + topic;
 			try {
 				// base node 
 				createZkNode(path, null);
@@ -120,14 +124,21 @@ public class OffsetAdmin {
 				Map<Integer, MetaDataOffset> metaDataOffsets = new ConcurrentHashMap<Integer, MetaDataOffset>();
 				byte[] data = curator.getData().forPath(path);
 				if (data == null) {
+					
 					for (MetaDataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
 						MetaDataOffset metaDataOffset = new MetaDataOffset(partition.getPartition(), 0, 0);
 						metaDataOffsets.put(partition.getPartition(), metaDataOffset);
 					}
 					setTopicOffsets(topic, metaDataOffsets);
+					
 				} else {
-					// {2:{"offsets":{"pwd01":{"consumer":"pwd01","offset":1},"pwd02":{"consumer":"pwd02","offset":2}},"partition":1,"producerOffset":100}
-					//,1:{"offsets":{"pwd01":{"consumer":"pwd01","offset":1},"pwd02":{"consumer":"pwd02","offset":2}},"partition":1,"producerOffset":100}}
+					
+					/*
+					 {
+					 	2:{"offsets":{"pwd01":{"consumer":"pwd01","offset":1},"pwd02":{"consumer":"pwd02","offset":2}},"partition":1,"producerOffset":100}
+					  	1:{"offsets":{"pwd01":{"consumer":"pwd01","offset":1},"pwd02":{"consumer":"pwd02","offset":2}},"partition":1,"producerOffset":100}
+					  }
+					*/
 
 					String str = new String(data);
 					JSONObject obj = JsonUtils.unmarshalFromString(str, JSONObject.class);
@@ -191,7 +202,7 @@ public class OffsetAdmin {
 	 * @param offset
 	 */
 	private void setTopicOffsets(String topic,  Map<Integer, MetaDataOffset> offset) {
-		String path = offsetCfg.getPath() + File.separator + topic;
+		String path = offsetManageCfg.getPath() + File.separator + topic;
 		Stat stat;
 		try {
 			stat = curator.checkExists().forPath(path);

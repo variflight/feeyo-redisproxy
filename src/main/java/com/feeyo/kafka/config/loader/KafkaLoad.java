@@ -24,6 +24,7 @@ import org.apache.kafka.clients.admin.TopicListing;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartitionInfo;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,15 +55,20 @@ public class KafkaLoad {
 
 	private final static KafkaLoad instance = new KafkaLoad();
 	private ReentrantLock lock = new ReentrantLock();
+	
+	private KafkaLoad() {
+	}
 
 	public static KafkaLoad instance() {
 		return instance;
 	}
 
 	public void load(Map<String, KafkaCfg> kafkaMap) {
+		
 		if (kafkaMap == null || kafkaMap.isEmpty()) {
 			return;
 		}
+		
 		Map<Integer, List<KafkaCfg>> topics = groupBy(kafkaMap);
 		for (Entry<Integer, List<KafkaCfg>> entry : topics.entrySet()) {
 			// 获取kafka地址
@@ -211,7 +217,7 @@ public class KafkaLoad {
 		Map<String, KafkaCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaMap();
 		try {
 			// 重新加载kafkamap
-			Map<String, KafkaCfg> newKafkaMap = KafkaConfigLoader.loadKafkaMap(poolCfgMap,
+			Map<String, KafkaCfg> newKafkaMap = KafkaConfigLoader.loadKafkaCfgMap(poolCfgMap,
 					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
 			load(newKafkaMap);
 

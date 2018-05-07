@@ -80,7 +80,7 @@ public class RedisEngineCtx {
 			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 			
-			this.kafkaMap = KafkaConfigLoader.loadKafkaMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
+			this.kafkaMap = KafkaConfigLoader.loadKafkaCfgMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
 		} catch (Exception e) {
 		}
 		

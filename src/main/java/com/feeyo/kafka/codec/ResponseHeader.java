@@ -13,8 +13,10 @@ import com.feeyo.kafka.protocol.types.Struct;
  * A response header in the kafka protocol.
  */
 public class ResponseHeader {
+	
     public static final Schema SCHEMA = new Schema(
             new Field("correlation_id", INT32, "The user-supplied value passed in with the request"));
+    
     private static final BoundField CORRELATION_KEY_FIELD = SCHEMA.get("correlation_id");
 
     private final int correlationId;

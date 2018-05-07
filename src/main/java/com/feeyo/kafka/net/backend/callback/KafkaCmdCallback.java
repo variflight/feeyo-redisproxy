@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.codec.ResponseHeader;
+
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
@@ -15,6 +16,7 @@ import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public abstract class KafkaCmdCallback extends AbstractBackendCallback {
+	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaCmdCallback.class );
 
 	protected static final byte ASTERISK = '*';

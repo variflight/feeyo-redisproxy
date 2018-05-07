@@ -16,14 +16,14 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.feeyo.kafka.config.KafkaCfg;
-import com.feeyo.kafka.config.OffsetCfg;
+import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.redis.config.PoolCfg;
 
 public class KafkaConfigLoader {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaConfigLoader.class );
 	
-	public static Map<String, KafkaCfg> loadKafkaMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception {
+	public static Map<String, KafkaCfg> loadKafkaCfgMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception {
 		
 		Map<String, KafkaCfg> map = new HashMap<String, KafkaCfg>();
 		try {
@@ -60,8 +60,8 @@ public class KafkaConfigLoader {
 	
 	
 	
-	public static OffsetCfg loadKafkaOffsetCfg(String uri) {
-		OffsetCfg offsetCfg = null;
+	public static OffsetManageCfg loadOffsetManageCfg(String uri) {
+		OffsetManageCfg offsetCfg = null;
 		try {
 			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("offset");
 			if (nodeList.getLength() != 1) {
@@ -75,7 +75,7 @@ public class KafkaConfigLoader {
 			if (index > 0 && index == path.length() - 1) {
 				path = path.substring(0, index);
 			}
-			offsetCfg = new OffsetCfg(server, path);
+			offsetCfg = new OffsetManageCfg(server, path);
 		} catch (Exception e) {
 			LOGGER.error("", e);
 		}

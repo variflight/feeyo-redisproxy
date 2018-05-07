@@ -6,6 +6,7 @@ import java.util.List;
 import com.feeyo.kafka.config.KafkaCfg;
 import com.feeyo.kafka.config.MetaDataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
+import com.feeyo.kafka.net.front.route.KafkaRouteResultNode;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
@@ -89,14 +90,14 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 
 		List<RouteResultNode> nodes = new ArrayList<RouteResultNode>();
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(kafkaCfg.getPoolId());
-		RouteResultNode node = new RouteResultNode();
+		KafkaRouteResultNode node = new KafkaRouteResultNode();
 
 		PhysicalNode physicalNode = pool.getPhysicalNode(partition.getLeader().getId());
 		if (physicalNode == null)
 			throw new PhysicalNodeUnavailableException("node unavailable.");
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);
-		node.setKafkaMetaDataOffset( kafkaCfg.getMetaData().getMetaDataOffsetByPartition(partition.getPartition()) );
+		node.setMetaDataOffset( kafkaCfg.getMetaData().getMetaDataOffsetByPartition(partition.getPartition()) );
 
 		nodes.add(node);
 

@@ -5,11 +5,12 @@ package com.feeyo.kafka.config;
  * @author yangtao
  *
  */
-public class OffsetCfg {
+public class OffsetManageCfg {
+	
 	private final String server;
 	private final String path;
 
-	public OffsetCfg(String server, String path) {
+	public OffsetManageCfg(String server, String path) {
 		this.server = server;
 		this.path = path;
 	}
