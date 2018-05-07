@@ -52,7 +52,7 @@ public class NetFlowMonitor {
 				}
 			}
 			
-			overproof = decrement(arrs[currentIndex] , length ) > 0;
+			overproof = decrement(arrs[currentIndex] , length ) <= 0;
 			return overproof;
 		}
 		
