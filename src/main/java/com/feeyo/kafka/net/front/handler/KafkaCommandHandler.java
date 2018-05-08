@@ -47,14 +47,6 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private static final int FETCH_LOG_COUNT = 1;
 	private static final int LENGTH_BYTE_COUNT = 4;
 	
-	//
-	private DataOffset dataOffset;
-	
-	//
-	private long oldOffset;
-	
-	// 消费失败是否把消费点位归还（指定点位消费时，不需要归还）
-	private boolean isFailCallback = true;
 	
 	public KafkaCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -69,29 +61,29 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		ByteBuffer buffer;
 		KafkaCmdCallback backendCallback;
 		
-		this.dataOffset = node.getDataOffset();
+		DataOffset dataOffset = node.getDataOffset();
 		
 		if ( request.getPolicy().getHandleType() == CommandParse.PRODUCE_CMD ) {
 			buffer = produceEncode(request, dataOffset.getPartition());
-			backendCallback = new KafkaProduceCmdCallback();
+			backendCallback = new KafkaProduceCmdCallback( dataOffset );
 			
 		} else {
 			
 			String consumer = frontCon.getPassword();
 			
 			// 指定点位消费
-			long offset;
+			long newConsumeOffset;
+			boolean isErrorConsumeOffsetRecovery = true;
 			if (request.getNumArgs() == 4) {
-				offset = Long.parseLong(new String(request.getArgs()[3]));
-				this.isFailCallback = false;
+				newConsumeOffset = Long.parseLong(new String(request.getArgs()[3]));
+				isErrorConsumeOffsetRecovery = false;
 			} else {
-				offset = dataOffset.getConsumerOffset(consumer);
+				newConsumeOffset = dataOffset.getConsumerOffset(consumer);
 			}
 			
-			this.oldOffset = offset;
 			
-			buffer = consumerEncode(request, dataOffset.getPartition(), offset);
-			backendCallback = new KafkaConsumerCmdCallback();
+			buffer = consumerEncode(request, dataOffset.getPartition(), newConsumeOffset);
+			backendCallback = new KafkaConsumerCmdCallback( dataOffset, newConsumeOffset, isErrorConsumeOffsetRecovery );
 		} 
 		
 		byte[] requestKey = request.getArgs()[1];
@@ -177,6 +169,12 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	private class KafkaProduceCmdCallback extends KafkaCmdCallback {
 		
+		private DataOffset dataOffset;
+		
+		private KafkaProduceCmdCallback(DataOffset dataOffset) {
+			this.dataOffset = dataOffset;
+		}
+		
 		@Override
 		public void continueParsing(ByteBuffer buffer) {
 			Struct response = ApiKeys.PRODUCE.parseResponse((short)5, buffer);
@@ -194,56 +192,71 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	private class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 		
+		private DataOffset dataOffset;
+		private long consumeOffset;
+		
+		// 消费失败是否把消费点位归还（指定点位消费时，不需要归还）
+		private boolean isErrorConsumeOffsetRecovery = true;
+		
+		private KafkaConsumerCmdCallback(DataOffset dataOffset, long newOffset, boolean isErrorConsumeOffsetRecovery) {
+			this.dataOffset = dataOffset;
+			this.consumeOffset = newOffset;
+			this.isErrorConsumeOffsetRecovery = isErrorConsumeOffsetRecovery;
+		}
+		
 		@Override
 		public void continueParsing(ByteBuffer buffer) {
 			
-			try {
-				Struct response = ApiKeys.FETCH.parseResponse((short)6, buffer);
-				FetchResponse fr = new FetchResponse(response);
-				if (fr.isCorrect()) {
-					byte[] value = fr.getRecord().getValue();
-					if (value == null) {
-						if (isFailCallback)
-							dataOffset.sendDefaultConsumerOffsetBack(oldOffset, frontCon.getPassword());
-						frontCon.write(NULL);
-						return;
-					}
-					byte[] size = ProtoUtils.convertIntToByteArray(3);
-					byte[] partitonArr = ProtoUtils.convertIntToByteArray(dataOffset.getPartition());
-					byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
-					byte[] offsetArr = String.valueOf(oldOffset).getBytes();
-					byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
-					byte[] valueLenght = ProtoUtils.convertIntToByteArray(value.length);
+
+			Struct response = ApiKeys.FETCH.parseResponse((short)6, buffer);
+			FetchResponse fr = new FetchResponse(response);
+			if (fr.isCorrect()) {
+				byte[] value = fr.getRecord().getValue();
+				if (value == null) {
 					
-					// 计算 bufferSize *3\r\n$1\r\n1\r\n$4\r\n2563\r\n$4\r\ntest\r\n 
-					int bufferSize = 1 + size.length + 2 
-							+ 1 + partitonLength.length + 2 + partitonArr.length + 2
-							+ 1 + offsetLength.length + 2 + offsetArr.length + 2 
-							+ 1 + valueLenght.length + 2 + value.length + 2;
-					ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(bufferSize);
-					bb.put(ASTERISK).put(size).put(CRLF)
-						.put(DOLLAR).put(partitonLength).put(CRLF).put(partitonArr).put(CRLF)
-						.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF)
-						.put(DOLLAR).put(valueLenght).put(CRLF).put(value).put(CRLF);
+					if ( isErrorConsumeOffsetRecovery )
+						dataOffset.sendDefaultConsumerOffsetBack(consumeOffset, frontCon.getPassword());
 					
-					frontCon.write(bb);
-					
-					// 消费offset超出范围
-				} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
-					if (isFailCallback)
-						dataOffset.sendDefaultConsumerOffsetBack(oldOffset, frontCon.getPassword());
 					frontCon.write(NULL);
-					
-					// 其他错误
-				} else {
-					if (isFailCallback)
-						dataOffset.sendDefaultConsumerOffsetBack(oldOffset, frontCon.getPassword());
-					StringBuffer sb = new StringBuffer();
-					sb.append("-ERR ").append(fr.getErrorMessage()).append("\r\n");
-					frontCon.write(sb.toString().getBytes());
+					return;
 				}
-			} finally {
-				isFailCallback = true;
+				byte[] size = ProtoUtils.convertIntToByteArray(3);
+				byte[] partitonArr = ProtoUtils.convertIntToByteArray(dataOffset.getPartition());
+				byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
+				byte[] offsetArr = String.valueOf(consumeOffset).getBytes();
+				byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
+				byte[] valueLenght = ProtoUtils.convertIntToByteArray(value.length);
+				
+				// 计算 bufferSize *3\r\n$1\r\n1\r\n$4\r\n2563\r\n$4\r\ntest\r\n 
+				int bufferSize = 1 + size.length + 2 
+						+ 1 + partitonLength.length + 2 + partitonArr.length + 2
+						+ 1 + offsetLength.length + 2 + offsetArr.length + 2 
+						+ 1 + valueLenght.length + 2 + value.length + 2;
+				ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(bufferSize);
+				bb.put(ASTERISK).put(size).put(CRLF)
+					.put(DOLLAR).put(partitonLength).put(CRLF).put(partitonArr).put(CRLF)
+					.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF)
+					.put(DOLLAR).put(valueLenght).put(CRLF).put(value).put(CRLF);
+				
+				frontCon.write(bb);
+				
+				// 消费offset超出范围
+			} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
+				
+				if ( isErrorConsumeOffsetRecovery )
+					dataOffset.sendDefaultConsumerOffsetBack(consumeOffset, frontCon.getPassword());
+				
+				frontCon.write(NULL);
+				
+				// 其他错误
+			} else {
+				
+				if ( isErrorConsumeOffsetRecovery )
+					dataOffset.sendDefaultConsumerOffsetBack(consumeOffset, frontCon.getPassword());
+				
+				StringBuffer sb = new StringBuffer();
+				sb.append("-ERR ").append(fr.getErrorMessage()).append("\r\n");
+				frontCon.write(sb.toString().getBytes());
 			}
 		}
 	}
