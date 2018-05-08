@@ -11,8 +11,8 @@ public class KafkaRouteNode extends RouteNode {
 		return _dataOffset;
 	}
 
-	public void setDataOffset(DataOffset metaDataOffset) {
-		this._dataOffset = metaDataOffset;
+	public void setDataOffset(DataOffset dataOffset) {
+		this._dataOffset = dataOffset;
 	}
 
 }

@@ -42,7 +42,7 @@ public class StatUtil {
 
 
 	
-	public static final int SLOW_COST = 50; 			  			// 50秒	
+	public static final int SLOW_COST = 50; 			  			// 超过50毫秒	
 	public static final int STATISTIC_PEROID = 30; 		  			// 30秒
 	
 	// ACCESS

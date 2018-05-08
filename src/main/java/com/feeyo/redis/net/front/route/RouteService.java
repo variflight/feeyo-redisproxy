@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.feeyo.kafka.net.front.route.strategy.KafkaRouteStrategy;
 import com.feeyo.redis.config.UserCfg;
+import com.feeyo.redis.net.backend.pool.PoolType;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -17,6 +18,7 @@ import com.feeyo.redis.net.front.route.strategy.SegmentRouteStrategy;
 
 /**
  * 路由功能
+ * 
  * @author yangtao
  *
  */
@@ -27,17 +29,20 @@ public class RouteService {
 	private static KafkaRouteStrategy _KAFKA = new KafkaRouteStrategy();
 	
 	
-	private static AbstractRouteStrategy getStrategy(int poolType, boolean isNeedSegment, boolean isKafkaCmd) {
-		// 集群情况下，需要对 Mset、Mget、Del mulitKey 分片
-		if (isNeedSegment) {
-			switch (poolType) {
-			case 1:
-			case 2:
-				return _SEGMENT;
-			}
-		}
+	private static AbstractRouteStrategy getStrategy(int poolType, boolean isNeedSegment) {
 		
-		if ( isKafkaCmd ) {
+		// 集群情况下，需要对 Mset、Mget、Del mulitKey 分片
+		switch (poolType) {
+		case PoolType.REDIS_STANDALONE:
+			return _DEFAULT;
+			
+		case PoolType.REDIS_CLUSTER:
+		case PoolType.REDIS_X_CLUSTER:
+			if ( isNeedSegment )
+				return _SEGMENT;
+			break;
+			
+		case PoolType.KAFKA_CLUSTER:
 			return _KAFKA;
 		}
 		return _DEFAULT;
@@ -55,7 +60,6 @@ public class RouteService {
 
 		List<Integer> noThroughtIndexs = null;
 		boolean isNeedSegment = false;
-		boolean isKafkaCmd = false;
 		
 		for(int i = 0; i < requests.size(); i++) {
 			
@@ -67,14 +71,6 @@ public class RouteService {
 			String cmd = new String( request.getArgs()[0] ).toUpperCase();
 			RedisRequestPolicy policy = CommandParse.getPolicy( cmd );
 			request.setPolicy( policy );
-			
-			if (policy.getCategory() == CommandParse.KAFKA_CMD) {
-				if (isPipeline) {
-					throw new InvalidRequestExistsException("invalid request exist");
-				}
-				isKafkaCmd = true;
-				break;
-			}
 			
 			// 是否存在无效指令
 			boolean invalidRequestExist =  RouteUtil.isInvalidRequest( poolType, policy, isReadOnly, isAdmin, isPipeline );
@@ -112,7 +108,7 @@ public class RouteService {
 		}
 		
 		// 根据请求做路由
-		AbstractRouteStrategy strategy = getStrategy(poolType, isNeedSegment, isKafkaCmd);
+		AbstractRouteStrategy strategy = getStrategy(poolType, isNeedSegment);
 		RouteResult routeResult = strategy.route(userCfg, requests);
 		if ( noThroughtIndexs != null )
 			routeResult.setNoThroughtIndexs( noThroughtIndexs );

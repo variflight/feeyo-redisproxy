@@ -13,12 +13,12 @@ public class DataOffset {
 	private volatile long producerOffset;
 	private volatile long logStartOffset;
 	
-	private Map<String, ConsumerOffset> offsets;
+	private Map<String, ConsumerOffset> consumerOffsets;
 	private volatile boolean isClosed = false;
 	
 	public DataOffset (int partition, long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
-		this.offsets = new ConcurrentHashMap<>();
+		this.consumerOffsets = new ConcurrentHashMap<>();
 		this.partition = partition;
 		this.logStartOffset = logStartOffset;
 	}
@@ -32,12 +32,12 @@ public class DataOffset {
 		this.logStartOffset = logStartOffset;
 	}
 
-	public Map<String, ConsumerOffset> getOffsets() {
-		return offsets;
+	public Map<String, ConsumerOffset> getConsumerOffsets() {
+		return consumerOffsets;
 	}
 
-	public void setOffsets(Map<String, ConsumerOffset> offsets) {
-		this.offsets = offsets;
+	public void setConsumerOffsets(Map<String, ConsumerOffset> offsets) {
+		this.consumerOffsets = offsets;
 	}
 	
 	public int getPartition() {
@@ -49,7 +49,7 @@ public class DataOffset {
 	@JSONField(serialize=false)
 	public List<String> getAllConsumerOffset() {
 		List<String> list = new ArrayList<>();
-		for (ConsumerOffset consumerOffset : offsets.values()) {
+		for (ConsumerOffset consumerOffset : consumerOffsets.values()) {
 			StringBuffer sb = new StringBuffer();
 			sb.append(consumerOffset.getConsumer()).append(":").append(consumerOffset.getOffset());
 			list.add(sb.toString());
@@ -86,10 +86,10 @@ public class DataOffset {
 	}
 	
 	private ConsumerOffset getConsumerOffsetByConsumer(String consumer) {
-		ConsumerOffset consumerOffset = offsets.get(consumer);
+		ConsumerOffset consumerOffset = consumerOffsets.get(consumer);
 		if (consumerOffset == null) {
 			consumerOffset = new ConsumerOffset(consumer, 0);
-			offsets.put(consumer, consumerOffset);
+			consumerOffsets.put(consumer, consumerOffset);
 		}
 		return consumerOffset;
 	}

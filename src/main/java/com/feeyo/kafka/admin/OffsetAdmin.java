@@ -145,22 +145,26 @@ public class OffsetAdmin {
 					
 					for (DataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
 
-						Object metaDataOffsetObject = obj.get(String.valueOf(partition.getPartition()));
+						Object metaDataOffsetObject = obj.get( String.valueOf(partition.getPartition()) );
 						if (metaDataOffsetObject == null) {
 							DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
 							dataOffsets.put(partition.getPartition(), dataOffset);
+							
 						} else {
 							JSONObject jsonObject = JsonUtils.unmarshalFromString(String.valueOf(metaDataOffsetObject), JSONObject.class);
+							
 							DataOffset dataOffset = new DataOffset(partition.getPartition(),
 									jsonObject.get("producerOffset") == null ? 0 : Integer.parseInt(jsonObject.getString("producerOffset")),
 									jsonObject.get("logStartOffset") == null ? 0 : Integer.parseInt(jsonObject.getString("logStartOffset")));
-							Map<String, ConsumerOffset> offsets = new ConcurrentHashMap<String, ConsumerOffset>();
+							
+							Map<String, ConsumerOffset> consumerOffsets = new ConcurrentHashMap<String, ConsumerOffset>();
 							
 							JSONObject offsetsObject = JsonUtils.unmarshalFromString(jsonObject.getString("offsets"), JSONObject.class);
 							HashSet<String> consumers = kafkaCfg.getConsumers();
 							for (String consumer : consumers) {
 
 								if (offsetsObject.get(consumer) != null) {
+									
 									JSONObject consumeJson = JsonUtils.unmarshalFromString(offsetsObject.getString(consumer), JSONObject.class);
 									ConsumerOffset cOffset = new ConsumerOffset(consumer, consumeJson.getString("offset") == null ? 0 
 											: Integer.parseInt(consumeJson.getString("offset")));
@@ -171,15 +175,16 @@ public class OffsetAdmin {
 										}
 									}
 									
-									offsets.put(consumer, cOffset);
+									consumerOffsets.put(consumer, cOffset);
 									
 								} else {
 									ConsumerOffset cOffset = new ConsumerOffset(consumer, 0);
-									offsets.put(consumer, cOffset);
+									consumerOffsets.put(consumer, cOffset);
 								}
-								
 							}
-							dataOffset.setOffsets(offsets);
+							
+							dataOffset.setConsumerOffsets(consumerOffsets);
+							
 							dataOffsets.put(partition.getPartition(), dataOffset);
 						}
 						
