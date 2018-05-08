@@ -126,9 +126,11 @@ public class KeyPrefixStrategyFactory {
 		keyStrategys.put("MSETNX", KeyPrefixStrategy.MKey);		
 		keyStrategys.put("OBJECT", KeyPrefixStrategy.SecondKey);
 		
-		// kafka
-		keyStrategys.put("KPUSH", KeyPrefixStrategy.NoKey);
-		keyStrategys.put("KPOP",  KeyPrefixStrategy.NoKey);
+		// Kafka nokey
+		keyStrategys.put("KPUSH", 		KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KPOP",  		KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KPARTITION", 	KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KOFFSET",  	KeyPrefixStrategy.NoKey);
 	}
 	
 	// 
