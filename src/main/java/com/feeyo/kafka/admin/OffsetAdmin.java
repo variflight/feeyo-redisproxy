@@ -114,9 +114,9 @@ public class OffsetAdmin {
 		Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 		
 		for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
-			TopicCfg kafkaCfg = entry.getValue();
-			String topic  = kafkaCfg.getTopic();
-			String path = offsetManageCfg.getPath() + File.separator + topic;
+			TopicCfg topicCfg = entry.getValue();
+			String topicName  = topicCfg.getName();
+			String path = offsetManageCfg.getPath() + File.separator + topicName;
 			try {
 				// base node 
 				createZkNode(path, null);
@@ -125,11 +125,11 @@ public class OffsetAdmin {
 				byte[] data = curator.getData().forPath(path);
 				if (data == null) {
 					
-					for (DataPartition partition : kafkaCfg.getMetadata().getPartitions()) {
+					for (DataPartition partition : topicCfg.getMetadata().getPartitions()) {
 						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
 						dataOffsets.put(partition.getPartition(), dataOffset);
 					}
-					setTopicOffsets(topic, dataOffsets);
+					saveOffsetsToZk(topicName, dataOffsets);
 					
 				} else {
 					
@@ -143,7 +143,7 @@ public class OffsetAdmin {
 					String str = new String(data);
 					JSONObject obj = JsonUtils.unmarshalFromString(str, JSONObject.class);
 					
-					for (DataPartition partition : kafkaCfg.getMetadata().getPartitions()) {
+					for (DataPartition partition : topicCfg.getMetadata().getPartitions()) {
 
 						Object metaDataOffsetObject = obj.get( String.valueOf(partition.getPartition()) );
 						if (metaDataOffsetObject == null) {
@@ -160,7 +160,7 @@ public class OffsetAdmin {
 							Map<String, ConsumerOffset> consumerOffsets = new ConcurrentHashMap<String, ConsumerOffset>();
 							
 							JSONObject offsetsObject = JsonUtils.unmarshalFromString(jsonObject.getString("offsets"), JSONObject.class);
-							HashSet<String> consumers = kafkaCfg.getConsumers();
+							HashSet<String> consumers = topicCfg.getConsumers();
 							for (String consumer : consumers) {
 
 								if (offsetsObject.get(consumer) != null) {
@@ -192,7 +192,7 @@ public class OffsetAdmin {
 					
 				}
 				
-				kafkaCfg.getMetadata().setDataOffsets(dataOffsets);
+				topicCfg.getMetadata().setDataOffsets(dataOffsets);
 				
 			} catch (Exception e) {
 				LOGGER.warn("", e);
@@ -201,13 +201,8 @@ public class OffsetAdmin {
 		
 	}
 	
-	/**
-	 * commit offset
-	 * @param topic
-	 * @param offset
-	 */
-	private void setTopicOffsets(String topic,  Map<Integer, DataOffset> offset) {
-		String path = offsetManageCfg.getPath() + File.separator + topic;
+	private void saveOffsetsToZk(String topicName,  Map<Integer, DataOffset> offset) {
+		String path = offsetManageCfg.getPath() + File.separator + topicName;
 		Stat stat;
 		try {
 			stat = curator.checkExists().forPath(path);
@@ -234,10 +229,10 @@ public class OffsetAdmin {
 					Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 					for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
 						TopicCfg topicCfg = entry.getValue();
-						setTopicOffsets(topicCfg.getTopic(), topicCfg.getMetadata().getDataOffsets());
+						saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getDataOffsets());
 					}
 				} catch (Exception e) {
-					LOGGER.warn("offset admin warn", e);
+					LOGGER.warn("offsetAdmin err: ", e);
 				}
 				
 			}
@@ -259,7 +254,7 @@ public class OffsetAdmin {
 		// 提交本地剩余offset
 		for (Entry<String, TopicCfg> entry : kafkaTopicMap.entrySet()) {
 			TopicCfg topicCfg = entry.getValue();
-			setTopicOffsets(topicCfg.getTopic(), topicCfg.getMetadata().getDataOffsets());
+			saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getDataOffsets());
 		}
 	}
 }

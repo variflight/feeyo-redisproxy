@@ -38,8 +38,8 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
     	}
     	
     	// 获取 topic
-    	String topic = new String( request.getArgs()[1] );
-		TopicCfg topicCfg = RedisEngineCtx.INSTANCE().getKafkaTopicMap().get( topic );
+    	String topicName = new String( request.getArgs()[1] );
+		TopicCfg topicCfg = RedisEngineCtx.INSTANCE().getKafkaTopicMap().get( topicName );
 		if (topicCfg == null) {
 			throw new InvalidRequestExistsException("topic not exists");
 		}

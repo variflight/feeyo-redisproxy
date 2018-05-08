@@ -7,7 +7,7 @@ public class TopicCfg {
 	
 	private final int poolId;
 	
-	private final String topic;
+	private final String name;
 	private final int partitions;
 	private final short replicationFactor;
 	
@@ -16,12 +16,12 @@ public class TopicCfg {
 	
 	private Metadata metadata;
 	
-	public TopicCfg(String topic, int poolId, int partitions, short replicationFactor, 
+	public TopicCfg(String name, int poolId, int partitions, short replicationFactor, 
 			String[] producerArr, String[] consumerArr) {
 		
 		this.poolId = poolId;
 		
-		this.topic = topic;
+		this.name = name;
 		this.partitions = partitions;
 		this.replicationFactor = replicationFactor;
 		
@@ -29,8 +29,8 @@ public class TopicCfg {
 		Collections.addAll(consumers, consumerArr);
 	}
 
-	public String getTopic() {
-		return topic;
+	public String getName() {
+		return name;
 	}
 
 	public int getPoolId() {

@@ -92,20 +92,20 @@ public class KafkaCtx {
 			Map<String, TopicDescription> existsTopics = kafkaAdmin.getTopicAndDescriptions();
 			List<TopicCfg> topicCfgs = entry.getValue();
 			for (TopicCfg topicCfg : topicCfgs) {
-				if (existsTopics.containsKey(topicCfg.getTopic())) {
-					TopicDescription topicDescription = existsTopics.get(topicCfg.getTopic());
+				if (existsTopics.containsKey(topicCfg.getName())) {
+					TopicDescription topicDescription = existsTopics.get(topicCfg.getName());
 					List<TopicPartitionInfo> partitions = topicDescription.partitions();
 					// 如果增加分区
 					if (partitions.size() < topicCfg.getPartitions()) {
-						kafkaAdmin.addPartitionsForTopic(topicCfg.getTopic(), topicCfg.getPartitions());
-						topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getTopic());
+						kafkaAdmin.addPartitionsForTopic(topicCfg.getName(), topicCfg.getPartitions());
+						topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getName());
 					}
 
 					initMetadata(topicCfg, topicDescription);
 					
 				} else {
-					kafkaAdmin.createTopic(topicCfg.getTopic(), topicCfg.getPartitions(), topicCfg.getReplicationFactor());
-					TopicDescription topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getTopic());
+					kafkaAdmin.createTopic(topicCfg.getName(), topicCfg.getPartitions(), topicCfg.getReplicationFactor());
+					TopicDescription topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getName());
 					
 					// 初始化metadata
 					initMetadata(topicCfg, topicDescription);
@@ -219,12 +219,11 @@ public class KafkaCtx {
 		Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 		try {
-			// 重新加载kafkamap
-			Map<String, TopicCfg> newKafkaMap = KafkaConfigLoader.loadTopicCfgMap(poolCfgMap,
-					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
-			load(newKafkaMap);
+			// 重新加载
+			Map<String, TopicCfg> newKafkaTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+			load(newKafkaTopicCfgMap);
 
-			for (Entry<String, TopicCfg> entry : newKafkaMap.entrySet()) {
+			for (Entry<String, TopicCfg> entry : newKafkaTopicCfgMap.entrySet()) {
 				String key = entry.getKey();
 				TopicCfg newKafkaCfg = entry.getValue();
 				TopicCfg oldKafkaCfg = kafkaMap.get(key);
@@ -244,7 +243,8 @@ public class KafkaCtx {
 					newKafkaCfg.getMetadata().setDataOffsets(dataOffsets);
 				}
 			}
-			RedisEngineCtx.INSTANCE().setKafkaTopicMap(newKafkaMap);
+			RedisEngineCtx.INSTANCE().setKafkaTopicMap(newKafkaTopicCfgMap);
+			
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");

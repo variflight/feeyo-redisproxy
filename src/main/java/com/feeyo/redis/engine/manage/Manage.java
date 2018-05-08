@@ -979,7 +979,7 @@ public class Manage {
 						for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
 							TopicCfg kafkaCfg = entry.getValue();
 							StringBuffer line = new StringBuffer();
-							line.append(kafkaCfg.getTopic()).append(", ");
+							line.append(kafkaCfg.getName()).append(", ");
 							line.append(kafkaCfg.getPoolId()).append(", ");
 							line.append(kafkaCfg.getPartitions()).append(", ");
 							line.append(kafkaCfg.getReplicationFactor()).append(", ");
@@ -1010,7 +1010,7 @@ public class Manage {
 								DataOffset offset = offsets.get(pt);
 								
 								StringBuffer line = new StringBuffer();
-								line.append(kafkaCfg.getTopic()).append(", ");
+								line.append(kafkaCfg.getName()).append(", ");
 								line.append(partition.getLeader().getHost()).append(partition.getLeader().getPort()).append(", ");
 								line.append(pt).append(", ");
 								line.append(offset.getLogStartOffset()).append(", ");
