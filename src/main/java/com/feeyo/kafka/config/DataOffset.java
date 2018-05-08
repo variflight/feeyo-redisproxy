@@ -93,4 +93,5 @@ public class DataOffset {
 		this.logStartOffset = logStartOffset;
 	}
 	
+	
 }
