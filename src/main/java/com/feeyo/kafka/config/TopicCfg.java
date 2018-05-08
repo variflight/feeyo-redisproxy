@@ -14,7 +14,7 @@ public class TopicCfg {
 	private final HashSet<String> producers = new HashSet<String>(); 
 	private final HashSet<String> consumers = new HashSet<String>(); 
 	
-	private MetaData metaData;
+	private Metadata metadata;
 	
 	public TopicCfg(String topic, int poolId, int partitions, short replicationFactor, 
 			String[] producerArr, String[] consumerArr) {
@@ -61,12 +61,12 @@ public class TopicCfg {
 		return consumers.contains(consumer);
 	}
 	
-	public MetaData getMetaData() {
-		return metaData;
+	public Metadata getMetadata() {
+		return metadata;
 	}
 
-	public void setMetaData(MetaData metaData) {
-		this.metaData = metaData;
+	public void setMetadata(Metadata metadata) {
+		this.metadata = metadata;
 	}
 	
 }

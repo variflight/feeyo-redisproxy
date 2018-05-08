@@ -8,7 +8,7 @@ import org.apache.kafka.common.protocol.ApiKeys;
 
 import com.feeyo.kafka.codec.ApiVersionsResponse.ApiVersion;
 
-public class MetaData {
+public class Metadata {
 	
 	private final String name;
 	private final boolean internal;
@@ -17,11 +17,12 @@ public class MetaData {
 	private final DataPartition[] partitions;
 	private AtomicInteger producerIndex;
 	private AtomicInteger consumerIndex;
+	
 	private final int partitionsCount;
 	private Map<Integer, DataOffset> offsets;
 	private static Map<Short, ApiVersion> apiVersions = null;
 
-	public MetaData(String name, boolean internal, DataPartition[] partitions) {
+	public Metadata(String name, boolean internal, DataPartition[] partitions) {
 		this.name = name;
 		this.internal = internal;
 		this.partitions = partitions;
@@ -42,17 +43,17 @@ public class MetaData {
 		return partitions;
 	}
 
-	public DataPartition getProducerMetaDataPartition() {
+	public DataPartition getProducerDataPartition() {
 		int index = getIndex(producerIndex);
 		return this.partitions[index];
 	}
 
-	public DataPartition getConsumerMetaDataPartition() {
+	public DataPartition getConsumerDataPartition() {
 		int index = getIndex(consumerIndex);
 		return this.partitions[index];
 	}
 	
-	public DataPartition getConsumerMetaDataPartition(int partition) {
+	public DataPartition getConsumerDataPartition(int partition) {
 		for (DataPartition p : partitions) {
 			if (p.getPartition() == partition) {
 				return p;
@@ -61,20 +62,20 @@ public class MetaData {
 		return null;
 	}
 
-	public Map<Integer, DataOffset> getOffsets() {
+	public Map<Integer, DataOffset> getDataOffsets() {
 		return offsets;
 	}
 	
-	public DataOffset getMetaDataOffsetByPartition(int partition) {
-		DataOffset metaDataOffset = offsets.get(partition);
-		if (metaDataOffset == null) {
-			metaDataOffset = new DataOffset(partition, 0, 0);
-			offsets.put(partition, metaDataOffset);
+	public DataOffset getDataOffsetByPartition(int partition) {
+		DataOffset dataOffset = offsets.get(partition);
+		if (dataOffset == null) {
+			dataOffset = new DataOffset(partition, 0, 0);
+			offsets.put(partition, dataOffset);
 		}
-		return metaDataOffset;
+		return dataOffset;
 	}
 
-	public void setOffsets(Map<Integer, DataOffset> offsets) {
+	public void setDataOffsets(Map<Integer, DataOffset> offsets) {
 		this.offsets = offsets;
 	}
 
@@ -101,11 +102,11 @@ public class MetaData {
 	}
 	
 	public static void setApiVersions(Map<Short, ApiVersion> apiVersions) {
-		MetaData.apiVersions = apiVersions;
+		Metadata.apiVersions = apiVersions;
 	}
 	
 	public static ApiVersion getApiVersion(short key) {
-		return MetaData.apiVersions.get(key);
+		return Metadata.apiVersions.get(key);
 	}
 	
 	public static short getProduceVersion() {

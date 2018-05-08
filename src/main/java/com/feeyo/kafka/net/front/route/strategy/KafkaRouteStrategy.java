@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.feeyo.kafka.config.TopicCfg;
+import com.feeyo.kafka.config.DataOffset;
 import com.feeyo.kafka.config.DataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
@@ -43,7 +44,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throw new InvalidRequestExistsException("topic not exists");
 		}
 		
-		if (topicCfg.getMetaData() == null) {
+		if (topicCfg.getMetadata() == null) {
 			throw new InvalidRequestExistsException("topic not create or not load to kafka...");
 		} 
 		
@@ -63,7 +64,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 					throw new InvalidRequestExistsException("no authority");
 				}
 				
-				partition = topicCfg.getMetaData().getProducerMetaDataPartition();
+				partition = topicCfg.getMetadata().getProducerDataPartition();
 			}
 			
 			break;
@@ -79,10 +80,10 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				
 				if (request.getNumArgs() == 4) {
 					int pt = Integer.parseInt(new String(request.getArgs()[2]));
-					partition = topicCfg.getMetaData().getConsumerMetaDataPartition(pt);
+					partition = topicCfg.getMetadata().getConsumerDataPartition(pt);
 
 				} else {
-					partition = topicCfg.getMetaData().getConsumerMetaDataPartition();
+					partition = topicCfg.getMetadata().getConsumerDataPartition();
 				}
 				
 			}
@@ -93,16 +94,18 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throw new InvalidRequestExistsException("wrong partition");
 		}
 		
+		DataOffset dataOffset = topicCfg.getMetadata().getDataOffsetByPartition( partition.getPartition() );
+		
 		//
-		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
-		PhysicalNode physicalNode = pool.getPhysicalNode(partition.getLeader().getId());
+		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get( topicCfg.getPoolId() );
+		PhysicalNode physicalNode = pool.getPhysicalNode( partition.getLeader().getId() );
 		if (physicalNode == null)
 			throw new PhysicalNodeUnavailableException("node unavailable.");
 		
 		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);
-		node.setDataOffset( topicCfg.getMetaData().getMetaDataOffsetByPartition(partition.getPartition()) );
+		node.setDataOffset( dataOffset );
 
 		List<RouteNode> nodes = new ArrayList<RouteNode>(1);
 		nodes.add(node);

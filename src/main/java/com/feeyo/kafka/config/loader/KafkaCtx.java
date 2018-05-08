@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.TopicCfg;
-import com.feeyo.kafka.config.MetaData;
+import com.feeyo.kafka.config.Metadata;
 import com.feeyo.kafka.config.DataNode;
 import com.feeyo.kafka.config.DataOffset;
 import com.feeyo.kafka.config.DataPartition;
@@ -101,14 +101,14 @@ public class KafkaCtx {
 						topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getTopic());
 					}
 
-					initKafkaCfgMetaData(topicCfg, topicDescription);
+					initMetadata(topicCfg, topicDescription);
 					
 				} else {
 					kafkaAdmin.createTopic(topicCfg.getTopic(), topicCfg.getPartitions(), topicCfg.getReplicationFactor());
 					TopicDescription topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getTopic());
 					
 					// 初始化metadata
-					initKafkaCfgMetaData(topicCfg, topicDescription);
+					initMetadata(topicCfg, topicDescription);
 				}
 			}
 
@@ -123,15 +123,15 @@ public class KafkaCtx {
 	 * @param topicCfg
 	 * @param topicDescription
 	 */
-	private void initKafkaCfgMetaData(TopicCfg topicCfg, TopicDescription topicDescription) {
+	private void initMetadata(TopicCfg topicCfg, TopicDescription topicDescription) {
 		if (topicDescription == null) {
-			topicCfg.setMetaData(null);
+			topicCfg.setMetadata(null);
 			return;
 		}
 		List<TopicPartitionInfo> partitions = topicDescription.partitions();
 		
-		DataPartition[] metaDataPartitions = new DataPartition[partitions.size()];
-		MetaData metaData = new MetaData(topicDescription.name(), topicDescription.isInternal(), metaDataPartitions);
+		DataPartition[] metadataPartitions = new DataPartition[partitions.size()];
+		Metadata metadata = new Metadata(topicDescription.name(), topicDescription.isInternal(), metadataPartitions);
 
 		int id = -1;
 		for (int i = 0; i < partitions.size(); i++) {
@@ -147,13 +147,13 @@ public class KafkaCtx {
 					topicPartitionInfo.leader().port());
 
 			DataPartition mdp = new DataPartition(topicPartitionInfo.partition(), leader, replicasData);
-			metaDataPartitions[i] = mdp;
+			metadataPartitions[i] = mdp;
 			id = leader.getId();
 		}
 
 		loadApiVersion(topicCfg, id);
 
-		topicCfg.setMetaData(metaData);
+		topicCfg.setMetadata(metadata);
 	}
 
 	/**
@@ -234,18 +234,18 @@ public class KafkaCtx {
 				TopicCfg oldKafkaCfg = kafkaMap.get(key);
 				if (oldKafkaCfg != null) {
 					// 迁移原来的offset
-					newKafkaCfg.getMetaData().setOffsets(oldKafkaCfg.getMetaData().getOffsets());
+					newKafkaCfg.getMetadata().setDataOffsets(oldKafkaCfg.getMetadata().getDataOffsets());
 
 					// 新建的topic
 				} else {
 					Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
 
-					for (DataPartition partition : newKafkaCfg.getMetaData().getPartitions()) {
+					for (DataPartition partition : newKafkaCfg.getMetadata().getPartitions()) {
 						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
 						dataOffsets.put(partition.getPartition(), dataOffset);
 					}
 
-					newKafkaCfg.getMetaData().setOffsets(dataOffsets);
+					newKafkaCfg.getMetadata().setDataOffsets(dataOffsets);
 				}
 			}
 			RedisEngineCtx.INSTANCE().setKafkaTopicMap(newKafkaMap);

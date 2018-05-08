@@ -12,7 +12,7 @@ import com.feeyo.kafka.codec.ProduceRequest;
 import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
-import com.feeyo.kafka.config.MetaData;
+import com.feeyo.kafka.config.Metadata;
 import com.feeyo.kafka.config.DataOffset;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
@@ -108,7 +108,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	}
 
 	private ByteBuffer produceEncode(RedisRequest request, int partition) {
-		short version = MetaData.getProduceVersion();
+		short version = Metadata.getProduceVersion();
 		
 		Record record = new Record();
 		record.setOffset(0);
@@ -130,7 +130,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	}
 	
 	private ByteBuffer consumerEncode(RedisRequest request, int partition, long offset) {
-		short version = MetaData.getConsumerVersion();
+		short version = Metadata.getConsumerVersion();
 		
 		TopicAndPartitionData<PartitionData> topicAndPartitionData = new TopicAndPartitionData<PartitionData>(new String(request.getArgs()[1]));
 		FetchRequest fr = new FetchRequest(version, REPLICA_ID, TIME_OUT, MINBYTES, MAXBYTES, ISOLATION_LEVEL, topicAndPartitionData);

@@ -125,7 +125,7 @@ public class OffsetAdmin {
 				byte[] data = curator.getData().forPath(path);
 				if (data == null) {
 					
-					for (DataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
+					for (DataPartition partition : kafkaCfg.getMetadata().getPartitions()) {
 						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
 						dataOffsets.put(partition.getPartition(), dataOffset);
 					}
@@ -143,7 +143,7 @@ public class OffsetAdmin {
 					String str = new String(data);
 					JSONObject obj = JsonUtils.unmarshalFromString(str, JSONObject.class);
 					
-					for (DataPartition partition : kafkaCfg.getMetaData().getPartitions()) {
+					for (DataPartition partition : kafkaCfg.getMetadata().getPartitions()) {
 
 						Object metaDataOffsetObject = obj.get( String.valueOf(partition.getPartition()) );
 						if (metaDataOffsetObject == null) {
@@ -192,7 +192,7 @@ public class OffsetAdmin {
 					
 				}
 				
-				kafkaCfg.getMetaData().setOffsets(dataOffsets);
+				kafkaCfg.getMetadata().setDataOffsets(dataOffsets);
 				
 			} catch (Exception e) {
 				LOGGER.warn("", e);
@@ -234,7 +234,7 @@ public class OffsetAdmin {
 					Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 					for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
 						TopicCfg topicCfg = entry.getValue();
-						setTopicOffsets(topicCfg.getTopic(), topicCfg.getMetaData().getOffsets());
+						setTopicOffsets(topicCfg.getTopic(), topicCfg.getMetadata().getDataOffsets());
 					}
 				} catch (Exception e) {
 					LOGGER.warn("offset admin warn", e);
@@ -253,13 +253,13 @@ public class OffsetAdmin {
 		Map<String, TopicCfg> kafkaTopicMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 		for (Entry<String, TopicCfg> entry : kafkaTopicMap.entrySet()) {
 			TopicCfg topicCfg = entry.getValue();
-			topicCfg.getMetaData().close();
+			topicCfg.getMetadata().close();
 		}
 		
 		// 提交本地剩余offset
 		for (Entry<String, TopicCfg> entry : kafkaTopicMap.entrySet()) {
 			TopicCfg topicCfg = entry.getValue();
-			setTopicOffsets(topicCfg.getTopic(), topicCfg.getMetaData().getOffsets());
+			setTopicOffsets(topicCfg.getTopic(), topicCfg.getMetadata().getDataOffsets());
 		}
 	}
 }
