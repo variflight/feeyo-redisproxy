@@ -37,6 +37,10 @@ public class KafkaAdmin {
 	
 	private AdminClient adminClient;
 	
+	public static KafkaAdmin create(String servers) {
+		return new KafkaAdmin(servers);
+	}
+	
 	public KafkaAdmin(String servers) {
 		Properties props = new Properties();
 		props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, servers);

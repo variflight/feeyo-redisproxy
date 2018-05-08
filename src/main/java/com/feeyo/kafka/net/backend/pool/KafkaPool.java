@@ -114,8 +114,10 @@ public class KafkaPool extends AbstractPool {
 		}
 		for (String availableHost : theHostList) {
 			String[] hostAndPort = availableHost.split(":");
-			KafkaAdmin kafkaAdmin = new KafkaAdmin(hostAndPort[0] + ":" + hostAndPort[1]);
+			
+			KafkaAdmin kafkaAdmin = null;
 			try {
+				kafkaAdmin = KafkaAdmin.create(hostAndPort[0] + ":" + hostAndPort[1]);
 				Collection<Node> nodeData = kafkaAdmin.getClusterNodes();
 				if (nodeData == null || nodeData.isEmpty()) {
 					continue;

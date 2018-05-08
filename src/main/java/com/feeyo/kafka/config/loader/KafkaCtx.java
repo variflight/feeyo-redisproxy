@@ -90,7 +90,7 @@ public class KafkaCtx {
 			KafkaAdmin kafkaAdmin = null;
 			try {
 				
-				kafkaAdmin = new KafkaAdmin(servers.toString());
+				kafkaAdmin = KafkaAdmin.create(servers.toString());
 				Map<String, TopicDescription> remoteKafkaTopics = kafkaAdmin.getTopicAndDescriptions();
 				List<TopicCfg> topicCfgs = entry.getValue();
 				for (TopicCfg topicCfg : topicCfgs) {

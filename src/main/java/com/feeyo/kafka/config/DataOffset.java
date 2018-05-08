@@ -62,15 +62,15 @@ public class DataOffset {
 			return;
 		}
 		
-		ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
-		
 		// 点位超出范围两种可能。
 		// 1:日志被kafka自动清除，
 		// 2:消费快过生产。
 		if ( offset < logStartOffset ) {
 			// 如果是日志被kafka自动清除的点位超出范围，把点位设置成kafka日志开始的点位
+			ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
 			consumerOffset.setOffsetToLogStartOffset(logStartOffset);
 		} else {
+			ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
 			consumerOffset.revertOldOffset(offset);
 		}
 
