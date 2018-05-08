@@ -21,6 +21,12 @@
 		    <artifactId>curator-client</artifactId>
 		    <version>4.0.0</version>
 		</dependency>
+		
+		<dependency>
+		    <groupId>org.apache.curator</groupId>
+		    <artifactId>curator-recipes</artifactId>
+		    <version>4.0.0</version>
+		</dependency>
 
 		<dependency>
 		    <groupId>org.apache.zookeeper</groupId>
