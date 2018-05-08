@@ -13,6 +13,7 @@ import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.Metadata;
+import com.feeyo.kafka.config.ConsumerOffset;
 import com.feeyo.kafka.config.DataOffset;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
@@ -75,7 +76,9 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 				newOffset = Long.parseLong(new String(request.getArgs()[3]));
 				isErrorOffsetRecovery = false;
 			} else {
-				newOffset = node.getDataOffset().getConsumerOffset( frontCon.getPassword() );
+				
+				ConsumerOffset cOffset =  node.getDataOffset().getConsumerOffsetByConsumer( frontCon.getPassword() );
+				newOffset =	cOffset.getNewOffset();
 			}
 			
 			

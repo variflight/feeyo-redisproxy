@@ -1,10 +1,10 @@
 package com.feeyo.kafka.admin;
 
 import java.io.File;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -160,7 +160,7 @@ public class OffsetAdmin {
 							Map<String, ConsumerOffset> consumerOffsets = new ConcurrentHashMap<String, ConsumerOffset>();
 							
 							JSONObject offsetsObject = JsonUtils.unmarshalFromString(jsonObject.getString("offsets"), JSONObject.class);
-							HashSet<String> consumers = topicCfg.getConsumers();
+							Set<String> consumers = topicCfg.getConsumers();
 							for (String consumer : consumers) {
 
 								if (offsetsObject.get(consumer) != null) {
@@ -172,7 +172,7 @@ public class OffsetAdmin {
 									if (consumeJson.get("defaultOffset") != null) {
 										List<Object> defaultOffsets = JsonUtils.unmarshalFromString(consumeJson.getString("defaultOffset"), List.class);
 										for (Object defaultOffset : defaultOffsets) {
-											cOffset.offerOffset(Long.parseLong(String.valueOf(defaultOffset)));
+											cOffset.revertOldOffset(Long.parseLong(String.valueOf(defaultOffset)));
 										}
 									}
 									
@@ -244,15 +244,9 @@ public class OffsetAdmin {
 		
 		// 关闭定时任务
 		executorService.shutdown();
-		
-		// 停止获取新的offset 
-		Map<String, TopicCfg> kafkaTopicMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
-		for (Entry<String, TopicCfg> entry : kafkaTopicMap.entrySet()) {
-			TopicCfg topicCfg = entry.getValue();
-			topicCfg.getMetadata().close();
-		}
-		
+
 		// 提交本地剩余offset
+		Map<String, TopicCfg> kafkaTopicMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 		for (Entry<String, TopicCfg> entry : kafkaTopicMap.entrySet()) {
 			TopicCfg topicCfg = entry.getValue();
 			saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getDataOffsets());

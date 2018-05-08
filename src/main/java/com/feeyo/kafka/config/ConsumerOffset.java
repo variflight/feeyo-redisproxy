@@ -6,22 +6,26 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ConsumerOffset {
 	
 	private String consumer;
-	private AtomicLong offset;
-	private ConcurrentLinkedQueue<Long> defaultOffset;
+	private AtomicLong currentOffset;
+	private ConcurrentLinkedQueue<Long> oldOffsetQueue;
 	
 
 	public ConsumerOffset(String consumer, long offset) {
 		this.consumer = consumer;
-		this.offset = new AtomicLong(offset);
-		this.defaultOffset = new ConcurrentLinkedQueue<Long>();
+		this.currentOffset = new AtomicLong(offset);
+		this.oldOffsetQueue = new ConcurrentLinkedQueue<Long>();
 	}
 
+	public void setConsumer(String consumer) {
+		this.consumer = consumer;
+	}
+	
 	public String getConsumer() {
 		return consumer;
 	}
 
-	public long getOffset() {
-		return offset.get();
+	public long getCurrentOffset() {
+		return currentOffset.get();
 	}
 	
 	/**
@@ -31,37 +35,35 @@ public class ConsumerOffset {
 	public void setOffsetToLogStartOffset(long update) {
 		
 		while (true) {
-            long current = offset.get();
+            long current = currentOffset.get();
             if (current >= update) {
             		break;
             }
-            if (offset.compareAndSet(current, update))
+            if (currentOffset.compareAndSet(current, update))
                 break;
         }
 		
 	}
 	
-	public long poolOffset() {
-		Long defaultOff = defaultOffset.poll();
+	public long getNewOffset() {
+		Long defaultOff = oldOffsetQueue.poll();
 		if ( defaultOff == null ) {
-			return offset.getAndIncrement();
+			return currentOffset.getAndIncrement();
 		}
 		return defaultOff.longValue();
 	}
 	
-	public void offerOffset(Long offset) {
-		this.defaultOffset.offer(offset);
+	public void revertOldOffset(Long offset) {
+		this.oldOffsetQueue.offer(offset);
 	}
 
-	public void setConsumer(String consumer) {
-		this.consumer = consumer;
+	public ConcurrentLinkedQueue<Long> getOldOffsetQueue() {
+		return oldOffsetQueue;
 	}
 
-	public ConcurrentLinkedQueue<Long> getDefaultOffset() {
-		return defaultOffset;
+	public void setOldOffsetQueue(ConcurrentLinkedQueue<Long> oldOffsetQueue) {
+		this.oldOffsetQueue = oldOffsetQueue;
 	}
 
-	public void setDefaultOffset(ConcurrentLinkedQueue<Long> defaultOffset) {
-		this.defaultOffset = defaultOffset;
-	}
+	
 }

@@ -2,6 +2,7 @@ package com.feeyo.kafka.config;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set;
 
 public class TopicCfg {
 	
@@ -11,8 +12,8 @@ public class TopicCfg {
 	private final int partitions;
 	private final short replicationFactor;
 	
-	private final HashSet<String> producers = new HashSet<String>(); 
-	private final HashSet<String> consumers = new HashSet<String>(); 
+	private final Set<String> producers = new HashSet<String>(); 
+	private final Set<String> consumers = new HashSet<String>(); 
 	
 	private Metadata metadata;
 	
@@ -45,11 +46,11 @@ public class TopicCfg {
 		return replicationFactor;
 	}
 
-	public HashSet<String> getProducers() {
+	public Set<String> getProducers() {
 		return producers;
 	}
 
-	public HashSet<String> getConsumers() {
+	public Set<String> getConsumers() {
 		return consumers;
 	}
 	

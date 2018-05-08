@@ -160,18 +160,8 @@ public class KafkaCtx {
 			id = newLeader.getId();
 		}
 
-		loadApiVersion(topicCfg, id);
-
-		Metadata metadata = new Metadata(name, internal, newPartitions);
-		topicCfg.setMetadata( metadata );
-	}
-
-	
-	/**
-	 * 加载 ApiVersion
-	 */
-	private void loadApiVersion(TopicCfg topicCfg, int id) {
-		
+		// 加载 ApiVersion
+		// -----------------------------------------------------------------------
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
 		PhysicalNode physicalNode = pool.getPhysicalNode(id);
 		if (physicalNode != null) {
@@ -215,7 +205,12 @@ public class KafkaCtx {
 				LOGGER.warn("", e);
 			}
 		}
+
+		Metadata metadata = new Metadata(name, internal, newPartitions);
+		topicCfg.setMetadata( metadata );
 	}
+	
+	
 
 	private Map<Integer, List<TopicCfg>> groupBy(Map<String, TopicCfg> topicCfgMap) {
 		Map<Integer, List<TopicCfg>> topics = new HashMap<Integer, List<TopicCfg>>();

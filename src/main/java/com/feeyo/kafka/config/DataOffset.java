@@ -14,7 +14,6 @@ public class DataOffset {
 	private volatile long logStartOffset;
 	
 	private Map<String, ConsumerOffset> consumerOffsets;
-	private volatile boolean isClosed = false;
 	
 	public DataOffset (int partition, long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
@@ -51,7 +50,7 @@ public class DataOffset {
 		List<String> list = new ArrayList<>();
 		for (ConsumerOffset consumerOffset : consumerOffsets.values()) {
 			StringBuffer sb = new StringBuffer();
-			sb.append(consumerOffset.getConsumer()).append(":").append(consumerOffset.getOffset());
+			sb.append(consumerOffset.getConsumer()).append(":").append(consumerOffset.getCurrentOffset());
 			list.add(sb.toString());
 		}
 		return list;
@@ -72,34 +71,18 @@ public class DataOffset {
 			// 如果是日志被kafka自动清除的点位超出范围，把点位设置成kafka日志开始的点位
 			consumerOffset.setOffsetToLogStartOffset(logStartOffset);
 		} else {
-			consumerOffset.offerOffset(offset);
+			consumerOffset.revertOldOffset(offset);
 		}
 
 	}
 	
-	public long getConsumerOffset(String consumer) {
-		if (isClosed) {
-			return -1L;
-		}
-		ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
-		return consumerOffset.poolOffset();
-	}
-	
-	private ConsumerOffset getConsumerOffsetByConsumer(String consumer) {
+	public ConsumerOffset getConsumerOffsetByConsumer(String consumer) {
 		ConsumerOffset consumerOffset = consumerOffsets.get(consumer);
 		if (consumerOffset == null) {
 			consumerOffset = new ConsumerOffset(consumer, 0);
 			consumerOffsets.put(consumer, consumerOffset);
 		}
 		return consumerOffset;
-	}
-	
-	public void close() {
-		this.isClosed = true;
-	}
-	
-	public void reset() {
-		this.isClosed = false;
 	}
 
 	public long getLogStartOffset() {

@@ -1,7 +1,6 @@
 package com.feeyo.kafka.config;
 
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.kafka.common.protocol.ApiKeys;
@@ -88,18 +87,7 @@ public class Metadata {
 				return next;
 		}
 	}
-	
-	public void close() {
-		for (Entry<Integer, DataOffset> entry : offsets.entrySet()) {
-			entry.getValue().close();
-		}
-	}
-	
-	public void reset() {
-		for (Entry<Integer, DataOffset> entry : offsets.entrySet()) {
-			entry.getValue().reset();
-		}
-	}
+
 	
 	public static void setApiVersions(Map<Short, ApiVersion> apiVersions) {
 		Metadata.apiVersions = apiVersions;
