@@ -38,7 +38,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
     	
     	// 获取 topic
     	String topic = new String( request.getArgs()[1] );
-		TopicCfg topicCfg = RedisEngineCtx.INSTANCE().getKafkaTopicMap().get(topic);
+		TopicCfg topicCfg = RedisEngineCtx.INSTANCE().getKafkaTopicMap().get( topic );
 		if (topicCfg == null) {
 			throw new InvalidRequestExistsException("topic not exists");
 		}
@@ -46,43 +46,53 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		if (topicCfg.getMetaData() == null) {
 			throw new InvalidRequestExistsException("topic not create or not load to kafka...");
 		} 
-    	
-
-		//
-		DataPartition partition = null;
 		
-		if ( request.getPolicy().getHandleType() == CommandParse.PRODUCE_CMD) {
-			if (request.getNumArgs() != 3) {
-				throw new InvalidRequestExistsException("wrong number of arguments");
-			}
-
-			if ( !topicCfg.isProducer( userCfg.getPassword() )) {
-				throw new InvalidRequestExistsException("no authority");
-			}
-			
-			partition = topicCfg.getMetaData().getProducerMetaDataPartition();
-			
-		} else {
-			
-			if (request.getNumArgs() != 2 && request.getNumArgs() != 4 ) {
-				throw new InvalidRequestExistsException("wrong number of arguments");
-			}
-			
-			if ( !topicCfg.isConsumer( userCfg.getPassword() )) {
-				throw new InvalidRequestExistsException("no authority");
-			}
-			
-			if (request.getNumArgs() == 4) {
-				int pt = Integer.parseInt(new String(request.getArgs()[2]));
-				partition = topicCfg.getMetaData().getConsumerMetaDataPartition(pt);
-				if (partition == null) {
-					throw new InvalidRequestExistsException("wrong partition");
+		
+		// 分区
+		DataPartition partition = null;
+	
+		// 参数有效性校验
+		switch( request.getPolicy().getHandleType() ) {
+		case CommandParse.PRODUCE_CMD:
+			{
+				if (request.getNumArgs() != 3) {
+					throw new InvalidRequestExistsException("wrong number of arguments");
 				}
-			} else {
-				partition = topicCfg.getMetaData().getConsumerMetaDataPartition();
+	
+				if ( !topicCfg.isProducer( userCfg.getPassword() )) {
+					throw new InvalidRequestExistsException("no authority");
+				}
+				
+				partition = topicCfg.getMetaData().getProducerMetaDataPartition();
 			}
+			
+			break;
+		case CommandParse.CONSUMER_CMD:
+			{
+				if (request.getNumArgs() != 2 && request.getNumArgs() != 4 ) {
+					throw new InvalidRequestExistsException("wrong number of arguments");
+				}
+				
+				if ( !topicCfg.isConsumer( userCfg.getPassword() )) {
+					throw new InvalidRequestExistsException("no authority");
+				}
+				
+				if (request.getNumArgs() == 4) {
+					int pt = Integer.parseInt(new String(request.getArgs()[2]));
+					partition = topicCfg.getMetaData().getConsumerMetaDataPartition(pt);
+
+				} else {
+					partition = topicCfg.getMetaData().getConsumerMetaDataPartition();
+				}
+				
+			}
+			break;
 		}
 
+		if ( partition == null ) {
+			throw new InvalidRequestExistsException("wrong partition");
+		}
+		
 		//
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
 		PhysicalNode physicalNode = pool.getPhysicalNode(partition.getLeader().getId());
