@@ -592,8 +592,8 @@ public abstract class AbstractConnection implements ClosableConnection {
 				}
 				netInBytes += length;
 				
-				// 如果资源不够，并且需要限流
-				if ( flowMonitor.pool(length) && isFlowLimit() ) {
+				// 流量检测，超过max 触发限流
+				if ( isFlowLimit() && flowMonitor.pool(length) ) {
 					flowClean();
 					return;
 				}

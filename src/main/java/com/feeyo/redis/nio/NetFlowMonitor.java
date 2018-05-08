@@ -44,7 +44,6 @@ public class NetFlowMonitor {
 				synchronized (this) {
 					// 这一秒的第一条统计，把对应的存储位的数据置是 max
 					if (currentIndex != tempIndex) {
-
 						// reset
 						arrs[tempIndex].set( maxByteSize );
 						currentIndex = tempIndex;

@@ -13,7 +13,7 @@
 
 
 ### 1.9 版本开始，我们支持通过 Redis 协议，对外提供 kafka 队列服务
-	 KPUSH {topic}
+	 KPUSH {topic} {content}
 	 KPOP {topic}
 	 KPOP {topic} {offset}
 	 KPARTITION {topic}
