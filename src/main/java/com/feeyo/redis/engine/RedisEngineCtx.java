@@ -10,7 +10,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.kafka.admin.OffsetAdmin;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.config.loader.KafkaCtx;
@@ -205,14 +204,8 @@ public class RedisEngineCtx {
         // 7, kafka 配置加载
         if (kafkaTopicMap != null && !kafkaTopicMap.isEmpty()) {
 	        	KafkaCtx.getInstance().load(kafkaTopicMap);
-	        	OffsetAdmin.getInstance().startUp();
         }
 
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-				OffsetAdmin.getInstance().close();
-			}
-		});
         
 //		// 7, zk startup
 //		ZkClient.INSTANCE().init();

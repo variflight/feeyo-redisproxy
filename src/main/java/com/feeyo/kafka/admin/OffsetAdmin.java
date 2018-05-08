@@ -106,15 +106,28 @@ public class OffsetAdmin {
 		}
 	}
 	
-	/**
-	 * 加载offset
-	 */
-	@SuppressWarnings("unchecked")
-	private void load() {
-		Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
+	
+	private void saveOffsetsToZk(String topicName,  Map<Integer, DataOffset> offset) {
+		String path = offsetManageCfg.getPath() + File.separator + topicName;
+		Stat stat;
+		try {
+			stat = curator.checkExists().forPath(path);
+			if (stat == null) {
+				ZKPaths.mkdirs(curator.getZookeeperClient().getZooKeeper(), path);
+			}
+			
+			curator.setData().inBackground().forPath(path, JsonUtils.marshalToByte(offset));
+		} catch (Exception e) {
+			LOGGER.warn("kafka cmd offset commit err:", e);
+		}
+	}
+
+	public void startup() {
 		
-		for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
-			TopicCfg topicCfg = entry.getValue();
+		//
+		Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
+		for (TopicCfg topicCfg : topicCfgMap.values()) {
+			
 			String topicName  = topicCfg.getName();
 			String path = offsetManageCfg.getPath() + File.separator + topicName;
 			try {
@@ -170,6 +183,7 @@ public class OffsetAdmin {
 											 consumer, consumeJson.getString("offset") == null ? 0 
 											: Integer.parseInt(consumeJson.getString("offset")));
 									if (consumeJson.get("defaultOffset") != null) {
+										@SuppressWarnings("unchecked")
 										List<Object> defaultOffsets = JsonUtils.unmarshalFromString(consumeJson.getString("defaultOffset"), List.class);
 										for (Object defaultOffset : defaultOffsets) {
 											cOffset.revertOldOffset(Long.parseLong(String.valueOf(defaultOffset)));
@@ -200,26 +214,6 @@ public class OffsetAdmin {
 			}
 		}
 		
-	}
-	
-	private void saveOffsetsToZk(String topicName,  Map<Integer, DataOffset> offset) {
-		String path = offsetManageCfg.getPath() + File.separator + topicName;
-		Stat stat;
-		try {
-			stat = curator.checkExists().forPath(path);
-			if (stat == null) {
-				ZKPaths.mkdirs(curator.getZookeeperClient().getZooKeeper(), path);
-			}
-			
-			curator.setData().inBackground().forPath(path, JsonUtils.marshalToByte(offset));
-		} catch (Exception e) {
-			LOGGER.warn("kafka cmd offset commit err:", e);
-		}
-	}
-
-	public void startUp() {
-		
-		this.load();
 		
 		// 定时持久化offset
 		executorService.scheduleAtFixedRate(new Runnable() {

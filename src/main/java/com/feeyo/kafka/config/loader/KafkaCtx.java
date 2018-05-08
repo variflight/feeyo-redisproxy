@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
+import com.feeyo.kafka.admin.OffsetAdmin;
 import com.feeyo.kafka.codec.ApiVersionsResponse;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.TopicCfg;
@@ -62,9 +63,11 @@ public class KafkaCtx {
 	public static KafkaCtx getInstance() {
 		return INSTANCE;
 	}
+	
 
 	public void load(Map<String, TopicCfg> topicCfgMap) {
 		
+
 		if (topicCfgMap == null || topicCfgMap.isEmpty()) {
 			return;
 		}
@@ -124,6 +127,16 @@ public class KafkaCtx {
 					kafkaAdmin.close();
 			}
 		}
+		
+		
+		//
+		OffsetAdmin.getInstance().startup();
+		
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				OffsetAdmin.getInstance().close();
+			}
+		});
 
 	}
 
