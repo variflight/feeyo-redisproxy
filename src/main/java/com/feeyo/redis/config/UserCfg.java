@@ -16,10 +16,11 @@ public class UserCfg {
 	// 通过管理指令 use pool 改变
 	private int usePoolId;
 	private int usePoolType = -1;
-	private UserFlowLimitCfg limitCfg;
+	
+	private boolean isFlowLimit = false;
 	
 	public UserCfg(int poolId, int poolType, String password,  String prefix, 
-			int selectDb, boolean isAdmin, boolean isReadonly, int throughPercentage) {
+			int selectDb, boolean isAdmin, boolean isReadonly, boolean isFlowLimit) {
 		super();
 		this.poolId = poolId;
 		this.poolType = poolType;
@@ -32,11 +33,8 @@ public class UserCfg {
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
 		
-		if (throughPercentage == 100 || isAdmin) {
-			limitCfg = null;
-		} else {
-			limitCfg = new UserFlowLimitCfg(throughPercentage);
-		}
+		if ( !isAdmin) 
+			this.isFlowLimit = isFlowLimit;
 	}
 	
 
@@ -76,8 +74,9 @@ public class UserCfg {
 		this.usePoolType = poolType;
 	}
 	
-	public UserFlowLimitCfg getLimitCfg() {
-		return this.limitCfg;
+
+	public boolean isFlowLimit() {
+		return isFlowLimit;
 	}
 
 	@Override

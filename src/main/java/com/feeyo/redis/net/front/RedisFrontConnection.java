@@ -5,7 +5,6 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.config.UserFlowLimitCfg;
 import com.feeyo.redis.net.Connection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -27,7 +26,6 @@ public class RedisFrontConnection extends Connection {
 	private RedisFrontSession session;
 	
 	private AtomicBoolean _readLock = new AtomicBoolean(false);
-	private AtomicBoolean _limitLock = new AtomicBoolean(false);
 	
 	public RedisFrontConnection(SocketChannel channel) {
 		super(channel);
@@ -126,20 +124,13 @@ public class RedisFrontConnection extends Connection {
 	
 	public void releaseLock() {
 		_readLock.set(false);
-		_limitLock.set(false);
 	}
 	
 	@Override
 	public boolean isFlowLimit() {
-		if (_limitLock.compareAndSet(false, true)) {
-			UserCfg uc = this.getUserCfg();
-			if (uc != null) {
-				UserFlowLimitCfg lc = uc.getLimitCfg();
-				if (lc != null && !lc.isOk())
-					return true;
-			}
-		}
-
+		UserCfg uc = this.getUserCfg();
+		if ( uc != null )
+			return uc.isFlowLimit();
 		return false;
 	}
 	
