@@ -118,10 +118,7 @@ public class KafkaCtx {
 	}
 
 	/**
-	 * 初始化kafka配置。metadata
-	 * 
-	 * @param topicCfg
-	 * @param topicDescription
+	 * 初始化 Kafka metadata
 	 */
 	private void initMetadata(TopicCfg topicCfg, TopicDescription topicDescription) {
 		if (topicDescription == null) {
@@ -157,9 +154,7 @@ public class KafkaCtx {
 	}
 
 	/**
-	 * 加载apiversion
-	 * @param topicCfg
-	 * @param id
+	 * 加载 ApiVersion
 	 */
 	private void loadApiVersion(TopicCfg topicCfg, int id) {
 		
@@ -217,6 +212,7 @@ public class KafkaCtx {
 
 	// 重新加载
 	public byte[] reload() {
+		
 		final ReentrantLock lock = this.lock;
 		lock.lock();
 

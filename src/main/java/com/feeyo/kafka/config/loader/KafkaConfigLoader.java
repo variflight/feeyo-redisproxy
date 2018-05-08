@@ -18,6 +18,7 @@ import org.w3c.dom.NodeList;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.redis.net.backend.pool.PoolType;
 
 public class KafkaConfigLoader {
 	
@@ -31,11 +32,13 @@ public class KafkaConfigLoader {
 			for (int i = 0; i < nodeList.getLength(); i++) {
 				Node node = nodeList.item(i);
 				NamedNodeMap nameNodeMap = node.getAttributes();		
-				String topic = getAttribute(nameNodeMap, "name", null);
-				if (topic == null) {
-					LOGGER.warn("kafka topic null...please check kafka.xml...");
+				
+				String name = getAttribute(nameNodeMap, "name", null);
+				if (name == null) {
+					LOGGER.warn("kafka.xml err,  topic is null.");
 					continue;
 				}
+				
 				int poolId = getIntAttribute(nameNodeMap, "poolId", -1);
 				int partitions = getIntAttribute(nameNodeMap, "partitions", 1);
 				short replicationFactor = getShortAttribute(nameNodeMap, "replicationFactor", (short)0);
@@ -43,13 +46,13 @@ public class KafkaConfigLoader {
 				String[] consumers = getAttribute(nameNodeMap, "consumer", "").split(",");
 				
 				PoolCfg poolCfg = poolMap.get(poolId);
-				if ( poolCfg.getType() != 3 ) {
-					LOGGER.warn("topic:{} is not a kafka pool...please check kafka.xml...", topic);
+				if ( poolCfg.getType() != PoolType.KAFKA_CLUSTER ) {
+					LOGGER.error("kafka.xml err,  topic:{} is not a kafka pool.", name);
 					continue;
 				}
-				TopicCfg kafkaCfg = new TopicCfg(topic, poolId, partitions, replicationFactor, producers, consumers);
 				
-				map.put(topic, kafkaCfg);
+				TopicCfg topicCfg = new TopicCfg(name, poolId, partitions, replicationFactor, producers, consumers);
+				map.put(name, topicCfg);
 			}
 		} catch (Exception e) {
 			LOGGER.error("load kafka.xml err: " + e);
