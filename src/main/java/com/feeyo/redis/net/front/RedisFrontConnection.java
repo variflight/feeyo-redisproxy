@@ -136,6 +136,7 @@ public class RedisFrontConnection extends Connection {
 	
 	@Override
 	public void flowClean() {
+		super.flowClean();
 		this.write(RedisFrontSession.FLOW_LIMIT);
 		this.close("flow limit");
 	}

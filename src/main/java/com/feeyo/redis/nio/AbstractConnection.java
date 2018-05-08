@@ -725,6 +725,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 
 	@Override
 	public void flowClean() {
+		LOGGER.warn("Flow cleaning,  {}", this );
 		// ignore
 	}
 	
