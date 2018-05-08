@@ -29,13 +29,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
+import com.feeyo.kafka.codec.ApiVersionsResponse;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.Metadata;
 import com.feeyo.kafka.config.DataNode;
 import com.feeyo.kafka.config.DataOffset;
 import com.feeyo.kafka.config.DataPartition;
-import com.feeyo.kafka.net.backend.callback.ApiVersionCallback;
+import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
@@ -45,7 +46,6 @@ import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.TodoTask;
-import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.NetSystem;
 
@@ -185,10 +185,19 @@ public class KafkaCtx {
 				buffer.putInt(struct.sizeOf());
 				struct.writeTo(buffer);
 				
-				//
-				AbstractBackendCallback callback = new ApiVersionCallback();
-				
-				BackendConnection backendCon = physicalNode.getConnection(callback, null);
+				// ApiVersionCallback
+				KafkaCmdCallback apiVersionCallback =  new KafkaCmdCallback() {
+					@Override
+					public void continueParsing(ByteBuffer buffer) {
+						Struct response = ApiKeys.API_VERSIONS.parseResponse((short) 1, buffer);
+						ApiVersionsResponse ar = new ApiVersionsResponse(response);
+						if (ar.isCorrect()) {
+							Metadata.setApiVersions( ar.getApiKeyToApiVersion() );
+						}
+					}
+				};
+
+				BackendConnection backendCon = physicalNode.getConnection(apiVersionCallback, null);
 				if ( backendCon == null ) {
 					TodoTask task = new TodoTask() {				
 						@Override
@@ -196,8 +205,8 @@ public class KafkaCtx {
 							backendCon.write( buffer );
 						}
 					};
-					callback.addTodoTask(task);
-					backendCon = physicalNode.createNewConnection(callback, null);
+					apiVersionCallback.addTodoTask(task);
+					backendCon = physicalNode.createNewConnection(apiVersionCallback, null);
 					
 				} else {
 					backendCon.write(buffer);
