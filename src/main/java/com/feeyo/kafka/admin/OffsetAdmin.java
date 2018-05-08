@@ -111,9 +111,9 @@ public class OffsetAdmin {
 	 */
 	@SuppressWarnings("unchecked")
 	private void load() {
-		Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
+		Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 		
-		for (Entry<String, TopicCfg> entry : kafkaMap.entrySet()) {
+		for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
 			TopicCfg topicCfg = entry.getValue();
 			String topicName  = topicCfg.getName();
 			String path = offsetManageCfg.getPath() + File.separator + topicName;
@@ -166,7 +166,8 @@ public class OffsetAdmin {
 								if (offsetsObject.get(consumer) != null) {
 									
 									JSONObject consumeJson = JsonUtils.unmarshalFromString(offsetsObject.getString(consumer), JSONObject.class);
-									ConsumerOffset cOffset = new ConsumerOffset(consumer, consumeJson.getString("offset") == null ? 0 
+									ConsumerOffset cOffset = new ConsumerOffset(
+											 consumer, consumeJson.getString("offset") == null ? 0 
 											: Integer.parseInt(consumeJson.getString("offset")));
 									if (consumeJson.get("defaultOffset") != null) {
 										List<Object> defaultOffsets = JsonUtils.unmarshalFromString(consumeJson.getString("defaultOffset"), List.class);

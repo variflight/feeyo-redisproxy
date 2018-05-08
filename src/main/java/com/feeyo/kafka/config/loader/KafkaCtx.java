@@ -57,8 +57,7 @@ public class KafkaCtx {
 	
 	private ReentrantLock lock = new ReentrantLock();
 	
-	private KafkaCtx() {
-	}
+	private KafkaCtx() {}
 
 	public static KafkaCtx getInstance() {
 		return INSTANCE;
@@ -73,7 +72,7 @@ public class KafkaCtx {
 		Map<Integer, List<TopicCfg>> topics = groupBy(topicCfgMap);
 		for (Entry<Integer, List<TopicCfg>> entry : topics.entrySet()) {
 			
-			// 获取kafka地址
+			// Get server address for kafka
 			int poolId = entry.getKey();
 			PoolCfg poolCfg = RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
 			StringBuffer servers = new StringBuffer();
@@ -87,32 +86,43 @@ public class KafkaCtx {
 				}
 			}
 
-			// 获取kafka管理对象
-			KafkaAdmin kafkaAdmin = new KafkaAdmin(servers.toString());
-			Map<String, TopicDescription> existsTopics = kafkaAdmin.getTopicAndDescriptions();
-			List<TopicCfg> topicCfgs = entry.getValue();
-			for (TopicCfg topicCfg : topicCfgs) {
-				if (existsTopics.containsKey(topicCfg.getName())) {
-					TopicDescription topicDescription = existsTopics.get(topicCfg.getName());
-					List<TopicPartitionInfo> partitions = topicDescription.partitions();
-					// 如果增加分区
-					if (partitions.size() < topicCfg.getPartitions()) {
-						kafkaAdmin.addPartitionsForTopic(topicCfg.getName(), topicCfg.getPartitions());
-						topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getName());
+			// 获取 Kafka 管理对象
+			KafkaAdmin kafkaAdmin = null;
+			try {
+				
+				kafkaAdmin = new KafkaAdmin(servers.toString());
+				Map<String, TopicDescription> remoteKafkaTopics = kafkaAdmin.getTopicAndDescriptions();
+				List<TopicCfg> topicCfgs = entry.getValue();
+				for (TopicCfg topicCfg : topicCfgs) {
+					
+					String topicName = topicCfg.getName();
+					short replicationFactor = topicCfg.getReplicationFactor();
+					int partitions = topicCfg.getPartitions();
+					
+					TopicDescription topicDescription = remoteKafkaTopics.get( topicName );
+					if ( topicDescription != null ) {
+						int oldPartitions = topicDescription.partitions().size();
+						if ( partitions > oldPartitions ) {
+							kafkaAdmin.addPartitionsForTopic(topicName, partitions);
+							topicDescription = kafkaAdmin.getDescriptionByTopicName( topicName );
+						}
+	
+						initMetadata(topicCfg, topicDescription);
+						
+					} else {
+						
+						kafkaAdmin.createTopic(topicName, partitions, replicationFactor);
+						topicDescription = kafkaAdmin.getDescriptionByTopicName( topicName );
+						
+						// 初始化 metadata
+						initMetadata(topicCfg, topicDescription);
 					}
-
-					initMetadata(topicCfg, topicDescription);
-					
-				} else {
-					kafkaAdmin.createTopic(topicCfg.getName(), topicCfg.getPartitions(), topicCfg.getReplicationFactor());
-					TopicDescription topicDescription = kafkaAdmin.getDescriptionByTopic(topicCfg.getName());
-					
-					// 初始化metadata
-					initMetadata(topicCfg, topicDescription);
 				}
+				
+			} finally {
+				if ( kafkaAdmin != null )
+					kafkaAdmin.close();
 			}
-
-			kafkaAdmin.close();
 		}
 
 	}
@@ -121,38 +131,42 @@ public class KafkaCtx {
 	 * 初始化 Kafka metadata
 	 */
 	private void initMetadata(TopicCfg topicCfg, TopicDescription topicDescription) {
+		
 		if (topicDescription == null) {
 			topicCfg.setMetadata(null);
 			return;
 		}
-		List<TopicPartitionInfo> partitions = topicDescription.partitions();
 		
-		DataPartition[] metadataPartitions = new DataPartition[partitions.size()];
-		Metadata metadata = new Metadata(topicDescription.name(), topicDescription.isInternal(), metadataPartitions);
-
+		//
+		DataPartition[] newPartitions = new DataPartition[ topicDescription.partitions().size() ];
+		String name = topicDescription.name();
+		boolean internal = topicDescription.isInternal();
+		
 		int id = -1;
-		for (int i = 0; i < partitions.size(); i++) {
-			TopicPartitionInfo topicPartitionInfo = partitions.get(i);
-			List<Node> replicas = topicPartitionInfo.replicas();
-			DataNode[] replicasData = new DataNode[replicas.size()];
+		for (int i = 0; i < topicDescription.partitions().size(); i++) {
+			
+			TopicPartitionInfo partitionInfo =  topicDescription.partitions().get(i);
+			List<Node> replicas = partitionInfo.replicas();
+			
+			DataNode[] newReplicas = new DataNode[replicas.size()];
 			for (int j = 0; j < replicas.size(); j++) {
-				replicasData[j] = new DataNode(replicas.get(j).id(), replicas.get(j).host(),
-						replicas.get(j).port());
+				newReplicas[j] = new DataNode(replicas.get(j).id(), replicas.get(j).host(), replicas.get(j).port());
 			}
 			
-			DataNode leader = new DataNode(topicPartitionInfo.leader().id(), topicPartitionInfo.leader().host(),
-					topicPartitionInfo.leader().port());
+			DataNode newLeader = new DataNode(partitionInfo.leader().id(), partitionInfo.leader().host(), partitionInfo.leader().port());
 
-			DataPartition mdp = new DataPartition(topicPartitionInfo.partition(), leader, replicasData);
-			metadataPartitions[i] = mdp;
-			id = leader.getId();
+			DataPartition newPartition = new DataPartition(partitionInfo.partition(), newLeader, newReplicas);
+			newPartitions[i] = newPartition;
+			id = newLeader.getId();
 		}
 
 		loadApiVersion(topicCfg, id);
 
-		topicCfg.setMetadata(metadata);
+		Metadata metadata = new Metadata(name, internal, newPartitions);
+		topicCfg.setMetadata( metadata );
 	}
 
+	
 	/**
 	 * 加载 ApiVersion
 	 */
@@ -217,33 +231,33 @@ public class KafkaCtx {
 		lock.lock();
 
 		Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
-		Map<String, TopicCfg> kafkaMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
+		Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
 		try {
 			// 重新加载
-			Map<String, TopicCfg> newKafkaTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
-			load(newKafkaTopicCfgMap);
+			Map<String, TopicCfg> newTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+			load(newTopicCfgMap);
 
-			for (Entry<String, TopicCfg> entry : newKafkaTopicCfgMap.entrySet()) {
+			for (Entry<String, TopicCfg> entry : newTopicCfgMap.entrySet()) {
 				String key = entry.getKey();
-				TopicCfg newKafkaCfg = entry.getValue();
-				TopicCfg oldKafkaCfg = kafkaMap.get(key);
-				if (oldKafkaCfg != null) {
+				TopicCfg newTopicCfg = entry.getValue();
+				TopicCfg oldTopicCfg = topicCfgMap.get(key);
+				if (oldTopicCfg != null) {
 					// 迁移原来的offset
-					newKafkaCfg.getMetadata().setDataOffsets(oldKafkaCfg.getMetadata().getDataOffsets());
+					newTopicCfg.getMetadata().setDataOffsets(oldTopicCfg.getMetadata().getDataOffsets());
 
 					// 新建的topic
 				} else {
 					Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
 
-					for (DataPartition partition : newKafkaCfg.getMetadata().getPartitions()) {
+					for (DataPartition partition : newTopicCfg.getMetadata().getPartitions()) {
 						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
 						dataOffsets.put(partition.getPartition(), dataOffset);
 					}
 
-					newKafkaCfg.getMetadata().setDataOffsets(dataOffsets);
+					newTopicCfg.getMetadata().setDataOffsets(dataOffsets);
 				}
 			}
-			RedisEngineCtx.INSTANCE().setKafkaTopicMap(newKafkaTopicCfgMap);
+			RedisEngineCtx.INSTANCE().setKafkaTopicMap(newTopicCfgMap);
 			
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();

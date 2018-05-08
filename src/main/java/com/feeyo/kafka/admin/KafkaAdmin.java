@@ -97,7 +97,7 @@ public class KafkaAdmin {
 	 * 获取指定topic的配置信息
 	 * @return
 	 */
-	public TopicDescription getDescriptionByTopic(String topic) {
+	public TopicDescription getDescriptionByTopicName(String topic) {
 		List<String> topics = new ArrayList<String>();
 		topics.add(topic);
 		try {
