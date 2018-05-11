@@ -12,9 +12,9 @@ import com.feeyo.kafka.codec.ProduceRequest;
 import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
-import com.feeyo.kafka.config.Metadata;
 import com.feeyo.kafka.config.ConsumerOffset;
 import com.feeyo.kafka.config.DataOffset;
+import com.feeyo.kafka.config.Metadata;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
@@ -46,8 +46,10 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	// 一次消费的条数
 	private static final int FETCH_LOG_COUNT = 1;
-	private static final int LENGTH_BYTE_COUNT = 4;
 	
+	private static final int LENGTH_BYTE_COUNT = 4;
+	private static final int PRODUCE_RESPONSE_SIZE = 2;
+	private static final int CONSUMER_RESPONSE_SIZE = 3;
 	
 	public KafkaCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -179,14 +181,30 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		public void continueParsing(ByteBuffer buffer) {
 			Struct response = ApiKeys.PRODUCE.parseResponse((short)5, buffer);
 			ProduceResponse pr = new ProduceResponse(response);
+			// 1k的buffer 肯定够用
+			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
 			if (pr.isCorrect()) {
-				frontCon.write(OK);
 				dataOffset.setOffsets(pr.getOffset(), pr.getLogStartOffset());
+				
+				byte[] size = ProtoUtils.convertIntToByteArray(PRODUCE_RESPONSE_SIZE);
+				byte[] partitonArr = ProtoUtils.convertIntToByteArray(dataOffset.getPartition());
+				byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
+				byte[] offsetArr = String.valueOf(pr.getOffset()).getBytes();
+				byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
+				
+				bb.put(ASTERISK).put(size).put(CRLF)
+					.put(DOLLAR).put(partitonLength).put(CRLF).put(partitonArr).put(CRLF)
+					.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF);
+				
 			} else {
-				StringBuffer sb = new StringBuffer();
-				sb.append("-ERR ").append(pr.getErrorMessage()).append("\r\n");
-				frontCon.write(sb.toString().getBytes());
+				byte[] size = ProtoUtils.convertIntToByteArray(1);
+				byte[] msg = pr.getErrorMessage().getBytes();
+				byte[] msgLen = ProtoUtils.convertIntToByteArray(msg.length);
+
+				bb.put(ASTERISK).put(size).put(CRLF)
+					.put(DOLLAR).put(msgLen).put(CRLF).put(msg).put(CRLF);
 			}
+			frontCon.write(bb);
 		}
 	}
 	
@@ -207,7 +225,6 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		@Override
 		public void continueParsing(ByteBuffer buffer) {
 			
-
 			Struct response = ApiKeys.FETCH.parseResponse((short)6, buffer);
 			FetchResponse fr = new FetchResponse(response);
 			if (fr.isCorrect()) {
@@ -220,7 +237,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 					frontCon.write(NULL);
 					return;
 				}
-				byte[] size = ProtoUtils.convertIntToByteArray(3);
+				byte[] size = ProtoUtils.convertIntToByteArray(CONSUMER_RESPONSE_SIZE);
 				byte[] partitonArr = ProtoUtils.convertIntToByteArray(dataOffset.getPartition());
 				byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
 				byte[] offsetArr = String.valueOf(consumeOffset).getBytes();
