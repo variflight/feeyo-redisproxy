@@ -93,6 +93,31 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				
 			}
 			break;
+		case CommandParse.PARTITIONS_CMD: 
+			{
+				if (request.getNumArgs() != 2) {
+					throw new InvalidRequestExistsException("wrong number of arguments");
+				}
+	
+				if (!topicCfg.isConsumer(userCfg.getPassword())) {
+					throw new InvalidRequestExistsException("no authority");
+				}
+				
+				return new RouteResult(RedisRequestType.KAFKA, requests, null);
+			}
+		case CommandParse.OFFSET_CMD: 
+			{
+				if (request.getNumArgs() != 2) {
+					throw new InvalidRequestExistsException("wrong number of arguments");
+				}
+				
+				if (!topicCfg.isConsumer(userCfg.getPassword())) {
+					throw new InvalidRequestExistsException("no authority");
+				}
+				
+				partition = new DataPartition(0, null, null);
+			}
+			break;
 		}
 
 		if ( partition == null ) {

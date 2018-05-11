@@ -21,6 +21,9 @@ public class RouteUtil {
 			if ( requestPolicy.getCategory() != CommandParse.KAFKA_CMD )
 				return true;
 			
+			if (isPipeline)
+				return true;  // kafka指令 不支持pipeline
+			
 		}  else {
 			if ( requestPolicy.getCategory() == CommandParse.KAFKA_CMD ) 
 				return true;

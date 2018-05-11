@@ -1,12 +1,16 @@
 package com.feeyo.redis.net.front;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.config.DataPartition;
+import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -28,9 +32,11 @@ import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
 import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
-import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
+import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteService;
+import com.feeyo.redis.nio.NetSystem;
+import com.feeyo.util.ProtoUtils;
 
 public class RedisFrontSession {
 	
@@ -50,8 +56,7 @@ public class RedisFrontSession {
 	public static final String UNKNOW_COMMAND = "Unknow command.";
 	public static final String NOT_READ_COMMAND = "Not read command.";
 	public static final byte[] FLOW_LIMIT = "-ERR flow limit.\r\n".getBytes();
-
-	
+	public static final byte[] NULL =  "$-1\r\n".getBytes();
 	
 	// PUBSUB
 	private PubSub pubsub = null;
@@ -195,8 +200,8 @@ public class RedisFrontSession {
 					return;
 				}
 				
-				boolean intercepted = interceptPubsub( routeResult );
-				if ( intercepted ) {
+				// pusub 和 kpartitions 指令提前返回
+				if ( interceptPubsub( routeResult ) || interceptKpartitions( routeResult )) {
 					return;
 				}
 				
@@ -239,7 +244,7 @@ public class RedisFrontSession {
 					} else if ("QUIT".equals(cmd)) {
 						frontCon.write(OK);
 						frontCon.close("quit");
-					} 
+					}
 				}
 				
 			} catch (PhysicalNodeUnavailableException e) {
@@ -487,6 +492,40 @@ public class RedisFrontSession {
 		return isIntercepted;
 	}
 	
+	
+	// 拦截 PUBSUB
+	public boolean interceptKpartitions(RouteResult routeResult) throws IOException {
+		boolean isIntercepted = false;
+		
+		RedisRequest request = routeResult.getRequests().get(0);
+		if ( request.getPolicy().getHandleType() == CommandParse.PARTITIONS_CMD ) {
+			isIntercepted = true;
+			
+			int poolId = frontCon.getUserCfg().getPoolId();
+			String topic = new String(request.getArgs()[1]);
+			KafkaPoolCfg poolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
+			TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
+			DataPartition[] partitions = tc.getMetadata().getPartitions();
+			
+			// 申请1k buffer （肯定够）
+			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
+			byte ASTERISK = '*';
+			byte DOLLAR = '$';
+			byte[] CRLF = "\r\n".getBytes();		
+			
+			byte[] size = ProtoUtils.convertIntToByteArray(partitions.length);
+			bb.put(ASTERISK).put(size).put(CRLF);
+			for (DataPartition dataPartition : partitions) {
+				byte[] partition = ProtoUtils.convertIntToByteArray(dataPartition.getPartition());
+				byte[] partitionLength = ProtoUtils.convertIntToByteArray(partition.length);
+				bb.put(DOLLAR).put(partitionLength).put(CRLF).put(partition).put(CRLF);
+			}
+			
+			frontCon.write(bb);
+		}
+		
+		return isIntercepted;
+	}
 	
 	private void cleanup() {
 		defaultCommandHandler = null;

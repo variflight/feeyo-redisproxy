@@ -30,7 +30,7 @@ public class CommandParse {
 	public static final byte EXISTS_CMD			= 12;		// 中间件加强指令 exists
 	public static final byte BLOCK_CMD 	    	= 13;		// 中间件加强指令, 阻塞指令特殊处理
 	
-	// kakfa指令
+	// 处理策略 kakfa指令
 	public static final byte PRODUCE_CMD    	= 14;       // 生产指令
 	public static final byte CONSUMER_CMD    	= 15;       // 消费指令
 	public static final byte PARTITIONS_CMD    	= 16;       // 消费指令

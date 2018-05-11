@@ -207,7 +207,6 @@ public class OffsetAdmin {
 							ConsumerOffset co = JsonUtils.unmarshalFromByte(consumerOffset, ConsumerOffset.class);
 							dataOffset.getConsumerOffsets().put(co.getConsumer(), co);
 						}
-						
 					}
 				}
 				
