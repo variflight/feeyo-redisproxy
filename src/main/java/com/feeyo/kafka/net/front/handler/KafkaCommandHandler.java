@@ -181,7 +181,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			ProduceResponse pr = new ProduceResponse(response);
 			if (pr.isCorrect()) {
 				frontCon.write(OK);
-				dataOffset.setProducerOffset(pr.getOffset(), pr.getLogStartOffset());
+				dataOffset.setOffsets(pr.getOffset(), pr.getLogStartOffset());
 			} else {
 				StringBuffer sb = new StringBuffer();
 				sb.append("-ERR ").append(pr.getErrorMessage()).append("\r\n");

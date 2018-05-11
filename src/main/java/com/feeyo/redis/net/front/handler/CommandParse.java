@@ -30,8 +30,11 @@ public class CommandParse {
 	public static final byte EXISTS_CMD			= 12;		// 中间件加强指令 exists
 	public static final byte BLOCK_CMD 	    	= 13;		// 中间件加强指令, 阻塞指令特殊处理
 	
+	// kakfa指令
 	public static final byte PRODUCE_CMD    	= 14;       // 生产指令
 	public static final byte CONSUMER_CMD    	= 15;       // 消费指令
+	public static final byte PARTITIONS_CMD    	= 16;       // 消费指令
+	public static final byte OFFSET_CMD    	= 17;       // 消费指令
 	
 	
 	// RW 
@@ -52,6 +55,8 @@ public class CommandParse {
 		// kafka
 		_cmds.put("KPUSH", 				new RedisRequestPolicy(KAFKA_CMD, PRODUCE_CMD, WRITE_CMD));
 		_cmds.put("KPOP", 				new RedisRequestPolicy(KAFKA_CMD, CONSUMER_CMD, WRITE_CMD));
+		_cmds.put("KPARTITIONS", 		new RedisRequestPolicy(KAFKA_CMD, PARTITIONS_CMD, READ_CMD));
+		_cmds.put("KOFFSET", 			new RedisRequestPolicy(KAFKA_CMD, OFFSET_CMD, READ_CMD));
 		
 		// Cluster
 		_cmds.put("CLUSTER", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));

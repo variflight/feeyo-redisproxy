@@ -1,23 +1,29 @@
 package com.feeyo.kafka.net.backend.pool;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.kafka.common.Node;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
+import com.feeyo.kafka.codec.ApiVersionsResponse;
 import com.feeyo.kafka.codec.RequestHeader;
-import com.feeyo.kafka.config.loader.KafkaCtx;
+import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.config.Metadata;
 import com.feeyo.kafka.net.backend.KafkaBackendConnectionFactory;
+import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.net.backend.BackendConnection;
+import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.NetSystem;
@@ -71,8 +77,61 @@ public class KafkaPool extends AbstractPool {
 			availableHostList.add(node.host() + ":" + node.port());
 			backupHostList.add(node.host() + ":" + node.host());
 		}
-
+		
+		// 加载 ApiVersion
+		loadKafkaVersion();
+		
 		return true;
+	}
+
+	/**
+	 * 加载kafka版本
+	 */
+	private void loadKafkaVersion() {
+		for (Entry<Integer, PhysicalNode> entry : physicalNodes.entrySet()) {
+
+			PhysicalNode physicalNode = entry.getValue();
+
+			try {
+
+				RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short) 1,
+						Thread.currentThread().getName(), Utils.getCorrelationId());
+
+				Struct struct = requestHeader.toStruct();
+				final ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(struct.sizeOf() + 4);
+				buffer.putInt(struct.sizeOf());
+				struct.writeTo(buffer);
+
+				// ApiVersionCallback
+				KafkaCmdCallback apiVersionCallback = new KafkaCmdCallback() {
+					@Override
+					public void continueParsing(ByteBuffer buffer) {
+						Struct response = ApiKeys.API_VERSIONS.parseResponse((short) 1, buffer);
+						ApiVersionsResponse ar = new ApiVersionsResponse(response);
+						if (ar.isCorrect()) {
+							Metadata.setApiVersions(ar.getApiKeyToApiVersion());
+						}
+					}
+				};
+
+				BackendConnection backendCon = physicalNode.getConnection(apiVersionCallback, null);
+				if (backendCon == null) {
+					TodoTask task = new TodoTask() {
+						@Override
+						public void execute(BackendConnection backendCon) throws Exception {
+							backendCon.write(buffer);
+						}
+					};
+					apiVersionCallback.addTodoTask(task);
+					backendCon = physicalNode.createNewConnection(apiVersionCallback, null);
+
+				} else {
+					backendCon.write(buffer);
+				}
+			} catch (IOException e) {
+				LOGGER.warn("", e);
+			}
+		}
 	}
 
 	@Override
@@ -208,7 +267,10 @@ public class KafkaPool extends AbstractPool {
 					}
 					
 					// 重新加载kafka topic信息
-					KafkaCtx.getInstance().reload();
+					try {
+						((KafkaPoolCfg) this.poolCfg).reload();
+					} catch (Exception e) {
+					}
 					
 					// 备份old
 					Map<Integer, PhysicalNode> oldPhysicalNodes = this.physicalNodes;

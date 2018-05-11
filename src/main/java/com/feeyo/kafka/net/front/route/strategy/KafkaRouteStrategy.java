@@ -3,9 +3,10 @@ package com.feeyo.kafka.net.front.route.strategy;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.DataOffset;
 import com.feeyo.kafka.config.DataPartition;
+import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
@@ -16,8 +17,8 @@ import com.feeyo.redis.net.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
-import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
+import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 
 /**
@@ -33,13 +34,18 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
     	
     	RedisRequest request = requests.get(0);
-    	if ( request.getNumArgs() > 1 ) {
+    	if ( request.getNumArgs() < 2 ) {
     		throw new InvalidRequestExistsException("wrong number of arguments");
     	}
     	
     	// 获取 topic
     	String topicName = new String( request.getArgs()[1] );
-		TopicCfg topicCfg = RedisEngineCtx.INSTANCE().getKafkaTopicMap().get( topicName );
+    		KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( userCfg.getPoolId() );
+    		if (kafkaPoolCfg == null) {
+    			throw new InvalidRequestExistsException("kafka pool not exists");
+    		}
+    		
+		TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get( topicName );
 		if (topicCfg == null) {
 			throw new InvalidRequestExistsException("topic not exists");
 		}
@@ -47,7 +53,6 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		if (topicCfg.getMetadata() == null) {
 			throw new InvalidRequestExistsException("topic not create or not load to kafka...");
 		} 
-		
 		
 		// 分区
 		DataPartition partition = null;

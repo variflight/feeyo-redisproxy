@@ -10,9 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.kafka.config.TopicCfg;
-import com.feeyo.kafka.config.loader.KafkaConfigLoader;
-import com.feeyo.kafka.config.loader.KafkaCtx;
+import com.feeyo.kafka.admin.OffsetAdmin;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
@@ -20,11 +18,11 @@ import com.feeyo.redis.config.loader.zk.ZkClient;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PoolFactory;
 import com.feeyo.redis.net.front.RedisFrontendConnectionFactory;
-import com.feeyo.redis.nio.NetFlowMonitor;
 import com.feeyo.redis.nio.NIOAcceptor;
 import com.feeyo.redis.nio.NIOConnector;
 import com.feeyo.redis.nio.NIOReactor;
 import com.feeyo.redis.nio.NIOReactorPool;
+import com.feeyo.redis.nio.NetFlowMonitor;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.SystemConfig;
 import com.feeyo.redis.nio.buffer.BufferPool;
@@ -56,8 +54,6 @@ public class RedisEngineCtx {
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
 	
-	private volatile Map<String, TopicCfg> kafkaTopicMap = null;
-	
 	private volatile Properties mailProperty = null;
 
 	// backup
@@ -79,8 +75,6 @@ public class RedisEngineCtx {
 			this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
-			
-			this.kafkaTopicMap = KafkaConfigLoader.loadTopicCfgMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("kafka.xml") );
 		} catch (Exception e) {
 		}
 		
@@ -201,16 +195,10 @@ public class RedisEngineCtx {
         String authString  = it.hasNext() ? it.next() : "";
         KeepAlived.check(port, authString);
         
-        // 7, kafka 配置加载
-        if (kafkaTopicMap != null && !kafkaTopicMap.isEmpty()) {
-	        	KafkaCtx.getInstance().load(kafkaTopicMap);
-        }
-
-        
 //		// 7, zk startup
 //		ZkClient.INSTANCE().init();
 //		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
-        
+        OffsetAdmin.getInstance().startup();
         
 	}
 	
@@ -479,14 +467,6 @@ public class RedisEngineCtx {
 	
 	public Properties getMailProperties() {
 		return this.mailProperty;
-	}
-	
-	public Map<String, TopicCfg> getKafkaTopicMap() {
-		return this.kafkaTopicMap;
-	}
-	
-	public void setKafkaTopicMap(Map<String, TopicCfg> map) {
-		this.kafkaTopicMap = map;
 	}
 	
 	public Map<Integer, AbstractPool> getBackupPoolMap() {

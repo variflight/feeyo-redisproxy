@@ -9,10 +9,11 @@ import com.alibaba.fastjson.annotation.JSONField;
 
 public class DataOffset {
 	
-	private final int partition;
+	private int partition;
 	private volatile long producerOffset;
 	private volatile long logStartOffset;
 	
+	@JSONField(serialize=false)
 	private Map<String, ConsumerOffset> consumerOffsets;
 	
 	public DataOffset (int partition, long producerOffset, long logStartOffset) {
@@ -22,11 +23,15 @@ public class DataOffset {
 		this.logStartOffset = logStartOffset;
 	}
 	
+	public DataOffset() {
+		this(0, 0, 0);
+	}
+	
 	public long getProducerOffset() {
 		return producerOffset;
 	}
 
-	public void setProducerOffset(long producerOffset, long logStartOffset) {
+	public void setOffsets(long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
 		this.logStartOffset = logStartOffset;
 	}
@@ -92,6 +97,13 @@ public class DataOffset {
 	public void setLogStartOffset(long logStartOffset) {
 		this.logStartOffset = logStartOffset;
 	}
-	
+
+	public void setPartition(int partition) {
+		this.partition = partition;
+	}
+
+	public void setProducerOffset(long producerOffset) {
+		this.producerOffset = producerOffset;
+	}
 	
 }

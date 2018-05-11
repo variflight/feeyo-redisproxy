@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <kafka>
-	<topic>
-		<property poolId="3" name="test" partitions="3" replicationFactor="2" producer="pwd01" consumer="pwd01,pwd02"/>
-		<property poolId="3" name="test2" partitions="3" replicationFactor="2" producer="pwd01" consumer="pwd01,pwd02"/>
-	</topic>
+	
+	<pool id="3">
+		<topic name="test6" partitions="3" replicationFactor="2" producer="pwd05" consumer="pwd05,pwd06"/>
+	</pool>
 	
 	<offset server="127.0.0.1:2181" path="/feeyo/kafka/offsets" />
 	

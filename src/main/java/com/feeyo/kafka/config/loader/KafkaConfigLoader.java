@@ -15,44 +15,51 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.OffsetManageCfg;
-import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.net.backend.pool.PoolType;
+import com.feeyo.kafka.config.TopicCfg;
 
 public class KafkaConfigLoader {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaConfigLoader.class );
 	
-	public static Map<String, TopicCfg> loadTopicCfgMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception {
+	public static Map<String, TopicCfg> loadTopicCfgMap(int poolId, String uri) throws Exception {
 		
 		Map<String, TopicCfg> map = new HashMap<String, TopicCfg>();
 		try {
-			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("property");
+			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("pool");
+			
 			for (int i = 0; i < nodeList.getLength(); i++) {
 				Node node = nodeList.item(i);
 				NamedNodeMap nameNodeMap = node.getAttributes();		
+				int id = getIntAttribute(nameNodeMap, "id", -1);
 				
-				String name = getAttribute(nameNodeMap, "name", null);
-				if (name == null) {
-					LOGGER.warn("kafka.xml err,  topic is null.");
+				if (id != poolId) {
 					continue;
 				}
 				
-				int poolId = getIntAttribute(nameNodeMap, "poolId", -1);
-				int partitions = getIntAttribute(nameNodeMap, "partitions", 1);
-				short replicationFactor = getShortAttribute(nameNodeMap, "replicationFactor", (short)0);
-				String[] producers = getAttribute(nameNodeMap, "producer", "").split(",");
-				String[] consumers = getAttribute(nameNodeMap, "consumer", "").split(",");
-				
-				PoolCfg poolCfg = poolMap.get(poolId);
-				if ( poolCfg.getType() != PoolType.KAFKA_CLUSTER ) {
-					LOGGER.error("kafka.xml err,  topic:{} is not a kafka pool.", name);
-					continue;
+				NodeList childNodeList = node.getChildNodes();
+				for (int j = 0; j < childNodeList.getLength(); j++) {
+					Node childNode = childNodeList.item(j);
+					NamedNodeMap nameChildNodeMap = childNode.getAttributes();	
+					if (nameChildNodeMap == null) {
+						continue;
+					}
+					
+					String name = getAttribute(nameChildNodeMap, "name", null);
+					if (name == null) {
+						LOGGER.warn("kafka.xml err,  topic is null.");
+						continue;
+					}
+					
+					int partitions = getIntAttribute(nameChildNodeMap, "partitions", 1);
+					short replicationFactor = getShortAttribute(nameChildNodeMap, "replicationFactor", (short)0);
+					String[] producers = getAttribute(nameChildNodeMap, "producer", "").split(",");
+					String[] consumers = getAttribute(nameChildNodeMap, "consumer", "").split(",");
+					
+					TopicCfg topicCfg = new TopicCfg(name, poolId, partitions, replicationFactor, producers, consumers);
+					map.put(name, topicCfg);
 				}
 				
-				TopicCfg topicCfg = new TopicCfg(name, poolId, partitions, replicationFactor, producers, consumers);
-				map.put(name, topicCfg);
 			}
 		} catch (Exception e) {
 			LOGGER.error("load kafka.xml err: " + e);
@@ -73,7 +80,7 @@ public class KafkaConfigLoader {
 			Node node = nodeList.item(0);
 			NamedNodeMap nameNodeMap = node.getAttributes();
 			String server = getAttribute(nameNodeMap, "server", null);
-			String path = getAttribute(nameNodeMap, "path", "/root/redis-proxy/kafka/data/topic");
+			String path = getAttribute(nameNodeMap, "path", "/feeyo/kafka/offsets");
 			int index = path.lastIndexOf('/');
 			if (index > 0 && index == path.length() - 1) {
 				path = path.substring(0, index);

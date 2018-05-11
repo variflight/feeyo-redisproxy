@@ -20,6 +20,8 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import com.feeyo.kafka.config.KafkaPoolCfg;
+
 
 
 public class ConfigLoader {
@@ -82,22 +84,33 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-
-				PoolCfg poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
+				
+				PoolCfg poolCfg;
+				if (type == 3) {
+					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon);
+				} else {
+					poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
+				}
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
-				for(int j = 0; j < nodeList.size(); j++) {
-					Node node = nodeList.get(j);					
+				for (int j = 0; j < nodeList.size(); j++) {
+					Node node = nodeList.get(j);
 					NamedNodeMap attrs = node.getAttributes();
 					String ip = getAttribute(attrs, "ip", null);
 					int port = getIntAttribute(attrs, "port", 6379);
 					String suffix = getAttribute(attrs, "suffix", null);
-					if(type == 2 && suffix == null) {
-						throw new ConfigurationException("Customer Cluster nodes need to set unique suffix property");
+					if (type == 2 && suffix == null) {
+						throw new ConfigurationException(
+								"Customer Cluster nodes need to set unique suffix property");
 					} else {
-						poolCfg.addNode( ip + ":" + port + ":" + suffix);
+						poolCfg.addNode(ip + ":" + port + ":" + suffix);
 					}
 				}
-				map.put(id,  poolCfg);
+				
+				if (poolCfg instanceof KafkaPoolCfg) {
+					((KafkaPoolCfg) poolCfg).load();
+				}
+				
+				map.put(id, poolCfg);
 			}
 		} catch (Exception e) {
 			LOGGER.error("loadPoolCfg err " + e);

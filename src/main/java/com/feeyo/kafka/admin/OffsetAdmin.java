@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -20,15 +19,16 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.alibaba.fastjson.JSONObject;
 import com.feeyo.kafka.config.ConsumerOffset;
-import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.DataOffset;
 import com.feeyo.kafka.config.DataPartition;
+import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.OffsetManageCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.ConfigLoader;
+import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 /**
@@ -107,16 +107,32 @@ public class OffsetAdmin {
 	}
 	
 	
-	private void saveOffsetsToZk(String topicName,  Map<Integer, DataOffset> offset) {
-		String path = offsetManageCfg.getPath() + File.separator + topicName;
+	private void saveOffsetsToZk(String topicName,  Map<Integer, DataOffset> offset, int poolId) {
+		String basepath = offsetManageCfg.getPath() + File.separator + String.valueOf(poolId) + File.separator + topicName;
 		Stat stat;
 		try {
-			stat = curator.checkExists().forPath(path);
-			if (stat == null) {
-				ZKPaths.mkdirs(curator.getZookeeperClient().getZooKeeper(), path);
+			for (Entry<Integer, DataOffset> offsetEntry : offset.entrySet()) {
+				// 点位
+				DataOffset dataOffset = offsetEntry.getValue();
+				String path = basepath + File.separator + offsetEntry.getKey();
+				stat = curator.checkExists().forPath(path);
+				if (stat == null) {
+					ZKPaths.mkdirs(curator.getZookeeperClient().getZooKeeper(), path);
+				}
+				curator.setData().inBackground().forPath(path, JsonUtils.marshalToByte(dataOffset));
+				
+				// 消费者点位
+				Map<String, ConsumerOffset> consumerOffsets = dataOffset.getConsumerOffsets();
+				for (Entry<String, ConsumerOffset> consumerOffsetEntry : consumerOffsets.entrySet()) {
+					String consumerOffsetPath = path + File.separator + consumerOffsetEntry.getKey();
+					stat = curator.checkExists().forPath(consumerOffsetPath);
+					if (stat == null) {
+						ZKPaths.mkdirs(curator.getZookeeperClient().getZooKeeper(), consumerOffsetPath);
+					}
+					ConsumerOffset co = consumerOffsetEntry.getValue();
+					curator.setData().inBackground().forPath(consumerOffsetPath, JsonUtils.marshalToByte(co));
+				}
 			}
-			
-			curator.setData().inBackground().forPath(path, JsonUtils.marshalToByte(offset));
 		} catch (Exception e) {
 			LOGGER.warn("kafka cmd offset commit err:", e);
 		}
@@ -124,96 +140,16 @@ public class OffsetAdmin {
 
 	public void startup() {
 		
-		//
-		Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
-		for (TopicCfg topicCfg : topicCfgMap.values()) {
-			
-			String topicName  = topicCfg.getName();
-			String path = offsetManageCfg.getPath() + File.separator + topicName;
-			try {
-				// base node 
-				createZkNode(path, null);
+		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
+		for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
+			PoolCfg poolCfg = entry.getValue();
+			if (poolCfg instanceof KafkaPoolCfg) {
+				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
 				
-				Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
-				byte[] data = curator.getData().forPath(path);
-				if (data == null) {
-					
-					for (DataPartition partition : topicCfg.getMetadata().getPartitions()) {
-						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
-						dataOffsets.put(partition.getPartition(), dataOffset);
-					}
-					saveOffsetsToZk(topicName, dataOffsets);
-					
-				} else {
-					
-					/*
-					 {
-					 	2:{"offsets":{"pwd01":{"consumer":"pwd01","offset":1},"pwd02":{"consumer":"pwd02","offset":2}},"partition":1,"producerOffset":100}
-					  	1:{"offsets":{"pwd01":{"consumer":"pwd01","offset":1},"pwd02":{"consumer":"pwd02","offset":2}},"partition":1,"producerOffset":100}
-					  }
-					*/
-
-					String str = new String(data);
-					JSONObject obj = JsonUtils.unmarshalFromString(str, JSONObject.class);
-					
-					for (DataPartition partition : topicCfg.getMetadata().getPartitions()) {
-
-						Object metaDataOffsetObject = obj.get( String.valueOf(partition.getPartition()) );
-						if (metaDataOffsetObject == null) {
-							DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
-							dataOffsets.put(partition.getPartition(), dataOffset);
-							
-						} else {
-							JSONObject jsonObject = JsonUtils.unmarshalFromString(String.valueOf(metaDataOffsetObject), JSONObject.class);
-							
-							DataOffset dataOffset = new DataOffset(partition.getPartition(),
-									jsonObject.get("producerOffset") == null ? 0 : Integer.parseInt(jsonObject.getString("producerOffset")),
-									jsonObject.get("logStartOffset") == null ? 0 : Integer.parseInt(jsonObject.getString("logStartOffset")));
-							
-							Map<String, ConsumerOffset> consumerOffsets = new ConcurrentHashMap<String, ConsumerOffset>();
-							
-							JSONObject offsetsObject = JsonUtils.unmarshalFromString(jsonObject.getString("offsets"), JSONObject.class);
-							Set<String> consumers = topicCfg.getConsumers();
-							for (String consumer : consumers) {
-
-								if (offsetsObject.get(consumer) != null) {
-									
-									JSONObject consumeJson = JsonUtils.unmarshalFromString(offsetsObject.getString(consumer), JSONObject.class);
-									ConsumerOffset cOffset = new ConsumerOffset(
-											 consumer, consumeJson.getString("offset") == null ? 0 
-											: Integer.parseInt(consumeJson.getString("offset")));
-									if (consumeJson.get("defaultOffset") != null) {
-										@SuppressWarnings("unchecked")
-										List<Object> defaultOffsets = JsonUtils.unmarshalFromString(consumeJson.getString("defaultOffset"), List.class);
-										for (Object defaultOffset : defaultOffsets) {
-											cOffset.revertOldOffset(Long.parseLong(String.valueOf(defaultOffset)));
-										}
-									}
-									
-									consumerOffsets.put(consumer, cOffset);
-									
-								} else {
-									ConsumerOffset cOffset = new ConsumerOffset(consumer, 0);
-									consumerOffsets.put(consumer, cOffset);
-								}
-							}
-							
-							dataOffset.setConsumerOffsets(consumerOffsets);
-							
-							dataOffsets.put(partition.getPartition(), dataOffset);
-						}
-						
-					}
-					
-				}
-				
-				topicCfg.getMetadata().setDataOffsets(dataOffsets);
-				
-			} catch (Exception e) {
-				LOGGER.warn("", e);
+				// 加载offset
+				loadOffset(topicCfgMap, poolCfg.getId());
 			}
 		}
-		
 		
 		// 定时持久化offset
 		executorService.scheduleAtFixedRate(new Runnable() {
@@ -221,29 +157,107 @@ public class OffsetAdmin {
 			public void run() {
 				try {
 					// offset 数据持久化
-					Map<String, TopicCfg> topicCfgMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
-					for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
-						TopicCfg topicCfg = entry.getValue();
-						saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getDataOffsets());
-					}
+					saveOffsets();
+					
 				} catch (Exception e) {
 					LOGGER.warn("offsetAdmin err: ", e);
 				}
 				
 			}
 		}, 30, 30, TimeUnit.SECONDS);
+		
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				close();
+			}
+		});
+
+	}
+
+	private void loadOffset(Map<String, TopicCfg> topicCfgMap, int poolId) {
+		for (TopicCfg topicCfg : topicCfgMap.values()) {
+			
+			String topicName  = topicCfg.getName();
+			String basepath = offsetManageCfg.getPath() + File.separator  + String.valueOf(poolId) + File.separator + topicName;
+			Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
+			try {
+				for (DataPartition partition : topicCfg.getMetadata().getPartitions()) {
+					
+					String path = basepath + File.separator + partition.getPartition();
+					// base node 
+					createZkNode(path, null);
+					byte[] data = curator.getData().forPath(path);
+					
+					if (isNull(data)) {
+						
+						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
+						dataOffsets.put(partition.getPartition(), dataOffset);
+						
+					} else {
+						// {"logStartOffset":0,"partition":0,"producerOffset":0}
+						DataOffset dataOffset = JsonUtils.unmarshalFromByte(data, DataOffset.class);
+						dataOffsets.put(partition.getPartition(), dataOffset);
+						
+						List<String> childrenPath = curator.getChildren().forPath(path);
+						for (String clildPath : childrenPath) {
+							byte[] consumerOffset = curator.getData().forPath(path + File.separator + clildPath);
+							if (isNull(data)) {
+								continue;
+							}
+							ConsumerOffset co = JsonUtils.unmarshalFromByte(consumerOffset, ConsumerOffset.class);
+							dataOffset.getConsumerOffsets().put(co.getConsumer(), co);
+						}
+						
+					}
+				}
+				
+				
+				topicCfg.getMetadata().setDataOffsets(dataOffsets);
+				
+			} catch (Exception e) {
+				LOGGER.warn("", e);
+			}
+		}
 	}
 	
 	public void close() {
 		
 		// 关闭定时任务
 		executorService.shutdown();
-
+		
 		// 提交本地剩余offset
-		Map<String, TopicCfg> kafkaTopicMap = RedisEngineCtx.INSTANCE().getKafkaTopicMap();
-		for (Entry<String, TopicCfg> entry : kafkaTopicMap.entrySet()) {
-			TopicCfg topicCfg = entry.getValue();
-			saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getDataOffsets());
+		saveOffsets();
+
+	}
+
+	/**
+	 * offsets 持久化
+	 */
+	private void saveOffsets() {
+		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
+		for (Entry<Integer, PoolCfg> poolEntry : poolCfgMap.entrySet()) {
+			PoolCfg poolCfg = poolEntry.getValue();
+			if (poolCfg instanceof KafkaPoolCfg) {
+				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
+				
+				for (Entry<String, TopicCfg> topicEntry : topicCfgMap.entrySet()) {
+					TopicCfg topicCfg = topicEntry.getValue();
+					saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getDataOffsets(), poolCfg.getId());
+				}
+			}
 		}
+	}
+	
+	private boolean isNull(byte[] b) {
+		if (b == null) {
+			return true;
+		}
+		
+		String str = new String(b);
+		if ("".equals(str) || "null".equals(str) || "NULL".equals(str))  {
+			return true;
+		}
+		
+		return false;
 	}
 }
