@@ -91,6 +91,7 @@ public class ConfigLoader {
 				} else {
 					poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
 				}
+				
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
 				for (int j = 0; j < nodeList.size(); j++) {
 					Node node = nodeList.get(j);
@@ -106,9 +107,8 @@ public class ConfigLoader {
 					}
 				}
 				
-				if (poolCfg instanceof KafkaPoolCfg) {
-					((KafkaPoolCfg) poolCfg).load();
-				}
+				// load extra config
+				poolCfg.loadExtraCfg();
 				
 				map.put(id, poolCfg);
 			}

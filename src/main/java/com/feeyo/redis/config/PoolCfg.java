@@ -55,6 +55,19 @@ public class PoolCfg {
 		this.nodes.add( node );
 	}
 	
+	
+	// Default null implement
+	//
+	public boolean loadExtraCfg() {
+		// ignore
+		return true;
+	}
+	
+	public boolean reloadExtraCfg() throws Exception {
+		// ignore
+		return true;
+	}
+	
 	@Override
     public boolean equals(Object obj) {
         if (this == obj)

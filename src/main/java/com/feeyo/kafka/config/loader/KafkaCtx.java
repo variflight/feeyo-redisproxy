@@ -12,7 +12,6 @@ import org.apache.kafka.common.TopicPartitionInfo;
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.config.DataNode;
 import com.feeyo.kafka.config.DataPartition;
-import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.Metadata;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.redis.config.PoolCfg;
@@ -131,9 +130,7 @@ public class KafkaCtx {
 			Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 			for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
 				PoolCfg poolCfg = entry.getValue();
-				if (poolCfg instanceof KafkaPoolCfg) {
-					((KafkaPoolCfg) poolCfg).reload();
-				}
+				poolCfg.reloadExtraCfg();
 			}
 			
 		} catch (Exception e) {

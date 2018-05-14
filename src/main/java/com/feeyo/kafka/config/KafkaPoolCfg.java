@@ -13,6 +13,7 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 
 public class KafkaPoolCfg extends PoolCfg {
+	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaPoolCfg.class );
 	
 	// topicName -> topicCfg
@@ -23,11 +24,14 @@ public class KafkaPoolCfg extends PoolCfg {
 	}
 	
 	// 加载kafka配置
-	public boolean load() {
+	//
+	@Override
+	public boolean loadExtraCfg() {
 		try {
 			
 			// load topic
-			topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+			topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, 
+					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
 			
 			// load topic metadata
 			KafkaCtx.getInstance().load(topicCfgMap, this);
@@ -38,10 +42,13 @@ public class KafkaPoolCfg extends PoolCfg {
 		return true;
 	}
 	
-	public boolean reload() throws Exception {
+	@Override
+	public boolean reloadExtraCfg() throws Exception {
 		
 		try {
-			Map<String, TopicCfg> newTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+			
+			Map<String, TopicCfg> newTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, 
+					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
 			
 			// load topic metadata
 			KafkaCtx.getInstance().load(newTopicCfgMap, this);
@@ -56,6 +63,8 @@ public class KafkaPoolCfg extends PoolCfg {
 
 					// 新建的topic
 				} else {
+					
+					// partition -> data offset
 					Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
 
 					for (DataPartition partition : newTopicCfg.getMetadata().getPartitions()) {

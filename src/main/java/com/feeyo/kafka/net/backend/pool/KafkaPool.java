@@ -268,7 +268,7 @@ public class KafkaPool extends AbstractPool {
 					
 					// 重新加载kafka topic信息
 					try {
-						((KafkaPoolCfg) this.poolCfg).reload();
+						((KafkaPoolCfg) this.poolCfg).reloadExtraCfg();
 					} catch (Exception e) {
 					}
 					
