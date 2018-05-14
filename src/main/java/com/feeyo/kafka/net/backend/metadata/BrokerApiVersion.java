@@ -6,7 +6,7 @@ import org.apache.kafka.common.protocol.ApiKeys;
 
 import com.feeyo.kafka.codec.ApiVersionsResponse.ApiVersion;
 
-public class KafkaVersions {
+public class BrokerApiVersion {
 	
 	private static Map<Short, ApiVersion> apiVersions = null;
 	

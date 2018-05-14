@@ -17,7 +17,7 @@ import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.net.backend.KafkaBackendConnectionFactory;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
-import com.feeyo.kafka.net.backend.metadata.KafkaVersions;
+import com.feeyo.kafka.net.backend.metadata.BrokerApiVersion;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
@@ -109,7 +109,7 @@ public class KafkaPool extends AbstractPool {
 						Struct response = ApiKeys.API_VERSIONS.parseResponse((short) 1, buffer);
 						ApiVersionsResponse ar = new ApiVersionsResponse(response);
 						if (ar.isCorrect()) {
-							KafkaVersions.setApiVersions(ar.getApiKeyToApiVersion());
+							BrokerApiVersion.setApiVersions(ar.getApiKeyToApiVersion());
 						}
 					}
 				};

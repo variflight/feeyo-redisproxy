@@ -17,7 +17,7 @@ import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.backend.metadata.ConsumerOffset;
 import com.feeyo.kafka.net.backend.metadata.DataPartitionOffset;
-import com.feeyo.kafka.net.backend.metadata.KafkaVersions;
+import com.feeyo.kafka.net.backend.metadata.BrokerApiVersion;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
@@ -111,7 +111,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	}
 
 	private ByteBuffer produceEncode(RedisRequest request, int partition) {
-		short version = KafkaVersions.getProduceVersion();
+		short version = BrokerApiVersion.getProduceVersion();
 		
 		Record record = new Record();
 		record.setOffset(0);
@@ -133,7 +133,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	}
 	
 	private ByteBuffer consumerEncode(RedisRequest request, int partition, long offset) {
-		short version = KafkaVersions.getConsumerVersion();
+		short version = BrokerApiVersion.getConsumerVersion();
 		
 		TopicAndPartitionData<PartitionData> topicAndPartitionData = new TopicAndPartitionData<PartitionData>(new String(request.getArgs()[1]));
 		FetchRequest fr = new FetchRequest(version, REPLICA_ID, TIME_OUT, MINBYTES, MAXBYTES, ISOLATION_LEVEL, topicAndPartitionData);
@@ -152,7 +152,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	}
 	
 	private ByteBuffer listOffsetsEncode(RedisRequest request) {
-		short version = KafkaVersions.getListOffsetsVersion();
+		short version = BrokerApiVersion.getListOffsetsVersion();
 		
 		RequestHeader rh = new RequestHeader(ApiKeys.LIST_OFFSETS.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
 		
@@ -210,7 +210,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		
 		@Override
 		public void continueParsing(ByteBuffer buffer) {
-			short version = KafkaVersions.getProduceVersion();
+			short version = BrokerApiVersion.getProduceVersion();
 			Struct response = ApiKeys.PRODUCE.parseResponse(version, buffer);
 			ProduceResponse pr = new ProduceResponse(response);
 			// 1k的buffer 肯定够用
@@ -258,7 +258,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		
 		@Override
 		public void continueParsing(ByteBuffer buffer) {
-			short version = KafkaVersions.getConsumerVersion();
+			short version = BrokerApiVersion.getConsumerVersion();
 			
 			Struct response = ApiKeys.FETCH.parseResponse(version, buffer);
 			FetchResponse fr = new FetchResponse(response);
@@ -317,7 +317,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 
 		@Override
 		public void continueParsing(ByteBuffer buffer) {
-			short version = KafkaVersions.getListOffsetsVersion();
+			short version = BrokerApiVersion.getListOffsetsVersion();
 			Struct response = ApiKeys.LIST_OFFSETS.parseResponse(version, buffer);
 			ListOffsetResponse lor = new ListOffsetResponse(response);
 			
