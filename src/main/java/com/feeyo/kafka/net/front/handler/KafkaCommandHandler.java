@@ -8,6 +8,8 @@ import com.feeyo.kafka.codec.FetchRequest;
 import com.feeyo.kafka.codec.FetchRequest.PartitionData;
 import com.feeyo.kafka.codec.FetchRequest.TopicAndPartitionData;
 import com.feeyo.kafka.codec.FetchResponse;
+import com.feeyo.kafka.codec.ListOffsetRequest;
+import com.feeyo.kafka.codec.ListOffsetResponse;
 import com.feeyo.kafka.codec.ProduceRequest;
 import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
@@ -50,6 +52,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private static final int LENGTH_BYTE_COUNT = 4;
 	private static final int PRODUCE_RESPONSE_SIZE = 2;
 	private static final int CONSUMER_RESPONSE_SIZE = 3;
+	private static final int OFFSET_RESPONSE_SIZE = 2;
 	
 	public KafkaCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -61,32 +64,38 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		KafkaRouteNode node = (KafkaRouteNode) routeResult.getRouteNodes().get(0);
 		RedisRequest request = routeResult.getRequests().get(0);
 		
-		ByteBuffer buffer;
-		KafkaCmdCallback backendCallback;
+		ByteBuffer buffer = null;
+		KafkaCmdCallback backendCallback = null;
 		
-		if ( request.getPolicy().getHandleType() == CommandParse.PRODUCE_CMD ) {
-			
+		switch (request.getPolicy().getHandleType()) {
+		case CommandParse.PRODUCE_CMD:
 			buffer = produceEncode(request, node.getDataOffset().getPartition());
-			backendCallback = new KafkaProduceCmdCallback( node.getDataOffset() );
+			backendCallback = new KafkaProduceCmdCallback(node.getDataOffset());
+			break;
 			
-		} else {
-			
-			// 指定点位消费
+		case CommandParse.CONSUMER_CMD:
 			long newOffset;
 			boolean isErrorOffsetRecovery = true;
+			// 指定点位消费
 			if (request.getNumArgs() == 4) {
 				newOffset = Long.parseLong(new String(request.getArgs()[3]));
 				isErrorOffsetRecovery = false;
-			} else {
 				
+			// 顺序消费
+			} else {
 				ConsumerOffset cOffset =  node.getDataOffset().getConsumerOffsetByConsumer( frontCon.getPassword() );
 				newOffset =	cOffset.getNewOffset();
 			}
 			
-			
 			buffer = consumerEncode(request, node.getDataOffset().getPartition(), newOffset);
 			backendCallback = new KafkaConsumerCmdCallback( node.getDataOffset(), newOffset, isErrorOffsetRecovery );
-		} 
+			break;
+			
+		case CommandParse.OFFSET_CMD:
+			buffer = listOffsetsEncode(request);
+			backendCallback = new KafkaOffsetCmdCallback();
+			break;
+		}
 		
 		byte[] requestKey = request.getArgs()[1];
 		String cmd = new String(request.getArgs()[0]).toUpperCase();
@@ -142,6 +151,28 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		return buffer;
 	}
 	
+	private ByteBuffer listOffsetsEncode(RedisRequest request) {
+		short version = Metadata.getListOffsetsVersion();
+		
+		RequestHeader rh = new RequestHeader(ApiKeys.LIST_OFFSETS.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
+		
+		String topic = new String(request.getArgs()[1]);
+		int partition = Integer.parseInt(new String(request.getArgs()[2]));
+		// 根据时间查询最后此时间之后第一个点位。时间-1查询最大点位，-2查询最小点位。
+		long timestamp = Long.parseLong(new String(request.getArgs()[3]));
+		ListOffsetRequest lor = new ListOffsetRequest(version, topic, partition, timestamp, REPLICA_ID, ISOLATION_LEVEL);
+		
+		Struct header = rh.toStruct();
+		Struct body = lor.toStruct();
+		
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT);
+		buffer.putInt(body.sizeOf() + header.sizeOf());
+		header.writeTo(buffer);
+		body.writeTo(buffer);
+		
+		return buffer;
+	}
+	
 
 	@Override
 	public void frontConnectionClose(String reason) {
@@ -179,7 +210,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		
 		@Override
 		public void continueParsing(ByteBuffer buffer) {
-			Struct response = ApiKeys.PRODUCE.parseResponse((short)5, buffer);
+			short version = Metadata.getProduceVersion();
+			Struct response = ApiKeys.PRODUCE.parseResponse(version, buffer);
 			ProduceResponse pr = new ProduceResponse(response);
 			// 1k的buffer 肯定够用
 			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
@@ -224,8 +256,9 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		
 		@Override
 		public void continueParsing(ByteBuffer buffer) {
+			short version = Metadata.getConsumerVersion();
 			
-			Struct response = ApiKeys.FETCH.parseResponse((short)6, buffer);
+			Struct response = ApiKeys.FETCH.parseResponse(version, buffer);
 			FetchResponse fr = new FetchResponse(response);
 			if (fr.isCorrect()) {
 				byte[] value = fr.getRecord().getValue();
@@ -276,5 +309,41 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 				frontCon.write(sb.toString().getBytes());
 			}
 		}
+	}
+	
+	private class KafkaOffsetCmdCallback extends KafkaCmdCallback {
+
+		@Override
+		public void continueParsing(ByteBuffer buffer) {
+			short version = Metadata.getListOffsetsVersion();
+			Struct response = ApiKeys.LIST_OFFSETS.parseResponse(version, buffer);
+			ListOffsetResponse lor = new ListOffsetResponse(response);
+			
+			// 1k的buffer 肯定够用
+			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
+			if (lor.isCorrect()) {
+				
+				byte[] size = ProtoUtils.convertIntToByteArray(OFFSET_RESPONSE_SIZE);
+				byte[] offsetArr = String.valueOf(lor.getOffset()).getBytes();
+				byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
+				byte[] timestampArr = String.valueOf(lor.getTimestamp()).getBytes();
+				byte[] timestampLength = ProtoUtils.convertIntToByteArray(timestampArr.length);
+				
+				
+				bb.put(ASTERISK).put(size).put(CRLF)
+					.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF)
+					.put(DOLLAR).put(timestampLength).put(CRLF).put(timestampArr).put(CRLF);
+				
+			} else {
+				byte[] size = ProtoUtils.convertIntToByteArray(1);
+				byte[] msg = lor.getErrorMessage().getBytes();
+				byte[] msgLen = ProtoUtils.convertIntToByteArray(msg.length);
+
+				bb.put(ASTERISK).put(size).put(CRLF)
+					.put(DOLLAR).put(msgLen).put(CRLF).put(msg).put(CRLF);
+			}
+			frontCon.write(bb);
+		}
+		
 	}
 }

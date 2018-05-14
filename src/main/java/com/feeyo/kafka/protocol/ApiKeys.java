@@ -11,6 +11,8 @@ import com.feeyo.kafka.codec.ApiVersionsRequest;
 import com.feeyo.kafka.codec.ApiVersionsResponse;
 import com.feeyo.kafka.codec.FetchRequest;
 import com.feeyo.kafka.codec.FetchResponse;
+import com.feeyo.kafka.codec.ListOffsetRequest;
+import com.feeyo.kafka.codec.ListOffsetResponse;
 import com.feeyo.kafka.codec.ProduceRequest;
 import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.protocol.types.Schema;
@@ -24,6 +26,7 @@ public enum ApiKeys {
 
 	PRODUCE(0, "Produce", ProduceRequest.schemaVersions(), ProduceResponse.schemaVersions()),
 	FETCH(1, "Fetch", FetchRequest.schemaVersions(), FetchResponse.schemaVersions()),
+	LIST_OFFSETS(2, "ListOffsets", ListOffsetRequest.schemaVersions(), ListOffsetResponse.schemaVersions()),
 	API_VERSIONS(18, "ApiVersions", ApiVersionsRequest.schemaVersions(), ApiVersionsResponse.schemaVersions());
 	
 	/** the permanent and immutable id of an API--this can't change ever */

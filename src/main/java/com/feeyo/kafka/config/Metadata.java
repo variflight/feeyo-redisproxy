@@ -122,4 +122,17 @@ public class Metadata {
 		
 		return version;
 	}
+	
+	public static short getListOffsetsVersion() {
+		// 现在代码最多支持到7
+		short version = 2;
+		ApiVersion apiVersion = apiVersions.get(ApiKeys.LIST_OFFSETS.id);
+		if (apiVersion.maxVersion < version) {
+			version = apiVersion.maxVersion;
+		} else if (apiVersion.minVersion > version) {
+			version = -1;
+		}
+
+		return version;
+	}
 }

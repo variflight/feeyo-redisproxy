@@ -107,7 +107,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			}
 		case CommandParse.OFFSET_CMD: 
 			{
-				if (request.getNumArgs() != 2) {
+				if (request.getNumArgs() != 4) {
 					throw new InvalidRequestExistsException("wrong number of arguments");
 				}
 				
@@ -115,9 +115,11 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 					throw new InvalidRequestExistsException("no authority");
 				}
 				
-				partition = new DataPartition(0, null, null);
+				int pt = Integer.parseInt(new String(request.getArgs()[2]));
+				partition = topicCfg.getMetadata().getConsumerDataPartition(pt);
+				
+				break;
 			}
-			break;
 		}
 
 		if ( partition == null ) {
