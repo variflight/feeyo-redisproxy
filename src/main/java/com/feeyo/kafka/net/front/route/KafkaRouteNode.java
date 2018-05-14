@@ -1,6 +1,6 @@
 package com.feeyo.kafka.net.front.route;
 
-import com.feeyo.kafka.net.backend.metadata.DataPartitionOffset;
+import com.feeyo.kafka.net.backend.runtime.DataPartitionOffset;
 import com.feeyo.redis.net.front.route.RouteNode;
 
 public class KafkaRouteNode extends RouteNode {

@@ -11,9 +11,9 @@ import org.apache.kafka.common.TopicPartitionInfo;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.config.TopicCfg;
-import com.feeyo.kafka.net.backend.metadata.DataNode;
-import com.feeyo.kafka.net.backend.metadata.DataPartition;
-import com.feeyo.kafka.net.backend.metadata.Metadata;
+import com.feeyo.kafka.net.backend.runtime.DataNode;
+import com.feeyo.kafka.net.backend.runtime.DataPartition;
+import com.feeyo.kafka.net.backend.runtime.Metadata;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 

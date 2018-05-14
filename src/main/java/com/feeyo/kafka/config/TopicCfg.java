@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.feeyo.kafka.net.backend.metadata.Metadata;
+import com.feeyo.kafka.net.backend.runtime.Metadata;
 
 public class TopicCfg {
 	

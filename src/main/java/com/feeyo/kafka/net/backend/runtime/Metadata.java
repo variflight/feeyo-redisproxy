@@ -1,4 +1,4 @@
-package com.feeyo.kafka.net.backend.metadata;
+package com.feeyo.kafka.net.backend.runtime;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,6 +22,7 @@ public class Metadata {
 		this.internal = internal;
 		this.partitions = partitions;
 		this.partitionsCount = partitions.length;
+		
 		this.producerIndex = new AtomicInteger(0);
 		this.consumerIndex = new AtomicInteger(0);
 	}
@@ -62,12 +63,12 @@ public class Metadata {
 	}
 	
 	public DataPartitionOffset getPartitionOffset(int partition) {
-		DataPartitionOffset dataOffset = partitionOffsets.get(partition);
-		if (dataOffset == null) {
-			dataOffset = new DataPartitionOffset(partition, 0, 0);
-			partitionOffsets.put(partition, dataOffset);
+		DataPartitionOffset offset = partitionOffsets.get(partition);
+		if (offset == null) {
+			offset = new DataPartitionOffset(partition, 0, 0);
+			partitionOffsets.put(partition, offset);
 		}
-		return dataOffset;
+		return offset;
 	}
 
 	public void setPartitionOffsets(Map<Integer, DataPartitionOffset> offsets) {
@@ -83,7 +84,5 @@ public class Metadata {
 				return next;
 		}
 	}
-
-	
 
 }

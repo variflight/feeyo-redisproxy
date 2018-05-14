@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
-import com.feeyo.kafka.net.backend.metadata.DataPartition;
+import com.feeyo.kafka.net.backend.runtime.DataPartition;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
