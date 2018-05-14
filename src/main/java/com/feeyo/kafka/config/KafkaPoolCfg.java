@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.config.loader.KafkaCtx;
+import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartition;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 

@@ -19,13 +19,13 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.kafka.config.ConsumerOffset;
-import com.feeyo.kafka.config.DataOffset;
-import com.feeyo.kafka.config.DataPartition;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
+import com.feeyo.kafka.net.backend.metadata.ConsumerOffset;
+import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartition;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;

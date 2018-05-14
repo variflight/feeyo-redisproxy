@@ -1,4 +1,4 @@
-package com.feeyo.kafka.config;
+package com.feeyo.kafka.net.backend.metadata;
 
 public class DataNode {
 	

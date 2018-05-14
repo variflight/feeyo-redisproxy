@@ -22,11 +22,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.TopicCfg;
-import com.feeyo.kafka.config.DataOffset;
-import com.feeyo.kafka.config.DataPartition;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
+import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;

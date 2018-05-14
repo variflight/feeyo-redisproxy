@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.feeyo.kafka.net.backend.metadata.Metadata;
+
 public class TopicCfg {
 	
 	private final int poolId;

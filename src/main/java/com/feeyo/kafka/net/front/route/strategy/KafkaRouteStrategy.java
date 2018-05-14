@@ -3,10 +3,10 @@ package com.feeyo.kafka.net.front.route.strategy;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.feeyo.kafka.config.DataOffset;
-import com.feeyo.kafka.config.DataPartition;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
+import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
