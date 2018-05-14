@@ -18,7 +18,7 @@ public class Metadata {
 	private AtomicInteger consumerIndex;
 	
 	private final int partitionsCount;
-	private Map<Integer, DataOffset> offsets;
+	private Map<Integer, DataPartitionOffset> partitionOffsets;
 	private static Map<Short, ApiVersion> apiVersions = null;
 
 	public Metadata(String name, boolean internal, DataPartition[] partitions) {
@@ -61,21 +61,21 @@ public class Metadata {
 		return null;
 	}
 
-	public Map<Integer, DataOffset> getDataOffsets() {
-		return offsets;
+	public Map<Integer, DataPartitionOffset> getPartitionOffsets() {
+		return partitionOffsets;
 	}
 	
-	public DataOffset getDataOffsetByPartition(int partition) {
-		DataOffset dataOffset = offsets.get(partition);
+	public DataPartitionOffset getPartitionOffset(int partition) {
+		DataPartitionOffset dataOffset = partitionOffsets.get(partition);
 		if (dataOffset == null) {
-			dataOffset = new DataOffset(partition, 0, 0);
-			offsets.put(partition, dataOffset);
+			dataOffset = new DataPartitionOffset(partition, 0, 0);
+			partitionOffsets.put(partition, dataOffset);
 		}
 		return dataOffset;
 	}
 
-	public void setDataOffsets(Map<Integer, DataOffset> offsets) {
-		this.offsets = offsets;
+	public void setPartitionOffsets(Map<Integer, DataPartitionOffset> offsets) {
+		this.partitionOffsets = offsets;
 	}
 
 	private int getIndex(AtomicInteger ai) {

@@ -24,7 +24,7 @@ import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.net.backend.metadata.ConsumerOffset;
-import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartitionOffset;
 import com.feeyo.kafka.net.backend.metadata.DataPartition;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.ConfigLoader;
@@ -107,28 +107,33 @@ public class OffsetAdmin {
 	}
 	
 	
-	private void saveOffsetsToZk(String topicName,  Map<Integer, DataOffset> offset, int poolId) {
+	private void saveOffsetsToZk(String topicName,  Map<Integer, DataPartitionOffset> partitionOffsetMap, int poolId) {
 		String basepath = offsetManageCfg.getPath() + File.separator + String.valueOf(poolId) + File.separator + topicName;
 		Stat stat;
 		try {
-			for (Entry<Integer, DataOffset> offsetEntry : offset.entrySet()) {
+			for (Entry<Integer, DataPartitionOffset> entry : partitionOffsetMap.entrySet()) {
+				
 				// 点位
-				DataOffset dataOffset = offsetEntry.getValue();
-				String path = basepath + File.separator + offsetEntry.getKey();
+				DataPartitionOffset partitionOffset = entry.getValue();
+				String path = basepath + File.separator + entry.getKey();
 				stat = curator.checkExists().forPath(path);
 				if (stat == null) {
 					ZKPaths.mkdirs(curator.getZookeeperClient().getZooKeeper(), path);
 				}
-				curator.setData().inBackground().forPath(path, JsonUtils.marshalToByte(dataOffset));
+				curator.setData().inBackground().forPath(path, JsonUtils.marshalToByte( partitionOffset ));
+				
+				
 				
 				// 消费者点位
-				Map<String, ConsumerOffset> consumerOffsets = dataOffset.getConsumerOffsets();
+				Map<String, ConsumerOffset> consumerOffsets = partitionOffset.getConsumerOffsets();
 				for (Entry<String, ConsumerOffset> consumerOffsetEntry : consumerOffsets.entrySet()) {
+					
 					String consumerOffsetPath = path + File.separator + consumerOffsetEntry.getKey();
 					stat = curator.checkExists().forPath(consumerOffsetPath);
 					if (stat == null) {
 						ZKPaths.mkdirs(curator.getZookeeperClient().getZooKeeper(), consumerOffsetPath);
 					}
+					
 					ConsumerOffset co = consumerOffsetEntry.getValue();
 					curator.setData().inBackground().forPath(consumerOffsetPath, JsonUtils.marshalToByte(co));
 				}
@@ -179,7 +184,7 @@ public class OffsetAdmin {
 			
 			String topicName  = topicCfg.getName();
 			String basepath = offsetManageCfg.getPath() + File.separator  + String.valueOf(poolId) + File.separator + topicName;
-			Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
+			Map<Integer, DataPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, DataPartitionOffset>();
 			try {
 				for (DataPartition partition : topicCfg.getMetadata().getPartitions()) {
 					
@@ -190,13 +195,13 @@ public class OffsetAdmin {
 					
 					if (isNull(data)) {
 						
-						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
-						dataOffsets.put(partition.getPartition(), dataOffset);
+						DataPartitionOffset partitionOffset = new DataPartitionOffset(partition.getPartition(), 0, 0);
+						partitionOffsetMap.put(partition.getPartition(), partitionOffset);
 						
 					} else {
 						// {"logStartOffset":0,"partition":0,"producerOffset":0}
-						DataOffset dataOffset = JsonUtils.unmarshalFromByte(data, DataOffset.class);
-						dataOffsets.put(partition.getPartition(), dataOffset);
+						DataPartitionOffset partitionOffset = JsonUtils.unmarshalFromByte(data, DataPartitionOffset.class);
+						partitionOffsetMap.put(partition.getPartition(), partitionOffset);
 						
 						List<String> childrenPath = curator.getChildren().forPath(path);
 						for (String clildPath : childrenPath) {
@@ -205,13 +210,13 @@ public class OffsetAdmin {
 								continue;
 							}
 							ConsumerOffset co = JsonUtils.unmarshalFromByte(consumerOffset, ConsumerOffset.class);
-							dataOffset.getConsumerOffsets().put(co.getConsumer(), co);
+							partitionOffset.getConsumerOffsets().put(co.getConsumer(), co);
 						}
 					}
 				}
 				
 				
-				topicCfg.getMetadata().setDataOffsets(dataOffsets);
+				topicCfg.getMetadata().setPartitionOffsets( partitionOffsetMap );
 				
 			} catch (Exception e) {
 				LOGGER.warn("", e);
@@ -241,7 +246,7 @@ public class OffsetAdmin {
 				
 				for (Entry<String, TopicCfg> topicEntry : topicCfgMap.entrySet()) {
 					TopicCfg topicCfg = topicEntry.getValue();
-					saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getDataOffsets(), poolCfg.getId());
+					saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getPartitionOffsets(), poolCfg.getId());
 				}
 			}
 		}

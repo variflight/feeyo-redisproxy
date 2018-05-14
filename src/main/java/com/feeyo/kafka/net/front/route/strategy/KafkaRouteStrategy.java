@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
-import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartitionOffset;
 import com.feeyo.kafka.net.backend.metadata.DataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
@@ -126,7 +126,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throw new InvalidRequestExistsException("wrong partition");
 		}
 		
-		DataOffset dataOffset = topicCfg.getMetadata().getDataOffsetByPartition( partition.getPartition() );
+		DataPartitionOffset partitionOffset = topicCfg.getMetadata().getPartitionOffset( partition.getPartition() );
 		
 		//
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get( topicCfg.getPoolId() );
@@ -137,7 +137,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);
-		node.setDataOffset( dataOffset );
+		node.setPartitionOffset( partitionOffset );
 
 		List<RouteNode> nodes = new ArrayList<RouteNode>(1);
 		nodes.add(node);

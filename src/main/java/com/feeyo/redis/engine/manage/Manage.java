@@ -25,7 +25,7 @@ import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
-import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartitionOffset;
 import com.feeyo.kafka.net.backend.metadata.DataPartition;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.PoolCfg;
@@ -1009,12 +1009,12 @@ public class Manage {
 								String topic = new String( request.getArgs()[2] );
 								TopicCfg kafkaCfg = kafkaMap.get(topic);
 								if (kafkaCfg != null) {
-									Map<Integer, DataOffset> offsets = kafkaCfg.getMetadata().getDataOffsets();
+									Map<Integer, DataPartitionOffset> offsets = kafkaCfg.getMetadata().getPartitionOffsets();
 									DataPartition[] partitions = kafkaCfg.getMetadata().getPartitions();
 									
 									for (DataPartition partition : partitions) {
 										int pt = partition.getPartition();
-										DataOffset offset = offsets.get(pt);
+										DataPartitionOffset offset = offsets.get(pt);
 										
 										StringBuffer line = new StringBuffer();
 										line.append(kafkaCfg.getName()).append(", ");

@@ -16,7 +16,7 @@ import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.backend.metadata.ConsumerOffset;
-import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartitionOffset;
 import com.feeyo.kafka.net.backend.metadata.Metadata;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
@@ -69,8 +69,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		
 		switch (request.getPolicy().getHandleType()) {
 		case CommandParse.PRODUCE_CMD:
-			buffer = produceEncode(request, node.getDataOffset().getPartition());
-			backendCallback = new KafkaProduceCmdCallback(node.getDataOffset());
+			buffer = produceEncode(request, node.getPartitionOffset().getPartition());
+			backendCallback = new KafkaProduceCmdCallback(node.getPartitionOffset());
 			break;
 			
 		case CommandParse.CONSUMER_CMD:
@@ -83,12 +83,12 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 				
 			// 顺序消费
 			} else {
-				ConsumerOffset cOffset =  node.getDataOffset().getConsumerOffsetByConsumer( frontCon.getPassword() );
+				ConsumerOffset cOffset =  node.getPartitionOffset().getConsumerOffsetByConsumer( frontCon.getPassword() );
 				newOffset =	cOffset.getNewOffset();
 			}
 			
-			buffer = consumerEncode(request, node.getDataOffset().getPartition(), newOffset);
-			backendCallback = new KafkaConsumerCmdCallback( node.getDataOffset(), newOffset, isErrorOffsetRecovery );
+			buffer = consumerEncode(request, node.getPartitionOffset().getPartition(), newOffset);
+			backendCallback = new KafkaConsumerCmdCallback( node.getPartitionOffset(), newOffset, isErrorOffsetRecovery );
 			break;
 			
 		case CommandParse.OFFSET_CMD:
@@ -202,10 +202,10 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	private class KafkaProduceCmdCallback extends KafkaCmdCallback {
 		
-		private DataOffset dataOffset;
+		private DataPartitionOffset partitionOffset;
 		
-		private KafkaProduceCmdCallback(DataOffset dataOffset) {
-			this.dataOffset = dataOffset;
+		private KafkaProduceCmdCallback(DataPartitionOffset partitionOffset) {
+			this.partitionOffset = partitionOffset;
 		}
 		
 		@Override
@@ -216,10 +216,10 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			// 1k的buffer 肯定够用
 			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
 			if (pr.isCorrect()) {
-				dataOffset.setOffsets(pr.getOffset(), pr.getLogStartOffset());
+				partitionOffset.setOffsets(pr.getOffset(), pr.getLogStartOffset());
 				
 				byte[] size = ProtoUtils.convertIntToByteArray(PRODUCE_RESPONSE_SIZE);
-				byte[] partitonArr = ProtoUtils.convertIntToByteArray(dataOffset.getPartition());
+				byte[] partitonArr = ProtoUtils.convertIntToByteArray(partitionOffset.getPartition());
 				byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
 				byte[] offsetArr = String.valueOf(pr.getOffset()).getBytes();
 				byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
@@ -242,14 +242,16 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	private class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 		
-		private DataOffset dataOffset;
+		private DataPartitionOffset partitionOffset;
 		private long consumeOffset;
 		
 		// 消费失败是否把消费点位归还（指定点位消费时，不需要归还）
 		private boolean isErrorOffsetRecovery = true;
 		
-		private KafkaConsumerCmdCallback(DataOffset dataOffset, long newOffset, boolean isErrorOffsetRecovery) {
-			this.dataOffset = dataOffset;
+		private KafkaConsumerCmdCallback(DataPartitionOffset partitionOffset, 
+				long newOffset, boolean isErrorOffsetRecovery) {
+			
+			this.partitionOffset = partitionOffset;
 			this.consumeOffset = newOffset;
 			this.isErrorOffsetRecovery = isErrorOffsetRecovery;
 		}
@@ -265,13 +267,13 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 				if (value == null) {
 					
 					if ( isErrorOffsetRecovery )
-						dataOffset.sendDefaultConsumerOffsetBack(consumeOffset, frontCon.getPassword());
+						partitionOffset.revertConsumerOffset( frontCon.getPassword(), consumeOffset);
 					
 					frontCon.write(NULL);
 					return;
 				}
 				byte[] size = ProtoUtils.convertIntToByteArray(CONSUMER_RESPONSE_SIZE);
-				byte[] partitonArr = ProtoUtils.convertIntToByteArray(dataOffset.getPartition());
+				byte[] partitonArr = ProtoUtils.convertIntToByteArray(partitionOffset.getPartition());
 				byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
 				byte[] offsetArr = String.valueOf(consumeOffset).getBytes();
 				byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
@@ -294,7 +296,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
 				
 				if ( isErrorOffsetRecovery )
-					dataOffset.sendDefaultConsumerOffsetBack(consumeOffset, frontCon.getPassword());
+					partitionOffset.revertConsumerOffset( frontCon.getPassword(), consumeOffset );
 				
 				frontCon.write(NULL);
 				
@@ -302,7 +304,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			} else {
 				
 				if ( isErrorOffsetRecovery )
-					dataOffset.sendDefaultConsumerOffsetBack(consumeOffset, frontCon.getPassword());
+					partitionOffset.revertConsumerOffset( frontCon.getPassword(), consumeOffset );
 				
 				StringBuffer sb = new StringBuffer();
 				sb.append("-ERR ").append(fr.getErrorMessage()).append("\r\n");

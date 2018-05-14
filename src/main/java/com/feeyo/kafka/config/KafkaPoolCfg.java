@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.config.loader.KafkaCtx;
-import com.feeyo.kafka.net.backend.metadata.DataOffset;
+import com.feeyo.kafka.net.backend.metadata.DataPartitionOffset;
 import com.feeyo.kafka.net.backend.metadata.DataPartition;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
@@ -61,20 +61,20 @@ public class KafkaPoolCfg extends PoolCfg {
 				TopicCfg oldTopicCfg = topicCfgMap.get(key);
 				if (oldTopicCfg != null) {
 					// 迁移原来的offset
-					newTopicCfg.getMetadata().setDataOffsets(oldTopicCfg.getMetadata().getDataOffsets());
+					newTopicCfg.getMetadata().setPartitionOffsets(oldTopicCfg.getMetadata().getPartitionOffsets());
 
 					// 新建的topic
 				} else {
 					
 					// partition -> data offset
-					Map<Integer, DataOffset> dataOffsets = new ConcurrentHashMap<Integer, DataOffset>();
+					Map<Integer, DataPartitionOffset> partitionOffsets = new ConcurrentHashMap<Integer, DataPartitionOffset>();
 
 					for (DataPartition partition : newTopicCfg.getMetadata().getPartitions()) {
-						DataOffset dataOffset = new DataOffset(partition.getPartition(), 0, 0);
-						dataOffsets.put(partition.getPartition(), dataOffset);
+						DataPartitionOffset dataOffset = new DataPartitionOffset(partition.getPartition(), 0, 0);
+						partitionOffsets.put(partition.getPartition(), dataOffset);
 					}
 
-					newTopicCfg.getMetadata().setDataOffsets(dataOffsets);
+					newTopicCfg.getMetadata().setPartitionOffsets(partitionOffsets);
 				}
 			}
 			

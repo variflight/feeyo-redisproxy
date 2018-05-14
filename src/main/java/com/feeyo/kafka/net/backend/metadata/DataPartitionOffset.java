@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.alibaba.fastjson.annotation.JSONField;
 
-public class DataOffset {
+public class DataPartitionOffset {
 	
 	private int partition;
 	private volatile long producerOffset;
@@ -16,14 +16,14 @@ public class DataOffset {
 	@JSONField(serialize=false)
 	private Map<String, ConsumerOffset> consumerOffsets;
 	
-	public DataOffset (int partition, long producerOffset, long logStartOffset) {
+	public DataPartitionOffset (int partition, long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
 		this.consumerOffsets = new ConcurrentHashMap<>();
 		this.partition = partition;
 		this.logStartOffset = logStartOffset;
 	}
 	
-	public DataOffset() {
+	public DataPartitionOffset() {
 		this(0, 0, 0);
 	}
 	
@@ -61,7 +61,7 @@ public class DataOffset {
 		return list;
 	}
 	
-	public void sendDefaultConsumerOffsetBack(long offset, String consumer) {
+	public void revertConsumerOffset(String consumer, long offset) {
 		
 		if (offset < 0) {
 			return;

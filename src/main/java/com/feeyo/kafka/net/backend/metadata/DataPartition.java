@@ -3,6 +3,7 @@ package com.feeyo.kafka.net.backend.metadata;
 public class DataPartition {
 	
 	private final int partition;
+	
 	private final DataNode leader;
 	private final DataNode[] replicas;
 
