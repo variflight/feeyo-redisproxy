@@ -52,7 +52,7 @@ public class KafkaPoolCfg extends PoolCfg {
 			Map<String, TopicCfg> newTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, 
 					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
 			
-			// load topic metadata
+			// load topic 
 			KafkaCtx.getInstance().load(newTopicCfgMap, this);
 			
 			for (Entry<String, TopicCfg> entry : newTopicCfgMap.entrySet()) {
@@ -63,18 +63,17 @@ public class KafkaPoolCfg extends PoolCfg {
 					// 迁移原来的offset
 					newTopicCfg.getMetadata().setPartitionOffsets(oldTopicCfg.getMetadata().getPartitionOffsets());
 
-					// 新建的topic
 				} else {
 					
 					// partition -> data offset
-					Map<Integer, DataPartitionOffset> partitionOffsets = new ConcurrentHashMap<Integer, DataPartitionOffset>();
+					Map<Integer, DataPartitionOffset> offsetMap = new ConcurrentHashMap<Integer, DataPartitionOffset>();
 
 					for (DataPartition partition : newTopicCfg.getMetadata().getPartitions()) {
-						DataPartitionOffset dataOffset = new DataPartitionOffset(partition.getPartition(), 0, 0);
-						partitionOffsets.put(partition.getPartition(), dataOffset);
+						DataPartitionOffset partitionOffset = new DataPartitionOffset(partition.getPartition(), 0, 0);
+						offsetMap.put(partition.getPartition(), partitionOffset);
 					}
 
-					newTopicCfg.getMetadata().setPartitionOffsets(partitionOffsets);
+					newTopicCfg.getMetadata().setPartitionOffsets(offsetMap);
 				}
 			}
 			

@@ -8,8 +8,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartitionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
+import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.runtime.DataNode;
 import com.feeyo.kafka.net.backend.runtime.DataPartition;
@@ -18,6 +21,8 @@ import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 public class KafkaCtx {
+	
+	private static Logger LOGGER = LoggerFactory.getLogger( KafkaCtx.class );
 	
 	private final static KafkaCtx INSTANCE = new KafkaCtx();
 	
@@ -47,12 +52,15 @@ public class KafkaCtx {
 				servers.append(",");
 			}
 		}
+		
+		
 		KafkaAdmin kafkaAdmin = null;
 		try {
 			// 获取 Kafka 管理对象
 			kafkaAdmin = KafkaAdmin.create(servers.toString());
+			
 			// 获取kafka中的topic情况
-			Map<String, TopicDescription> remoteKafkaTopics = kafkaAdmin.getTopicAndDescriptions();
+			Map<String, TopicDescription> remoteTopics = kafkaAdmin.getTopicAndDescriptions();
 
 			for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
 
@@ -60,69 +68,68 @@ public class KafkaCtx {
 
 				String topicName = topicCfg.getName();
 				short replicationFactor = topicCfg.getReplicationFactor();
-				int partitions = topicCfg.getPartitions();
+				int partitionNum = topicCfg.getPartitions();
 
-				TopicDescription topicDescription = remoteKafkaTopics.get(topicName);
+				TopicDescription topicDescription = remoteTopics.get(topicName);
 				if (topicDescription != null) {
-					int oldPartitions = topicDescription.partitions().size();
-					if (partitions > oldPartitions) {
-						kafkaAdmin.addPartitionsForTopic(topicName, partitions);
+					int oldPartitionNum = topicDescription.partitions().size();
+					if (partitionNum > oldPartitionNum) {
+						// add partition
+						kafkaAdmin.addPartitionsForTopic(topicName, partitionNum);
 						topicDescription = kafkaAdmin.getDescriptionByTopicName(topicName);
 					}
-
-					initMetadata(topicCfg, topicDescription);
-
 				} else {
-
-					kafkaAdmin.createTopic(topicName, partitions, replicationFactor);
+					// create topic
+					kafkaAdmin.createTopic(topicName, partitionNum, replicationFactor);
 					topicDescription = kafkaAdmin.getDescriptionByTopicName(topicName);
-
-					// 初始化 metadata
-					initMetadata(topicCfg, topicDescription);
+				}
+				
+				// 
+				if ( topicDescription == null) {
+					topicCfg.setMetadata( null );
+					return;
+					
+				} else {
+				
+					String name = topicDescription.name();
+					boolean internal = topicDescription.isInternal();
+					int partitionSize = topicDescription.partitions().size();
+					
+					//
+					DataPartition[] newPartitions = new DataPartition[ partitionSize ];
+					for (int i = 0; i < partitionSize; i++) {
+						
+						TopicPartitionInfo partitionInfo =  topicDescription.partitions().get(i);
+						int partition = partitionInfo.partition();
+						
+						Node leader = partitionInfo.leader();
+						DataNode newLeader = new DataNode(leader.id(), leader.host(), leader.port());
+						
+						List<Node> replicas = partitionInfo.replicas();
+						DataNode[] newReplicas = new DataNode[replicas.size()];
+						for (int j = 0; j < replicas.size(); j++) {
+							newReplicas[j] = new DataNode(replicas.get(j).id(), replicas.get(j).host(), replicas.get(j).port());
+						}
+						
+						DataPartition newPartition = new DataPartition(partition, newLeader, newReplicas);
+						newPartitions[i] = newPartition;
+					}
+	
+					Metadata metadata = new Metadata(name, internal, newPartitions);
+					topicCfg.setMetadata( metadata );
 				}
 
 			}
-
+		} catch(Throwable e) {
+			LOGGER.error("load kafka err:", e);
+			
 		} finally {
 			if (kafkaAdmin != null)
 				kafkaAdmin.close();
 		}
 	}
 
-	/**
-	 * 初始化 Kafka metadata
-	 */
-	private void initMetadata(TopicCfg topicCfg, TopicDescription topicDescription) {
-		
-		if (topicDescription == null) {
-			topicCfg.setMetadata(null);
-			return;
-		}
-		
-		//
-		DataPartition[] newPartitions = new DataPartition[ topicDescription.partitions().size() ];
-		String name = topicDescription.name();
-		boolean internal = topicDescription.isInternal();
-		
-		for (int i = 0; i < topicDescription.partitions().size(); i++) {
-			
-			TopicPartitionInfo partitionInfo =  topicDescription.partitions().get(i);
-			List<Node> replicas = partitionInfo.replicas();
-			
-			DataNode[] newReplicas = new DataNode[replicas.size()];
-			for (int j = 0; j < replicas.size(); j++) {
-				newReplicas[j] = new DataNode(replicas.get(j).id(), replicas.get(j).host(), replicas.get(j).port());
-			}
-			
-			DataNode newLeader = new DataNode(partitionInfo.leader().id(), partitionInfo.leader().host(), partitionInfo.leader().port());
 
-			DataPartition newPartition = new DataPartition(partitionInfo.partition(), newLeader, newReplicas);
-			newPartitions[i] = newPartition;
-		}
-
-		Metadata metadata = new Metadata(name, internal, newPartitions);
-		topicCfg.setMetadata( metadata );
-	}
 	
 	// 重新加载
 	public byte[] reloadAll() {
@@ -130,7 +137,8 @@ public class KafkaCtx {
 			Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 			for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
 				PoolCfg poolCfg = entry.getValue();
-				poolCfg.reloadExtraCfg();
+				if ( poolCfg instanceof KafkaPoolCfg )
+					poolCfg.reloadExtraCfg();
 			}
 			
 		} catch (Exception e) {
