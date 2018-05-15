@@ -13,7 +13,7 @@ public class TopicRunningInfo {
 	private AtomicInteger producerIndex;
 	private AtomicInteger consumerIndex;
 	
-	private final int partitionsCount;
+	private final int partitionNum;
 	private Map<Integer, DataPartitionOffset> partitionOffsets;
 
 
@@ -21,7 +21,7 @@ public class TopicRunningInfo {
 		this.name = name;
 		this.internal = internal;
 		this.partitions = partitions;
-		this.partitionsCount = partitions.length;
+		this.partitionNum = partitions.length;
 		
 		this.producerIndex = new AtomicInteger(0);
 		this.consumerIndex = new AtomicInteger(0);
@@ -40,12 +40,12 @@ public class TopicRunningInfo {
 	}
 
 	public DataPartition getProducerDataPartition() {
-		int index = getIndex(producerIndex);
+		int index = getPartitionIndex(producerIndex);
 		return this.partitions[index];
 	}
 
 	public DataPartition getConsumerDataPartition() {
-		int index = getIndex(consumerIndex);
+		int index = getPartitionIndex( consumerIndex );
 		return this.partitions[index];
 	}
 	
@@ -75,12 +75,12 @@ public class TopicRunningInfo {
 		this.partitionOffsets = offsets;
 	}
 
-	private int getIndex(AtomicInteger ai) {
+	private int getPartitionIndex(AtomicInteger index) {
 		for (;;) {
-			int current = ai.get();
+			int current = index.get();
 			int next = current + 1;
-			next = next < partitionsCount ? next : 0;
-			if (ai.compareAndSet(current, next))
+			next = next < partitionNum ? next : 0;
+			if (index.compareAndSet(current, next))
 				return next;
 		}
 	}
