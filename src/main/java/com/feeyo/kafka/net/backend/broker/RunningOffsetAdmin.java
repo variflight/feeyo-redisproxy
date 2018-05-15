@@ -104,7 +104,7 @@ public class RunningOffsetAdmin {
 	}
 	
 	
-	private void saveOffsetsToZk(String topicName,  Map<Integer, BrokerPartitionOffset> partitionOffsetMap, int poolId) {
+	private void savePartitionOffsets(String topicName,  Map<Integer, BrokerPartitionOffset> partitionOffsetMap, int poolId) {
 		
 		String basepath = offsetManageCfg.getPath() + File.separator + String.valueOf(poolId) + File.separator + topicName;
 		Stat stat;
@@ -141,47 +141,15 @@ public class RunningOffsetAdmin {
 		}
 	}
 
-	public void startup() {
+	
+	
+	private void loadPartitionOffsetByPoolId(Map<String, TopicCfg> topicCfgMap, int poolId) {
 		
-		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
-		for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
-			PoolCfg poolCfg = entry.getValue();
-			if (poolCfg instanceof KafkaPoolCfg) {
-				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
-				
-				// 加载offset
-				loadOffset(topicCfgMap, poolCfg.getId());
-			}
-		}
-		
-		// 定时持久化offset
-		executorService.scheduleAtFixedRate(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					// offset 数据持久化
-					saveOffsets();
-					
-				} catch (Exception e) {
-					LOGGER.warn("offsetAdmin err: ", e);
-				}
-				
-			}
-		}, 30, 30, TimeUnit.SECONDS);
-		
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-				close();
-			}
-		});
-
-	}
-
-	private void loadOffset(Map<String, TopicCfg> topicCfgMap, int poolId) {
 		for (TopicCfg topicCfg : topicCfgMap.values()) {
 			
 			String topicName  = topicCfg.getName();
 			String basepath = offsetManageCfg.getPath() + File.separator  + String.valueOf(poolId) + File.separator + topicName;
+			
 			Map<Integer, BrokerPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 			try {
 				for (BrokerPartition partition : topicCfg.getRunningOffset().getBrokerPartitions()) {
@@ -222,20 +190,60 @@ public class RunningOffsetAdmin {
 		}
 	}
 	
+	public void startup() {
+		
+		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
+		for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
+			PoolCfg poolCfg = entry.getValue();
+			if (poolCfg instanceof KafkaPoolCfg) {
+				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
+				
+				// 加载offset
+				loadPartitionOffsetByPoolId(topicCfgMap, poolCfg.getId());
+			}
+		}
+		
+		
+		
+		// 定时持久化offset
+		executorService.scheduleAtFixedRate(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					// offset 数据持久化
+					saveAll();
+					
+				} catch (Exception e) {
+					LOGGER.warn("offsetAdmin err: ", e);
+				}
+				
+			}
+		}, 30, 30, TimeUnit.SECONDS);
+		
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				close();
+			}
+		});
+
+	}
+
+
+	
 	public void close() {
 		
 		// 关闭定时任务
 		executorService.shutdown();
 		
 		// 提交本地剩余offset
-		saveOffsets();
+		saveAll();
 
 	}
 
 	/**
 	 * offsets 持久化
 	 */
-	private void saveOffsets() {
+	private void saveAll() {
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (Entry<Integer, PoolCfg> poolEntry : poolCfgMap.entrySet()) {
 			PoolCfg poolCfg = poolEntry.getValue();
@@ -244,7 +252,7 @@ public class RunningOffsetAdmin {
 				
 				for (Entry<String, TopicCfg> topicEntry : topicCfgMap.entrySet()) {
 					TopicCfg topicCfg = topicEntry.getValue();
-					saveOffsetsToZk(topicCfg.getName(), topicCfg.getRunningOffset().getPartitionOffsets(), poolCfg.getId());
+					savePartitionOffsets(topicCfg.getName(), topicCfg.getRunningOffset().getPartitionOffsets(), poolCfg.getId());
 				}
 			}
 		}
