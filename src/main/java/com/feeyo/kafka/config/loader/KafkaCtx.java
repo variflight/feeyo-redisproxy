@@ -14,9 +14,9 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
-import com.feeyo.kafka.net.backend.runtime.DataNode;
-import com.feeyo.kafka.net.backend.runtime.DataPartition;
-import com.feeyo.kafka.net.backend.runtime.TopicRunningInfo;
+import com.feeyo.kafka.net.backend.broker.BrokerNode;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.RunningInfo;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
@@ -96,26 +96,26 @@ public class KafkaCtx {
 					int partitionSize = topicDescription.partitions().size();
 					
 					//
-					DataPartition[] newPartitions = new DataPartition[ partitionSize ];
+					BrokerPartition[] newPartitions = new BrokerPartition[ partitionSize ];
 					for (int i = 0; i < partitionSize; i++) {
 						
 						TopicPartitionInfo partitionInfo =  topicDescription.partitions().get(i);
 						int partition = partitionInfo.partition();
 						
 						Node leader = partitionInfo.leader();
-						DataNode newLeader = new DataNode(leader.id(), leader.host(), leader.port());
+						BrokerNode newLeader = new BrokerNode(leader.id(), leader.host(), leader.port());
 						
 						List<Node> replicas = partitionInfo.replicas();
-						DataNode[] newReplicas = new DataNode[replicas.size()];
+						BrokerNode[] newReplicas = new BrokerNode[replicas.size()];
 						for (int j = 0; j < replicas.size(); j++) {
-							newReplicas[j] = new DataNode(replicas.get(j).id(), replicas.get(j).host(), replicas.get(j).port());
+							newReplicas[j] = new BrokerNode(replicas.get(j).id(), replicas.get(j).host(), replicas.get(j).port());
 						}
 						
-						DataPartition newPartition = new DataPartition(partition, newLeader, newReplicas);
+						BrokerPartition newPartition = new BrokerPartition(partition, newLeader, newReplicas);
 						newPartitions[i] = newPartition;
 					}
 	
-					TopicRunningInfo runningInfo = new TopicRunningInfo(name, internal, newPartitions);
+					RunningInfo runningInfo = new RunningInfo(name, internal, newPartitions);
 					topicCfg.setRunningInfo( runningInfo );
 				}
 

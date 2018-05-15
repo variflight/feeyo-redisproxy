@@ -14,10 +14,10 @@ import com.feeyo.kafka.codec.ProduceRequest;
 import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
+import com.feeyo.kafka.net.backend.broker.BrokerApiVersion;
+import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
+import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
-import com.feeyo.kafka.net.backend.runtime.BrokerApiVersion;
-import com.feeyo.kafka.net.backend.runtime.ConsumerOffset;
-import com.feeyo.kafka.net.backend.runtime.DataPartitionOffset;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
@@ -202,9 +202,9 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	private class KafkaProduceCmdCallback extends KafkaCmdCallback {
 		
-		private DataPartitionOffset partitionOffset;
+		private BrokerPartitionOffset partitionOffset;
 		
-		private KafkaProduceCmdCallback(DataPartitionOffset partitionOffset) {
+		private KafkaProduceCmdCallback(BrokerPartitionOffset partitionOffset) {
 			this.partitionOffset = partitionOffset;
 		}
 		
@@ -242,13 +242,13 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	private class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 		
-		private DataPartitionOffset partitionOffset;
+		private BrokerPartitionOffset partitionOffset;
 		private long consumeOffset;
 		
 		// 消费失败是否把消费点位归还（指定点位消费时，不需要归还）
 		private boolean isErrorOffsetRecovery = true;
 		
-		private KafkaConsumerCmdCallback(DataPartitionOffset partitionOffset, 
+		private KafkaConsumerCmdCallback(BrokerPartitionOffset partitionOffset, 
 				long newOffset, boolean isErrorOffsetRecovery) {
 			
 			this.partitionOffset = partitionOffset;

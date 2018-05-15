@@ -5,9 +5,9 @@ import java.util.List;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
-import com.feeyo.kafka.net.backend.runtime.DataPartition;
-import com.feeyo.kafka.net.backend.runtime.DataPartitionOffset;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -55,7 +55,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		} 
 		
 		// 分区
-		DataPartition partition = null;
+		BrokerPartition partition = null;
 	
 		// 参数有效性校验
 		switch( request.getPolicy().getHandleType() ) {
@@ -126,7 +126,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throw new InvalidRequestExistsException("wrong partition");
 		}
 		
-		DataPartitionOffset partitionOffset = topicCfg.getRunningInfo().getPartitionOffset( partition.getPartition() );
+		BrokerPartitionOffset partitionOffset = topicCfg.getRunningInfo().getPartitionOffset( partition.getPartition() );
 		
 		//
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get( topicCfg.getPoolId() );

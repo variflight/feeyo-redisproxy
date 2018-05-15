@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
-import com.feeyo.kafka.net.backend.runtime.DataPartition;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -505,7 +505,7 @@ public class RedisFrontSession {
 			String topic = new String(request.getArgs()[1]);
 			KafkaPoolCfg poolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
 			TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
-			DataPartition[] partitions = tc.getRunningInfo().getPartitions();
+			BrokerPartition[] partitions = tc.getRunningInfo().getPartitions();
 			
 			// 申请1k buffer （肯定够）
 			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
@@ -515,7 +515,7 @@ public class RedisFrontSession {
 			
 			byte[] size = ProtoUtils.convertIntToByteArray(partitions.length);
 			bb.put(ASTERISK).put(size).put(CRLF);
-			for (DataPartition dataPartition : partitions) {
+			for (BrokerPartition dataPartition : partitions) {
 				byte[] partition = ProtoUtils.convertIntToByteArray(dataPartition.getPartition());
 				byte[] partitionLength = ProtoUtils.convertIntToByteArray(partition.length);
 				bb.put(DOLLAR).put(partitionLength).put(CRLF).put(partition).put(CRLF);

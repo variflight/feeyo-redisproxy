@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.feeyo.kafka.net.backend.runtime.TopicRunningInfo;
+import com.feeyo.kafka.net.backend.broker.RunningInfo;
 
 public class TopicCfg {
 	
@@ -17,7 +17,7 @@ public class TopicCfg {
 	private final Set<String> producers = new HashSet<String>(); 
 	private final Set<String> consumers = new HashSet<String>(); 
 	
-	private TopicRunningInfo runningInfo;
+	private RunningInfo runningInfo;
 	
 	public TopicCfg(String name, int poolId, int partitions, short replicationFactor, 
 			String[] producerArr, String[] consumerArr) {
@@ -66,11 +66,11 @@ public class TopicCfg {
 
 	// running info
 	//
-	public TopicRunningInfo getRunningInfo() {
+	public RunningInfo getRunningInfo() {
 		return runningInfo;
 	}
 
-	public void setRunningInfo(TopicRunningInfo runningInfo) {
+	public void setRunningInfo(RunningInfo runningInfo) {
 		this.runningInfo = runningInfo;
 	}
 	

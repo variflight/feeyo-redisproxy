@@ -25,9 +25,9 @@ import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
-import com.feeyo.kafka.net.backend.runtime.DataPartition;
-import com.feeyo.kafka.net.backend.runtime.DataPartitionOffset;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -1009,12 +1009,12 @@ public class Manage {
 								String topic = new String( request.getArgs()[2] );
 								TopicCfg kafkaCfg = kafkaMap.get(topic);
 								if (kafkaCfg != null) {
-									Map<Integer, DataPartitionOffset> offsets = kafkaCfg.getRunningInfo().getPartitionOffsets();
-									DataPartition[] partitions = kafkaCfg.getRunningInfo().getPartitions();
+									Map<Integer, BrokerPartitionOffset> offsets = kafkaCfg.getRunningInfo().getPartitionOffsets();
+									BrokerPartition[] partitions = kafkaCfg.getRunningInfo().getPartitions();
 									
-									for (DataPartition partition : partitions) {
+									for (BrokerPartition partition : partitions) {
 										int pt = partition.getPartition();
-										DataPartitionOffset offset = offsets.get(pt);
+										BrokerPartitionOffset offset = offsets.get(pt);
 										
 										StringBuffer line = new StringBuffer();
 										line.append(kafkaCfg.getName()).append(", ");

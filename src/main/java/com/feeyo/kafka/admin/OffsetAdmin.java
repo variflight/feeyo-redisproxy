@@ -23,9 +23,9 @@ import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
-import com.feeyo.kafka.net.backend.runtime.ConsumerOffset;
-import com.feeyo.kafka.net.backend.runtime.DataPartition;
-import com.feeyo.kafka.net.backend.runtime.DataPartitionOffset;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
+import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
@@ -107,14 +107,15 @@ public class OffsetAdmin {
 	}
 	
 	
-	private void saveOffsetsToZk(String topicName,  Map<Integer, DataPartitionOffset> partitionOffsetMap, int poolId) {
+	private void saveOffsetsToZk(String topicName,  Map<Integer, BrokerPartitionOffset> partitionOffsetMap, int poolId) {
+		
 		String basepath = offsetManageCfg.getPath() + File.separator + String.valueOf(poolId) + File.separator + topicName;
 		Stat stat;
 		try {
-			for (Entry<Integer, DataPartitionOffset> entry : partitionOffsetMap.entrySet()) {
+			for (Entry<Integer, BrokerPartitionOffset> entry : partitionOffsetMap.entrySet()) {
 				
 				// 点位
-				DataPartitionOffset partitionOffset = entry.getValue();
+				BrokerPartitionOffset partitionOffset = entry.getValue();
 				String path = basepath + File.separator + entry.getKey();
 				stat = curator.checkExists().forPath(path);
 				if (stat == null) {
@@ -184,9 +185,9 @@ public class OffsetAdmin {
 			
 			String topicName  = topicCfg.getName();
 			String basepath = offsetManageCfg.getPath() + File.separator  + String.valueOf(poolId) + File.separator + topicName;
-			Map<Integer, DataPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, DataPartitionOffset>();
+			Map<Integer, BrokerPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 			try {
-				for (DataPartition partition : topicCfg.getRunningInfo().getPartitions()) {
+				for (BrokerPartition partition : topicCfg.getRunningInfo().getPartitions()) {
 					
 					String path = basepath + File.separator + partition.getPartition();
 					// base node 
@@ -195,12 +196,12 @@ public class OffsetAdmin {
 					
 					if (isNull(data)) {
 						
-						DataPartitionOffset partitionOffset = new DataPartitionOffset(partition.getPartition(), 0, 0);
+						BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), 0, 0);
 						partitionOffsetMap.put(partition.getPartition(), partitionOffset);
 						
 					} else {
 						// {"logStartOffset":0,"partition":0,"producerOffset":0}
-						DataPartitionOffset partitionOffset = JsonUtils.unmarshalFromByte(data, DataPartitionOffset.class);
+						BrokerPartitionOffset partitionOffset = JsonUtils.unmarshalFromByte(data, BrokerPartitionOffset.class);
 						partitionOffsetMap.put(partition.getPartition(), partitionOffset);
 						
 						List<String> childrenPath = curator.getChildren().forPath(path);

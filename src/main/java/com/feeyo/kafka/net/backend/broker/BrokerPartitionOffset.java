@@ -1,4 +1,4 @@
-package com.feeyo.kafka.net.backend.runtime;
+package com.feeyo.kafka.net.backend.broker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.alibaba.fastjson.annotation.JSONField;
 
-public class DataPartitionOffset {
+public class BrokerPartitionOffset {
 	
 	private int partition;
 	private volatile long producerOffset;
@@ -16,14 +16,14 @@ public class DataPartitionOffset {
 	@JSONField(serialize=false)
 	private Map<String, ConsumerOffset> consumerOffsets;
 	
-	public DataPartitionOffset (int partition, long producerOffset, long logStartOffset) {
+	public BrokerPartitionOffset (int partition, long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
 		this.consumerOffsets = new ConcurrentHashMap<>();
 		this.partition = partition;
 		this.logStartOffset = logStartOffset;
 	}
 	
-	public DataPartitionOffset() {
+	public BrokerPartitionOffset() {
 		this(0, 0, 0);
 	}
 	

@@ -9,8 +9,8 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.config.loader.KafkaCtx;
-import com.feeyo.kafka.net.backend.runtime.DataPartition;
-import com.feeyo.kafka.net.backend.runtime.DataPartitionOffset;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 
@@ -66,10 +66,10 @@ public class KafkaPoolCfg extends PoolCfg {
 				} else {
 					
 					// partition -> data offset
-					Map<Integer, DataPartitionOffset> offsetMap = new ConcurrentHashMap<Integer, DataPartitionOffset>();
+					Map<Integer, BrokerPartitionOffset> offsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 
-					for (DataPartition partition : newTopicCfg.getRunningInfo().getPartitions()) {
-						DataPartitionOffset partitionOffset = new DataPartitionOffset(partition.getPartition(), 0, 0);
+					for (BrokerPartition partition : newTopicCfg.getRunningInfo().getPartitions()) {
+						BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), 0, 0);
 						offsetMap.put(partition.getPartition(), partitionOffset);
 					}
 

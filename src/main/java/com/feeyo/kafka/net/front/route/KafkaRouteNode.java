@@ -1,17 +1,17 @@
 package com.feeyo.kafka.net.front.route;
 
-import com.feeyo.kafka.net.backend.runtime.DataPartitionOffset;
+import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
 import com.feeyo.redis.net.front.route.RouteNode;
 
 public class KafkaRouteNode extends RouteNode {
 	
-	private DataPartitionOffset partitionOffset;
+	private BrokerPartitionOffset partitionOffset;
 	
-	public DataPartitionOffset getPartitionOffset() {
+	public BrokerPartitionOffset getPartitionOffset() {
 		return partitionOffset;
 	}
 
-	public void setPartitionOffset(DataPartitionOffset partitionOffset) {
+	public void setPartitionOffset(BrokerPartitionOffset partitionOffset) {
 		this.partitionOffset = partitionOffset;
 	}
 

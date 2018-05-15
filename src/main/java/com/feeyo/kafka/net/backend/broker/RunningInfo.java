@@ -1,23 +1,26 @@
-package com.feeyo.kafka.net.backend.runtime;
+package com.feeyo.kafka.net.backend.broker;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class TopicRunningInfo {
+/*
+ * Topic 运行信息
+ */
+public class RunningInfo {
 	
 	private final String name;
 	private final boolean internal;
 	
 	// 分区信息
-	private final DataPartition[] partitions;
+	private final BrokerPartition[] partitions;
 	private AtomicInteger producerIndex;
 	private AtomicInteger consumerIndex;
 	
 	private final int partitionNum;
-	private Map<Integer, DataPartitionOffset> partitionOffsets;
+	private Map<Integer, BrokerPartitionOffset> partitionOffsets;
 
 
-	public TopicRunningInfo(String name, boolean internal, DataPartition[] partitions) {
+	public RunningInfo(String name, boolean internal, BrokerPartition[] partitions) {
 		this.name = name;
 		this.internal = internal;
 		this.partitions = partitions;
@@ -35,22 +38,22 @@ public class TopicRunningInfo {
 		return internal;
 	}
 
-	public DataPartition[] getPartitions() {
+	public BrokerPartition[] getPartitions() {
 		return partitions;
 	}
 
-	public DataPartition getProducerDataPartition() {
+	public BrokerPartition getProducerDataPartition() {
 		int index = getPartitionIndex(producerIndex);
 		return this.partitions[index];
 	}
 
-	public DataPartition getConsumerDataPartition() {
+	public BrokerPartition getConsumerDataPartition() {
 		int index = getPartitionIndex( consumerIndex );
 		return this.partitions[index];
 	}
 	
-	public DataPartition getConsumerDataPartition(int partition) {
-		for (DataPartition p : partitions) {
+	public BrokerPartition getConsumerDataPartition(int partition) {
+		for (BrokerPartition p : partitions) {
 			if (p.getPartition() == partition) {
 				return p;
 			}
@@ -58,20 +61,20 @@ public class TopicRunningInfo {
 		return null;
 	}
 
-	public Map<Integer, DataPartitionOffset> getPartitionOffsets() {
+	public Map<Integer, BrokerPartitionOffset> getPartitionOffsets() {
 		return partitionOffsets;
 	}
 	
-	public DataPartitionOffset getPartitionOffset(int partition) {
-		DataPartitionOffset offset = partitionOffsets.get(partition);
+	public BrokerPartitionOffset getPartitionOffset(int partition) {
+		BrokerPartitionOffset offset = partitionOffsets.get(partition);
 		if (offset == null) {
-			offset = new DataPartitionOffset(partition, 0, 0);
+			offset = new BrokerPartitionOffset(partition, 0, 0);
 			partitionOffsets.put(partition, offset);
 		}
 		return offset;
 	}
 
-	public void setPartitionOffsets(Map<Integer, DataPartitionOffset> offsets) {
+	public void setPartitionOffsets(Map<Integer, BrokerPartitionOffset> offsets) {
 		this.partitionOffsets = offsets;
 	}
 
