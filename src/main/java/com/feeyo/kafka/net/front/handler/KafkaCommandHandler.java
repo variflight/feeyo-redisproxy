@@ -216,7 +216,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			// 1k的buffer 肯定够用
 			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
 			if (pr.isCorrect()) {
-				partitionOffset.setOffsets(pr.getOffset(), pr.getLogStartOffset());
+				partitionOffset.setProducerOffset(pr.getOffset(), pr.getLogStartOffset());
 				
 				byte[] size = ProtoUtils.convertIntToByteArray(PRODUCE_RESPONSE_SIZE);
 				byte[] partitonArr = ProtoUtils.convertIntToByteArray(partitionOffset.getPartition());

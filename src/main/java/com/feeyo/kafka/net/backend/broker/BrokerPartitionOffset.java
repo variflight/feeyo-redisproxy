@@ -27,27 +27,34 @@ public class BrokerPartitionOffset {
 		this(0, 0, 0);
 	}
 	
+	public long getLogStartOffset() {
+		return logStartOffset;
+	}
+
+	public void setLogStartOffset(long logStartOffset) {
+		this.logStartOffset = logStartOffset;
+	}
+	
 	public long getProducerOffset() {
 		return producerOffset;
 	}
 
-	public void setOffsets(long producerOffset, long logStartOffset) {
+	public void setProducerOffset(long producerOffset, long logStartOffset) {
 		this.producerOffset = producerOffset;
 		this.logStartOffset = logStartOffset;
 	}
-
-	public Map<String, ConsumerOffset> getConsumerOffsets() {
-		return consumerOffsets;
-	}
-
-	public void setConsumerOffsets(Map<String, ConsumerOffset> offsets) {
-		this.consumerOffsets = offsets;
-	}
 	
+	public void setProducerOffset(long producerOffset) {
+		this.producerOffset = producerOffset;
+	}
+
 	public int getPartition() {
 		return partition;
 	}
-	
+
+	public void setPartition(int partition) {
+		this.partition = partition;
+	}
 
 	
 	@JSONField(serialize=false)
@@ -81,6 +88,15 @@ public class BrokerPartitionOffset {
 
 	}
 	
+	
+	public Map<String, ConsumerOffset> getConsumerOffsets() {
+		return consumerOffsets;
+	}
+
+	public void setConsumerOffsets(Map<String, ConsumerOffset> offsets) {
+		this.consumerOffsets = offsets;
+	}
+	
 	public ConsumerOffset getConsumerOffsetByConsumer(String consumer) {
 		ConsumerOffset consumerOffset = consumerOffsets.get(consumer);
 		if (consumerOffset == null) {
@@ -90,20 +106,4 @@ public class BrokerPartitionOffset {
 		return consumerOffset;
 	}
 
-	public long getLogStartOffset() {
-		return logStartOffset;
-	}
-
-	public void setLogStartOffset(long logStartOffset) {
-		this.logStartOffset = logStartOffset;
-	}
-
-	public void setPartition(int partition) {
-		this.partition = partition;
-	}
-
-	public void setProducerOffset(long producerOffset) {
-		this.producerOffset = producerOffset;
-	}
-	
 }
