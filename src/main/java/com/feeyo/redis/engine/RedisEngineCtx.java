@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.kafka.admin.OffsetAdmin;
+import com.feeyo.kafka.net.backend.broker.RunningOffsetAdmin;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
@@ -198,7 +198,7 @@ public class RedisEngineCtx {
 //		// 7, zk startup
 //		ZkClient.INSTANCE().init();
 //		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
-        OffsetAdmin.getInstance().startup();
+        RunningOffsetAdmin.getInstance().startup();
         
 	}
 	

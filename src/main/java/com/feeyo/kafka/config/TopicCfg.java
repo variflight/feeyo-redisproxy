@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.feeyo.kafka.net.backend.broker.RunningInfo;
+import com.feeyo.kafka.net.backend.broker.RunningOffset;
 
 public class TopicCfg {
 	
@@ -17,7 +17,7 @@ public class TopicCfg {
 	private final Set<String> producers = new HashSet<String>(); 
 	private final Set<String> consumers = new HashSet<String>(); 
 	
-	private RunningInfo runningInfo;
+	private RunningOffset runningOffset;
 	
 	public TopicCfg(String name, int poolId, int partitions, short replicationFactor, 
 			String[] producerArr, String[] consumerArr) {
@@ -64,14 +64,14 @@ public class TopicCfg {
 		return consumers.contains(consumer);
 	}
 
-	// running info
+	// running offset
 	//
-	public RunningInfo getRunningInfo() {
-		return runningInfo;
+	public RunningOffset getRunningOffset() {
+		return runningOffset;
 	}
 
-	public void setRunningInfo(RunningInfo runningInfo) {
-		this.runningInfo = runningInfo;
+	public void setRunningOffset(RunningOffset runningOffset) {
+		this.runningOffset = runningOffset;
 	}
 	
 }

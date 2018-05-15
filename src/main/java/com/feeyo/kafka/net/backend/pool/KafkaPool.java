@@ -55,8 +55,8 @@ public class KafkaPool extends AbstractPool {
 
 	@Override
 	public boolean startup() {
-		Collection<Node> nodeData = discoverNodes();
-		if (nodeData == null || nodeData.isEmpty()) {
+		Collection<Node> nodes = discoverNodes();
+		if (nodes == null || nodes.isEmpty()) {
 			return false;
 		}
 
@@ -67,7 +67,7 @@ public class KafkaPool extends AbstractPool {
 
 		availableHostList.clear();
 		backupHostList.clear();
-		for (Node node : nodeData) {
+		for (Node node : nodes) {
 			PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
 					poolType, poolName, minCon, maxCon, node.host(), node.port());
 			physicalNode.initConnections();
@@ -159,8 +159,8 @@ public class KafkaPool extends AbstractPool {
 
 	@Override
 	public boolean testConnection() {
-		Collection<Node> nodeData = discoverNodes();
-		if (nodeData == null || nodeData.isEmpty()) {
+		Collection<Node> nodes = discoverNodes();
+		if (nodes == null || nodes.isEmpty()) {
 			return false;
 		}
 		return true;
@@ -177,11 +177,11 @@ public class KafkaPool extends AbstractPool {
 			KafkaAdmin kafkaAdmin = null;
 			try {
 				kafkaAdmin = KafkaAdmin.create(hostAndPort[0] + ":" + hostAndPort[1]);
-				Collection<Node> nodeData = kafkaAdmin.getClusterNodes();
-				if (nodeData == null || nodeData.isEmpty()) {
+				Collection<Node> nodes = kafkaAdmin.getClusterNodes();
+				if (nodes == null || nodes.isEmpty()) {
 					continue;
 				}
-				return nodeData;
+				return nodes;
 			} finally {
 				if (kafkaAdmin != null)
 					kafkaAdmin.close();
@@ -200,8 +200,8 @@ public class KafkaPool extends AbstractPool {
 		}
 		
 		try {
-			Collection<Node> nodeData = discoverNodes();
-			if (nodeData == null || nodeData.isEmpty()) {
+			Collection<Node> nodes = discoverNodes();
+			if (nodes == null || nodes.isEmpty()) {
 				heartbeatStatus = -1;
 				LOGGER.error("kafka pool err: heartbeatStatus={}", heartbeatStatus);
 			} else {
@@ -212,7 +212,7 @@ public class KafkaPool extends AbstractPool {
 				int minCon = poolCfg.getMinCon();
 				int maxCon = poolCfg.getMaxCon();
 
-				for (Node node : nodeData) {
+				for (Node node : nodes) {
 					PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
 							poolType, poolName, minCon, maxCon, node.host(), node.port());
 					newPhysicalNodes.put(node.id(), physicalNode);

@@ -16,7 +16,7 @@ import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerNode;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.RunningInfo;
+import com.feeyo.kafka.net.backend.broker.RunningOffset;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
@@ -86,7 +86,7 @@ public class KafkaCtx {
 				
 				// 
 				if ( topicDescription == null) {
-					topicCfg.setRunningInfo( null );
+					topicCfg.setRunningOffset( null );
 					return;
 					
 				} else {
@@ -115,8 +115,8 @@ public class KafkaCtx {
 						newPartitions[i] = newPartition;
 					}
 	
-					RunningInfo runningInfo = new RunningInfo(name, internal, newPartitions);
-					topicCfg.setRunningInfo( runningInfo );
+					RunningOffset runningInfo = new RunningOffset(name, internal, newPartitions);
+					topicCfg.setRunningOffset( runningInfo );
 				}
 
 			}

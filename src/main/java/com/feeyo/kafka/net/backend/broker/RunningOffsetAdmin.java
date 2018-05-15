@@ -1,4 +1,4 @@
-package com.feeyo.kafka.admin;
+package com.feeyo.kafka.net.backend.broker;
 
 import java.io.File;
 import java.util.List;
@@ -23,9 +23,6 @@ import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
-import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
-import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
@@ -36,26 +33,26 @@ import com.feeyo.redis.engine.RedisEngineCtx;
  * 
  * @author yangtao
  */
-public class OffsetAdmin {
+public class RunningOffsetAdmin {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger(OffsetAdmin.class);
+	private static Logger LOGGER = LoggerFactory.getLogger(RunningOffsetAdmin.class);
 	
 	private static final String ZK_CFG_FILE = "kafka.xml"; // zk settings is in server.xml
 	
 
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 	
-	private static OffsetAdmin INSTANCE = new OffsetAdmin();
+	private static RunningOffsetAdmin INSTANCE = new RunningOffsetAdmin();
 
 	private CuratorFramework curator;
 	private OffsetManageCfg offsetManageCfg;
 	
 	
-	public static OffsetAdmin getInstance() {
+	public static RunningOffsetAdmin getInstance() {
 		return INSTANCE;
 	}
 	
-	private OffsetAdmin() {
+	private RunningOffsetAdmin() {
 
 		offsetManageCfg = KafkaConfigLoader.loadOffsetManageCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
 		
@@ -187,7 +184,7 @@ public class OffsetAdmin {
 			String basepath = offsetManageCfg.getPath() + File.separator  + String.valueOf(poolId) + File.separator + topicName;
 			Map<Integer, BrokerPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 			try {
-				for (BrokerPartition partition : topicCfg.getRunningInfo().getPartitions()) {
+				for (BrokerPartition partition : topicCfg.getRunningOffset().getBrokerPartitions()) {
 					
 					String path = basepath + File.separator + partition.getPartition();
 					// base node 
@@ -217,7 +214,7 @@ public class OffsetAdmin {
 				}
 				
 				
-				topicCfg.getRunningInfo().setPartitionOffsets( partitionOffsetMap );
+				topicCfg.getRunningOffset().setPartitionOffsets( partitionOffsetMap );
 				
 			} catch (Exception e) {
 				LOGGER.warn("", e);
@@ -247,7 +244,7 @@ public class OffsetAdmin {
 				
 				for (Entry<String, TopicCfg> topicEntry : topicCfgMap.entrySet()) {
 					TopicCfg topicCfg = topicEntry.getValue();
-					saveOffsetsToZk(topicCfg.getName(), topicCfg.getRunningInfo().getPartitionOffsets(), poolCfg.getId());
+					saveOffsetsToZk(topicCfg.getName(), topicCfg.getRunningOffset().getPartitionOffsets(), poolCfg.getId());
 				}
 			}
 		}

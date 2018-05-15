@@ -61,19 +61,19 @@ public class KafkaPoolCfg extends PoolCfg {
 				TopicCfg oldTopicCfg = topicCfgMap.get(key);
 				if (oldTopicCfg != null) {
 					// 迁移原来的offset
-					newTopicCfg.getRunningInfo().setPartitionOffsets( oldTopicCfg.getRunningInfo().getPartitionOffsets() );
+					newTopicCfg.getRunningOffset().setPartitionOffsets( oldTopicCfg.getRunningOffset().getPartitionOffsets() );
 
 				} else {
 					
 					// partition -> data offset
 					Map<Integer, BrokerPartitionOffset> offsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 
-					for (BrokerPartition partition : newTopicCfg.getRunningInfo().getPartitions()) {
+					for (BrokerPartition partition : newTopicCfg.getRunningOffset().getBrokerPartitions()) {
 						BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), 0, 0);
 						offsetMap.put(partition.getPartition(), partitionOffset);
 					}
 
-					newTopicCfg.getRunningInfo().setPartitionOffsets(offsetMap);
+					newTopicCfg.getRunningOffset().setPartitionOffsets(offsetMap);
 				}
 			}
 			

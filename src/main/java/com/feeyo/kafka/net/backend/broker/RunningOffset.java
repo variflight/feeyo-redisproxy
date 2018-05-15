@@ -4,9 +4,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /*
- * Topic 运行信息
+ * Topic 运行时点位
  */
-public class RunningInfo {
+public class RunningOffset {
 	
 	private final String name;
 	private final boolean internal;
@@ -20,7 +20,7 @@ public class RunningInfo {
 	private Map<Integer, BrokerPartitionOffset> partitionOffsets;
 
 
-	public RunningInfo(String name, boolean internal, BrokerPartition[] partitions) {
+	public RunningOffset(String name, boolean internal, BrokerPartition[] partitions) {
 		this.name = name;
 		this.internal = internal;
 		this.partitions = partitions;
@@ -38,21 +38,21 @@ public class RunningInfo {
 		return internal;
 	}
 
-	public BrokerPartition[] getPartitions() {
+	public BrokerPartition[] getBrokerPartitions() {
 		return partitions;
 	}
 
-	public BrokerPartition getProducerDataPartition() {
+	public BrokerPartition getProducerBrokerPartition() {
 		int index = getPartitionIndex(producerIndex);
 		return this.partitions[index];
 	}
 
-	public BrokerPartition getConsumerDataPartition() {
+	public BrokerPartition getConsumerBrokerPartition() {
 		int index = getPartitionIndex( consumerIndex );
 		return this.partitions[index];
 	}
 	
-	public BrokerPartition getConsumerDataPartition(int partition) {
+	public BrokerPartition getConsumerBrokerPartition(int partition) {
 		for (BrokerPartition p : partitions) {
 			if (p.getPartition() == partition) {
 				return p;
