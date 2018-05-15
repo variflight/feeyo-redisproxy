@@ -1009,8 +1009,8 @@ public class Manage {
 								String topic = new String( request.getArgs()[2] );
 								TopicCfg kafkaCfg = kafkaMap.get(topic);
 								if (kafkaCfg != null) {
-									Map<Integer, DataPartitionOffset> offsets = kafkaCfg.getMetadata().getPartitionOffsets();
-									DataPartition[] partitions = kafkaCfg.getMetadata().getPartitions();
+									Map<Integer, DataPartitionOffset> offsets = kafkaCfg.getRunningInfo().getPartitionOffsets();
+									DataPartition[] partitions = kafkaCfg.getRunningInfo().getPartitions();
 									
 									for (DataPartition partition : partitions) {
 										int pt = partition.getPartition();

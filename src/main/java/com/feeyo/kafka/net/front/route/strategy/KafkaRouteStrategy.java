@@ -50,7 +50,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throw new InvalidRequestExistsException("topic not exists");
 		}
 		
-		if (topicCfg.getMetadata() == null) {
+		if (topicCfg.getRunningInfo() == null) {
 			throw new InvalidRequestExistsException("topic not create or not load to kafka...");
 		} 
 		
@@ -69,7 +69,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 					throw new InvalidRequestExistsException("no authority");
 				}
 				
-				partition = topicCfg.getMetadata().getProducerDataPartition();
+				partition = topicCfg.getRunningInfo().getProducerDataPartition();
 			}
 			
 			break;
@@ -85,10 +85,10 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				
 				if (request.getNumArgs() == 4) {
 					int pt = Integer.parseInt(new String(request.getArgs()[2]));
-					partition = topicCfg.getMetadata().getConsumerDataPartition(pt);
+					partition = topicCfg.getRunningInfo().getConsumerDataPartition(pt);
 
 				} else {
-					partition = topicCfg.getMetadata().getConsumerDataPartition();
+					partition = topicCfg.getRunningInfo().getConsumerDataPartition();
 				}
 				
 			}
@@ -116,7 +116,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				}
 				
 				int pt = Integer.parseInt(new String(request.getArgs()[2]));
-				partition = topicCfg.getMetadata().getConsumerDataPartition(pt);
+				partition = topicCfg.getRunningInfo().getConsumerDataPartition(pt);
 				
 				break;
 			}
@@ -126,7 +126,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throw new InvalidRequestExistsException("wrong partition");
 		}
 		
-		DataPartitionOffset partitionOffset = topicCfg.getMetadata().getPartitionOffset( partition.getPartition() );
+		DataPartitionOffset partitionOffset = topicCfg.getRunningInfo().getPartitionOffset( partition.getPartition() );
 		
 		//
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get( topicCfg.getPoolId() );

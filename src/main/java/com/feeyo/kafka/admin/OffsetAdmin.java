@@ -186,7 +186,7 @@ public class OffsetAdmin {
 			String basepath = offsetManageCfg.getPath() + File.separator  + String.valueOf(poolId) + File.separator + topicName;
 			Map<Integer, DataPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, DataPartitionOffset>();
 			try {
-				for (DataPartition partition : topicCfg.getMetadata().getPartitions()) {
+				for (DataPartition partition : topicCfg.getRunningInfo().getPartitions()) {
 					
 					String path = basepath + File.separator + partition.getPartition();
 					// base node 
@@ -216,7 +216,7 @@ public class OffsetAdmin {
 				}
 				
 				
-				topicCfg.getMetadata().setPartitionOffsets( partitionOffsetMap );
+				topicCfg.getRunningInfo().setPartitionOffsets( partitionOffsetMap );
 				
 			} catch (Exception e) {
 				LOGGER.warn("", e);
@@ -246,7 +246,7 @@ public class OffsetAdmin {
 				
 				for (Entry<String, TopicCfg> topicEntry : topicCfgMap.entrySet()) {
 					TopicCfg topicCfg = topicEntry.getValue();
-					saveOffsetsToZk(topicCfg.getName(), topicCfg.getMetadata().getPartitionOffsets(), poolCfg.getId());
+					saveOffsetsToZk(topicCfg.getName(), topicCfg.getRunningInfo().getPartitionOffsets(), poolCfg.getId());
 				}
 			}
 		}

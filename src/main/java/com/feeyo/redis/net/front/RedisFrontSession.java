@@ -505,7 +505,7 @@ public class RedisFrontSession {
 			String topic = new String(request.getArgs()[1]);
 			KafkaPoolCfg poolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
 			TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
-			DataPartition[] partitions = tc.getMetadata().getPartitions();
+			DataPartition[] partitions = tc.getRunningInfo().getPartitions();
 			
 			// 申请1k buffer （肯定够）
 			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);

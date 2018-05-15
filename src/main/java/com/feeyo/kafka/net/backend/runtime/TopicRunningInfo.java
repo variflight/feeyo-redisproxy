@@ -3,7 +3,7 @@ package com.feeyo.kafka.net.backend.runtime;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Metadata {
+public class TopicRunningInfo {
 	
 	private final String name;
 	private final boolean internal;
@@ -17,7 +17,7 @@ public class Metadata {
 	private Map<Integer, DataPartitionOffset> partitionOffsets;
 
 
-	public Metadata(String name, boolean internal, DataPartition[] partitions) {
+	public TopicRunningInfo(String name, boolean internal, DataPartition[] partitions) {
 		this.name = name;
 		this.internal = internal;
 		this.partitions = partitions;

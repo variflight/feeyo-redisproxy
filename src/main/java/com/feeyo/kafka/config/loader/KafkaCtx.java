@@ -16,7 +16,7 @@ import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.runtime.DataNode;
 import com.feeyo.kafka.net.backend.runtime.DataPartition;
-import com.feeyo.kafka.net.backend.runtime.Metadata;
+import com.feeyo.kafka.net.backend.runtime.TopicRunningInfo;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
@@ -86,7 +86,7 @@ public class KafkaCtx {
 				
 				// 
 				if ( topicDescription == null) {
-					topicCfg.setMetadata( null );
+					topicCfg.setRunningInfo( null );
 					return;
 					
 				} else {
@@ -115,8 +115,8 @@ public class KafkaCtx {
 						newPartitions[i] = newPartition;
 					}
 	
-					Metadata metadata = new Metadata(name, internal, newPartitions);
-					topicCfg.setMetadata( metadata );
+					TopicRunningInfo runningInfo = new TopicRunningInfo(name, internal, newPartitions);
+					topicCfg.setRunningInfo( runningInfo );
 				}
 
 			}

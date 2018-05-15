@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.feeyo.kafka.net.backend.runtime.Metadata;
+import com.feeyo.kafka.net.backend.runtime.TopicRunningInfo;
 
 public class TopicCfg {
 	
@@ -17,7 +17,7 @@ public class TopicCfg {
 	private final Set<String> producers = new HashSet<String>(); 
 	private final Set<String> consumers = new HashSet<String>(); 
 	
-	private Metadata metadata;
+	private TopicRunningInfo runningInfo;
 	
 	public TopicCfg(String name, int poolId, int partitions, short replicationFactor, 
 			String[] producerArr, String[] consumerArr) {
@@ -63,13 +63,15 @@ public class TopicCfg {
 	public boolean isConsumer(String consumer) {
 		return consumers.contains(consumer);
 	}
-	
-	public Metadata getMetadata() {
-		return metadata;
+
+	// running info
+	//
+	public TopicRunningInfo getRunningInfo() {
+		return runningInfo;
 	}
 
-	public void setMetadata(Metadata metadata) {
-		this.metadata = metadata;
+	public void setRunningInfo(TopicRunningInfo runningInfo) {
+		this.runningInfo = runningInfo;
 	}
 	
 }
