@@ -2,6 +2,7 @@ package com.feeyo.kafka.net.front.handler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import com.feeyo.kafka.codec.Errors;
 import com.feeyo.kafka.codec.FetchRequest;
@@ -46,8 +47,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private static final int REPLICA_ID = -1;
 	private static final long LOG_START_OFFSET = -1;
 	
-	// 一次消费的条数
-	private static final int FETCH_LOG_COUNT = 1;
+	// 一次消费的字节数(默认为1，可以确保一次消费一条数据)
+	private static final int DEFAULT_MAX_BYTES = 1;
 	
 	private static final int LENGTH_BYTE_COUNT = 4;
 	private static final int PRODUCE_RESPONSE_SIZE = 2;
@@ -76,18 +77,26 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		case CommandParse.CONSUMER_CMD:
 			long newOffset;
 			boolean isErrorOffsetRecovery = true;
+			int maxBytes = DEFAULT_MAX_BYTES;
+			
+			// 顺序消费
+			if (request.getNumArgs() == 2) {
+				ConsumerOffset cOffset =  node.getPartitionOffset().getConsumerOffsetByConsumer( frontCon.getPassword() );
+				newOffset =	cOffset.getNewOffset();
+			
 			// 指定点位消费
-			if (request.getNumArgs() == 4) {
+			} else if (request.getNumArgs() == 4){
 				newOffset = Long.parseLong(new String(request.getArgs()[3]));
 				isErrorOffsetRecovery = false;
 				
-			// 顺序消费
+			// 指定点位指定字节消费
 			} else {
-				ConsumerOffset cOffset =  node.getPartitionOffset().getConsumerOffsetByConsumer( frontCon.getPassword() );
-				newOffset =	cOffset.getNewOffset();
+				newOffset = Long.parseLong(new String(request.getArgs()[3]));
+				isErrorOffsetRecovery = false;
+				maxBytes = Integer.parseInt(new String(request.getArgs()[4]));
 			}
 			
-			buffer = consumerEncode(request, node.getPartitionOffset().getPartition(), newOffset);
+			buffer = consumerEncode(request, node.getPartitionOffset().getPartition(), newOffset, maxBytes);
 			backendCallback = new KafkaConsumerCmdCallback( node.getPartitionOffset(), newOffset, isErrorOffsetRecovery );
 			break;
 			
@@ -113,11 +122,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private ByteBuffer produceEncode(RedisRequest request, int partition) {
 		short version = BrokerApiVersion.getProduceVersion();
 		
-		Record record = new Record();
-		record.setOffset(0);
-		record.setKey(request.getArgs()[1]);
-		record.setValue(request.getArgs()[2]);
-		record.setTopic(new String(request.getArgs()[1]));
+		Record record = new Record(0, new String(request.getArgs()[1]), request.getArgs()[1], request.getArgs()[2]);
 		record.setTimestamp(TimeUtil.currentTimeMillis());
 		record.setTimestampDelta(0);
 		ProduceRequest pr = new ProduceRequest(version, ACKS, TIME_OUT, null, partition, record);
@@ -132,12 +137,12 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		return buffer;
 	}
 	
-	private ByteBuffer consumerEncode(RedisRequest request, int partition, long offset) {
+	private ByteBuffer consumerEncode(RedisRequest request, int partition, long offset, int maxBytes) {
 		short version = BrokerApiVersion.getConsumerVersion();
 		
 		TopicAndPartitionData<PartitionData> topicAndPartitionData = new TopicAndPartitionData<PartitionData>(new String(request.getArgs()[1]));
 		FetchRequest fr = new FetchRequest(version, REPLICA_ID, TIME_OUT, MINBYTES, MAXBYTES, ISOLATION_LEVEL, topicAndPartitionData);
-		PartitionData pd = new PartitionData(offset, LOG_START_OFFSET, FETCH_LOG_COUNT);
+		PartitionData pd = new PartitionData(offset, LOG_START_OFFSET, maxBytes);
 		topicAndPartitionData.addData(partition, pd);
 		RequestHeader rh = new RequestHeader(ApiKeys.FETCH.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
 		Struct header = rh.toStruct();
@@ -263,35 +268,47 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			Struct response = ApiKeys.FETCH.parseResponse(version, buffer);
 			FetchResponse fr = new FetchResponse(response);
 			if (fr.isCorrect()) {
-				byte[] value = fr.getRecord().getValue();
-				if (value == null) {
-					
+				List<Record> records = fr.getRecords();
+				if (records == null || records.isEmpty()) {
 					if ( isErrorOffsetRecovery )
 						partitionOffset.revertConsumerOffset( frontCon.getPassword(), consumeOffset);
-					
 					frontCon.write(NULL);
 					return;
 				}
-				byte[] size = ProtoUtils.convertIntToByteArray(CONSUMER_RESPONSE_SIZE);
-				byte[] partitonArr = ProtoUtils.convertIntToByteArray(partitionOffset.getPartition());
-				byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
-				byte[] offsetArr = String.valueOf(consumeOffset).getBytes();
-				byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
-				byte[] valueLenght = ProtoUtils.convertIntToByteArray(value.length);
 				
-				// 计算 bufferSize *3\r\n$1\r\n1\r\n$4\r\n2563\r\n$4\r\ntest\r\n 
-				int bufferSize = 1 + size.length + 2 
-						+ 1 + partitonLength.length + 2 + partitonArr.length + 2
-						+ 1 + offsetLength.length + 2 + offsetArr.length + 2 
-						+ 1 + valueLenght.length + 2 + value.length + 2;
-				ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(bufferSize);
-				bb.put(ASTERISK).put(size).put(CRLF)
-					.put(DOLLAR).put(partitonLength).put(CRLF).put(partitonArr).put(CRLF)
+				byte[] size = ProtoUtils.convertIntToByteArray(CONSUMER_RESPONSE_SIZE * records.size());
+				
+				for (int i = 0;i<records.size();i++) {
+					Record record = records.get(i);
+					byte[] value = record.getValue();
+					
+					if (value == null) {
+						if ( isErrorOffsetRecovery )
+							partitionOffset.revertConsumerOffset( frontCon.getPassword(), consumeOffset);
+						
+						frontCon.write(NULL);
+						return;
+					}
+					byte[] partitonArr = ProtoUtils.convertIntToByteArray(partitionOffset.getPartition());
+					byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
+					byte[] offsetArr = String.valueOf(record.getOffset()).getBytes();
+					byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
+					byte[] valueLenght = ProtoUtils.convertIntToByteArray(value.length);
+					
+					// 计算 bufferSize $1\r\n1\r\n$4\r\n2563\r\n$4\r\ntest\r\n
+					int bufferSize = 1 + size.length + 2 
+							+ 1 + partitonLength.length + 2 + partitonArr.length + 2
+							+ 1 + offsetLength.length + 2 + offsetArr.length + 2 
+							+ 1 + valueLenght.length + 2 + value.length + 2;
+					ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(bufferSize);
+					if (i == 0) {
+						bb.put(ASTERISK).put(size).put(CRLF);
+					}
+					bb.put(DOLLAR).put(partitonLength).put(CRLF).put(partitonArr).put(CRLF)
 					.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF)
 					.put(DOLLAR).put(valueLenght).put(CRLF).put(value).put(CRLF);
-				
-				frontCon.write(bb);
-				
+					frontCon.write(bb);
+				}
 				// 消费offset超出范围
 			} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
 				

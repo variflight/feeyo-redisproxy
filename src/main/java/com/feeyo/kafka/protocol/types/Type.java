@@ -1,6 +1,8 @@
 package com.feeyo.kafka.protocol.types;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.util.ByteUtils;
@@ -455,12 +457,15 @@ public abstract class Type {
         }
 
         @Override
-        public Record read(ByteBuffer buffer) {
-        	// TODO read
-            ByteBuffer recordsBuffer = (ByteBuffer) NULLABLE_BYTES.read(buffer);
-            
-        		return new Record(recordsBuffer);
-        }
+		public List<Record> read(ByteBuffer buffer) {
+			ByteBuffer recordsBuffer = (ByteBuffer) NULLABLE_BYTES.read(buffer);
+			List<Record> records = new ArrayList<Record>();
+			while (recordsBuffer.hasRemaining()) {
+				Record record = new Record(recordsBuffer);
+				records.add(record);
+			}
+			return records;
+		}
 
         @Override
         public int sizeOf(Object o) {

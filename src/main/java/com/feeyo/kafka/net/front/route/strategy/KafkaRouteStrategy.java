@@ -75,7 +75,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			break;
 		case CommandParse.CONSUMER_CMD:
 			{
-				if (request.getNumArgs() != 2 && request.getNumArgs() != 4 ) {
+				if (request.getNumArgs() != 2 && request.getNumArgs() != 4 && request.getNumArgs() != 5 ) {
 					throw new InvalidRequestExistsException("wrong number of arguments");
 				}
 				
@@ -83,13 +83,15 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 					throw new InvalidRequestExistsException("no authority");
 				}
 				
-				if (request.getNumArgs() == 4) {
+				// 轮询分区消费
+				if (request.getNumArgs() == 2) {
+					partition = topicCfg.getRunningOffset().getConsumerBrokerPartition();
+					
+				// 指定分区消费
+				} else {
 					int pt = Integer.parseInt(new String(request.getArgs()[2]));
 					partition = topicCfg.getRunningOffset().getConsumerBrokerPartition(pt);
-
-				} else {
-					partition = topicCfg.getRunningOffset().getConsumerBrokerPartition();
-				}
+				} 
 				
 			}
 			break;

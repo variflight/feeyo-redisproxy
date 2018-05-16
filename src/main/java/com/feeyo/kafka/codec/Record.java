@@ -2,8 +2,11 @@ package com.feeyo.kafka.codec;
 
 import java.nio.ByteBuffer;
 
+import org.apache.kafka.common.record.InvalidRecordException;
+
 import com.feeyo.kafka.util.ByteUtils;
 import com.feeyo.kafka.util.Crc32C;
+import com.feeyo.kafka.util.Utils;
 
 public class Record {
 	private static final int NULL_VARINT_SIZE_BYTES = ByteUtils.sizeOfVarint(-1);
@@ -57,10 +60,6 @@ public class Record {
 	private String topic;
 	private byte magic;
 	
-	public Record() {
-		this(0, null, null, null);
-	}
-	
 	public Record(long offset, String topic, byte[] key, byte[] value) {
 		this.offset = offset;
 		this.topic = topic;
@@ -78,7 +77,7 @@ public class Record {
 			return;
 		}
 		//		return DefaultRecord.readFrom(buffer, baseOffset, firstTimestamp, baseSequence, logAppendTime);
-		this.offset = buffer.getLong(BASE_OFFSET_OFFSET);
+		this.offset = buffer.getLong(buffer.position() + BASE_OFFSET_OFFSET);
 //		int x = LOG_OVERHEAD + buffer.getInt(LENGTH_OFFSET);
 //		int partitionLeaderEpoch = buffer.getInt(PARTITION_LEADER_EPOCH_OFFSET);
 //		this.magic = buffer.get(MAGIC_OFFSET);
@@ -87,7 +86,7 @@ public class Record {
 //		long baseSequence = buffer.getInt(BASE_SEQUENCE_OFFSET);
 //		byte attru = (byte)buffer.getShort(ATTRIBUTES_OFFSET);
 		
-		buffer.position(RECORDS_OFFSET);
+		buffer.position(buffer.position() + RECORDS_OFFSET);
 		
 		int sizeOfBodyInBytes = ByteUtils.readVarint(buffer);
         if (buffer.remaining() < sizeOfBodyInBytes)
@@ -120,8 +119,14 @@ public class Record {
         }
 
         int numHeaders = ByteUtils.readVarint(buffer);
-//        if (numHeaders < 0)
-//            throw new InvalidRecordException("Found invalid number of record headers " + numHeaders);
+        if (numHeaders > 0)
+            readHeaders(buffer, numHeaders);
+
+        // validate whether we have read all header bytes in the current record
+        if (buffer.position() - recordStart != sizeOfBodyInBytes)
+            throw new InvalidRecordException("Invalid record size: expected to read " + sizeOfBodyInBytes +
+                    " bytes in record payload, but instead read " + (buffer.position() - recordStart));
+
 	}
 
 	public long getOffset() {
@@ -287,11 +292,22 @@ public class Record {
 				.append("key=").append(key).append(",").append("value=").append(value).append(",");
 		return sb.toString();
 		
-//		 return String.format("DefaultRecord(offset=%d, timestamp=%d, key=%d bytes, value=%d bytes)",
-//	                offset,
-//	                timestamp,
-//	                key == null ? 0 : key.limit(),
-//	                value == null ? 0 : value.limit());
 	}
 	
+	
+	private static void readHeaders(ByteBuffer buffer, int numHeaders) {
+		for (int i = 0; i < numHeaders; i++) {
+			int headerKeySize = ByteUtils.readVarint(buffer);
+			if (headerKeySize < 0)
+				throw new InvalidRecordException("Invalid negative header key size " + headerKeySize);
+
+			Utils.utf8(buffer, headerKeySize);
+			buffer.position(buffer.position() + headerKeySize);
+
+			int headerValueSize = ByteUtils.readVarint(buffer);
+			if (headerValueSize >= 0) {
+				buffer.position(buffer.position() + headerValueSize);
+			}
+		}
+	}
 }

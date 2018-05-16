@@ -3,6 +3,7 @@ package com.feeyo.kafka.protocol.types;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 
 import com.feeyo.kafka.codec.Record;
 
@@ -159,8 +160,9 @@ public class Struct {
         return (Byte) get(name);
     }
 
-    public Record getRecords(String name) {
-        return (Record) get(name);
+    @SuppressWarnings("unchecked")
+	public List<Record> getRecords(String name) {
+        return (List<Record>) get(name);
     }
 
     public Short getShort(BoundField field) {

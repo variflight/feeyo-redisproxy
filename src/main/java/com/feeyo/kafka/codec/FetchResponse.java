@@ -7,6 +7,8 @@ import static com.feeyo.kafka.protocol.CommonFields.TOPIC_NAME;
 import static com.feeyo.kafka.protocol.types.Type.INT64;
 import static com.feeyo.kafka.protocol.types.Type.RECORDS;
 
+import java.util.List;
+
 import com.feeyo.kafka.protocol.types.ArrayOf;
 import com.feeyo.kafka.protocol.types.Field;
 import com.feeyo.kafka.protocol.types.Schema;
@@ -144,7 +146,7 @@ public class FetchResponse {
     private int partition;
     private long lastStableOffset  = INVALID_LAST_STABLE_OFFSET;
     private long logStartOffset = INVALID_LOG_START_OFFSET;
-    private Record record;
+    private List<Record> records;
     
     
 	public FetchResponse(Struct struct) {
@@ -162,7 +164,7 @@ public class FetchResponse {
 				if (partitionResponseHeader.hasField(LOG_START_OFFSET_KEY_NAME))
 					logStartOffset = partitionResponseHeader.getLong(LOG_START_OFFSET_KEY_NAME);
 
-				record = partitionResponse.getRecords(RECORD_SET_KEY_NAME);
+				records = partitionResponse.getRecords(RECORD_SET_KEY_NAME);
 			}
 		}
 		this.responseErr = Errors.forCode(struct.getOrElse(ERROR_CODE, (short) 0));
@@ -198,8 +200,8 @@ public class FetchResponse {
 	}
 
 
-	public Record getRecord() {
-		return record;
+	public List<Record> getRecords() {
+		return records;
 	}
 	
 	public boolean isCorrect() {

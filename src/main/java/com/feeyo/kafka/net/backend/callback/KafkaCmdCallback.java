@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.codec.ResponseHeader;
-
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
@@ -25,6 +24,8 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 	protected static final byte[] OK =   "+OK\r\n".getBytes();
 	protected static final byte[] NULL =   "$-1\r\n".getBytes();
 	
+	private static int HEAD_LENGTH = 4;
+	
 	private byte[] buffer;
 	
 	@Override
@@ -40,7 +41,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( this.buffer.length );
 		try {
 			// 去除头部的长度
-			buffer.put(this.buffer, 4, this.buffer.length - 4);
+			buffer.put(this.buffer, HEAD_LENGTH, this.buffer.length - HEAD_LENGTH);
 			buffer.flip();
 			
 			int responseSize = this.buffer.length;
@@ -96,9 +97,13 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 		}
 	}
 	
+	/**
+	 * 检查有没有断包
+	 * @return
+	 */
 	private boolean isComplete() {
 		int len = this.buffer.length;
-		if (len < 4) {
+		if (len < HEAD_LENGTH) {
 			return false;
 		}
 		int v0 = (this.buffer[0] & 0xff) << 24;
@@ -106,7 +111,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 		int v2 = (this.buffer[2] & 0xff) << 8;  
 	    int v3 = (this.buffer[3] & 0xff); 
 	    
-	    if (v0 + v1 + v2 + v3 > len - 4) {
+	    if (v0 + v1 + v2 + v3 > len - HEAD_LENGTH) {
 	    		return false;
 	    }
 		
