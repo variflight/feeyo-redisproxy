@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import com.feeyo.kafka.codec.Errors;
+import com.feeyo.kafka.codec.FetchMetadata;
 import com.feeyo.kafka.codec.FetchRequest;
 import com.feeyo.kafka.codec.FetchRequest.PartitionData;
 import com.feeyo.kafka.codec.FetchRequest.TopicAndPartitionData;
@@ -141,7 +142,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		short version = BrokerApiVersion.getConsumerVersion();
 		
 		TopicAndPartitionData<PartitionData> topicAndPartitionData = new TopicAndPartitionData<PartitionData>(new String(request.getArgs()[1]));
-		FetchRequest fr = new FetchRequest(version, REPLICA_ID, TIME_OUT, MINBYTES, MAXBYTES, ISOLATION_LEVEL, topicAndPartitionData);
+		FetchRequest fr = new FetchRequest(version, REPLICA_ID, TIME_OUT, MINBYTES, MAXBYTES, ISOLATION_LEVEL, topicAndPartitionData, null, FetchMetadata.LEGACY);
 		PartitionData pd = new PartitionData(offset, LOG_START_OFFSET, maxBytes);
 		topicAndPartitionData.addData(partition, pd);
 		RequestHeader rh = new RequestHeader(ApiKeys.FETCH.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());

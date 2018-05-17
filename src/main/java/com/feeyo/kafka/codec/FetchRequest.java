@@ -7,10 +7,13 @@ import static com.feeyo.kafka.protocol.types.Type.INT64;
 import static com.feeyo.kafka.protocol.types.Type.INT8;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import org.apache.kafka.common.TopicPartition;
 
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.ArrayOf;
@@ -164,6 +167,8 @@ public class FetchRequest {
     private final int minBytes;
     private final int maxBytes;
     private final byte isolationLevel;
+    private final FetchMetadata metadata;
+    private final List<TopicPartition> toForget;
     
     private final TopicAndPartitionData<PartitionData> topicAndPartitionData;
 
@@ -225,7 +230,8 @@ public class FetchRequest {
     * @param topicAndPartitionData
     */
     public FetchRequest(short version, int replicaId, int maxWait, int minBytes, int maxBytes,
-                        byte isolationLevel, TopicAndPartitionData<PartitionData> topicAndPartitionData) {
+                        byte isolationLevel, TopicAndPartitionData<PartitionData> topicAndPartitionData,
+                        List<TopicPartition> toForget, FetchMetadata metadata) {
     		this.version = version;
         this.replicaId = replicaId;
         this.maxWait = maxWait;
@@ -233,6 +239,8 @@ public class FetchRequest {
         this.maxBytes = maxBytes;
         this.isolationLevel = isolationLevel;
         this.topicAndPartitionData = topicAndPartitionData;
+        this.metadata = metadata;
+        this.toForget = toForget;
     }
 
     public int replicaId() {
@@ -261,7 +269,9 @@ public class FetchRequest {
             struct.set(MAX_BYTES_KEY_NAME, maxBytes);
         if (struct.hasField(ISOLATION_LEVEL_KEY_NAME))
             struct.set(ISOLATION_LEVEL_KEY_NAME, isolationLevel);
-
+        struct.setIfExists(SESSION_ID, metadata.sessionId());
+        struct.setIfExists(EPOCH, metadata.epoch());
+        
         List<Struct> topicArray = new ArrayList<>();
         Struct topicData = struct.instance(TOPICS_KEY_NAME);
         topicData.set(TOPIC_NAME, topicAndPartitionData.topic);
@@ -279,6 +289,29 @@ public class FetchRequest {
         topicData.set(PARTITIONS_KEY_NAME, partitionArray.toArray());
         topicArray.add(topicData);
         struct.set(TOPICS_KEY_NAME, topicArray.toArray());
+        
+        if (struct.hasField(FORGOTTEN_TOPICS_DATA)) {
+            Map<String, List<Integer>> topicsToPartitions = new HashMap<String, List<Integer>>();
+            
+            if(toForget != null) {
+	            for (TopicPartition part : toForget) {
+	                List<Integer> partitions = topicsToPartitions.get(part.topic());
+	                if (partitions == null) {
+	                    partitions = new ArrayList<>();
+	                    topicsToPartitions.put(part.topic(), partitions);
+	                }
+	                partitions.add(part.partition());
+	            }
+            }
+            List<Struct> toForgetStructs = new ArrayList<>();
+            for (Map.Entry<String, List<Integer>> entry : topicsToPartitions.entrySet()) {
+                Struct toForgetStruct = struct.instance(FORGOTTEN_TOPICS_DATA);
+                toForgetStruct.set(TOPIC_NAME, entry.getKey());
+                toForgetStruct.set(PARTITIONS_KEY_NAME, entry.getValue().toArray());
+                toForgetStructs.add(toForgetStruct);
+            }
+            struct.set(FORGOTTEN_TOPICS_DATA, toForgetStructs.toArray());
+        }
         return struct;
     }
 }
