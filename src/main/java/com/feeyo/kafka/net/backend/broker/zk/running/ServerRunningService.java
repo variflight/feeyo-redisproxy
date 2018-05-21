@@ -1,4 +1,4 @@
-package com.feeyo.kafka.net.backend.broker.running;
+package com.feeyo.kafka.net.backend.broker.zk.running;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
-import com.feeyo.kafka.net.backend.broker.running.zk.ZkClientx;
+import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.util.NetworkUtil;
 
@@ -32,18 +32,18 @@ import com.feeyo.util.NetworkUtil;
  * 触发HA自动切换的场景
  * 
  * 1. 正常场景
- * 	   a. 正常关闭dbsync server(会释放channel的所有资源，包括删除running节点)
+ * 	   a. 正常关闭 server(会释放channel的所有资源，包括删除running节点)
  * 	   b. 平滑切换(gracefully)
  * 		操作：更新对应destination的running节点内容，将"active"设置为false，对应的running节点收到消息后，会主动释放running节点，让出控制权但自己jvm不退出，gracefully.
  *			 {"active":false,"address":"127.0.0.1:11111","cid":1}
  * 
  * 2. 异常场景
- * 	   a. redis-proxy server对应的jvm异常crash，running节点的释放会在对应的zookeeper session失效后，释放running节点(EPHEMERAL节点)
+ * 	   a.  server对应的jvm异常crash，running节点的释放会在对应的zookeeper session失效后，释放running节点(EPHEMERAL节点)
  * 		 ps. session过期时间默认为zookeeper配置文件中定义的tickTime的20倍，如果不改动zookeeper配置，那默认就是40秒
  * 
- * 	   b. redis-proxy server所在的网络出现闪断，导致zookeeper认为session失效，释放了running节点，此时dbsync server对应的jvm并未退出，(一种假死状态，非常特殊的情况)
- * 		 ps. 为了保护假死状态的dbsync server，避免因瞬间running失效导致channel重新分布，
- * 			所以做了一个策略：redis-proxy server在收到running节点释放后，延迟一段时间抢占running，
+ * 	   b.  server所在的网络出现闪断，导致zookeeper认为session失效，释放了running节点，此时 server对应的jvm并未退出，(一种假死状态，非常特殊的情况)
+ * 		 ps. 为了保护假死状态的 server，避免因瞬间running失效导致channel重新分布，
+ * 			所以做了一个策略： server在收到running节点释放后，延迟一段时间抢占running，
  * 			原本running节点的拥有者可以不需要等待延迟，优先取得running节点，可以保证假死状态下尽可能不无谓的释放资源。 
  * 			目前延迟时间的默认值为5秒，即running节点针对假死状态的保护期为5秒.
  * 
