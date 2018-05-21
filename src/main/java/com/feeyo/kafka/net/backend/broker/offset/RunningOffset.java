@@ -1,7 +1,10 @@
-package com.feeyo.kafka.net.backend.broker;
+package com.feeyo.kafka.net.backend.broker.offset;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
 
 /*
  * Topic 运行时点位

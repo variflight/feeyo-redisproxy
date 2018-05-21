@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.feeyo.kafka.net.backend.broker.RunningOffset;
+import com.feeyo.kafka.net.backend.broker.offset.RunningOffset;
 
 public class TopicCfg {
 	

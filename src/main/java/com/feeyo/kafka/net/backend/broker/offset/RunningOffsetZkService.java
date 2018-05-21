@@ -1,4 +1,4 @@
-package com.feeyo.kafka.net.backend.broker.zk.running;
+package com.feeyo.kafka.net.backend.broker.offset;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
+import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningData;
+import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningListener;
+import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningMonitor;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.util.NetworkUtil;
 
@@ -53,9 +56,9 @@ import com.feeyo.util.NetworkUtil;
  * @author zhuam
  *
  */
-public class ServerRunningService {
+public class RunningOffsetZkService {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger(ServerRunningService.class);
+	private static Logger LOGGER = LoggerFactory.getLogger(RunningOffsetZkService.class);
 	private static final String ZK_CFG_FILE = "kafka.xml"; // zk settings is in server.xml
 	
 	private ZkClientx  zkclientx;
@@ -66,15 +69,15 @@ public class ServerRunningService {
 	private String address;
 	private OffsetManageCfg offsetManageCfg;
 	
-	private static ServerRunningService INSTANCE;
+	private static RunningOffsetZkService INSTANCE;
 	private static Object _lock = new Object();
 	
-	public static ServerRunningService INSTANCE() {
+	public static RunningOffsetZkService INSTANCE() {
 		if (INSTANCE == null) {
 			synchronized (_lock) {
 				if (INSTANCE == null) {
 					try {
-						INSTANCE = new ServerRunningService();
+						INSTANCE = new RunningOffsetZkService();
 					} catch (Exception e) {
 						LOGGER.error("", e);
 					}
@@ -84,7 +87,7 @@ public class ServerRunningService {
 		return INSTANCE;
 	}
 	
-	private ServerRunningService() throws FileNotFoundException, IOException {
+	private RunningOffsetZkService() throws FileNotFoundException, IOException {
 		
 		offsetManageCfg = KafkaConfigLoader.loadOffsetManageCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
 		
