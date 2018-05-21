@@ -1,4 +1,4 @@
-package com.feeyo.kafka.net.backend.broker.zk.running;
+package com.feeyo.kafka.net.backend.broker.offset;
 
 import java.io.File;
 import java.util.List;
@@ -21,6 +21,7 @@ import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 /**
@@ -28,49 +29,51 @@ import com.feeyo.redis.engine.RedisEngineCtx;
  * 
  * @author yangtao
  */
-public class RunningOffsetAdmin {
-	
-	private static Logger LOGGER = LoggerFactory.getLogger(RunningOffsetAdmin.class);
-	
+public class RunningOffsetService {
+	private static Logger LOGGER = LoggerFactory.getLogger(RunningOffsetService.class);
+
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-	
-	private static RunningOffsetAdmin INSTANCE = new RunningOffsetAdmin();
+
+	private static RunningOffsetService INSTANCE = new RunningOffsetService();
 
 	private OffsetManageCfg offsetManageCfg;
-	
+
 	private boolean isRunning = false;
-	
-	public static RunningOffsetAdmin INSTANCE() {
+
+	public static RunningOffsetService INSTANCE() {
 		return INSTANCE;
 	}
-	
-	private RunningOffsetAdmin() {}
-	
-	private void savePartitionOffsets(String topicName,  Map<Integer, BrokerPartitionOffset> partitionOffsetMap, int poolId) {
-		
-		String basepath = offsetManageCfg.getOffsetPath() + File.separator + String.valueOf(poolId) + File.separator + topicName;
-		
+
+	private RunningOffsetService() {
+	}
+
+	private void savePartitionOffsets(String topicName, Map<Integer, BrokerPartitionOffset> partitionOffsetMap,
+			int poolId) {
+
+		String basepath = offsetManageCfg.getOffsetPath() + File.separator + String.valueOf(poolId) + File.separator
+				+ topicName;
+
 		ZkClientx zkclientx = ZkClientx.getZkClient(offsetManageCfg.getServer());
 		try {
 			for (Entry<Integer, BrokerPartitionOffset> entry : partitionOffsetMap.entrySet()) {
-				
+
 				// 点位
 				BrokerPartitionOffset partitionOffset = entry.getValue();
 				String path = basepath + File.separator + entry.getKey();
 				if (!zkclientx.exists(path)) {
 					zkclientx.createPersistentSequential(path, true);
 				}
-				zkclientx.writeData(path, JsonUtils.marshalToByte( partitionOffset ));
-				
+				zkclientx.writeData(path, JsonUtils.marshalToByte(partitionOffset));
+
 				// 消费者点位
 				Map<String, ConsumerOffset> consumerOffsets = partitionOffset.getConsumerOffsets();
 				for (Entry<String, ConsumerOffset> consumerOffsetEntry : consumerOffsets.entrySet()) {
-					
+
 					String consumerOffsetPath = path + File.separator + consumerOffsetEntry.getKey();
 					if (!zkclientx.exists(consumerOffsetPath)) {
 						zkclientx.createPersistentSequential(consumerOffsetPath, true);
 					}
-					
+
 					ConsumerOffset co = consumerOffsetEntry.getValue();
 					zkclientx.writeData(consumerOffsetPath, JsonUtils.marshalToByte(co));
 				}
@@ -80,54 +83,55 @@ public class RunningOffsetAdmin {
 		}
 	}
 
-	
-	
 	private void loadPartitionOffsetByPoolId(Map<String, TopicCfg> topicCfgMap, int poolId) {
 		ZkClientx zkclientx = ZkClientx.getZkClient(offsetManageCfg.getServer());
 		for (TopicCfg topicCfg : topicCfgMap.values()) {
-			
-			String topicName  = topicCfg.getName();
-			String basepath = offsetManageCfg.getOffsetPath() + File.separator  + String.valueOf(poolId) + File.separator + topicName;
-			
+
+			String topicName = topicCfg.getName();
+			String basepath = offsetManageCfg.getOffsetPath() + File.separator + String.valueOf(poolId) + File.separator
+					+ topicName;
+
 			Map<Integer, BrokerPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 			try {
 				for (BrokerPartition partition : topicCfg.getRunningOffset().getBrokerPartitions()) {
-					
+
 					String path = basepath + File.separator + partition.getPartition();
-					// base node 
+					// base node
 					if (!zkclientx.exists(path)) {
 						zkclientx.createPersistentSequential(path, true);
 					}
-					
+
 					String data;
-					Object obj = zkclientx.readData( path );
-					if ( obj instanceof String ) {
-						data = (String)obj;
+					Object obj = zkclientx.readData(path);
+					if (obj instanceof String) {
+						data = (String) obj;
 					} else {
-						data = new String((byte[])obj);
+						data = new String((byte[]) obj);
 					}
-					
+
 					if (isNull(data)) {
-						
-						BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), 0, 0);
+
+						BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), 0,
+								0);
 						partitionOffsetMap.put(partition.getPartition(), partitionOffset);
-						
+
 					} else {
 						// {"logStartOffset":0,"partition":0,"producerOffset":0}
-						BrokerPartitionOffset partitionOffset = JsonUtils.unmarshalFromString(data, BrokerPartitionOffset.class);
+						BrokerPartitionOffset partitionOffset = JsonUtils.unmarshalFromString(data,
+								BrokerPartitionOffset.class);
 						partitionOffsetMap.put(partition.getPartition(), partitionOffset);
-						
+
 						List<String> childrenPath = zkclientx.getChildren(path);
 						for (String clildPath : childrenPath) {
-							
+
 							String consumerOffset;
-							Object object = zkclientx.readData( path + File.separator + clildPath );
-							if ( object instanceof String ) {
-								consumerOffset = (String)object;
+							Object object = zkclientx.readData(path + File.separator + clildPath);
+							if (object instanceof String) {
+								consumerOffset = (String) object;
 							} else {
-								consumerOffset = new String((byte[])object);
+								consumerOffset = new String((byte[]) object);
 							}
-							
+
 							if (isNull(consumerOffset)) {
 								continue;
 							}
@@ -136,33 +140,33 @@ public class RunningOffsetAdmin {
 						}
 					}
 				}
-				
-				topicCfg.getRunningOffset().setPartitionOffsets( partitionOffsetMap );
-				
+
+				topicCfg.getRunningOffset().setPartitionOffsets(partitionOffsetMap);
+
 			} catch (Exception e) {
 				LOGGER.warn("", e);
 			}
 		}
 	}
-	
+
 	public void startup(OffsetManageCfg offsetManageCfg) {
 		if (isRunning) {
 			return;
 		}
-		
+
 		this.offsetManageCfg = offsetManageCfg;
-		
+
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
 			PoolCfg poolCfg = entry.getValue();
 			if (poolCfg instanceof KafkaPoolCfg) {
 				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
-				
+
 				// 加载offset
 				loadPartitionOffsetByPoolId(topicCfgMap, poolCfg.getId());
 			}
 		}
-		
+
 		// 定时持久化offset
 		executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
@@ -170,14 +174,14 @@ public class RunningOffsetAdmin {
 				try {
 					// offset 数据持久化
 					saveAll();
-					
+
 				} catch (Exception e) {
 					LOGGER.warn("offsetAdmin err: ", e);
 				}
-				
+
 			}
 		}, 30, 30, TimeUnit.SECONDS);
-		
+
 		isRunning = true;
 	}
 
@@ -188,13 +192,13 @@ public class RunningOffsetAdmin {
 		if (!isRunning) {
 			return;
 		}
-		
+
 		isRunning = false;
-		
+
 		try {
 			// 关闭定时任务
 			executorService.shutdown();
-			
+
 			// 提交本地剩余offset
 			saveAll();
 		} catch (Exception e) {
@@ -212,24 +216,95 @@ public class RunningOffsetAdmin {
 			PoolCfg poolCfg = poolEntry.getValue();
 			if (poolCfg instanceof KafkaPoolCfg) {
 				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
-				
+
 				for (Entry<String, TopicCfg> topicEntry : topicCfgMap.entrySet()) {
 					TopicCfg topicCfg = topicEntry.getValue();
-					savePartitionOffsets(topicCfg.getName(), topicCfg.getRunningOffset().getPartitionOffsets(), poolCfg.getId());
+					savePartitionOffsets(topicCfg.getName(), topicCfg.getRunningOffset().getPartitionOffsets(),
+							poolCfg.getId());
 				}
 			}
 		}
 	}
-	
+
 	private boolean isNull(String str) {
 		if (str == null) {
 			return true;
 		}
-		
-		if ("".equals(str) || "null".equals(str) || "NULL".equals(str))  {
+
+		if ("".equals(str) || "null".equals(str) || "NULL".equals(str)) {
 			return true;
 		}
-		
+
 		return false;
 	}
-}
+
+	// 获取offset
+	public long getOffset(TopicCfg topicCfg, String user, int partition) {
+		long offset;
+		if (RunningOffsetZkService.INSTANCE().isMaster()) {
+			BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
+			ConsumerOffset cOffset = partitionOffset.getConsumerOffsetByConsumer(user);
+			offset = cOffset.getNewOffset();
+		} else {
+			// TODO 待完善
+			offset = -1;
+		}
+		return offset;
+	}
+
+	// 回收offset
+	public void revertConsumerOffset(String user, String topic, int partition, long offset) {
+		if (RunningOffsetZkService.INSTANCE().isMaster()) {
+
+			UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
+			if (userCfg == null) {
+				return;
+			}
+			KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap()
+					.get(userCfg.getPoolId());
+			if (kafkaPoolCfg == null) {
+				return;
+			}
+			TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topic);
+			if (topicCfg == null) {
+				return;
+			}
+			BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
+			if (partitionOffset == null) {
+				return;
+			}
+
+			partitionOffset.revertConsumerOffset(user, offset);
+
+		} else {
+			// TODO 待完善
+		}
+	}
+
+	// 更新生产offset
+	public void updateProducerOffset(String user, String topic, int partition, long offset, long logStartOffset) {
+		if (RunningOffsetZkService.INSTANCE().isMaster()) {
+
+			UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
+			if (userCfg == null) {
+				return;
+			}
+			KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap()
+					.get(userCfg.getPoolId());
+			if (kafkaPoolCfg == null) {
+				return;
+			}
+			TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topic);
+			if (topicCfg == null) {
+				return;
+			}
+			BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
+			if (partitionOffset == null) {
+				return;
+			}
+			partitionOffset.setProducerOffset(offset, logStartOffset);
+
+		} else {
+			// TODO 待完善
+		}
+	}}

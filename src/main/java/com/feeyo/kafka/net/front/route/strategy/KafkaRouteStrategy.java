@@ -6,7 +6,7 @@ import java.util.List;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
+import com.feeyo.kafka.net.backend.broker.offset.RunningOffsetService;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
@@ -56,6 +56,8 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		
 		// 分区
 		BrokerPartition partition = null;
+		long offset = -1;
+		int maxBytes = 1;
 	
 		// 参数有效性校验
 		switch( request.getPolicy().getHandleType() ) {
@@ -86,11 +88,16 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				// 轮询分区消费
 				if (request.getNumArgs() == 2) {
 					partition = topicCfg.getRunningOffset().getConsumerBrokerPartition();
+					offset = RunningOffsetService.INSTANCE().getOffset(topicCfg, userCfg.getPassword(), partition.getPartition());
 					
 				// 指定分区消费
 				} else {
 					int pt = Integer.parseInt(new String(request.getArgs()[2]));
 					partition = topicCfg.getRunningOffset().getConsumerBrokerPartition(pt);
+					offset = Long.parseLong(new String(request.getArgs()[3]));
+					if (request.getNumArgs() == 5) {
+						maxBytes = Integer.parseInt(new String(request.getArgs()[4]));
+					}
 				} 
 				
 			}
@@ -128,8 +135,6 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 			throw new InvalidRequestExistsException("wrong partition");
 		}
 		
-		BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset( partition.getPartition() );
-		
 		//
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get( topicCfg.getPoolId() );
 		PhysicalNode physicalNode = pool.getPhysicalNode( partition.getLeader().getId() );
@@ -139,7 +144,9 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);
-		node.setPartitionOffset( partitionOffset );
+		node.setOffset(offset);
+		node.setPartition(partition.getPartition());
+		node.setMaxBytes(maxBytes);
 
 		List<RouteNode> nodes = new ArrayList<RouteNode>(1);
 		nodes.add(node);

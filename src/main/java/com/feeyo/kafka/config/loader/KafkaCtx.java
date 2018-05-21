@@ -16,7 +16,7 @@ import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerNode;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.RunningOffset;
+import com.feeyo.kafka.net.backend.broker.offset.RunningOffset;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
