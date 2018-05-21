@@ -104,14 +104,14 @@ public class RunningOffsetZkService {
 
 			@Override
 			public void processStop() {
-				RunningOffsetAdmin.INSTANCE().close();
+				RunningOffsetService.INSTANCE().close();
 			}
 
 			@Override
 			public void processActiveEnter() {
 				// start
 				try {
-					RunningOffsetAdmin.INSTANCE().startup(offsetManageCfg);
+					RunningOffsetService.INSTANCE().startup(offsetManageCfg);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -119,7 +119,7 @@ public class RunningOffsetZkService {
 
 			@Override
 			public void processActiveExit() {
-				RunningOffsetAdmin.INSTANCE().close();
+				RunningOffsetService.INSTANCE().close();
 			}
         });
         
