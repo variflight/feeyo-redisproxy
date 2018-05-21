@@ -103,7 +103,7 @@ public class StatUtil {
 							
 							
 							StringBuffer subject = new StringBuffer( 50 );
-							subject.append(" ###RedisProxy report, host:" ).append( NetworkUtil.getLocalAddress() );
+							subject.append(" ###RedisProxy report, host:" ).append( NetworkUtil.getLocalIp() );
 							
 							StringBuffer body = new StringBuffer( 500 );
 							

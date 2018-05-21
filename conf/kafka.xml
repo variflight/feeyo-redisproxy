@@ -3,9 +3,11 @@
 	
 	<pool id="3">
 		<topic name="test6" partitions="3" replicationFactor="2" producer="pwd05" consumer="pwd05,pwd06"/>
+		<topic name="test7" partitions="3" replicationFactor="2" producer="pwd05" consumer="pwd05,pwd06"/>
+		<topic name="etd_entry_k_queue" partitions="3" replicationFactor="2" producer="yzm" consumer="yzm"/>
 	</pool>
 	
-	<offset server="127.0.0.1:2181" path="/feeyo/kafka/offsets" />
+	<offset server="127.0.0.1:2181" offsetsPath="/feeyo/kafka/offsets" runningPath="/feeyo/kafka/running" clusterPath = "/feeyo/kafka/cluster"/>
 	
 	
 </kafka>

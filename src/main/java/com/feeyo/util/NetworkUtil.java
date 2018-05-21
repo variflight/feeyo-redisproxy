@@ -7,11 +7,13 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.engine.RedisEngineCtx;
+
 public class NetworkUtil {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NetworkUtil.class );
 
-	public static String getLocalAddress() {
+	public static String getLocalIp() {
 		try {
 			Enumeration<NetworkInterface> enumeration = NetworkInterface.getNetworkInterfaces();
 			ArrayList<String> ipv4Result = new ArrayList<String>();
@@ -170,4 +172,12 @@ public class NetworkUtil {
 		return null;
 	}
 
+	public static String getLocalAddress() {
+		String ip = getLocalIp();
+		Map<String, String> map = RedisEngineCtx.INSTANCE().getServerMap();
+		String port = map.get("port");
+		StringBuffer sb = new StringBuffer();
+		sb.append(ip).append(":").append(port);
+		return sb.toString();
+	}
 }

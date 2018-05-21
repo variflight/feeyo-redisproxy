@@ -80,12 +80,22 @@ public class KafkaConfigLoader {
 			Node node = nodeList.item(0);
 			NamedNodeMap nameNodeMap = node.getAttributes();
 			String server = getAttribute(nameNodeMap, "server", null);
-			String path = getAttribute(nameNodeMap, "path", "/feeyo/kafka/offsets");
-			int index = path.lastIndexOf('/');
-			if (index > 0 && index == path.length() - 1) {
-				path = path.substring(0, index);
+			String offsetPath = getAttribute(nameNodeMap, "offsetPath", "/feeyo/kafka/offsets");
+			int index = offsetPath.lastIndexOf('/');
+			if (index > 0 && index == offsetPath.length() - 1) {
+				offsetPath = offsetPath.substring(0, index);
 			}
-			offsetCfg = new OffsetManageCfg(server, path);
+			String runningPath = getAttribute(nameNodeMap, "runningPath", "/feeyo/kafka/running");
+			index = runningPath.lastIndexOf('/');
+			if (index > 0 && index == runningPath.length() - 1) {
+				runningPath = runningPath.substring(0, index);
+			}
+			String clusterPath = getAttribute(nameNodeMap, "clusterPath", "/feeyo/kafka/cluster");
+			index = clusterPath.lastIndexOf('/');
+			if (index > 0 && index == clusterPath.length() - 1) {
+				clusterPath = clusterPath.substring(0, index);
+			}
+			offsetCfg = new OffsetManageCfg(server, offsetPath, runningPath, clusterPath);
 		} catch (Exception e) {
 			LOGGER.error("", e);
 		}
