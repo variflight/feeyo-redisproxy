@@ -91,7 +91,7 @@ public class RunningOffsetService {
 			String basepath = offsetManageCfg.getOffsetPath() + File.separator + String.valueOf(poolId) + File.separator
 					+ topicName;
 
-			Map<Integer, BrokerPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
+			ConcurrentHashMap<Integer, BrokerPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 			try {
 				for (BrokerPartition partition : topicCfg.getRunningOffset().getBrokerPartitions()) {
 
