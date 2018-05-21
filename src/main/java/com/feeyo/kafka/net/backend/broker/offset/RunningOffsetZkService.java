@@ -113,7 +113,7 @@ public class RunningOffsetZkService {
 				try {
 					RunningOffsetService.INSTANCE().startup(offsetManageCfg);
 				} catch (Exception e) {
-					e.printStackTrace();
+					LOGGER.error("offset load err:", e);
 				}
 			}
 
