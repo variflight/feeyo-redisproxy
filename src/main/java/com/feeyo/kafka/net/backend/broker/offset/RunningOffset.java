@@ -1,6 +1,7 @@
 package com.feeyo.kafka.net.backend.broker.offset;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
@@ -20,7 +21,7 @@ public class RunningOffset {
 	private AtomicInteger consumerIndex;
 	
 	private final int partitionNum;
-	private Map<Integer, BrokerPartitionOffset> partitionOffsets;
+	private ConcurrentHashMap<Integer, BrokerPartitionOffset> partitionOffsets;
 
 
 	public RunningOffset(String name, boolean internal, BrokerPartition[] partitions) {
@@ -64,20 +65,23 @@ public class RunningOffset {
 		return null;
 	}
 
-	public Map<Integer, BrokerPartitionOffset> getPartitionOffsets() {
+	public ConcurrentHashMap<Integer, BrokerPartitionOffset> getPartitionOffsets() {
 		return partitionOffsets;
 	}
 	
 	public BrokerPartitionOffset getPartitionOffset(int partition) {
 		BrokerPartitionOffset offset = partitionOffsets.get(partition);
-		if (offset == null) {
+		
+		if (offset == null && getConsumerBrokerPartition(partition) != null) {
 			offset = new BrokerPartitionOffset(partition, 0, 0);
-			partitionOffsets.put(partition, offset);
-		}
+			partitionOffsets.putIfAbsent(partition, offset);
+			return partitionOffsets.get(partition);
+		} 
+		
 		return offset;
 	}
 
-	public void setPartitionOffsets(Map<Integer, BrokerPartitionOffset> offsets) {
+	public void setPartitionOffsets(ConcurrentHashMap<Integer, BrokerPartitionOffset> offsets) {
 		this.partitionOffsets = offsets;
 	}
 
