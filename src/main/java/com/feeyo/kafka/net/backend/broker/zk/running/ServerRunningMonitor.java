@@ -13,8 +13,8 @@ import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.net.backend.broker.zk.BooleanMutex;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
-import com.feeyo.kafka.net.backend.broker.zk.util.BooleanMutex;
 import com.feeyo.kafka.util.JsonUtils;
 
 /**

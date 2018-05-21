@@ -1,4 +1,4 @@
-package com.feeyo.kafka.net.backend.broker.zk.util;
+package com.feeyo.kafka.net.backend.broker.zk;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
