@@ -1,5 +1,7 @@
 package com.feeyo.kafka.config;
 
+import java.io.File;
+
 /**
  * offset备份地址配置
  * @author yangtao
@@ -8,15 +10,14 @@ package com.feeyo.kafka.config;
 public class OffsetManageCfg {
 	
 	private final String server;
-	private final String offsetPath;
-	private final String runningPath;
-	private final String clusterPath;
+	private final String path;
+	private final static String offsetNodeName = "offsets";
+	private final static String clusterNodeName = "cluster";
+	private final static String runningNodeName = "running";
 
-	public OffsetManageCfg(String server, String offsetPath, String runningPath, String clusterPath) {
+	public OffsetManageCfg(String server, String path) {
 		this.server = server;
-		this.offsetPath = offsetPath;
-		this.runningPath = runningPath;
-		this.clusterPath = clusterPath;
+		this.path = path;
 	}
 
 	public String getServer() {
@@ -24,14 +25,14 @@ public class OffsetManageCfg {
 	}
 
 	public String getOffsetPath() {
-		return offsetPath;
+		return path + File.pathSeparator + offsetNodeName;
 	}
 
 	public String getRunningPath() {
-		return runningPath;
+		return path + File.pathSeparator + runningNodeName;
 	}
 
 	public String getClusterPath() {
-		return clusterPath;
+		return path + File.pathSeparator + clusterNodeName;
 	}
 }
