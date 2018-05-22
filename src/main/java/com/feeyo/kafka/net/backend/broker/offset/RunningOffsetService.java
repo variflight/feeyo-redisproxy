@@ -1,10 +1,10 @@
 package com.feeyo.kafka.net.backend.broker.offset;
 
-import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +19,7 @@ import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
 import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
+import com.feeyo.kafka.net.backend.broker.zk.ZkPathUtil;
 import com.feeyo.kafka.util.JsonUtils;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
@@ -37,6 +38,7 @@ public class RunningOffsetService {
 	private static RunningOffsetService INSTANCE = new RunningOffsetService();
 
 	private OffsetManageCfg offsetManageCfg;
+	private ZkPathUtil zkPathUtil;
 
 	private boolean isRunning = false;
 
@@ -47,35 +49,49 @@ public class RunningOffsetService {
 	private RunningOffsetService() {
 	}
 
-	private void savePartitionOffsets(String topicName, Map<Integer, BrokerPartitionOffset> partitionOffsetMap,
+	private void savePartitionOffsets(String topic, Map<Integer, BrokerPartitionOffset> partitionOffsetMap,
 			int poolId) {
-
-		String basepath = offsetManageCfg.getOffsetPath() + File.separator + String.valueOf(poolId) + File.separator
-				+ topicName;
 
 		ZkClientx zkclientx = ZkClientx.getZkClient(offsetManageCfg.getServer());
 		try {
 			for (Entry<Integer, BrokerPartitionOffset> entry : partitionOffsetMap.entrySet()) {
-
-				// 点位
+				int partition = entry.getKey();
 				BrokerPartitionOffset partitionOffset = entry.getValue();
-				String path = basepath + File.separator + entry.getKey();
-				if (!zkclientx.exists(path)) {
-					zkclientx.createPersistentSequential(path, true);
+				
+				// log_start_offset
+				String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition);
+				if (!zkclientx.exists(partitionLogStartOffsetPath)) {
+					zkclientx.createPersistent(partitionLogStartOffsetPath, null, true);
 				}
-				zkclientx.writeData(path, JsonUtils.marshalToByte(partitionOffset));
-
-				// 消费者点位
+				zkclientx.writeData(partitionLogStartOffsetPath, String.valueOf(partitionOffset.getLogStartOffset()));
+				
+				// produce_offset
+				String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topic, partition);
+				if (!zkclientx.exists(partitionProducerOffsetPath)) {
+					zkclientx.createPersistent(partitionProducerOffsetPath, null, true);
+				}
+				zkclientx.writeData(partitionProducerOffsetPath, String.valueOf(partitionOffset.getProducerOffset()));
+				
+				// 消费者
 				Map<String, ConsumerOffset> consumerOffsets = partitionOffset.getConsumerOffsets();
 				for (Entry<String, ConsumerOffset> consumerOffsetEntry : consumerOffsets.entrySet()) {
-
-					String consumerOffsetPath = path + File.separator + consumerOffsetEntry.getKey();
-					if (!zkclientx.exists(consumerOffsetPath)) {
-						zkclientx.createPersistentSequential(consumerOffsetPath, true);
-					}
-
+					String consumer = consumerOffsetEntry.getKey();
 					ConsumerOffset co = consumerOffsetEntry.getValue();
-					zkclientx.writeData(consumerOffsetPath, JsonUtils.marshalToByte(co));
+					
+					// 消费者点位
+					String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topic, partition, consumer);
+					if (!zkclientx.exists(partitionConsumerOffsetPath)) {
+						zkclientx.createPersistent(partitionConsumerOffsetPath, null, true);
+					}
+					zkclientx.writeData(partitionConsumerOffsetPath, String.valueOf(co.getCurrentOffset()));
+					
+					// 消费者回退点位
+					String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topic, partition, consumer);
+					if (!zkclientx.exists(partitionConsumerRollbackOffsetPath)) {
+						zkclientx.createPersistent(partitionConsumerRollbackOffsetPath, null, true);
+					}
+					zkclientx.writeData(partitionConsumerRollbackOffsetPath, co.getOldOffsetQueue().toString());
+
 				}
 			}
 		} catch (Exception e) {
@@ -86,57 +102,68 @@ public class RunningOffsetService {
 	private void loadPartitionOffsetByPoolId(Map<String, TopicCfg> topicCfgMap, int poolId) {
 		ZkClientx zkclientx = ZkClientx.getZkClient(offsetManageCfg.getServer());
 		for (TopicCfg topicCfg : topicCfgMap.values()) {
-
-			String topicName = topicCfg.getName();
-			String basepath = offsetManageCfg.getOffsetPath() + File.separator + String.valueOf(poolId) + File.separator
-					+ topicName;
-
+			String topic = topicCfg.getName();
+			
 			ConcurrentHashMap<Integer, BrokerPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 			try {
 				for (BrokerPartition partition : topicCfg.getRunningOffset().getBrokerPartitions()) {
-
-					String path = basepath + File.separator + partition.getPartition();
-					// base node
-					if (!zkclientx.exists(path)) {
-						zkclientx.createPersistentSequential(path, true);
+					// log_start_offset
+					String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition.getPartition());
+					if (!zkclientx.exists(partitionLogStartOffsetPath)) {
+						zkclientx.createPersistent(partitionLogStartOffsetPath, null, true);
 					}
-
-					String data;
-					Object obj = zkclientx.readData(path);
-					if (obj instanceof String) {
-						data = (String) obj;
-					} else {
-						data = new String((byte[]) obj);
+					Object obj = zkclientx.readData(partitionLogStartOffsetPath);
+					String data = zkObject2String(obj);
+					long logStartOffset = isNull(data) ? 0 : Long.parseLong(data);
+					
+					// produce_offset
+					String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topic, partition.getPartition());
+					if (!zkclientx.exists(partitionProducerOffsetPath)) {
+						zkclientx.createPersistent(partitionProducerOffsetPath, null, true);
 					}
-
-					if (isNull(data)) {
-
-						BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), 0,
-								0);
-						partitionOffsetMap.put(partition.getPartition(), partitionOffset);
-
-					} else {
-						// {"logStartOffset":0,"partition":0,"producerOffset":0}
-						BrokerPartitionOffset partitionOffset = JsonUtils.unmarshalFromString(data,
-								BrokerPartitionOffset.class);
-						partitionOffsetMap.put(partition.getPartition(), partitionOffset);
-
-						List<String> childrenPath = zkclientx.getChildren(path);
-						for (String clildPath : childrenPath) {
-
-							String consumerOffset;
-							Object object = zkclientx.readData(path + File.separator + clildPath);
-							if (object instanceof String) {
-								consumerOffset = (String) object;
-							} else {
-								consumerOffset = new String((byte[]) object);
+					obj = zkclientx.readData(partitionProducerOffsetPath);
+					data = zkObject2String(obj);
+					long producerOffset = isNull(data) ? 0 : Long.parseLong(data);
+					
+					BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), producerOffset, logStartOffset);
+					partitionOffsetMap.put(partition.getPartition(), partitionOffset);
+					String partitionConsumerPath = zkPathUtil.getPartitionConsumerPath(poolId, topic, partition.getPartition());
+					if (!zkclientx.exists(partitionConsumerPath)) {
+						continue;
+					}
+					
+					List<String> childrenPath = zkclientx.getChildren(partitionConsumerPath);
+					for (String consumer : childrenPath) {
+						// consumer_offset
+						String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topic, partition.getPartition(), consumer);
+						if (!zkclientx.exists(partitionConsumerOffsetPath)) {
+							zkclientx.createPersistent(partitionConsumerOffsetPath, null, true);
+						}
+						obj = zkclientx.readData(partitionConsumerOffsetPath);
+						data = zkObject2String(obj);
+						long consumerOffset = isNull(data) ? 0 : Long.parseLong(data);
+						
+						ConsumerOffset co = new ConsumerOffset(consumer, consumerOffset);
+						partitionOffset.getConsumerOffsets().put(consumer, co);
+						
+						// consumer_offset
+						String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topic, partition.getPartition(), consumer);
+						if (!zkclientx.exists(partitionConsumerRollbackOffsetPath)) {
+							zkclientx.createPersistent(partitionConsumerRollbackOffsetPath, null, true);
+						}
+						obj = zkclientx.readData(partitionConsumerRollbackOffsetPath);
+						data = zkObject2String(obj);
+						if (!isNull(data)) {
+							ConcurrentLinkedQueue<?> offsets = JsonUtils.unmarshalFromString(data, ConcurrentLinkedQueue.class);
+							Object object = offsets.poll();
+							while (object != null) {
+								if (object instanceof Integer) {
+									co.getOldOffsetQueue().offer( Long.parseLong(object.toString()) );
+								} else if (object instanceof Long) {
+									co.getOldOffsetQueue().offer( (long) obj );
+								}
+								object = offsets.poll();
 							}
-
-							if (isNull(consumerOffset)) {
-								continue;
-							}
-							ConsumerOffset co = JsonUtils.unmarshalFromString(consumerOffset, ConsumerOffset.class);
-							partitionOffset.getConsumerOffsets().put(co.getConsumer(), co);
 						}
 					}
 				}
@@ -155,6 +182,7 @@ public class RunningOffsetService {
 		}
 
 		this.offsetManageCfg = offsetManageCfg;
+		this.zkPathUtil = new ZkPathUtil(offsetManageCfg.getPath());
 
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
@@ -236,6 +264,21 @@ public class RunningOffsetService {
 		}
 
 		return false;
+	}
+	
+	private String zkObject2String(Object obj) {
+		String result = null;
+		if (obj == null) {
+			return result;
+		}
+		
+		if (obj instanceof String) {
+			result = (String) obj;
+		} else {
+			result = new String((byte[]) obj);
+		}
+		
+		return result;
 	}
 
 	// 获取offset

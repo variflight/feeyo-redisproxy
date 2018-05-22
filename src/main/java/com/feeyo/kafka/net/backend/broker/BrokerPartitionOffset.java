@@ -5,15 +5,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.alibaba.fastjson.annotation.JSONField;
-
 public class BrokerPartitionOffset {
 	
 	private int partition;
 	private volatile long producerOffset;
 	private volatile long logStartOffset;
 	
-	@JSONField(serialize=false)
 	private Map<String, ConsumerOffset> consumerOffsets;
 	
 	public BrokerPartitionOffset (int partition, long producerOffset, long logStartOffset) {
@@ -57,7 +54,6 @@ public class BrokerPartitionOffset {
 	}
 
 	
-	@JSONField(serialize=false)
 	public List<String> getAllConsumerOffset() {
 		List<String> list = new ArrayList<>();
 		for (ConsumerOffset consumerOffset : consumerOffsets.values()) {

@@ -1,6 +1,5 @@
 package com.feeyo.kafka.net.backend.broker.offset;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -14,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.kafka.config.OffsetManageCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
+import com.feeyo.kafka.net.backend.broker.zk.ZkPathUtil;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningData;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningListener;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningMonitor;
@@ -68,6 +68,7 @@ public class RunningOffsetZkService {
 	
 	private String address;
 	private OffsetManageCfg offsetManageCfg;
+	private ZkPathUtil zkPathUtil;
 	
 	private static RunningOffsetZkService INSTANCE;
 	private static Object _lock = new Object();
@@ -90,6 +91,7 @@ public class RunningOffsetZkService {
 	private RunningOffsetZkService() throws FileNotFoundException, IOException {
 		
 		offsetManageCfg = KafkaConfigLoader.loadOffsetManageCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
+		zkPathUtil = new ZkPathUtil(offsetManageCfg.getPath());
 		
 		address = NetworkUtil.getLocalAddress();
 		runningData = new ServerRunningData(address);
@@ -97,7 +99,7 @@ public class RunningOffsetZkService {
 		// HA
 		zkclientx = ZkClientx.getZkClient(offsetManageCfg.getServer());
 		runningMonitor = new ServerRunningMonitor( runningData );
-		runningMonitor.setPath(offsetManageCfg.getRunningPath());
+		runningMonitor.setPath(zkPathUtil.getMasterRunningPath());
 		runningMonitor.setListener(new ServerRunningListener() {
 			@Override
 			public void processStart() {}
@@ -135,7 +137,7 @@ public class RunningOffsetZkService {
 		
 		LOGGER.info("## start the redis-proxy server[{}]", address);
 		
-		final String path = offsetManageCfg.getClusterPath() + File.separator + address;
+		final String path = zkPathUtil.getClusterHostPath(address);
 		initCid(path);
 		if (zkclientx != null) {
 			this.zkclientx.subscribeStateChanges(new IZkStateListener() {
@@ -167,7 +169,7 @@ public class RunningOffsetZkService {
 			runningMonitor.stop();
 		}
 
-		final String path = offsetManageCfg.getClusterPath() + File.separator + address;
+		final String path = zkPathUtil.getClusterHostPath(address);
 		// 释放工作节点
 		releaseCid(path);
 
