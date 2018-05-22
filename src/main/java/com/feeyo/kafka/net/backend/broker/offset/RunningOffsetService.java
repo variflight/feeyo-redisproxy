@@ -253,7 +253,7 @@ public class RunningOffsetService {
 	}
 
 	// 回收offset
-	public void revertConsumerOffset(String user, String topic, int partition, long offset) {
+	public void rollbackConsumerOffset(String user, String topic, int partition, long offset) {
 		if (RunningOffsetZkService.INSTANCE().isMaster()) {
 
 			UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
@@ -274,7 +274,7 @@ public class RunningOffsetService {
 				return;
 			}
 
-			partitionOffset.revertConsumerOffset(user, offset);
+			partitionOffset.rollbackConsumerOffset(user, offset);
 
 		} else {
 			// TODO 待完善

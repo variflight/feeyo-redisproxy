@@ -68,7 +68,7 @@ public class BrokerPartitionOffset {
 		return list;
 	}
 	
-	public void revertConsumerOffset(String consumer, long offset) {
+	public void rollbackConsumerOffset(String consumer, long offset) {
 		
 		if (offset < 0) {
 			return;
