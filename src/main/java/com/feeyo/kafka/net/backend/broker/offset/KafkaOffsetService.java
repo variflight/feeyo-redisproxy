@@ -9,6 +9,7 @@ import org.I0Itec.zkclient.IZkStateListener;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +60,6 @@ public class KafkaOffsetService {
 		OffsetCfg offsetCfg = KafkaConfigLoader.loadOffsetCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
 		this.localAdmin = new LocalOffsetAdmin( offsetCfg );
 		this.remoteAdmin = new RemoteOffsetAdmin();
-		
 		
 		this.localIp = offsetCfg.getLocalIp();
 
