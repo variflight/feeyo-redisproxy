@@ -31,24 +31,20 @@ public class KafkaOffsetService {
 	private final RemoteOffsetAdmin remoteAdmin;
 	private final LocalOffsetAdmin localAdmin;
 	
-
-
 	// 支持 HA
 	private ZkClientx  zkclientx;
-	
+	private ZkPathUtil zkPathUtil;
 	private ServerRunningData runningData;
 	private ServerRunningMonitor runningMonitor;	// HA 监控
 	
-	private ZkPathUtil zkPathUtil;
-	
 	private String localIp = null;
 	
-
 	private static KafkaOffsetService INSTANCE = new KafkaOffsetService();
 
 	public static KafkaOffsetService INSTANCE() {
 		return INSTANCE;
 	}
+	
 	
 	private KafkaOffsetService() {
 		
@@ -59,15 +55,13 @@ public class KafkaOffsetService {
 		
 		this.localIp = offsetCfg.getLocalIp();
 
-		zkPathUtil = new ZkPathUtil( offsetCfg.getPath() );
-		
-		runningData = new ServerRunningData( localIp );
-		
-		// HA
-		zkclientx = ZkClientx.getZkClient( offsetCfg.getZkServerIp() );
-		runningMonitor = new ServerRunningMonitor( runningData );
-		runningMonitor.setPath( zkPathUtil.getMasterRunningPath() );
-		runningMonitor.setListener(new ServerRunningListener() {
+		this.zkPathUtil = new ZkPathUtil( offsetCfg.getPath() );
+		this.zkclientx = ZkClientx.getZkClient( offsetCfg.getZkServerIp() );
+	
+		this.runningData = new ServerRunningData( localIp );
+		this.runningMonitor = new ServerRunningMonitor( runningData );
+		this.runningMonitor.setPath( zkPathUtil.getMasterRunningPath() );
+		this.runningMonitor.setListener(new ServerRunningListener() {
 			@Override
 			public void processStart() {}
 
@@ -78,7 +72,6 @@ public class KafkaOffsetService {
 
 			@Override
 			public void processActiveEnter() {
-				// start
 				try {
 					localAdmin.startup();
 				} catch (Exception e) {
@@ -90,6 +83,7 @@ public class KafkaOffsetService {
 			public void processActiveExit() {
 				localAdmin.close();
 			}
+			
         });
         
         if ( zkclientx != null) {
@@ -98,7 +92,6 @@ public class KafkaOffsetService {
         
         // 触发创建一下cid节点
         runningMonitor.init();
-		
 	}
 	
 	public void start() throws IOException {
@@ -142,15 +135,7 @@ public class KafkaOffsetService {
 		releaseCid(path);
 	}
 	
-	public boolean isMaster() {
-		return runningMonitor.isMineRunning();
-	}
-	
-	public ServerRunningData getMasterServerRunningData() {
-		return runningMonitor.getActiveData();
-	}
-	
-	
+
 	private void initCid(String path) {
 		// 初始化系统目录
 		if (zkclientx != null) {
@@ -182,7 +167,7 @@ public class KafkaOffsetService {
 	public long getOffsetForSlave(String user, String topic, int partition) {
 		
 		// 如果本机不是master,说明网络异常，目前没有master
-		if (!isMaster()) {
+		if (!runningMonitor.isMineRunning()) {
 			return -1;
 		}
 		
@@ -207,11 +192,11 @@ public class KafkaOffsetService {
 	// 获取offset
 	public long getOffset(String user, TopicCfg topicCfg, int partition) {
 		long offset;
-		if (isMaster()) {
+		if (runningMonitor.isMineRunning()) {
 			offset = localAdmin.getOffset(topicCfg, user, partition);
 			
 		} else {
-			ServerRunningData master = getMasterServerRunningData();
+			ServerRunningData master = this.runningMonitor.getActiveData();
 			offset = remoteAdmin.getOffset(master.getAddress(), user, topicCfg.getName(), partition);
 		}
 		return offset;
@@ -222,17 +207,17 @@ public class KafkaOffsetService {
 		if (offset < 0) {
 			return;
 		}
-		if (isMaster()) {
+		if (runningMonitor.isMineRunning()) {
 			localAdmin.rollbackConsumerOffset(user, topic, partition, offset);
 		} else {
-			ServerRunningData master = getMasterServerRunningData();
+			ServerRunningData master = this.runningMonitor.getActiveData();
 			remoteAdmin.rollbackConsumerOffset(master.getAddress(), user, topic, partition, offset);
 		}
 	}
 	
 	// 回滚slave节点上的offset
 	public void rollbackConsumerOffsetForSlave(String user, String topic, int partition, long offset) {
-		if (isMaster()) {
+		if (runningMonitor.isMineRunning()) {
 			localAdmin.rollbackConsumerOffset(user, topic, partition, offset);
 		}
 	}
@@ -240,7 +225,7 @@ public class KafkaOffsetService {
 	// 更新生产offset
 	public void updateProducerOffset(String user, String topic, int partition, long offset, long logStartOffset) {
 		// TODO 因为影响很小，所以为了减少slave master之间的调用，对slave节点不更新生产点位
-		if (isMaster()) {
+		if (runningMonitor.isMineRunning()) {
 			localAdmin.updateProducerOffset(user, topic, partition, offset, logStartOffset);
 		}
 	}

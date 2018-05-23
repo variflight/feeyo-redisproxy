@@ -1,5 +1,6 @@
 package com.feeyo.kafka.net.backend.broker.offset;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -47,13 +48,13 @@ public class LocalOffsetAdmin {
 		this.zkPathUtil = new ZkPathUtil( offsetCfg.getPath() );
 	}
 
-	private void savePartitionOffsets(int poolId, String topic, Map<Integer, BrokerPartitionOffset> partitionOffsetMap) {
+	private void savePartitionOffsets(int poolId, String topic, Collection<BrokerPartitionOffset> partitionOffsets) {
 
 		ZkClientx zkclientx = ZkClientx.getZkClient( zkServerIp );
 		try {
-			for (Entry<Integer, BrokerPartitionOffset> entry : partitionOffsetMap.entrySet()) {
-				int partition = entry.getKey();
-				BrokerPartitionOffset partitionOffset = entry.getValue();
+			for (BrokerPartitionOffset partitionOffset : partitionOffsets) {
+				
+				int partition = partitionOffset.getPartition();
 				
 				// log_start_offset
 				String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition);
@@ -213,7 +214,7 @@ public class LocalOffsetAdmin {
 
 				for (Entry<String, TopicCfg> topicEntry : topicCfgMap.entrySet()) {
 					TopicCfg topicCfg = topicEntry.getValue();
-					savePartitionOffsets(poolCfg.getId(), topicCfg.getName(), topicCfg.getRunningOffset().getPartitionOffsets() );
+					savePartitionOffsets(poolCfg.getId(), topicCfg.getName(), topicCfg.getRunningOffset().getPartitionOffsets().values() );
 				}
 			}
 		}
