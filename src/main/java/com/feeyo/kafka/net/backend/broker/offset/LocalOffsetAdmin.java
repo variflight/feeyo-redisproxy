@@ -36,52 +36,16 @@ public class LocalOffsetAdmin {
 	private ZkPathUtil zkPathUtil;
 
 	public LocalOffsetAdmin(OffsetCfg offsetCfg) {
-		
 		this.zkServerIp = offsetCfg.getZkServerIp();
 		this.zkPathUtil = new ZkPathUtil( offsetCfg.getPath() );
 	}
 
-	private void savePartitionOffsets(int poolId, String topic, Collection<BrokerPartitionOffset> partitionOffsets) {
 
-		ZkClientx zkclientx = ZkClientx.getZkClient( zkServerIp );
-		try {
-			for (BrokerPartitionOffset partitionOffset : partitionOffsets) {
-				
-				int partition = partitionOffset.getPartition();
-				
-				// log_start_offset
-				String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition);
-				writeDataByPath(zkclientx, partitionLogStartOffsetPath, String.valueOf(partitionOffset.getLogStartOffset()));
-				
-				// produce_offset
-				String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topic, partition);
-				writeDataByPath(zkclientx, partitionProducerOffsetPath, String.valueOf(partitionOffset.getProducerOffset()));
-				
-				// 消费者
-				Map<String, ConsumerOffset> consumerOffsets = partitionOffset.getConsumerOffsets();
-				for (Entry<String, ConsumerOffset> consumerOffsetEntry : consumerOffsets.entrySet()) {
-					String consumer = consumerOffsetEntry.getKey();
-					ConsumerOffset co = consumerOffsetEntry.getValue();
-					
-					// 消费者点位
-					String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topic, partition, consumer);
-					writeDataByPath(zkclientx, partitionConsumerOffsetPath, String.valueOf(co.getCurrentOffset()));
-					
-					// 消费者回退点位
-					String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topic, partition, consumer);
-					writeDataByPath(zkclientx, partitionConsumerRollbackOffsetPath, co.getOldOffsetQueue().toString());
-
-				}
-			}
-		} catch (Exception e) {
-			LOGGER.warn("kafka cmd offset commit err:", e);
-		}
-	}
-
-	private void loadPartitionOffsetByPoolId(Map<String, TopicCfg> topicCfgMap, int poolId) {
+	private void loadOffsetByPoolId(int poolId, Collection<TopicCfg> topicCfgs) {
 		
 		ZkClientx zkclientx = ZkClientx.getZkClient( zkServerIp );
-		for (TopicCfg topicCfg : topicCfgMap.values()) {
+		
+		for (TopicCfg topicCfg : topicCfgs) {
 			
 			String topic = topicCfg.getName();
 			
@@ -102,6 +66,8 @@ public class LocalOffsetAdmin {
 					//
 					BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), producerOffset, logStartOffset);
 					partitionOffsetMap.put(partition.getPartition(), partitionOffset);
+					
+					// consumer offset
 					String partitionConsumerPath = zkPathUtil.getPartitionConsumerPath(poolId, topic, partition.getPartition());
 					if (!zkclientx.exists(partitionConsumerPath)) {
 						continue;
@@ -150,18 +116,14 @@ public class LocalOffsetAdmin {
 	 */
 	public void startup() {
 
-
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
-		for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
-			PoolCfg poolCfg = entry.getValue();
+		for (PoolCfg poolCfg : poolCfgMap.values()) {
 			if (poolCfg instanceof KafkaPoolCfg) {
+				
 				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
-
-				// 加载offset
-				loadPartitionOffsetByPoolId(topicCfgMap, poolCfg.getId());
+				this.loadOffsetByPoolId(poolCfg.getId(), topicCfgMap.values());
 			}
 		}
-
 	}
 
 	/**
@@ -175,15 +137,55 @@ public class LocalOffsetAdmin {
 	 * offsets 持久化
 	 */
 	public void flushAll() {
+		
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (Entry<Integer, PoolCfg> poolEntry : poolCfgMap.entrySet()) {
 			PoolCfg poolCfg = poolEntry.getValue();
 			if (poolCfg instanceof KafkaPoolCfg) {
-				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
 
+				//
+				ZkClientx zkclientx = ZkClientx.getZkClient( zkServerIp );
+				
+				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
 				for (Entry<String, TopicCfg> topicEntry : topicCfgMap.entrySet()) {
 					TopicCfg topicCfg = topicEntry.getValue();
-					savePartitionOffsets(poolCfg.getId(), topicCfg.getName(), topicCfg.getRunningOffset().getPartitionOffsets().values() );
+					int poolId = poolCfg.getId();
+					String topicName = topicCfg.getName();
+					
+				
+					try {
+						
+						for (BrokerPartitionOffset partitionOffset : topicCfg.getRunningOffset().getPartitionOffsets().values()) {
+							
+							int partition = partitionOffset.getPartition();
+							
+							// log_start_offset
+							String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topicName, partition);
+							writeDataByPath(zkclientx, partitionLogStartOffsetPath, String.valueOf(partitionOffset.getLogStartOffset()));
+							
+							// produce_offset
+							String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topicName, partition);
+							writeDataByPath(zkclientx, partitionProducerOffsetPath, String.valueOf(partitionOffset.getProducerOffset()));
+							
+							// 消费者
+							Map<String, ConsumerOffset> consumerOffsets = partitionOffset.getConsumerOffsets();
+							for (ConsumerOffset consumeOffset : consumerOffsets.values()) {
+								String consumer = consumeOffset.getConsumer();
+								
+								// 消费者点位
+								String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topicName, partition, consumer);
+								writeDataByPath(zkclientx, partitionConsumerOffsetPath, String.valueOf(consumeOffset.getCurrentOffset()));
+								
+								// 消费者回退点位
+								String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topicName, partition, consumer);
+								writeDataByPath(zkclientx, partitionConsumerRollbackOffsetPath, consumeOffset.getOldOffsetQueue().toString());
+
+							}
+						}
+					} catch (Exception e) {
+						LOGGER.warn("offset flush err:", e);
+					}
+
 				}
 			}
 		}

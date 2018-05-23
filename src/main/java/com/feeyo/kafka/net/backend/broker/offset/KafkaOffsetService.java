@@ -91,7 +91,6 @@ public class KafkaOffsetService {
 			public void processActiveExit() {
 				localAdmin.close();
 			}
-			
         });
         
         if ( zkclientx != null) {
