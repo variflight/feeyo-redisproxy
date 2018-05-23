@@ -3,7 +3,7 @@ package com.feeyo.kafka.net.backend.broker;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.alibaba.fastjson.annotation.JSONField;
+import com.feeyo.kafka.util.JsonUtils;
 
 public class ConsumerOffset {
 	
@@ -51,7 +51,6 @@ public class ConsumerOffset {
 		
 	}
 	
-	@JSONField(serialize=false)
 	public long getNewOffset() {
 		Long defaultOff = oldOffsetQueue.poll();
 		if ( defaultOff == null ) {
@@ -75,6 +74,24 @@ public class ConsumerOffset {
 	public void setCurrentOffset(long currentOffset) {
 		this.currentOffset.set(currentOffset);
 	}
-
 	
+	public static void main(String[] args) {
+		String s = "[1111111111111,2]";
+		ConcurrentLinkedQueue<?> x  = JsonUtils.unmarshalFromString(s, ConcurrentLinkedQueue.class);
+		Object obj = x.poll();
+		while (obj != null) {
+			
+			if (obj instanceof Integer) {
+				long ss = Long.parseLong(obj.toString());
+				System.out.println(2);
+				System.out.println(ss);
+			} else if (obj instanceof Long) {
+				long s1 = (long) obj;
+				System.out.println(1);
+				System.out.println(s1);
+			}
+			obj = x.poll();
+		}
+	}
+
 }

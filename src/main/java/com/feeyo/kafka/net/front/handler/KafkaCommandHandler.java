@@ -207,7 +207,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
 			if (pr.isCorrect()) {
 				
-				RunningOffsetService.INSTANCE().updateProducerOffset(frontCon.getPassword(), pr.getTopic(), version,
+				RunningOffsetService.INSTANCE().updateProducerOffset(frontCon.getPassword(), pr.getTopic(), partition,
 						pr.getOffset(), pr.getLogStartOffset());
 				
 				byte[] size = ProtoUtils.convertIntToByteArray(PRODUCE_RESPONSE_SIZE);
@@ -317,7 +317,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		}
 		
 		private void revertConsumerOffset(String topic, int partition, long offset) {
-			RunningOffsetService.INSTANCE().revertConsumerOffset(frontCon.getPassword(), topic, partition, offset);
+			RunningOffsetService.INSTANCE().rollbackConsumerOffset(frontCon.getPassword(), topic, partition, offset);
 		}
 	}
 	

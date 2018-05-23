@@ -1,6 +1,5 @@
 package com.feeyo.kafka.net.backend.broker.offset;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 

@@ -8,30 +8,18 @@ package com.feeyo.kafka.config;
 public class OffsetManageCfg {
 	
 	private final String server;
-	private final String offsetPath;
-	private final String runningPath;
-	private final String clusterPath;
+	private final String path;
 
-	public OffsetManageCfg(String server, String offsetPath, String runningPath, String clusterPath) {
+	public OffsetManageCfg(String server, String path) {
 		this.server = server;
-		this.offsetPath = offsetPath;
-		this.runningPath = runningPath;
-		this.clusterPath = clusterPath;
+		this.path = path;
 	}
 
 	public String getServer() {
 		return server;
 	}
 
-	public String getOffsetPath() {
-		return offsetPath;
-	}
-
-	public String getRunningPath() {
-		return runningPath;
-	}
-
-	public String getClusterPath() {
-		return clusterPath;
+	public String getPath() {
+		return path;
 	}
 }
