@@ -76,6 +76,9 @@ public class KafkaOffsetService {
 
 	// 回收 offset
 	public void rollbackConsumerOffset(String user, String topic, int partition, long offset) {
+		if (offset < 0) {
+			return;
+		}
 		if (runningServerAdmin.isMaster()) {
 			runningOffsetAdmin.rollbackConsumerOffset(user, topic, partition, offset);
 		} else {
