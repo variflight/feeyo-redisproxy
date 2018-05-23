@@ -48,6 +48,8 @@ public class JedisConnection {
 	private Socket socket;
 	private RedisOutputStream outputStream;
 	private RedisInputStream inputStream;
+	
+	protected Pool<JedisConnection> dataSource = null;	
 
 	public JedisConnection(final String host, final int port) {
 		this.host = host;
@@ -105,6 +107,22 @@ public class JedisConnection {
 			}
 		}
 	}
+	
+	  public void close() {
+	    if (dataSource != null) {
+	      if (isBroken()) {
+	        this.dataSource.returnBrokenResource(this);
+	      } else {
+	        this.dataSource.returnResource(this);
+	      }
+	    } else {
+	    		disconnect();
+	    }
+	  }
+
+	  public void setDataSource(Pool<JedisConnection> jedisPool) {
+	    this.dataSource = jedisPool;
+	  }
 	
 	public boolean isConnected() {
 		return socket != null && socket.isBound() && !socket.isClosed() && socket.isConnected()
@@ -401,7 +419,20 @@ public class JedisConnection {
 		}
 		throw new JedisDataException(message);
 	}
+	
+	public String getHost() {
+		return host;
+	}
 
+	public int getPort() {
+		return port;
+	}
+	
+	public String ping() {
+		sendCommand(RedisCommand.PING);
+		return getStatusCodeReply();
+	}
+	
 	private static String[] parseTargetHostAndSlot(String clusterRedirectResponse) {
 		String[] response = new String[3];
 		String[] messageInfo = clusterRedirectResponse.split(" ");

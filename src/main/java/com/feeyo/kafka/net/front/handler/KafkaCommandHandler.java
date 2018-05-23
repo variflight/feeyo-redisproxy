@@ -17,7 +17,7 @@ import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.net.backend.broker.BrokerApiVersion;
-import com.feeyo.kafka.net.backend.broker.offset.RunningOffsetService;
+import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
@@ -207,7 +207,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
 			if (pr.isCorrect()) {
 				
-				RunningOffsetService.INSTANCE().updateProducerOffset(frontCon.getPassword(), pr.getTopic(), partition,
+				KafkaOffsetService.INSTANCE().updateProducerOffset(frontCon.getPassword(), pr.getTopic(), partition,
 						pr.getOffset(), pr.getLogStartOffset());
 				
 				byte[] size = ProtoUtils.convertIntToByteArray(PRODUCE_RESPONSE_SIZE);
@@ -317,7 +317,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		}
 		
 		private void revertConsumerOffset(String topic, int partition, long offset) {
-			RunningOffsetService.INSTANCE().rollbackConsumerOffset(frontCon.getPassword(), topic, partition, offset);
+			KafkaOffsetService.INSTANCE().rollbackConsumerOffset(frontCon.getPassword(), topic, partition, offset);
 		}
 	}
 	

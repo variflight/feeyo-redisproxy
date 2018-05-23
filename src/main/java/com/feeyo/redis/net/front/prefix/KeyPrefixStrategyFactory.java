@@ -127,10 +127,12 @@ public class KeyPrefixStrategyFactory {
 		keyStrategys.put("OBJECT", KeyPrefixStrategy.SecondKey);
 		
 		// Kafka nokey
-		keyStrategys.put("KPUSH", 		KeyPrefixStrategy.NoKey);
-		keyStrategys.put("KPOP",  		KeyPrefixStrategy.NoKey);
-		keyStrategys.put("KPARTITIONS", 	KeyPrefixStrategy.NoKey);
-		keyStrategys.put("KOFFSET",  	KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KPUSH", 			KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KPOP",  			KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KPARTITIONS", 		KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KOFFSET",  	    KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KCONSUMEOFFSET",  	KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KRETURNOFFSET",  	KeyPrefixStrategy.NoKey);
 	}
 	
 	// 

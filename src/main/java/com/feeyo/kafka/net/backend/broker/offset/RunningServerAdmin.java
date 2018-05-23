@@ -56,9 +56,9 @@ import com.feeyo.util.NetworkUtil;
  * @author zhuam
  *
  */
-public class RunningOffsetZkService {
+public class RunningServerAdmin {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger(RunningOffsetZkService.class);
+	private static Logger LOGGER = LoggerFactory.getLogger(RunningServerAdmin.class);
 	private static final String ZK_CFG_FILE = "kafka.xml"; // zk settings is in server.xml
 	
 	private ZkClientx  zkclientx;
@@ -70,15 +70,15 @@ public class RunningOffsetZkService {
 	private OffsetManageCfg offsetManageCfg;
 	private ZkPathUtil zkPathUtil;
 	
-	private static RunningOffsetZkService INSTANCE;
+	private static RunningServerAdmin INSTANCE;
 	private static Object _lock = new Object();
 	
-	public static RunningOffsetZkService INSTANCE() {
+	public static RunningServerAdmin INSTANCE() {
 		if (INSTANCE == null) {
 			synchronized (_lock) {
 				if (INSTANCE == null) {
 					try {
-						INSTANCE = new RunningOffsetZkService();
+						INSTANCE = new RunningServerAdmin();
 					} catch (Exception e) {
 						LOGGER.error("", e);
 					}
@@ -88,7 +88,7 @@ public class RunningOffsetZkService {
 		return INSTANCE;
 	}
 	
-	private RunningOffsetZkService() throws FileNotFoundException, IOException {
+	private RunningServerAdmin() throws FileNotFoundException, IOException {
 		
 		offsetManageCfg = KafkaConfigLoader.loadOffsetManageCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
 		zkPathUtil = new ZkPathUtil(offsetManageCfg.getPath());
@@ -106,14 +106,14 @@ public class RunningOffsetZkService {
 
 			@Override
 			public void processStop() {
-				RunningOffsetService.INSTANCE().close();
+				RunningOffsetAdmin.INSTANCE().close();
 			}
 
 			@Override
 			public void processActiveEnter() {
 				// start
 				try {
-					RunningOffsetService.INSTANCE().startup(offsetManageCfg);
+					RunningOffsetAdmin.INSTANCE().startup(offsetManageCfg);
 				} catch (Exception e) {
 					LOGGER.error("offset load err:", e);
 				}
@@ -121,7 +121,7 @@ public class RunningOffsetZkService {
 
 			@Override
 			public void processActiveExit() {
-				RunningOffsetService.INSTANCE().close();
+				RunningOffsetAdmin.INSTANCE().close();
 			}
         });
         

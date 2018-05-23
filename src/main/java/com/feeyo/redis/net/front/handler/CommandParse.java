@@ -33,8 +33,9 @@ public class CommandParse {
 	// 处理策略 kakfa指令
 	public static final byte PRODUCE_CMD    	= 14;       // 生产指令
 	public static final byte CONSUMER_CMD    	= 15;       // 消费指令
-	public static final byte PARTITIONS_CMD    	= 16;       // 消费指令
-	public static final byte OFFSET_CMD    	= 17;       // 消费指令
+	public static final byte PARTITIONS_CMD    	= 16;       // 获取分区指令
+	public static final byte OFFSET_CMD    	= 17;       // 获取点位指令
+	public static final byte PRIVATE_CMD    	= 18;       // 内部调用指令
 	
 	
 	// RW 
@@ -57,6 +58,8 @@ public class CommandParse {
 		_cmds.put("KPOP", 				new RedisRequestPolicy(KAFKA_CMD, CONSUMER_CMD, WRITE_CMD));
 		_cmds.put("KPARTITIONS", 		new RedisRequestPolicy(KAFKA_CMD, PARTITIONS_CMD, READ_CMD));
 		_cmds.put("KOFFSET", 			new RedisRequestPolicy(KAFKA_CMD, OFFSET_CMD, READ_CMD));
+		_cmds.put("KCONSUMEOFFSET", 		new RedisRequestPolicy(KAFKA_CMD, PRIVATE_CMD, WRITE_CMD));
+		_cmds.put("KRETURNOFFSET", 		new RedisRequestPolicy(KAFKA_CMD, PRIVATE_CMD, WRITE_CMD));
 		
 		// Cluster
 		_cmds.put("CLUSTER", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));

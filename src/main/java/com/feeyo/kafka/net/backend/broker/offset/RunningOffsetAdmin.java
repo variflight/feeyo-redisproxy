@@ -30,23 +30,23 @@ import com.feeyo.redis.engine.RedisEngineCtx;
  * 
  * @author yangtao
  */
-public class RunningOffsetService {
-	private static Logger LOGGER = LoggerFactory.getLogger(RunningOffsetService.class);
+public class RunningOffsetAdmin {
+	private static Logger LOGGER = LoggerFactory.getLogger(RunningOffsetAdmin.class);
 
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
-	private static RunningOffsetService INSTANCE = new RunningOffsetService();
+	private static RunningOffsetAdmin INSTANCE = new RunningOffsetAdmin();
 
 	private OffsetManageCfg offsetManageCfg;
 	private ZkPathUtil zkPathUtil;
 
 	private boolean isRunning = false;
 
-	public static RunningOffsetService INSTANCE() {
+	public static RunningOffsetAdmin INSTANCE() {
 		return INSTANCE;
 	}
 
-	private RunningOffsetService() {
+	private RunningOffsetAdmin() {
 	}
 
 	private void savePartitionOffsets(String topic, Map<Integer, BrokerPartitionOffset> partitionOffsetMap,
@@ -60,17 +60,11 @@ public class RunningOffsetService {
 				
 				// log_start_offset
 				String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition);
-				if (!zkclientx.exists(partitionLogStartOffsetPath)) {
-					zkclientx.createPersistent(partitionLogStartOffsetPath, null, true);
-				}
-				zkclientx.writeData(partitionLogStartOffsetPath, String.valueOf(partitionOffset.getLogStartOffset()));
+				sendDataToNode(zkclientx, partitionLogStartOffsetPath, String.valueOf(partitionOffset.getLogStartOffset()));
 				
 				// produce_offset
 				String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topic, partition);
-				if (!zkclientx.exists(partitionProducerOffsetPath)) {
-					zkclientx.createPersistent(partitionProducerOffsetPath, null, true);
-				}
-				zkclientx.writeData(partitionProducerOffsetPath, String.valueOf(partitionOffset.getProducerOffset()));
+				sendDataToNode(zkclientx, partitionProducerOffsetPath, String.valueOf(partitionOffset.getProducerOffset()));
 				
 				// 消费者
 				Map<String, ConsumerOffset> consumerOffsets = partitionOffset.getConsumerOffsets();
@@ -80,17 +74,11 @@ public class RunningOffsetService {
 					
 					// 消费者点位
 					String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topic, partition, consumer);
-					if (!zkclientx.exists(partitionConsumerOffsetPath)) {
-						zkclientx.createPersistent(partitionConsumerOffsetPath, null, true);
-					}
-					zkclientx.writeData(partitionConsumerOffsetPath, String.valueOf(co.getCurrentOffset()));
+					sendDataToNode(zkclientx, partitionConsumerOffsetPath, String.valueOf(co.getCurrentOffset()));
 					
 					// 消费者回退点位
 					String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topic, partition, consumer);
-					if (!zkclientx.exists(partitionConsumerRollbackOffsetPath)) {
-						zkclientx.createPersistent(partitionConsumerRollbackOffsetPath, null, true);
-					}
-					zkclientx.writeData(partitionConsumerRollbackOffsetPath, co.getOldOffsetQueue().toString());
+					sendDataToNode(zkclientx, partitionConsumerRollbackOffsetPath, co.getOldOffsetQueue().toString());
 
 				}
 			}
@@ -109,20 +97,12 @@ public class RunningOffsetService {
 				for (BrokerPartition partition : topicCfg.getRunningOffset().getBrokerPartitions()) {
 					// log_start_offset
 					String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition.getPartition());
-					if (!zkclientx.exists(partitionLogStartOffsetPath)) {
-						zkclientx.createPersistent(partitionLogStartOffsetPath, null, true);
-					}
-					Object obj = zkclientx.readData(partitionLogStartOffsetPath);
-					String data = zkObject2String(obj);
+					String data = getNodeData(zkclientx, partitionLogStartOffsetPath);
 					long logStartOffset = isNull(data) ? 0 : Long.parseLong(data);
 					
 					// produce_offset
 					String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topic, partition.getPartition());
-					if (!zkclientx.exists(partitionProducerOffsetPath)) {
-						zkclientx.createPersistent(partitionProducerOffsetPath, null, true);
-					}
-					obj = zkclientx.readData(partitionProducerOffsetPath);
-					data = zkObject2String(obj);
+					data = getNodeData(zkclientx, partitionProducerOffsetPath);
 					long producerOffset = isNull(data) ? 0 : Long.parseLong(data);
 					
 					BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), producerOffset, logStartOffset);
@@ -136,11 +116,7 @@ public class RunningOffsetService {
 					for (String consumer : childrenPath) {
 						// consumer_offset
 						String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topic, partition.getPartition(), consumer);
-						if (!zkclientx.exists(partitionConsumerOffsetPath)) {
-							zkclientx.createPersistent(partitionConsumerOffsetPath, null, true);
-						}
-						obj = zkclientx.readData(partitionConsumerOffsetPath);
-						data = zkObject2String(obj);
+						data = getNodeData(zkclientx, partitionConsumerOffsetPath);
 						long consumerOffset = isNull(data) ? 0 : Long.parseLong(data);
 						
 						ConsumerOffset co = new ConsumerOffset(consumer, consumerOffset);
@@ -148,11 +124,7 @@ public class RunningOffsetService {
 						
 						// consumer_offset
 						String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topic, partition.getPartition(), consumer);
-						if (!zkclientx.exists(partitionConsumerRollbackOffsetPath)) {
-							zkclientx.createPersistent(partitionConsumerRollbackOffsetPath, null, true);
-						}
-						obj = zkclientx.readData(partitionConsumerRollbackOffsetPath);
-						data = zkObject2String(obj);
+						data = getNodeData(zkclientx, partitionConsumerRollbackOffsetPath);
 						if (!isNull(data)) {
 							ConcurrentLinkedQueue<?> offsets = JsonUtils.unmarshalFromString(data, ConcurrentLinkedQueue.class);
 							Object object = offsets.poll();
@@ -160,7 +132,7 @@ public class RunningOffsetService {
 								if (object instanceof Integer) {
 									co.getOldOffsetQueue().offer( Long.parseLong(object.toString()) );
 								} else if (object instanceof Long) {
-									co.getOldOffsetQueue().offer( (long) obj );
+									co.getOldOffsetQueue().offer( (long) object );
 								}
 								object = offsets.poll();
 							}
@@ -283,71 +255,71 @@ public class RunningOffsetService {
 
 	// 获取offset
 	public long getOffset(TopicCfg topicCfg, String user, int partition) {
-		long offset;
-		if (RunningOffsetZkService.INSTANCE().isMaster()) {
-			BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
-			ConsumerOffset cOffset = partitionOffset.getConsumerOffsetByConsumer(user);
-			offset = cOffset.getNewOffset();
-		} else {
-			// TODO 待完善
-			offset = -1;
-		}
+		BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
+		ConsumerOffset cOffset = partitionOffset.getConsumerOffsetByConsumer(user);
+		long offset = cOffset.getNewOffset();
 		return offset;
 	}
 
 	// 回收offset
 	public void rollbackConsumerOffset(String user, String topic, int partition, long offset) {
-		if (RunningOffsetZkService.INSTANCE().isMaster()) {
 
-			UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
-			if (userCfg == null) {
-				return;
-			}
-			KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap()
-					.get(userCfg.getPoolId());
-			if (kafkaPoolCfg == null) {
-				return;
-			}
-			TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topic);
-			if (topicCfg == null) {
-				return;
-			}
-			BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
-			if (partitionOffset == null) {
-				return;
-			}
-
-			partitionOffset.rollbackConsumerOffset(user, offset);
-
-		} else {
-			// TODO 待完善
+		UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
+		if (userCfg == null) {
+			return;
 		}
+		KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(userCfg.getPoolId());
+		if (kafkaPoolCfg == null) {
+			return;
+		}
+		TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topic);
+		if (topicCfg == null) {
+			return;
+		}
+		BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
+		if (partitionOffset == null) {
+			return;
+		}
+
+		partitionOffset.rollbackConsumerOffset(user, offset);
+
 	}
 
 	// 更新生产offset
 	public void updateProducerOffset(String user, String topic, int partition, long offset, long logStartOffset) {
-		if (RunningOffsetZkService.INSTANCE().isMaster()) {
 
-			UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
-			if (userCfg == null) {
-				return;
-			}
-			KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap()
-					.get(userCfg.getPoolId());
-			if (kafkaPoolCfg == null) {
-				return;
-			}
-			TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topic);
-			if (topicCfg == null) {
-				return;
-			}
-			BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
-			if (partitionOffset == null) {
-				return;
-			}
-			partitionOffset.setProducerOffset(offset, logStartOffset);
-
-		} else {
-			// TODO 待完善
+		UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
+		if (userCfg == null) {
+			return;
 		}
-	}}
+		KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(userCfg.getPoolId());
+		if (kafkaPoolCfg == null) {
+			return;
+		}
+		TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topic);
+		if (topicCfg == null) {
+			return;
+		}
+		BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
+		if (partitionOffset == null) {
+			return;
+		}
+		partitionOffset.setProducerOffset(offset, logStartOffset);
+
+	}
+	
+	private String getNodeData(ZkClientx zkclientx, String path) {
+		if (!zkclientx.exists(path)) {
+			zkclientx.createPersistent(path, null, true);
+		}
+		Object obj = zkclientx.readData(path);
+		return zkObject2String(obj);
+	}
+	
+	private void sendDataToNode(ZkClientx zkclientx, String path, String value) {
+		if (!zkclientx.exists(path)) {
+			zkclientx.createPersistent(path, null, true);
+		}
+		zkclientx.writeData(path, value);
+	}
+}

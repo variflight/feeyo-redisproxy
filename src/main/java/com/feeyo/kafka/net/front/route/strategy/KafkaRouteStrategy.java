@@ -6,7 +6,7 @@ import java.util.List;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.offset.RunningOffsetService;
+import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
@@ -88,7 +88,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				// 轮询分区消费
 				if (request.getNumArgs() == 2) {
 					partition = topicCfg.getRunningOffset().getConsumerBrokerPartition();
-					offset = RunningOffsetService.INSTANCE().getOffset(topicCfg, userCfg.getPassword(), partition.getPartition());
+					offset = KafkaOffsetService.INSTANCE().getOffset(userCfg.getPassword(), topicCfg, partition.getPartition());
 					
 				// 指定分区消费
 				} else {
@@ -114,6 +114,12 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				
 				return new RouteResult(RedisRequestType.KAFKA, requests, null);
 			}
+		case CommandParse.PRIVATE_CMD: 
+			{
+				// 全部内部代码调用 省掉验证部分
+				return new RouteResult(RedisRequestType.KAFKA, requests, null);
+			}
+			
 		case CommandParse.OFFSET_CMD: 
 			{
 				if (request.getNumArgs() != 4) {

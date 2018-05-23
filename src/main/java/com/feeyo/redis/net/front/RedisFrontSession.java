@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -200,8 +201,8 @@ public class RedisFrontSession {
 					return;
 				}
 				
-				// pusub 和 kpartitions 指令提前返回
-				if ( interceptPubsub( routeResult ) || interceptKpartitions( routeResult )) {
+				// 指令提前返回
+				if ( intercept( routeResult ) ) {
 					return;
 				}
 				
@@ -429,21 +430,37 @@ public class RedisFrontSession {
 		this.requestTimeMills = requestTimeMills;
 	}
 	
+	public boolean intercept(RouteResult routeResult) throws IOException {
+		boolean result = false;
+		RedisRequest request = routeResult.getRequests().get(0);
+		byte handleType = request.getPolicy().getHandleType();
+		
+		// pubsub 连接不允许其他指令
+		if ( handleType != CommandParse.PUBSUB_CMD || routeResult.getRequestType() != RedisRequestType.DEFAULT) {
+			if (pubsub != null) {
+				frontCon.write("-ERR not support commond to channel.\r\n".getBytes());
+				result = true;
+			}
+		}
+		switch (handleType) {
+		case CommandParse.PUBSUB_CMD:
+			return result || interceptPubsub(routeResult);
+			
+		case CommandParse.PARTITIONS_CMD:
+			return result || interceptKpartitions(request);
+			
+		case CommandParse.PRIVATE_CMD:
+			return result || interceptPrivateCmds(request);
+
+		default:
+			return result;
+		}
+		
+	}
 	
 	// 拦截 PUBSUB
-	public boolean interceptPubsub(RouteResult routeResult) throws IOException {
+	private boolean interceptPubsub(RouteResult routeResult) throws IOException {
 		RedisRequest request = routeResult.getRequests().get(0);
-		
-		if ( request.getPolicy().getHandleType() != CommandParse.PUBSUB_CMD || routeResult.getRequestType() != RedisRequestType.DEFAULT ) {
-			
-			if ( pubsub == null ) {
-				return false;
-			}
-			
-			frontCon.write("-ERR not support commond to channel.\r\n".getBytes());
-			return true;
-			
-		}
 		
 		boolean isIntercepted = false;
 		
@@ -493,38 +510,57 @@ public class RedisFrontSession {
 	}
 	
 	
-	// 拦截 PUBSUB
-	public boolean interceptKpartitions(RouteResult routeResult) throws IOException {
-		boolean isIntercepted = false;
-		
-		RedisRequest request = routeResult.getRequests().get(0);
-		if ( request.getPolicy().getHandleType() == CommandParse.PARTITIONS_CMD ) {
-			isIntercepted = true;
-			
-			int poolId = frontCon.getUserCfg().getPoolId();
-			String topic = new String(request.getArgs()[1]);
-			KafkaPoolCfg poolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
-			TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
-			BrokerPartition[] partitions = tc.getRunningOffset().getBrokerPartitions();
-			
-			// 申请1k buffer （肯定够）
-			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
-			byte ASTERISK = '*';
-			byte DOLLAR = '$';
-			byte[] CRLF = "\r\n".getBytes();		
-			
-			byte[] size = ProtoUtils.convertIntToByteArray(partitions.length);
-			bb.put(ASTERISK).put(size).put(CRLF);
-			for (BrokerPartition dataPartition : partitions) {
-				byte[] partition = ProtoUtils.convertIntToByteArray(dataPartition.getPartition());
-				byte[] partitionLength = ProtoUtils.convertIntToByteArray(partition.length);
-				bb.put(DOLLAR).put(partitionLength).put(CRLF).put(partition).put(CRLF);
+	// 拦截 kapartitions
+	private boolean interceptKpartitions(RedisRequest request) throws IOException {
+
+		int poolId = frontCon.getUserCfg().getPoolId();
+		String topic = new String(request.getArgs()[1]);
+		KafkaPoolCfg poolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
+		TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
+		BrokerPartition[] partitions = tc.getRunningOffset().getBrokerPartitions();
+
+		// 申请1k buffer （肯定够）
+		ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
+		byte ASTERISK = '*';
+		byte DOLLAR = '$';
+		byte[] CRLF = "\r\n".getBytes();
+
+		byte[] size = ProtoUtils.convertIntToByteArray(partitions.length);
+		bb.put(ASTERISK).put(size).put(CRLF);
+		for (BrokerPartition dataPartition : partitions) {
+			byte[] partition = ProtoUtils.convertIntToByteArray(dataPartition.getPartition());
+			byte[] partitionLength = ProtoUtils.convertIntToByteArray(partition.length);
+			bb.put(DOLLAR).put(partitionLength).put(CRLF).put(partition).put(CRLF);
+		}
+
+		frontCon.write(bb);
+
+		return true;
+	}
+	
+	// 拦截内部调用指令
+	private boolean interceptPrivateCmds(RedisRequest request) throws IOException {
+		String cmd = new String(request.getArgs()[0]).toUpperCase();
+		String topic = new String(request.getArgs()[1]);
+		int partition = Integer.parseInt(new String(request.getArgs()[2]));
+		try {
+			if ( cmd.equals("KCONSUMEOFFSET") ) {
+				long offset = KafkaOffsetService.INSTANCE().getOffsetForSlave(frontCon.getPassword(), topic, partition);
+				StringBuffer sb = new StringBuffer();
+				sb.append("+").append(offset).append("\r\n");
+				frontCon.write(sb.toString().getBytes());
+			} else if ( cmd.equals("KRETURNOFFSET") ) {
+				long offset = Long.parseLong(new String(request.getArgs()[3]));
+				KafkaOffsetService.INSTANCE().rollbackConsumerOffsetForSlave(frontCon.getPassword(), topic, partition, offset);
+				frontCon.write(OK);
 			}
-			
-			frontCon.write(bb);
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR").append(e.getMessage()).append("\r\n");
+			frontCon.write(sb.toString().getBytes());
 		}
 		
-		return isIntercepted;
+		return true;
 	}
 	
 	private void cleanup() {
