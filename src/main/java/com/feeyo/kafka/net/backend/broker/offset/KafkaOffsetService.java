@@ -135,7 +135,7 @@ public class KafkaOffsetService {
 				try {
 					// offset 数据持久化
 					if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null )
-						localAdmin.saveAll();
+						localAdmin.flushAll();
 
 				} catch (Exception e) {
 					LOGGER.warn("offsetAdmin err: ", e);
@@ -169,7 +169,7 @@ public class KafkaOffsetService {
 
 			// 提交本地剩余offset
 			if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null )
-				localAdmin.saveAll();
+				localAdmin.flushAll();
 			
 		} catch (Exception e) {
 		}

@@ -79,13 +79,16 @@ public class LocalOffsetAdmin {
 	}
 
 	private void loadPartitionOffsetByPoolId(Map<String, TopicCfg> topicCfgMap, int poolId) {
+		
 		ZkClientx zkclientx = ZkClientx.getZkClient( zkServerIp );
 		for (TopicCfg topicCfg : topicCfgMap.values()) {
+			
 			String topic = topicCfg.getName();
 			
 			ConcurrentHashMap<Integer, BrokerPartitionOffset> partitionOffsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 			try {
 				for (BrokerPartition partition : topicCfg.getRunningOffset().getBrokerPartitions()) {
+					
 					// log_start_offset
 					String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition.getPartition());
 					String data = readDataByPath(zkclientx, partitionLogStartOffsetPath);
@@ -96,6 +99,7 @@ public class LocalOffsetAdmin {
 					data = readDataByPath(zkclientx, partitionProducerOffsetPath);
 					long producerOffset = isNull(data) ? 0 : Long.parseLong(data);
 					
+					//
 					BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), producerOffset, logStartOffset);
 					partitionOffsetMap.put(partition.getPartition(), partitionOffset);
 					String partitionConsumerPath = zkPathUtil.getPartitionConsumerPath(poolId, topic, partition.getPartition());
@@ -103,6 +107,7 @@ public class LocalOffsetAdmin {
 						continue;
 					}
 					
+					//
 					List<String> childrenPath = zkclientx.getChildren(partitionConsumerPath);
 					for (String consumer : childrenPath) {
 						// consumer_offset
@@ -122,6 +127,7 @@ public class LocalOffsetAdmin {
 							while (object != null) {
 								if (object instanceof Integer) {
 									co.getOldOffsetQueue().offer( Long.parseLong(object.toString()) );
+									
 								} else if (object instanceof Long) {
 									co.getOldOffsetQueue().offer( (long) object );
 								}
@@ -139,6 +145,9 @@ public class LocalOffsetAdmin {
 		}
 	}
 
+	/**
+	 * 启动
+	 */
 	public void startup() {
 
 
@@ -161,10 +170,11 @@ public class LocalOffsetAdmin {
 	public void close() {
 	}
 
+	
 	/**
 	 * offsets 持久化
 	 */
-	public void saveAll() {
+	public void flushAll() {
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (Entry<Integer, PoolCfg> poolEntry : poolCfgMap.entrySet()) {
 			PoolCfg poolCfg = poolEntry.getValue();
