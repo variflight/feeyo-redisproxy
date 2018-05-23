@@ -2,12 +2,12 @@ package com.feeyo.redis.net.front.handler;
 
 import java.io.IOException;
 
-import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
+import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
@@ -15,7 +15,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  */
 public class BlockCommandHandler extends AbstractCommandHandler {
 	
-	private RedisBackendConnection keepConnection;
+	private BackendConnection keepConnection;
 	
 	public BlockCommandHandler(RedisFrontConnection frontCon) {
 		super(frontCon);
@@ -23,7 +23,7 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 
 	@Override
 	protected void commonHandle(RouteResult rrs) throws IOException {
-		RouteResultNode node = rrs.getRouteResultNodes().get(0);
+		RouteNode node = rrs.getRouteNodes().get(0);
 		RedisRequest request = rrs.getRequests().get(0);
 		
 		String cmd = new String(request.getArgs()[0]).toUpperCase();
@@ -42,7 +42,7 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 	private class BlockDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
 		
 		@Override
-		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+		public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 			// handler释放后端链接
 			keepConnection = null;
 			

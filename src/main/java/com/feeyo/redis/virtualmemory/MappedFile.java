@@ -23,7 +23,6 @@ import com.feeyo.redis.virtualmemory.AppendMessageResult.AppendMessageStatus;
 import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
 
-import sun.nio.ch.DirectBuffer;
 
 /*
   Page Cache 文件访问封装
@@ -522,9 +521,10 @@ public class MappedFile extends ReferenceResource {
      	mlock方法在标准C中的实现是将锁住指定的内存区域避免被操作系统调到swap空间中
      	madvise的作用是一次性先将一段数据读入到映射内存区域，这样就减少了缺页异常的产生
      */
-    public void mlock() {
+    @SuppressWarnings("restriction")
+	public void mlock() {
         final long beginTime = System.currentTimeMillis();
-        final long address = ((DirectBuffer) (this.mappedByteBuffer)).address();
+		final long address = ((sun.nio.ch.DirectBuffer) (this.mappedByteBuffer)).address();
         Pointer pointer = new Pointer(address);
         {
             int ret = PlatformLibC.mlock(pointer, new NativeLong(this.fileSize));
@@ -537,9 +537,10 @@ public class MappedFile extends ReferenceResource {
         }
     }
 
-    public void munlock() {
+    @SuppressWarnings("restriction")
+	public void munlock() {
         final long beginTime = System.currentTimeMillis();
-        final long address = ((DirectBuffer) (this.mappedByteBuffer)).address();
+        final long address = ((sun.nio.ch.DirectBuffer) (this.mappedByteBuffer)).address();
         Pointer pointer = new Pointer(address);
         int ret = PlatformLibC.munlock(pointer, new NativeLong(this.fileSize));
         log.info("munlock {} {} {} ret = {} time consuming = {}",  new Object[]{ address, this.fileName, this.fileSize, ret, System.currentTimeMillis() - beginTime });

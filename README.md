@@ -11,7 +11,17 @@
 *  支持 访问的数据监控、 use 指令，实时切换后端代理
 *  支持 用户、代理配置的热更新 等等 ...
 
-### 扩展的运维指令
+
+### 1.9 版本开始，我们支持通过 Redis 协议，对外提供 kafka 队列服务
+	 KPUSH {topic} {content}
+	 KPOP {topic} 
+	 KPOP {topic} {partition}
+	 KPOP {topic} {partition} {offset}
+	 KPARTITION {topic}
+	 KOFFSET {topic} {partition} {time}
+
+
+### 扩展的 Redis 运维指令
 	
 	 动态切换集群
 	 USE {poodId}

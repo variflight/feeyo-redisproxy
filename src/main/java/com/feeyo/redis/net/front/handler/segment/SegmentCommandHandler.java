@@ -7,15 +7,15 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
-import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineResponse;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
+import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder;
+import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder.PipelineResponse;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.AbstractPipelineCommandHandler;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
@@ -45,11 +45,11 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
     	super.commonHandle(rrs);
     	
     	// 写出
-		for (RouteResultNode rrn : rrs.getRouteResultNodes()) {
+		for (RouteNode rrn : rrs.getRouteNodes()) {
 			
 			ByteBuffer buffer = getRequestBufferByRRN(rrn);
 			
-		    RedisBackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new SegmentCallBack()); 
+		    BackendConnection backendConn = writeToBackend( rrn.getPhysicalNode(), buffer, new SegmentCallBack()); 
 		    
 		    if ( backendConn != null )
 				this.holdBackendConnection(backendConn);
@@ -64,10 +64,10 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
     
     private class SegmentCallBack extends DirectTransTofrontCallBack {
 
-        private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
+        private RedisResponsePipelineDecoder decoder = new RedisResponsePipelineDecoder();
 
         @Override
-        public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+        public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 
         	PipelineResponse pipelineResponse = decoder.parse(byteBuff);
         	if ( !pipelineResponse.isOK() )

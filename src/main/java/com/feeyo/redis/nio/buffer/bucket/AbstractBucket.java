@@ -70,7 +70,6 @@ public abstract class AbstractBucket implements Comparable<AbstractBucket> {
 
 				// 检测
 				if (reference.isItAllocatable()) {
-
 					this.usedCount.incrementAndGet();
 
 					// Clear sets limit == capacity. Position == 0.

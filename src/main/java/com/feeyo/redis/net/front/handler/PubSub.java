@@ -8,13 +8,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisResponse;
 import com.feeyo.redis.net.backend.TodoTask;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
+import com.feeyo.redis.net.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisResponse;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.NetSystem;
 
@@ -59,7 +60,7 @@ public class PubSub  {
 
 			DirectTransTofrontCallBack callback = new DirectTransTofrontCallBack() {
 				@Override
-				public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+				public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 					
 					// 应答解析
 					List<RedisResponse> resps = decoder.decode(byteBuff);
@@ -78,14 +79,14 @@ public class PubSub  {
 			// 连接建立成功后需要处理的任务
 			TodoTask task = new TodoTask() {				
 				@Override
-				public void execute(RedisBackendConnection backendCon) throws Exception {	
+				public void execute(BackendConnection backendCon) throws Exception {	
 					backendCon.write(  request.encode()  );
 				}
 			};
 			callback.addTodoTask(task);
 			
 			// 创建新连接
-			this.backendCon = node.createNewConnection(callback, frontCon);
+			this.backendCon = (RedisBackendConnection)node.createNewConnection(callback, frontCon);
 			
 		} else {
 			

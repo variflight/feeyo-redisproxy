@@ -14,8 +14,6 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.nio.buffer.BufferPool;
 
-import sun.nio.ch.DirectBuffer;
-
 /**
  * DirectByteBuffer池，可以分配任意指定大小的DirectByteBuffer，用完需要归还
  * 
@@ -147,19 +145,20 @@ public class PageBufferPool extends BufferPool {
 		return byteBuf;
 	}
 
-    @Override
+    @SuppressWarnings("restriction")
+	@Override
     public void recycle(ByteBuffer theBuf) {
     	
-      	if(theBuf !=null && (!(theBuf instanceof DirectBuffer) )){
+      	if(theBuf !=null && (!(theBuf instanceof sun.nio.ch.DirectBuffer) )){
     		theBuf.clear();
     		return;
          }
 
       	final long size = theBuf.capacity();
 		boolean recycled = false;
-		DirectBuffer thisNavBuf = (DirectBuffer) theBuf;
+		sun.nio.ch.DirectBuffer thisNavBuf = (sun.nio.ch.DirectBuffer) theBuf;
 		int chunkCount = theBuf.capacity() / chunkSize;
-		DirectBuffer parentBuf = (DirectBuffer) thisNavBuf.attachment();
+		sun.nio.ch.DirectBuffer parentBuf = (sun.nio.ch.DirectBuffer) thisNavBuf.attachment();
 		int startChunk = (int) ((thisNavBuf.address() - parentBuf.address()) / chunkSize);
 		for (int i = 0; i < allPages.length; i++) {
 			if ((recycled = allPages[i].recycleBuffer((ByteBuffer) parentBuf, startChunk,chunkCount) == true)) {

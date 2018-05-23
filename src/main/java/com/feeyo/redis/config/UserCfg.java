@@ -17,7 +17,10 @@ public class UserCfg {
 	private int usePoolId;
 	private int usePoolType = -1;
 	
-	public UserCfg(int poolId, int poolType, String password,  String prefix, int selectDb, boolean isAdmin, boolean isReadonly) {
+	private boolean isFlowLimit = false;
+	
+	public UserCfg(int poolId, int poolType, String password,  String prefix, 
+			int selectDb, boolean isAdmin, boolean isReadonly, boolean isFlowLimit) {
 		super();
 		this.poolId = poolId;
 		this.poolType = poolType;
@@ -29,6 +32,9 @@ public class UserCfg {
 		
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
+		
+		if ( !isAdmin) 
+			this.isFlowLimit = isFlowLimit;
 	}
 	
 
@@ -66,6 +72,11 @@ public class UserCfg {
 	public void setUsePool(int poolId, int poolType) {
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
+	}
+	
+
+	public boolean isFlowLimit() {
+		return isFlowLimit;
 	}
 
 	@Override

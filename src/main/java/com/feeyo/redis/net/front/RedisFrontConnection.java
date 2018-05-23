@@ -5,7 +5,7 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.net.RedisConnection;
+import com.feeyo.redis.net.Connection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -14,7 +14,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * @author zhuam
  *
  */
-public class RedisFrontConnection extends RedisConnection {
+public class RedisFrontConnection extends Connection {
 	
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
@@ -24,6 +24,7 @@ public class RedisFrontConnection extends RedisConnection {
 	private boolean isAuthenticated;
 	
 	private RedisFrontSession session;
+	
 	private AtomicBoolean _readLock = new AtomicBoolean(false);
 	
 	public RedisFrontConnection(SocketChannel channel) {
@@ -38,6 +39,12 @@ public class RedisFrontConnection extends RedisConnection {
 	
 	@Override
 	protected void asynRead() throws IOException {
+		
+		// 流量超标，执行流量清洗
+		if (this.getFlowMonitor().isOverproof() && isFlowLimit()) {
+			flowClean();
+			return;
+		}
 		
 		if (_readLock.compareAndSet(false, true)) {
 			super.asynRead();
@@ -117,5 +124,20 @@ public class RedisFrontConnection extends RedisConnection {
 	
 	public void releaseLock() {
 		_readLock.set(false);
+	}
+	
+	@Override
+	public boolean isFlowLimit() {
+		UserCfg uc = this.getUserCfg();
+		if ( uc != null )
+			return uc.isFlowLimit();
+		return false;
+	}
+	
+	@Override
+	public void flowClean() {
+		super.flowClean();
+		this.write(RedisFrontSession.FLOW_LIMIT);
+		this.close("flow limit");
 	}
 }

@@ -54,7 +54,7 @@ public class BucketBufferPool extends BufferPool {
 			// 测试结果 队列长度2048的时候效果就没那么显著了。
 			AbstractBucket bucket;
 			if (chunkCount > 2000) {
-				bucket = new SegmentBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
+				bucket = new DefaultArrayBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
 			} else {
 				bucket = new DefaultBucket(this, chunkSize, chunkCount, isExpand, threadLocalPercent);
 			}

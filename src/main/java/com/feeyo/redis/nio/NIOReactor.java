@@ -1,7 +1,6 @@
 package com.feeyo.redis.nio;
 
 import java.io.IOException;
-import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Queue;
@@ -21,6 +20,8 @@ public final class NIOReactor {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOReactor.class );
 	
+	private final static long SELECTOR_TIMEOUT = 100L; // 500L
+	
 	private final String name;
 	private final RW reactorR;
 
@@ -37,14 +38,14 @@ public final class NIOReactor {
 		new Thread(reactorR, name + "-RW").start();
 	}
 
-	final void postRegister(Connection c) {
+	final void postRegister(AbstractConnection c) {
 		c.setReactor( this.name );
-		reactorR.registerQueue.offer(c);
+		reactorR.pendingQueue.offer(c);
 		reactorR.selector.wakeup();
 	}
 
-	final Queue<Connection> getRegisterQueue() {
-		return reactorR.registerQueue;
+	final Queue<AbstractConnection> getRegisterQueue() {
+		return reactorR.pendingQueue;
 	}
 
 	final long getReactCount() {
@@ -56,41 +57,60 @@ public final class NIOReactor {
 	private final class RW implements Runnable {
 		
 		private final Selector selector;
-		private final ConcurrentLinkedQueue<Connection> registerQueue;
+		private final ConcurrentLinkedQueue<AbstractConnection> pendingQueue;
 		private long reactCount;
         
 		private RW() throws IOException {
 			this.selector = Selector.open();
-			this.registerQueue = new ConcurrentLinkedQueue<Connection>();  
+			this.pendingQueue = new ConcurrentLinkedQueue<AbstractConnection>();  
 		}
 
 		@Override
 		public void run() {
 			
 			final Selector selector = this.selector;
-			Set<SelectionKey> keys = null;
+			long ioTimes = 0;
+			
 			for (;;) {
 				++reactCount;
 				try {
-					
+
 					// 查看有无连接就绪
-					selector.select(500L);
+					selector.select( SELECTOR_TIMEOUT );
 					
-					// 处理注册队列
-					register(selector);
+					final Set<SelectionKey> keys = selector.selectedKeys();
+					if ( keys.isEmpty() ) {
+						
+						if (!pendingQueue.isEmpty()) {
+							ioTimes = 0;
+							processPendingQueue(selector); 	// 处理注册队列
+						}
+						continue;
+						
+					} else if ((ioTimes > 5) & !pendingQueue.isEmpty()) {
+						ioTimes = 0;
+						processPendingQueue(selector); 		// 处理注册队列
+					}
 					
-					keys = selector.selectedKeys();
+				
+					
+
+					ioTimes++;
 					for (final SelectionKey key : keys) {
 						
-						Connection con = null;
+						AbstractConnection con = null;
+						
 						try {
+							
 							Object att = key.attachment();
 							if ( att != null ) {
 								
-								con = (Connection) att;
+								con = (AbstractConnection) att;
+								
+								int ops = key.readyOps();
 								
 								// 处理读
-								if (key.isValid() && key.isReadable()) {									
+								if ( (ops & SelectionKey.OP_READ) == SelectionKey.OP_READ ) {									
 									try {
 										con.asynRead();
 									} catch (IOException  e) {
@@ -105,58 +125,41 @@ public final class NIOReactor {
 								}								
 								
 								// 处理写
-								if (key.isValid() && key.isWritable()) {
+								if ( (ops & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE ) {
 									con.doNextWriteCheck();
 								}
 								
 							} else {
 								key.cancel();
 							}
-							
-						} catch (CancelledKeyException e) {			
-							
-							if (LOGGER.isDebugEnabled()) {
-								LOGGER.debug(con + " socket key canceled");
-							}
-							
-						} catch (Exception e) {
-							LOGGER.warn(con + " " + e);
-							
+
 						} catch (final Throwable e) {
+							
+							key.cancel();
+							
 							// Catch exceptions such as OOM and close connection if exists
                         	//so that the reactor can keep running!
 							if (con != null) {
 								con.close("Bad: " + e);
 							}
+							
 							LOGGER.error("caught err: ", e);
-                        	continue;
 						}
 					}
 					
-					
-					
-				} catch (Exception e) {
-					LOGGER.error(name, e);
+					keys.clear();
 					
 				} catch (Throwable e) {
 					// Catch exceptions such as OOM so that the reactor can keep running!
 					LOGGER.error(name +" caught err: ", e);
-				} finally {
-					if (keys != null) {
-						keys.clear();
-					}
-				}
+				} 
 			}
 		}
 		
 		// 注册 IO 读写事件
-		private void register(Selector selector) {
-			if ( registerQueue.isEmpty() ) {
-				return;
-			}
-			
-			Connection c = null;
-			while ((c = registerQueue.poll()) != null) {
+		private void processPendingQueue(Selector selector) {
+			AbstractConnection c = null;
+			while ((c = pendingQueue.poll()) != null) {
 				try {
 					c.register(selector);
 				} catch (Exception e) {

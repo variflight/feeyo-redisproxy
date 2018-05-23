@@ -3,7 +3,7 @@ package com.feeyo.redis.net.backend.pool.xcluster;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.feeyo.redis.engine.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisRequest;
 
 public class XNodeUtil {
 

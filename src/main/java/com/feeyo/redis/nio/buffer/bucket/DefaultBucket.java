@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class DefaultBucket extends AbstractBucket {
 	
-	private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<ByteBuffer>();
+	private final ConcurrentLinkedQueue<ByteBuffer> queue = new ConcurrentLinkedQueue<ByteBuffer>();
 
 	public DefaultBucket(BucketBufferPool pool, int chunkSize, 
 			int count, boolean isExpand, int threadLocalPercent) {
@@ -30,22 +30,22 @@ public class DefaultBucket extends AbstractBucket {
 
 	@Override
 	protected boolean queueOffer(ByteBuffer buffer) {
-		return this.buffers.offer( buffer );
+		return this.queue.offer( buffer );
 	}
 
 	@Override
 	protected ByteBuffer queuePoll() {
-		return this.buffers.poll();
+		return this.queue.poll();
 	}
 
 	@Override
 	protected void containerClear() {
-		buffers.clear();
+		queue.clear();
 	}
 
 	@Override
 	public int getQueueSize() {
-		return this.buffers.size();
+		return this.queue.size();
 	}
 
 }

@@ -14,12 +14,15 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
+import com.feeyo.kafka.config.KafkaPoolCfg;
+
+
 
 public class ConfigLoader {
 	
@@ -30,8 +33,9 @@ public class ConfigLoader {
 	 * 
 	 * @param uri
 	 * @return
+	 * @throws Exception 
 	 */
-	public static Map<String, String> loadServerMap(String uri) {	
+	public static Map<String, String> loadServerMap(String uri) throws Exception {	
 		Map<String, String> map = new HashMap<String, String>();
 		try {
 			Element element = loadXmlDoc(uri).getDocumentElement();
@@ -50,7 +54,8 @@ public class ConfigLoader {
 			}
 
 		} catch (Exception e) {
-			LOGGER.error("loadServerCfg err " + e);
+			LOGGER.error("load server.xml err " + e);
+			throw e;
 		}		
 		return map;
 		
@@ -61,8 +66,9 @@ public class ConfigLoader {
 	 * 
 	 * @param uri
 	 * @return
+	 * @throws Exception 
 	 */
-	public static Map<Integer, PoolCfg> loadPoolMap(String uri) {
+	public static Map<Integer, PoolCfg> loadPoolMap(String uri) throws Exception {
 
 		Map<Integer, PoolCfg> map = new HashMap<Integer, PoolCfg>();
 		
@@ -78,30 +84,42 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-
-				PoolCfg poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
+				
+				PoolCfg poolCfg;
+				if (type == 3) {
+					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon);
+				} else {
+					poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
+				}
+				
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
-				for(int j = 0; j < nodeList.size(); j++) {
-					Node node = nodeList.get(j);					
+				for (int j = 0; j < nodeList.size(); j++) {
+					Node node = nodeList.get(j);
 					NamedNodeMap attrs = node.getAttributes();
 					String ip = getAttribute(attrs, "ip", null);
 					int port = getIntAttribute(attrs, "port", 6379);
 					String suffix = getAttribute(attrs, "suffix", null);
-					if(suffix == null && type == 2) {
-						throw new ConfigurationException("Customer Cluster nodes need to set unique suffix property");
+					if (type == 2 && suffix == null) {
+						throw new ConfigurationException(
+								"Customer Cluster nodes need to set unique suffix property");
+					} else {
+						poolCfg.addNode(ip + ":" + port + ":" + suffix);
 					}
-					else
-						poolCfg.addNode( ip + ":" + port + ":" + suffix);
 				}
-				map.put(id,  poolCfg);
+				
+				// load extra config
+				poolCfg.loadExtraCfg();
+				
+				map.put(id, poolCfg);
 			}
 		} catch (Exception e) {
 			LOGGER.error("loadPoolCfg err " + e);
+			throw e;
 		}
 		return map;
 	}
 	
-	public static Map<String, UserCfg> loadUserMap(Map<Integer, PoolCfg> poolMap, String uri) {
+	public static Map<String, UserCfg> loadUserMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception  {
 
 		Map<String, UserCfg> map = new HashMap<String, UserCfg>();
 		try {
@@ -116,21 +134,26 @@ public class ConfigLoader {
 					prefix = null;
 				}
 				int selectDb = getIntAttribute(nameNodeMap, "selectDb", -1);
-				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);
-				
+				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
+				boolean isFlowlimit = getBooleanAttribute(nameNodeMap, "flowlimit", false);
 					
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
-				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, isReadonly);
+				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, 
+						isReadonly, isFlowlimit);
+				
 				map.put(password, userCfg);
 			}
 		} catch (Exception e) {
-			LOGGER.error("loadUsers err " + e);
+			LOGGER.error("load user.xml err " + e);
+			throw e;
 		}
 		return map;
 	}
+	
+
 	
 	//
 	public static ZkCfg loadZkCfg(String uri) {
@@ -205,15 +228,19 @@ public class ConfigLoader {
 		return zkCfg;
 	}
 	
+	
+	
 	/*
 	 * load mail properties
 	 */
-	public static Properties loadMailProperties(String uri) {
+	public static Properties loadMailProperties(String uri) throws Exception {
 		Properties props = new Properties();
 		try {
 			props.load(new FileInputStream(uri));
 		} catch (Exception e) {
 			LOGGER.error("load mail property error", e);
+			throw e;
+			
 		}
 		return props;
 	}
@@ -233,6 +260,10 @@ public class ConfigLoader {
 		return getIntValue(map.getNamedItem(attr), defaultVal);
 	}
 	
+	static short getShortAttribute(NamedNodeMap map, String attr, short defaultVal) {
+		return getShortValue(map.getNamedItem(attr), defaultVal);
+	}
+	
 	private static boolean getBooleanAttribute(NamedNodeMap map, String attr, boolean defaultVal) {
 		return getBooleanValue(map.getNamedItem(attr), defaultVal);
 	}
@@ -244,6 +275,10 @@ public class ConfigLoader {
 
 	private static int getIntValue(Node node, int defaultVal) {
 		return node == null ? defaultVal : Integer.valueOf(node.getNodeValue());
+	}
+	
+	private static short getShortValue(Node node, short defaultVal) {
+		return node == null ? defaultVal : Short.valueOf(node.getNodeValue());
 	}
 	
 	private static boolean getBooleanValue(Node node, boolean defaultVal) {

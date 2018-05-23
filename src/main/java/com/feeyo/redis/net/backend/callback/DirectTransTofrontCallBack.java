@@ -6,10 +6,10 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
-import com.feeyo.redis.engine.codec.RedisResponse;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
+import com.feeyo.redis.net.codec.RedisResponse;
+import com.feeyo.redis.net.codec.RedisResponseDecoder;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -24,7 +24,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 
 	private static Logger LOGGER = LoggerFactory.getLogger( DirectTransTofrontCallBack.class );
 	
-	protected RedisResponseDecoderV4 decoder = new RedisResponseDecoderV4();
+	protected RedisResponseDecoder decoder = new RedisResponseDecoder();
 	
 	// 写入到前端
 	protected int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {	
@@ -96,7 +96,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 	}
 	
 	@Override
-	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+	public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 		// 应答解析
 		List<RedisResponse> resps = decoder.decode( byteBuff );

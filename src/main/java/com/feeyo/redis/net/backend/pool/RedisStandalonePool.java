@@ -3,14 +3,12 @@ package com.feeyo.redis.net.backend.pool;
 import java.util.LinkedList;
 
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.nio.util.TimeUtil;
-
+import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
-import com.feeyo.util.jedis.JedisConnection;
 
 /**
  * 单节点, Redis 连接池
@@ -19,6 +17,9 @@ import com.feeyo.util.jedis.JedisConnection;
  *
  */
 public class RedisStandalonePool extends AbstractPool {
+	
+	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
+	protected RedisBackendConnectionFactory backendConFactory = new RedisBackendConnectionFactory();
 	
 	private PhysicalNode physicalNode;
 
@@ -44,9 +45,9 @@ public class RedisStandalonePool extends AbstractPool {
 		int minCon = poolCfg.getMinCon();
 		int maxCon = poolCfg.getMaxCon();
 		
-		String[] ipAndPort = poolCfg.getNodes().get(0).split(":");
-		final RedisBackendConnectionFactory bcFactory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();		
-		this.physicalNode = new PhysicalNode(bcFactory, poolType, poolName, minCon, maxCon, ipAndPort[0], Integer.parseInt( ipAndPort[1] ) );
+		String[] ipAndPort = poolCfg.getNodes().get(0).split(":");	
+		this.physicalNode = new PhysicalNode(backendConFactory, 
+				poolType, poolName, minCon, maxCon, ipAndPort[0], Integer.parseInt( ipAndPort[1] ) );
 		this.physicalNode.initConnections();		
 		return true;
 	}
@@ -167,8 +168,8 @@ public class RedisStandalonePool extends AbstractPool {
 		long heartbeatTime = System.currentTimeMillis() - timeout;
 		long closeTime = System.currentTimeMillis() - timeout * 2;
 		
-		LinkedList<RedisBackendConnection> heartBeatCons = getNeedHeartbeatCons( physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
-		for (RedisBackendConnection conn : heartBeatCons) {
+		LinkedList<BackendConnection> heartBeatCons = getNeedHeartbeatCons( physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
+		for (BackendConnection conn : heartBeatCons) {
 			conHeartBeatHanler.doHeartBeat(conn, PING );
 		}
 		heartBeatCons.clear();		
@@ -238,6 +239,11 @@ public class RedisStandalonePool extends AbstractPool {
 		sbuf.append(']')
 		.append(']');
 		return (sbuf.toString());
+	}
+
+	@Override
+	public PhysicalNode getPhysicalNode(int id) {
+		return null;
 	}	
 	
 }

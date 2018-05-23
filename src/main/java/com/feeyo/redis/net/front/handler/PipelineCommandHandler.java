@@ -7,16 +7,16 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder;
-import com.feeyo.redis.engine.codec.RedisPipelineResponseDecoder.PipelineResponse;
-import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestType;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
+import com.feeyo.redis.net.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisRequestType;
+import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder;
+import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder.PipelineResponse;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
@@ -33,9 +33,9 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		super.commonHandle(rrs);
 		
     	// 写出
-		for (RouteResultNode rrn : rrs.getRouteResultNodes()) {
+		for (RouteNode rrn : rrs.getRouteNodes()) {
 			ByteBuffer buffer =  getRequestBufferByRRN(rrn);
-			RedisBackendConnection backendConn = writeToBackend(rrn.getPhysicalNode(), buffer, new PipelineDirectTransTofrontCallBack());
+			BackendConnection backendConn = writeToBackend(rrn.getPhysicalNode(), buffer, new PipelineDirectTransTofrontCallBack());
 			if ( backendConn != null )
 				this.holdBackendConnection( backendConn );
 		}
@@ -50,10 +50,10 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	// 
 	private class PipelineDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
 
-		private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
+		private RedisResponsePipelineDecoder decoder = new RedisResponsePipelineDecoder();
 		
 		@Override
-		public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+		public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 			// 解析此次返回的数据条数
 			PipelineResponse pipelineResponse = decoder.parse( byteBuff );

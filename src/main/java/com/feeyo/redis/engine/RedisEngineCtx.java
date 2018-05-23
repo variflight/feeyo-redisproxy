@@ -10,11 +10,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.config.loader.zk.ZkClient;
-import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PoolFactory;
 import com.feeyo.redis.net.front.RedisFrontendConnectionFactory;
@@ -22,6 +22,7 @@ import com.feeyo.redis.nio.NIOAcceptor;
 import com.feeyo.redis.nio.NIOConnector;
 import com.feeyo.redis.nio.NIOReactor;
 import com.feeyo.redis.nio.NIOReactorPool;
+import com.feeyo.redis.nio.NetFlowMonitor;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.SystemConfig;
 import com.feeyo.redis.nio.buffer.BufferPool;
@@ -42,7 +43,8 @@ public class RedisEngineCtx {
 	
 	private VirtualMemoryService virtualMemoryService;
 	private BufferPool bufferPool;	
-	private RedisBackendConnectionFactory backendRedisConFactory;
+	
+	private volatile NetFlowMonitor flowMonitor;
 	
 	// 
 	private volatile Map<String, NIOReactor> reactorMap = new HashMap<String, NIOReactor>();
@@ -51,6 +53,7 @@ public class RedisEngineCtx {
 	private volatile Map<String, UserCfg> userMap = null;
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
+	
 	private volatile Properties mailProperty = null;
 
 	// backup
@@ -67,11 +70,13 @@ public class RedisEngineCtx {
 		this.lock = new ReentrantLock();
 
 		//
-		this.serverMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
-		this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
-		this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
-		this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
-		
+		try {
+			this.serverMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
+			this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
+			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
+			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
+		} catch (Exception e) {
+		}
 		
 		// 1、Buffer 配置
 		// ---------------------------------------------------------------------------		
@@ -88,6 +93,7 @@ public class RedisEngineCtx {
         
         String bossSizeString = this.serverMap.get("bossSize");
         String timerSizeString = this.serverMap.get("timerSize"); 
+        String networkFlowLimitSizeString = this.serverMap.get("networkFlowLimitSize");
         
         int processors = Runtime.getRuntime().availableProcessors();
         int port = portString == null ? 8066: Integer.parseInt( portString );
@@ -99,6 +105,9 @@ public class RedisEngineCtx {
         
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
+        
+        long networkFlowLimitSize = networkFlowLimitSizeString == null ? -1 : Long.parseLong(networkFlowLimitSizeString);
+        this.flowMonitor = new NetFlowMonitor(networkFlowLimitSize);
         
 		int[] increments = null;
 		if ( incrementString == null ) {
@@ -123,9 +132,12 @@ public class RedisEngineCtx {
         int bossSize = bossSizeString == null ? 10 : Integer.parseInt( bossSizeString ); 
         int timerSize = timerSizeString == null ? 6 : Integer.parseInt( timerSizeString ); 
 
-        //ByteBufferPagePool ByteBufferBucketPool
+        //PageBufferPool BucketBufferPool
         this.bufferPool = new BucketBufferPool(minBufferSize, maxBufferSize, decomposeBufferSize,
         		minChunkSize, increments, maxChunkSize, threadLocalPercent);   
+        
+//        this.bufferPool = new PageBufferPool(minBufferSize, maxBufferSize, decomposeBufferSize,
+//        		minChunkSize, increments, maxChunkSize);
        
         this.virtualMemoryService = new VirtualMemoryService();
         this.virtualMemoryService.start();
@@ -164,8 +176,6 @@ public class RedisEngineCtx {
         
 		// 4、后端物理连接池
 		// ---------------------------------------------------------------------------
-        this.backendRedisConFactory = new RedisBackendConnectionFactory();
-        
 		this.poolMap = new HashMap<Integer, AbstractPool>( poolCfgMap.size() );
 		for (final PoolCfg poolCfg : poolCfgMap.values()) {
 			AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
@@ -185,9 +195,18 @@ public class RedisEngineCtx {
         String authString  = it.hasNext() ? it.next() : "";
         KeepAlived.check(port, authString);
         
-		// 7, zk startup
+//		// 7, zk startup
 //		ZkClient.INSTANCE().init();
 //		ZkClient.INSTANCE().createZkInstanceIdByIpPort(NetworkUtil.getIp()+":"+port);
+//        RunningOffsetAdmin.getInstance().startup();
+        
+        KafkaOffsetService.INSTANCE().start();
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				KafkaOffsetService.INSTANCE().close();
+			}
+		});
+        
 	}
 	
 	public byte[] reloadAll() {
@@ -316,6 +335,10 @@ public class RedisEngineCtx {
 			// 切换 new
 			this.userMap = newUserMap;	
 			
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
 		} finally {
 			lock.unlock();
 		}		
@@ -347,6 +370,10 @@ public class RedisEngineCtx {
 //			ZkClient.INSTANCE().reloadZkCfg();
 			
 			return "+OK\r\n".getBytes();
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
 		} finally {
 			lock.unlock();
 		}
@@ -360,7 +387,11 @@ public class RedisEngineCtx {
 			ZkClient.INSTANCE().reloadZkCfg();
 			
 			return "+OK\r\n".getBytes();
-		}finally {
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
+		} finally {
 			lock.unlock();
 		}
 	}
@@ -408,6 +439,10 @@ public class RedisEngineCtx {
 				LOGGER.error("reload pool failed");
 				return "-ERR reload pool failed\r\n".getBytes();
 			}
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
 		} finally {
 			lock.unlock();
 		}
@@ -465,12 +500,12 @@ public class RedisEngineCtx {
 		return instance;
 	}
 
-	public RedisBackendConnectionFactory getBackendRedisConFactory() {
-		return backendRedisConFactory;
-	}
-
 	public VirtualMemoryService getVirtualMemoryService() {
 		return virtualMemoryService;
+	}
+
+	public NetFlowMonitor getFlowMonitor() {
+		return flowMonitor;
 	}
 
 }

@@ -3,6 +3,7 @@ package com.feeyo.redis.net.backend.callback;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 
 /**
@@ -25,8 +26,10 @@ public class SelectDbCallback extends AbstractBackendCallback {
     }
 	
 	@Override
-	public void handleResponse(RedisBackendConnection backendCon, byte[] byteBuff) throws IOException {
+	public void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException {
 
+		RedisBackendConnection backendCon = (RedisBackendConnection)conn;
+		
 		if ( byteBuff.length == 5 &&  byteBuff[0] == '+' &&  byteBuff[1] == 'O' &&  byteBuff[2] == 'K'  ) {
 			
 			if ( nextCallback != null ) {

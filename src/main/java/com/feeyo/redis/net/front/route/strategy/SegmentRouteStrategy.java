@@ -3,16 +3,17 @@ package com.feeyo.redis.net.front.route.strategy;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
-import com.feeyo.redis.engine.codec.RedisRequestType;
+import com.feeyo.redis.config.UserCfg;
+import com.feeyo.redis.net.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisRequestPolicy;
+import com.feeyo.redis.net.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.segment.Segment;
 import com.feeyo.redis.net.front.handler.segment.SegmentType;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 
 /**
  * pipeline && mget and mset and del and exists and default command route
@@ -27,6 +28,8 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			throws InvalidRequestExistsException {
 
 		byte[][] args = request.getArgs();
+		
+		// 此处待优化
 		String cmd = new String(args[0]).toUpperCase();
 		
 		// mset 分包
@@ -112,7 +115,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 	}
 
 	@Override
-	public RouteResult route(int poolId, List<RedisRequest> requests)
+	public RouteResult route(UserCfg userCfg, List<RedisRequest> requests)
 			throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
 
 		List<Segment> segments = new ArrayList<Segment>();
@@ -140,7 +143,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			}
 		}
 
-		List<RouteResultNode> nodes = doSharding(poolId, newRequests);
+		List<RouteNode> nodes = doSharding(userCfg.getPoolId(), newRequests);
 		requestType = requests.size() > 1 ? RedisRequestType.PIPELINE : requestType;
 
 		RouteResult result = new RouteResult(requestType, newRequests, nodes);

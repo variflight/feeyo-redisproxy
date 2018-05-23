@@ -41,7 +41,7 @@ public final class NIOAcceptor extends Thread {
 		this.serverChannel.setOption(StandardSocketOptions.SO_RCVBUF, 1024 * 32); // 32K
 		
 		// backlog=200
-		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 200);
+		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 500);
 		this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 		this.factory = factory;
 		this.reactorPool = reactorPool;
@@ -90,8 +90,8 @@ public final class NIOAcceptor extends Thread {
 			channel.configureBlocking( false );
 			
 			// 构建Connection
-			Connection c = factory.make(channel);
-			c.setDirection( Connection.Direction.in );
+			AbstractConnection c = factory.make(channel);
+			c.setDirection( AbstractConnection.Direction.in );
 			//c.setId( ConnectIdGenerator.getINSTNCE().getId() );
 			
 			InetSocketAddress remoteAddr = (InetSocketAddress) channel.getRemoteAddress();

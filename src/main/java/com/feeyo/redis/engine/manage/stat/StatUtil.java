@@ -42,7 +42,7 @@ public class StatUtil {
 
 
 	
-	public static final int SLOW_COST = 50; 			  			// 50秒	
+	public static final int SLOW_COST = 50; 			  			// 超过50毫秒	
 	public static final int STATISTIC_PEROID = 30; 		  			// 30秒
 	
 	// ACCESS
@@ -103,7 +103,7 @@ public class StatUtil {
 							
 							
 							StringBuffer subject = new StringBuffer( 50 );
-							subject.append(" ###RedisProxy report, host:" ).append( NetworkUtil.getLocalAddress() );
+							subject.append(" ###RedisProxy report, host:" ).append( NetworkUtil.getLocalIp() );
 							
 							StringBuffer body = new StringBuffer( 500 );
 							

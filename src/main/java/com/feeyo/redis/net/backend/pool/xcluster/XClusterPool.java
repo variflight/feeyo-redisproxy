@@ -5,10 +5,10 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
+import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
@@ -20,6 +20,9 @@ import com.feeyo.util.jedis.exception.JedisConnectionException;
  * @author Tr!bf wangyamin@variflight.com
  */
 public class XClusterPool extends AbstractPool{
+	
+	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
+	protected RedisBackendConnectionFactory backendConFactory = new RedisBackendConnectionFactory();
 	
     private Map<String, XNode> nodes = new HashMap<>();
 
@@ -44,8 +47,8 @@ public class XClusterPool extends AbstractPool{
             xNode.setPort( Integer.parseInt(attrs[1]) );
             xNode.setSuffix( attrs[2] );
 
-            RedisBackendConnectionFactory factory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();
-            PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, xNode.getIp(), xNode.getPort());
+            PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
+            		type, name, minCon, maxCon, xNode.getIp(), xNode.getPort());
             physicalNode.initConnections();
             xNode.setPhysicalNode(physicalNode);
             
@@ -134,8 +137,8 @@ public class XClusterPool extends AbstractPool{
 		long heartbeatTime = System.currentTimeMillis() - timeout;
 		long closeTime = System.currentTimeMillis() - timeout * 2;
 		
-		LinkedList<RedisBackendConnection> heartBeatCons = getNeedHeartbeatCons( physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
-		for (RedisBackendConnection conn : heartBeatCons) {
+		LinkedList<BackendConnection> heartBeatCons = getNeedHeartbeatCons( physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
+		for (BackendConnection conn : heartBeatCons) {
 			conHeartBeatHanler.doHeartBeat(conn, PING );
 		}
 		heartBeatCons.clear();		
@@ -180,4 +183,9 @@ public class XClusterPool extends AbstractPool{
     	PhysicalNode node = nodes.get( suffix ).getPhysicalNode();
         return node;
     }
+
+	@Override
+	public PhysicalNode getPhysicalNode(int id) {
+		return null;
+	}
 }

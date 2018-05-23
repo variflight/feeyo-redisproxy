@@ -125,13 +125,21 @@ public class KeyPrefixStrategyFactory {
 		keyStrategys.put("MSET", KeyPrefixStrategy.MKey);
 		keyStrategys.put("MSETNX", KeyPrefixStrategy.MKey);		
 		keyStrategys.put("OBJECT", KeyPrefixStrategy.SecondKey);
+		
+		// Kafka nokey
+		keyStrategys.put("KPUSH", 			KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KPOP",  			KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KPARTITIONS", 		KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KOFFSET",  	    KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KCONSUMEOFFSET",  	KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KRETURNOFFSET",  	KeyPrefixStrategy.NoKey);
 	}
 	
 	// 
 	// TODO: 修复一个并发问题，不采用锁，直接 new, 耗内存哦，采用ThreadLocal
 	public static KeyPrefixStrategy getStrategy(String cmd) {		
 		
-		Integer strategyCode = keyStrategys.get( cmd.toUpperCase() );
+		Integer strategyCode = keyStrategys.get( cmd );
 		if ( strategyCode == null ) {
 			return firstKey.get();
 		}

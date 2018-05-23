@@ -5,14 +5,14 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
+import com.feeyo.redis.net.backend.BackendConnection;
+import com.feeyo.redis.net.backend.BackendConnectionFactory;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 
 /**
- * Redis 物理节点的连接池
+ * 后端物理节点的 connection 连接池
  * 
  * @author zhuam
  *
@@ -35,9 +35,9 @@ public class PhysicalNode {
 	protected int minCon;
 	protected int maxCon;
 	
-	protected final RedisBackendConnectionFactory factory;
+	protected final BackendConnectionFactory factory;
 	
-	public PhysicalNode(RedisBackendConnectionFactory factory, int poolType, String poolName, 
+	public PhysicalNode(BackendConnectionFactory factory, int poolType, String poolName, 
 			int minCon, int maxCon, String host, int port) {
 		
 		this.factory = factory;
@@ -58,27 +58,27 @@ public class PhysicalNode {
 		
 		createNewConnection(new BackendCallback() {
 			@Override
-			public void connectionAcquired(RedisBackendConnection conn) {
+			public void connectionAcquired(BackendConnection conn) {
 				conQueue.getCons().add( conn ); 
 			}	
 			
-			public void connectionClose(RedisBackendConnection conn, String reason) {
+			public void connectionClose(BackendConnection conn, String reason) {
 				conQueue.getCons().remove( conn );  
 			}
 
 			@Override
-			public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+			public void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException {
 				//ignore
 			}
 
 			@Override
-			public void connectionError(Exception e, RedisBackendConnection conn) {
+			public void connectionError(Exception e, BackendConnection conn) {
 				//ignore
 			}
 		}, null);
 	}
 	
-	public RedisBackendConnection createNewConnection(BackendCallback callback, Object attachment) throws IOException {
+	public BackendConnection createNewConnection(BackendCallback callback, Object attachment) throws IOException {
 		
 		 int activeCons = this.getActiveCount();// 当前最大活动连接
          if ( activeCons + 1 > size ) {// 下一个连接大于最大连接数
@@ -90,7 +90,7 @@ public class PhysicalNode {
          		LOGGER.debug( " no ilde connection in pool, create new connection for " + this.name + " of " + poolName);           
              
          	// create connection
-        	RedisBackendConnection con = factory.make(this, callback, attachment);
+        	BackendConnection con = factory.make(this, callback, attachment);
     		con.setLastTime( TimeUtil.currentTimeMillis() );
     		return con;
          }
@@ -132,10 +132,10 @@ public class PhysicalNode {
     	}
     }
 
-    public RedisBackendConnection getConnection(BackendCallback callback, Object attachment)
+    public BackendConnection getConnection(BackendCallback callback, Object attachment)
             throws IOException {
     	
-    	RedisBackendConnection con = this.conQueue.takeIdleCon();
+    	BackendConnection con = this.conQueue.takeIdleCon();
         if (con != null) {
         	con.setAttachement( attachment );
         	con.setCallback( callback );        	
@@ -147,7 +147,7 @@ public class PhysicalNode {
         return null;
     }
 	
-	public void releaseConnection(RedisBackendConnection c) {
+	public void releaseConnection(BackendConnection c) {
         
 		c.setBorrowed( false );
         c.setAttachement( null );
@@ -167,7 +167,7 @@ public class PhysicalNode {
         }
     }
 	
-	public void removeConnection(RedisBackendConnection conn) {
+	public void removeConnection(BackendConnection conn) {
 		
 		ConQueue queue = this.conQueue;
 		if (queue != null) {

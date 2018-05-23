@@ -1,22 +1,28 @@
 package com.feeyo.redis.net.front;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.config.TopicCfg;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
+import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestDecoderV5;
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
-import com.feeyo.redis.engine.codec.RedisRequestType;
-import com.feeyo.redis.engine.codec.RedisRequestUnknowException;
 import com.feeyo.redis.engine.manage.Manage;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
+import com.feeyo.redis.net.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisRequestDecoder;
+import com.feeyo.redis.net.codec.RedisRequestPolicy;
+import com.feeyo.redis.net.codec.RedisRequestType;
+import com.feeyo.redis.net.codec.RedisRequestUnknowException;
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
 import com.feeyo.redis.net.front.handler.BlockCommandHandler;
 import com.feeyo.redis.net.front.handler.CommandParse;
@@ -27,9 +33,11 @@ import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
 import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
 import com.feeyo.redis.net.front.route.RouteService;
+import com.feeyo.redis.nio.NetSystem;
+import com.feeyo.util.ProtoUtils;
 
 public class RedisFrontSession {
 	
@@ -48,8 +56,8 @@ public class RedisFrontSession {
 	public static final String NOT_ADMIN_USER = "Not supported:manage cmd but not admin user.";
 	public static final String UNKNOW_COMMAND = "Unknow command.";
 	public static final String NOT_READ_COMMAND = "Not read command.";
-
-	
+	public static final byte[] FLOW_LIMIT = "-ERR flow limit.\r\n".getBytes();
+	public static final byte[] NULL =  "$-1\r\n".getBytes();
 	
 	// PUBSUB
 	private PubSub pubsub = null;
@@ -61,12 +69,13 @@ public class RedisFrontSession {
 	private long requestTimeMills; 
 	
     // 解析器 
-	private RedisRequestDecoderV5 requestDecoder = new RedisRequestDecoderV5();
+	private RedisRequestDecoder requestDecoder = new RedisRequestDecoder();
 	
 	private AbstractCommandHandler defaultCommandHandler;
 	private AbstractCommandHandler segmentCommandHandler;
 	private AbstractCommandHandler pipelineCommandHandler;
 	private AbstractCommandHandler blockCommandHandler;
+	private AbstractCommandHandler kafkaCommandHandler;
 	
 	private AbstractCommandHandler currentCommandHandler;
 	
@@ -98,7 +107,6 @@ public class RedisFrontSession {
 			// 非pipeline 情况下， 特殊指令前置优化性能
 			if ( requests.size() ==  1 ) {
 				
-			
 				byte[] cmd = firstRequest.getArgs()[0];
 				int len = cmd.length;
 				if ( len == 4 ) {
@@ -172,7 +180,7 @@ public class RedisFrontSession {
 			// 执行路由
 			try {
 				
-				// 管理指令
+				// 管理指令检测
 				if ( frontCon.getUserCfg().isAdmin() && requests.size() == 1 ) {
 					
 					String cmd = new String( firstRequest.getArgs()[0] ).toUpperCase();
@@ -186,14 +194,15 @@ public class RedisFrontSession {
 					}
 				}
 				
+				// 指令路由
 				RouteResult routeResult = RouteService.route(requests, frontCon);
 				if ( routeResult == null ) {
 					frontCon.write( "-ERR unkonw command \r\n".getBytes() );
 					return;
 				}
 				
-				boolean intercepted = interceptPubsub( routeResult );
-				if ( intercepted ) {
+				// 指令提前返回
+				if ( intercept( routeResult ) ) {
 					return;
 				}
 				
@@ -236,7 +245,7 @@ public class RedisFrontSession {
 					} else if ("QUIT".equals(cmd)) {
 						frontCon.write(OK);
 						frontCon.close("quit");
-					} 
+					}
 				}
 				
 			} catch (PhysicalNodeUnavailableException e) {
@@ -308,6 +317,17 @@ public class RedisFrontSession {
 				}
 			}
 			return blockCommandHandler;
+			
+		case KAFKA: 
+			
+			if (kafkaCommandHandler == null) {
+				synchronized (_lock) {
+					if (kafkaCommandHandler == null) {
+						kafkaCommandHandler = new KafkaCommandHandler(frontCon);
+					}
+				}
+			}
+			return kafkaCommandHandler;
 			
 		default:
 			return defaultCommandHandler;
@@ -410,27 +430,41 @@ public class RedisFrontSession {
 		this.requestTimeMills = requestTimeMills;
 	}
 	
+	public boolean intercept(RouteResult routeResult) throws IOException {
+		boolean result = false;
+		RedisRequest request = routeResult.getRequests().get(0);
+		byte handleType = request.getPolicy().getHandleType();
+		
+		// pubsub 连接不允许其他指令
+		if ( handleType != CommandParse.PUBSUB_CMD || routeResult.getRequestType() != RedisRequestType.DEFAULT) {
+			if (pubsub != null) {
+				frontCon.write("-ERR not support commond to channel.\r\n".getBytes());
+				result = true;
+			}
+		}
+		switch (handleType) {
+		case CommandParse.PUBSUB_CMD:
+			return result || interceptPubsub(routeResult);
+			
+		case CommandParse.PARTITIONS_CMD:
+			return result || interceptKpartitions(request);
+			
+		case CommandParse.PRIVATE_CMD:
+			return result || interceptPrivateCmds(request);
+
+		default:
+			return result;
+		}
+		
+	}
 	
 	// 拦截 PUBSUB
-	public boolean interceptPubsub(RouteResult routeResult) throws IOException {
-		
-		
-		if ( routeResult.getRequestType() != RedisRequestType.DEFAULT  ) {
-			
-			if ( pubsub == null ) {
-				return false;
-			}
-			
-			frontCon.write("-ERR not support pipeline to channel.\r\n".getBytes());
-			return true;
-			
-		}
+	private boolean interceptPubsub(RouteResult routeResult) throws IOException {
+		RedisRequest request = routeResult.getRequests().get(0);
 		
 		boolean isIntercepted = false;
 		
-		//
-		RouteResultNode node = routeResult.getRouteResultNodes().get(0);
-		RedisRequest request = routeResult.getRequests().get(0);
+		RouteNode node = routeResult.getRouteNodes().get(0);
 		
 		String cmd = new String(request.getArgs()[0]).toUpperCase();
 		if ( cmd.startsWith("SUBSCRIBE") || cmd.startsWith("PSUBSCRIBE") ) {
@@ -444,7 +478,7 @@ public class RedisFrontSession {
 				// PUBSUB
 				pubsub = new PubSub(frontCon, new AbstractBackendCallback() {
 					@Override
-					public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+					public void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException {
 						if (frontCon != null && !frontCon.isClosed()) {
 							frontCon.write(byteBuff);
 						}
@@ -476,11 +510,65 @@ public class RedisFrontSession {
 	}
 	
 	
+	// 拦截 kapartitions
+	private boolean interceptKpartitions(RedisRequest request) throws IOException {
+
+		int poolId = frontCon.getUserCfg().getPoolId();
+		String topic = new String(request.getArgs()[1]);
+		KafkaPoolCfg poolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
+		TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
+		BrokerPartition[] partitions = tc.getRunningOffset().getBrokerPartitions();
+
+		// 申请1k buffer （肯定够）
+		ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
+		byte ASTERISK = '*';
+		byte DOLLAR = '$';
+		byte[] CRLF = "\r\n".getBytes();
+
+		byte[] size = ProtoUtils.convertIntToByteArray(partitions.length);
+		bb.put(ASTERISK).put(size).put(CRLF);
+		for (BrokerPartition dataPartition : partitions) {
+			byte[] partition = ProtoUtils.convertIntToByteArray(dataPartition.getPartition());
+			byte[] partitionLength = ProtoUtils.convertIntToByteArray(partition.length);
+			bb.put(DOLLAR).put(partitionLength).put(CRLF).put(partition).put(CRLF);
+		}
+
+		frontCon.write(bb);
+
+		return true;
+	}
+	
+	// 拦截内部调用指令
+	private boolean interceptPrivateCmds(RedisRequest request) throws IOException {
+		String cmd = new String(request.getArgs()[0]).toUpperCase();
+		String topic = new String(request.getArgs()[1]);
+		int partition = Integer.parseInt(new String(request.getArgs()[2]));
+		try {
+			if ( cmd.equals("KCONSUMEOFFSET") ) {
+				long offset = KafkaOffsetService.INSTANCE().getOffsetForSlave(frontCon.getPassword(), topic, partition);
+				StringBuffer sb = new StringBuffer();
+				sb.append("+").append(offset).append("\r\n");
+				frontCon.write(sb.toString().getBytes());
+			} else if ( cmd.equals("KRETURNOFFSET") ) {
+				long offset = Long.parseLong(new String(request.getArgs()[3]));
+				KafkaOffsetService.INSTANCE().rollbackConsumerOffsetForSlave(frontCon.getPassword(), topic, partition, offset);
+				frontCon.write(OK);
+			}
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR").append(e.getMessage()).append("\r\n");
+			frontCon.write(sb.toString().getBytes());
+		}
+		
+		return true;
+	}
+	
 	private void cleanup() {
 		defaultCommandHandler = null;
 		segmentCommandHandler = null;
 		pipelineCommandHandler = null;
 		blockCommandHandler = null;
+		kafkaCommandHandler = null;
 		currentCommandHandler = null;
 	}
 	

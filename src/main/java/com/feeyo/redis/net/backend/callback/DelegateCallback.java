@@ -3,7 +3,7 @@ package com.feeyo.redis.net.backend.callback;
 
 import java.io.IOException;
 
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 
 /**
  * 代理
@@ -20,22 +20,22 @@ public abstract class DelegateCallback implements BackendCallback {
 	}
 
 	@Override
-	public void connectionAcquired(RedisBackendConnection conn) {
+	public void connectionAcquired(BackendConnection conn) {
 		target.connectionAcquired(conn);
 	}
 
 	@Override
-	public void connectionError(Exception e, RedisBackendConnection conn) {
+	public void connectionError(Exception e, BackendConnection conn) {
 		target.connectionError(e, conn);
 	}
 
 	@Override
-	public void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException {
+	public void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException {
 		target.handleResponse(conn, byteBuff);
 	}
 
 	@Override
-	public void connectionClose(RedisBackendConnection conn, String reason) {
+	public void connectionClose(BackendConnection conn, String reason) {
 		target.connectionClose(conn, reason);
 	}
 

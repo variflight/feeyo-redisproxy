@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.front.route;
 
-import com.feeyo.redis.engine.codec.RedisRequestPolicy;
+import com.feeyo.redis.net.backend.pool.PoolType;
+import com.feeyo.redis.net.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.front.handler.CommandParse;
 
 public class RouteUtil {
@@ -14,12 +15,27 @@ public class RouteUtil {
 			return true;
 		}
 		
+		// Kakfa 指令校验
+		if ( poolType == PoolType.KAFKA_CLUSTER ) {
+			
+			if ( requestPolicy.getCategory() != CommandParse.KAFKA_CMD )
+				return true;
+			
+			if (isPipeline)
+				return true;  // kafka指令 不支持pipeline
+			
+		}  else {
+			if ( requestPolicy.getCategory() == CommandParse.KAFKA_CMD ) 
+				return true;
+			
+		}
+		
 		// 类型策略校验
 		switch( requestPolicy.getCategory()  ) {
 		case CommandParse.DISABLED_CMD :
 			return true;
 		case CommandParse.NO_CLUSTER_CMD:
-			if ( poolType == 1 ) //集群
+			if ( poolType == PoolType.REDIS_CLUSTER ) //集群
 				return true;
 			break;
 		case CommandParse.MANAGE_CMD:
@@ -40,7 +56,7 @@ public class RouteUtil {
 			break;
 		
 		case CommandParse.BLOCK_CMD:
-			if ( poolType == 1 ) // 集群不支持阻塞指令
+			if ( poolType == PoolType.REDIS_CLUSTER ) // 集群不支持阻塞指令
 				return true;
 			if ( isPipeline )
 				return true;  // pipe不支持阻塞指令

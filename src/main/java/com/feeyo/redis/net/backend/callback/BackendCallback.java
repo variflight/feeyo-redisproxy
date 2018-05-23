@@ -2,7 +2,7 @@ package com.feeyo.redis.net.backend.callback;
 
 import java.io.IOException;
 
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 
 /**
  * 后端数据库的事件处理回调接口
@@ -16,22 +16,22 @@ public interface BackendCallback  {
     /**
      * 已获得有效连接的响应处理
      */
-    void connectionAcquired(RedisBackendConnection conn);
+    void connectionAcquired(BackendConnection conn);
 
     /**
      * 无法获取连接
      */
-    void connectionError(Exception e, RedisBackendConnection conn);
+    void connectionError(Exception e, BackendConnection conn);
 
 
     /**
      * 收到数据包的响应处理
      */
-   void handleResponse(RedisBackendConnection conn, byte[] byteBuff) throws IOException;
+   void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException;
 
     /**
      * 连接关闭
      */
-   void connectionClose(RedisBackendConnection conn, String reason);
+   void connectionClose(BackendConnection conn, String reason);
     
 }

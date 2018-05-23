@@ -21,9 +21,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.config.TopicCfg;
+import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.config.loader.KafkaCtx;
+import com.feeyo.kafka.net.backend.KafkaBackendConnection;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
+import com.feeyo.kafka.net.backend.pool.KafkaPool;
+import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.engine.codec.RedisRequest;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
@@ -39,8 +46,9 @@ import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
+import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.nio.Connection;
+import com.feeyo.redis.nio.AbstractConnection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.buffer.BufferPool;
 import com.feeyo.redis.nio.buffer.bucket.AbstractBucket;
@@ -87,6 +95,8 @@ public class Manage {
 	 *  RELOAD USER
 	 *  RELOAD ALL
 	 *  RELOAD FRONT
+	 *  RELOAD PATH
+	 *  RELOAD KAFKA
 	 *  
 	 *  JVM 指令依赖 JAVA_HOME 
 	 *  ----------------------------------------
@@ -120,6 +130,7 @@ public class Manage {
 	 *  SHOW COST
 	 *  SHOW USER_DAY_NET_IO
 	 *  SHOW POOL_NET_IO POOLNAME
+	 *  SHOW TOPIC
 	 *  
 	 *  SHOW LOG_ERROR
 	 *  SHOW LOG_WARN
@@ -369,10 +380,10 @@ public class Manage {
 					
 					int frontSize = 0;
 					int backendSize = 0;
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							frontSize++;
 						} else {
@@ -390,10 +401,10 @@ public class Manage {
 				// SHOW USER_CONN
 				} else if ( arg2.equalsIgnoreCase("USER_CONN") ) {
 					Map<String, Integer> userMap = new HashMap<String, Integer>();
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if (c instanceof RedisFrontConnection) {
 							userMap.put(((RedisFrontConnection) c).getPassword(),
 									1 + (userMap.get(((RedisFrontConnection) c).getPassword()) == null ? 0
@@ -457,10 +468,10 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							lines.add( c.toString() );
 						}
@@ -563,13 +574,24 @@ public class Manage {
 					List<String> lines = new ArrayList<String>();
 					
 					Map<String, AtomicInteger> poolConnections = new HashMap<String, AtomicInteger>();
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
 							// 统计每个redis池的连接数 
 							String poolName = ((RedisBackendConnection) c).getPhysicalNode().getPoolName();
+							AtomicInteger poolConnCount = poolConnections.get(poolName);
+							if ( poolConnCount == null ) {
+								poolConnections.put(poolName, new AtomicInteger(1));
+							} else {
+								poolConnCount.incrementAndGet();
+							}
+							
+							lines.add( c.toString() );
+						} else if ( c instanceof KafkaBackendConnection ) {
+							// 统计每个redis池的连接数 
+							String poolName = ((KafkaBackendConnection) c).getPhysicalNode().getPoolName();
 							AtomicInteger poolConnCount = poolConnections.get(poolName);
 							if ( poolConnCount == null ) {
 								poolConnections.put(poolName, new AtomicInteger(1));
@@ -597,9 +619,8 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
-					Map<String, AtomicInteger> poolConnections = new HashMap<String, AtomicInteger>();
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					long minStartupTime = -1;
 					long maxLastLargeMessageTime = -1;
 					long totalLargeCount = 0;
@@ -608,7 +629,7 @@ public class Manage {
 					long totalNetOutBytes = 0;
 					
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
 							// 统计每个redis池的连接数 
 							if (((RedisBackendConnection) c).getPhysicalNode().getPoolName().equals(poolName)) {
@@ -871,6 +892,23 @@ public class Manage {
 								sb.append(clusterNode.getConnectInfo());
 							}
 							list.add(clusterInfo);
+						} else if (pool instanceof KafkaPool) {
+							KafkaPool kafkaPool =  (KafkaPool) pool;
+							Map<Integer, PhysicalNode> physicalNodes = kafkaPool.getPhysicalNodes();
+							for (PhysicalNode physicalNode : physicalNodes.values()) {
+								StringBuffer sb = new StringBuffer();
+								sb.append("   ");
+								sb.append(kafkaPool.getId()).append("       ");
+								sb.append(physicalNode.getPoolName()).append("       ");
+								sb.append("kafka").append("       ");
+								sb.append(physicalNode.getName()).append("       ");
+								sb.append(physicalNode.getMinCon()).append("       ");
+								sb.append(physicalNode.getMaxCon()).append("       ");
+								sb.append(physicalNode.getIdleCount()).append("          ");
+								sb.append(physicalNode.getActiveCount());
+								list.add(sb.toString());
+							}
+							
 						}
 					}
 					return encodeObject(list);
@@ -924,6 +962,75 @@ public class Manage {
 						lines.add(line1.toString());
 					}
 					return encode(lines);
+					
+				// SHOW TOPIC 
+				} else if (arg2.equalsIgnoreCase("TOPIC") && (numArgs == 3 || numArgs == 2) ) {
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					if (numArgs == 2) {
+						titleLine.append("TOPIC").append(",  ");
+						titleLine.append("POOLID").append(",  ");
+						titleLine.append("PARTITION").append(",  ");
+						titleLine.append("REPLICATION").append(",  ");
+						titleLine.append("PRODUCER").append(",  ");
+						titleLine.append("CONSUMER");
+					} else {
+						titleLine.append("TOPIC").append(",  ");
+						titleLine.append("HOST").append(",  ");
+						titleLine.append("PARTITION").append(",  ");
+						titleLine.append("PRODUCER_START").append(",  ");
+						titleLine.append("PRODUCER_END").append(",  ");
+						titleLine.append("CONSUMER");
+					}
+					lines.add(titleLine.toString());
+					
+					final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
+					for (Entry<Integer, PoolCfg> poolEntry : poolCfgMap.entrySet()) {
+						PoolCfg poolCfg = poolEntry.getValue();
+						if (poolCfg instanceof KafkaPoolCfg) {
+							Map<String, TopicCfg> kafkaMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
+							
+							// 查看所有topic
+							if (numArgs == 2) {
+								for (Entry<String, TopicCfg> kafkaEntry : kafkaMap.entrySet()) {
+									TopicCfg kafkaCfg = kafkaEntry.getValue();
+									StringBuffer line = new StringBuffer();
+									line.append(kafkaCfg.getName()).append(", ");
+									line.append(kafkaCfg.getPoolId()).append(", ");
+									line.append(kafkaCfg.getPartitions()).append(", ");
+									line.append(kafkaCfg.getReplicationFactor()).append(", ");
+									line.append(kafkaCfg.getProducers()).append(", ");
+									line.append(kafkaCfg.getConsumers());
+									lines.add(line.toString());
+								}
+								
+							// 查看topic详情
+							} else {
+								String topic = new String( request.getArgs()[2] );
+								TopicCfg kafkaCfg = kafkaMap.get(topic);
+								if (kafkaCfg != null) {
+									Map<Integer, BrokerPartitionOffset> offsets = kafkaCfg.getRunningOffset().getPartitionOffsets();
+									BrokerPartition[] partitions = kafkaCfg.getRunningOffset().getBrokerPartitions();
+									
+									for (BrokerPartition partition : partitions) {
+										int pt = partition.getPartition();
+										BrokerPartitionOffset offset = offsets.get(pt);
+										
+										StringBuffer line = new StringBuffer();
+										line.append(kafkaCfg.getName()).append(", ");
+										line.append(partition.getLeader().getHost()).append(partition.getLeader().getPort()).append(", ");
+										line.append(pt).append(", ");
+										line.append(offset.getLogStartOffset()).append(", ");
+										line.append(offset.getProducerOffset()).append(", ");
+										line.append(offset.getAllConsumerOffset());
+										lines.add(line.toString());
+									}
+								}
+							}
+						}
+					}
+					
+					return encode(lines);
 				}
 				
 			// NODE
@@ -954,7 +1061,6 @@ public class Manage {
 		// RELOAD
 		} else if ( arg1.length == 6 ) {
 			
-			
 			if ( (arg1[0] == 'R' || arg1[0] == 'r' ) && 
 				 (arg1[1] == 'E' || arg1[1] == 'e' ) && 
 				 (arg1[2] == 'L' || arg1[2] == 'l' ) && 
@@ -975,10 +1081,10 @@ public class Manage {
 				// reload front
 				} else if ( arg2.equalsIgnoreCase("FRONT") ) {
 					
-					ConcurrentMap<Long, Connection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, Connection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						Connection c = it.next().getValue();
+						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							LOGGER.info("close: {}", c);
 							c.close("manage close");
@@ -986,11 +1092,18 @@ public class Manage {
 					}
 					
 					return "+OK\r\n".getBytes();
+					
+				// reload path
 				} else if ( arg2.equalsIgnoreCase("PATH") ) {
 					
 					JAVA_BIN_PATH = new String( request.getArgs()[2] );
 					
 					return "+OK\r\n".getBytes();
+					
+				// reload kafka
+				} else if ( arg2.equalsIgnoreCase("KAFKA") ) {
+					byte[] buff = KafkaCtx.getInstance().reloadAll();
+					return buff;
 				}
 			}
 
@@ -1024,7 +1137,7 @@ public class Manage {
 				
 				try {
 				
-					RedisBackendConnection backendCon = pysicalNode.getConnection(new DirectTransTofrontCallBack(), frontCon);
+					RedisBackendConnection backendCon = (RedisBackendConnection)pysicalNode.getConnection(new DirectTransTofrontCallBack(), frontCon);
 					if (backendCon == null) {
 						frontCon.writeErrMessage("not idle backend connection, pls wait !!!");
 					} else {

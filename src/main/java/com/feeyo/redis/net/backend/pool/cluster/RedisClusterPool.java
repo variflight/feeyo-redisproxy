@@ -10,10 +10,10 @@ import java.util.Random;
 import java.util.Set;
 
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
+import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.jedis.RedisCommand;
@@ -28,6 +28,9 @@ import com.google.common.collect.Sets;
  */
 
 public class RedisClusterPool extends AbstractPool {
+	
+	protected ConHeartBeatHandler conHeartBeatHanler = new ConHeartBeatHandler();
+	protected RedisBackendConnectionFactory backendConFactory = new RedisBackendConnectionFactory();
 	
 	public static final String LOCALHOST_STR = getLocalHostQuietly();
 	
@@ -236,8 +239,7 @@ public class RedisClusterPool extends AbstractPool {
 				String host = clusterNode.getHost();
 				int port = clusterNode.getPort();
 				
-				RedisBackendConnectionFactory factory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();		
-				PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, host, port );
+				PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port );
 				physicalNode.initConnections();
 				clusterNode.setPhysicalNode(physicalNode);				
 			}			
@@ -454,9 +456,8 @@ public class RedisClusterPool extends AbstractPool {
 						int maxCon = poolCfg.getMaxCon();
 						String host = clusterNode.getHost();
 						int port = clusterNode.getPort();
-						
-						RedisBackendConnectionFactory factory = RedisEngineCtx.INSTANCE().getBackendRedisConFactory();		
-						PhysicalNode physicalNode = new PhysicalNode(factory, type, name, minCon, maxCon, host, port );
+							
+						PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port );
 						physicalNode.initConnections();
 						clusterNode.setPhysicalNode( physicalNode );
 					}
@@ -500,9 +501,9 @@ public class RedisClusterPool extends AbstractPool {
 		long heartbeatTime = TimeUtil.currentTimeMillis() - timeout;		
 		long closeTime = TimeUtil.currentTimeMillis() - (timeout * 2);
 		
-		LinkedList<RedisBackendConnection> heartBeatCons = getNeedHeartbeatCons(physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
+		LinkedList<BackendConnection> heartBeatCons = getNeedHeartbeatCons(physicalNode.conQueue.getCons(), heartbeatTime, closeTime);			
 		if ( !heartBeatCons.isEmpty() ) { 			
-			for (RedisBackendConnection conn : heartBeatCons) {
+			for (BackendConnection conn : heartBeatCons) {
 				conHeartBeatHanler.doHeartBeat(conn, PING);
 			}
 		}
@@ -557,6 +558,11 @@ public class RedisClusterPool extends AbstractPool {
 	
 	public Map<String, ClusterNode> getMasters() {
 		return masters;
+	}
+
+	@Override
+	public PhysicalNode getPhysicalNode(int id) {
+		return null;
 	}
 	
 }

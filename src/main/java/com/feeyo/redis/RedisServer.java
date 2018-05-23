@@ -18,6 +18,8 @@ import com.feeyo.util.Log4jInitializer;
  * redis-benchmark -p 8066 -c 100 -t set,get,lpush,LPOP,sAdd,spop,incr -n 500000 -a pwd01 --dbnum 1
  * redis-benchmark -p 8066 -c 100 -n 500000 -a pwd01
  * 
+ * redis-benchmark -p 6379 -c 100 -t set,get,lpush,LPOP,sAdd,spop,incr -n 500000
+ * 
  * @author zhuam 
  *
  */
@@ -31,6 +33,10 @@ public class RedisServer {
 	private static final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
 	
 	public static void main(String[] args) throws IOException {
+		
+		//System.setProperty("com.sun.management.jmxremote.port", "8099");
+		//System.setProperty("com.sun.management.jmxremote.ssl", "false");
+		//System.setProperty("com.sun.management.jmxremote.authenticate", "false");
 		
 	    /**
          * 检查 FEEYO_HOME

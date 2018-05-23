@@ -14,16 +14,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.engine.codec.RedisRequest;
-import com.feeyo.redis.engine.codec.RedisRequestEncoderV2;
-import com.feeyo.redis.engine.codec.RedisResponseDecoderV4;
-import com.feeyo.redis.engine.codec.RedisResponse;
-import com.feeyo.redis.net.backend.RedisBackendConnection;
+import com.feeyo.redis.net.backend.BackendConnection;
+import com.feeyo.redis.net.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisRequestEncoder;
+import com.feeyo.redis.net.codec.RedisResponse;
+import com.feeyo.redis.net.codec.RedisResponseDecoder;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.segment.Segment;
 import com.feeyo.redis.net.front.handler.segment.SegmentType;
 import com.feeyo.redis.net.front.route.RouteResult;
-import com.feeyo.redis.net.front.route.RouteResultNode;
+import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.virtualmemory.Message;
 import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.redis.virtualmemory.Util;
@@ -121,23 +121,23 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	// 应答节点
 	public class ResponseNode {
 
-		private RouteResultNode sourceNode;
+		private RouteNode sourceNode;
 		
 		private int count = 0;		//应答数
 		private ConcurrentLinkedQueue<DataOffset> dataOffsetQueue = new ConcurrentLinkedQueue<DataOffset>();
 		
-		public ResponseNode(RouteResultNode node) {
+		public ResponseNode(RouteNode node) {
 			this.sourceNode = node;
 		}
 	}
 
-	protected RedisRequestEncoderV2 encoder = new RedisRequestEncoderV2();
+	protected RedisRequestEncoder encoder = new RedisRequestEncoder();
 	protected RouteResult rrs;
 	
 	private ConcurrentHashMap<String, ResponseNode> allResponseNode =  new ConcurrentHashMap<String, ResponseNode>(); 
 	private AtomicInteger allResponseCount = new AtomicInteger(0); 					// 接收到返回数据的条数
 	
-	private ConcurrentHashMap<Long, RedisBackendConnection> backendConnections = new ConcurrentHashMap<Long, RedisBackendConnection>();
+	private ConcurrentHashMap<Long, BackendConnection> backendConnections = new ConcurrentHashMap<Long, BackendConnection>();
 	
 
 
@@ -153,7 +153,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 		this.allResponseNode.clear();
 		
 		//
-		for(RouteResultNode node: rrs.getRouteResultNodes()) {
+		for(RouteNode node: rrs.getRouteNodes()) {
 			String address = node.getPhysicalNode().getName();
 			ResponseNode reponseNode = new ResponseNode( node );
 			allResponseNode.put( address, reponseNode );
@@ -161,7 +161,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	}
 	
 	
-	protected ByteBuffer getRequestBufferByRRN(RouteResultNode rrn) {
+	protected ByteBuffer getRequestBufferByRRN(RouteNode rrn) {
 		ByteBuffer buffer = null;
 		List<RedisRequest> requests = rrs.getRequests();
 		
@@ -296,7 +296,7 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			break;
 		case MDEL:
 		case MEXISTS:
-			RedisResponseDecoderV4 responseDecoder = new RedisResponseDecoderV4();
+			RedisResponseDecoder responseDecoder = new RedisResponseDecoder();
 			int okCount = 0;
 			for (DataOffset offset : offsets) {
 				byte[] data = offset.getData();
@@ -372,8 +372,8 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	// 持有连接、 处理（正确、异常）、释放连接
 	// ------------------------------------------------------------
 	private void clearBackendConnections() {
-        for(Map.Entry<Long, RedisBackendConnection> entry: backendConnections.entrySet()) {
-        	RedisBackendConnection backendConn = entry.getValue();
+        for(Map.Entry<Long, BackendConnection> entry: backendConnections.entrySet()) {
+        	BackendConnection backendConn = entry.getValue();
         	if (backendConnections.remove(entry.getKey()) != null )
         		backendConn.release();
         } 
@@ -382,11 +382,11 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 	}
 	
 	
-	protected void holdBackendConnection(RedisBackendConnection backendConn) {
+	protected void holdBackendConnection(BackendConnection backendConn) {
 		backendConnections.put(backendConn.getId(), backendConn);
 	}
 	
-	protected void releaseBackendConnection(RedisBackendConnection backendConn) {
+	protected void releaseBackendConnection(BackendConnection backendConn) {
 		if (backendConnections.remove(backendConn.getId()) != null) {
 			backendConn.release();
 		}

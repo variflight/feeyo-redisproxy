@@ -10,14 +10,14 @@ import java.util.List;
  */
 public class PoolCfg {
 	
-	private final int id;
-	private final String name;
-	private final int type;
+	protected final int id;
+	protected final String name;
+	protected final int type;
 	
-	private final int maxCon;
-	private final int minCon;
+	protected final int maxCon;
+	protected final int minCon;
 
-	private List<String> nodes = new ArrayList<String>();
+	protected List<String> nodes = new ArrayList<String>();
 
 	public PoolCfg(int id, String name, int type, int minCon, int maxCon) {
 		this.id = id;
@@ -53,6 +53,19 @@ public class PoolCfg {
 
 	public void addNode(String node) {
 		this.nodes.add( node );
+	}
+	
+	
+	// Default null implement
+	//
+	public boolean loadExtraCfg() {
+		// ignore
+		return true;
+	}
+	
+	public boolean reloadExtraCfg() throws Exception {
+		// ignore
+		return true;
 	}
 	
 	@Override
