@@ -1,6 +1,9 @@
 package com.feeyo.kafka.net.backend.broker.offset;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.I0Itec.zkclient.IZkStateListener;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
@@ -38,6 +41,11 @@ public class KafkaOffsetService {
 	private ServerRunningMonitor runningMonitor;	// HA 监控
 	
 	private String localIp = null;
+	
+	
+	// 刷新
+	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+	
 	
 	private static KafkaOffsetService INSTANCE = new KafkaOffsetService();
 
@@ -102,9 +110,7 @@ public class KafkaOffsetService {
 		initCid(path);
 		if (zkclientx != null) {
 			this.zkclientx.subscribeStateChanges(new IZkStateListener() {
-
 				public void handleStateChanged(KeeperState state) throws Exception {}
-
 				public void handleNewSession() throws Exception {
 					initCid(path);
 				}
@@ -119,6 +125,25 @@ public class KafkaOffsetService {
 		if (runningMonitor != null && !runningMonitor.isStart()) {
 			runningMonitor.start();
 		}
+		
+		
+		//
+		// 定时持久化offset
+		executorService.scheduleAtFixedRate(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					// offset 数据持久化
+					if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null )
+						localAdmin.saveAll();
+
+				} catch (Exception e) {
+					LOGGER.warn("offsetAdmin err: ", e);
+				}
+
+			}
+		}, 30, 30, TimeUnit.SECONDS);
+
 
 	}
 	
@@ -130,10 +155,28 @@ public class KafkaOffsetService {
 			runningMonitor.stop();
 		}
 
-		final String path = zkPathUtil.getClusterHostPath( localIp );
+		
+		
 		// 释放工作节点
+		final String path = zkPathUtil.getClusterHostPath( localIp );
 		releaseCid(path);
+		
+		
+		//
+		try {
+			// 关闭定时任务
+			executorService.shutdown();
+
+			// 提交本地剩余offset
+			if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null )
+				localAdmin.saveAll();
+			
+		} catch (Exception e) {
+		}
+		
 	}
+	
+	///
 	
 
 	private void initCid(String path) {

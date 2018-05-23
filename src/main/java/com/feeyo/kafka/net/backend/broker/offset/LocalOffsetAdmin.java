@@ -6,9 +6,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +32,8 @@ public class LocalOffsetAdmin {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger(LocalOffsetAdmin.class);
 
-	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-	
 	private String zkServerIp;
 	private ZkPathUtil zkPathUtil;
-
-	private boolean isRunning = false;
 
 	public LocalOffsetAdmin(OffsetCfg offsetCfg) {
 		
@@ -58,11 +51,11 @@ public class LocalOffsetAdmin {
 				
 				// log_start_offset
 				String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition);
-				writePath(zkclientx, partitionLogStartOffsetPath, String.valueOf(partitionOffset.getLogStartOffset()));
+				writeDataByPath(zkclientx, partitionLogStartOffsetPath, String.valueOf(partitionOffset.getLogStartOffset()));
 				
 				// produce_offset
 				String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topic, partition);
-				writePath(zkclientx, partitionProducerOffsetPath, String.valueOf(partitionOffset.getProducerOffset()));
+				writeDataByPath(zkclientx, partitionProducerOffsetPath, String.valueOf(partitionOffset.getProducerOffset()));
 				
 				// 消费者
 				Map<String, ConsumerOffset> consumerOffsets = partitionOffset.getConsumerOffsets();
@@ -72,11 +65,11 @@ public class LocalOffsetAdmin {
 					
 					// 消费者点位
 					String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topic, partition, consumer);
-					writePath(zkclientx, partitionConsumerOffsetPath, String.valueOf(co.getCurrentOffset()));
+					writeDataByPath(zkclientx, partitionConsumerOffsetPath, String.valueOf(co.getCurrentOffset()));
 					
 					// 消费者回退点位
 					String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topic, partition, consumer);
-					writePath(zkclientx, partitionConsumerRollbackOffsetPath, co.getOldOffsetQueue().toString());
+					writeDataByPath(zkclientx, partitionConsumerRollbackOffsetPath, co.getOldOffsetQueue().toString());
 
 				}
 			}
@@ -95,12 +88,12 @@ public class LocalOffsetAdmin {
 				for (BrokerPartition partition : topicCfg.getRunningOffset().getBrokerPartitions()) {
 					// log_start_offset
 					String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, partition.getPartition());
-					String data = getPathData(zkclientx, partitionLogStartOffsetPath);
+					String data = readDataByPath(zkclientx, partitionLogStartOffsetPath);
 					long logStartOffset = isNull(data) ? 0 : Long.parseLong(data);
 					
 					// produce_offset
 					String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topic, partition.getPartition());
-					data = getPathData(zkclientx, partitionProducerOffsetPath);
+					data = readDataByPath(zkclientx, partitionProducerOffsetPath);
 					long producerOffset = isNull(data) ? 0 : Long.parseLong(data);
 					
 					BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), producerOffset, logStartOffset);
@@ -114,7 +107,7 @@ public class LocalOffsetAdmin {
 					for (String consumer : childrenPath) {
 						// consumer_offset
 						String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topic, partition.getPartition(), consumer);
-						data = getPathData(zkclientx, partitionConsumerOffsetPath);
+						data = readDataByPath(zkclientx, partitionConsumerOffsetPath);
 						long consumerOffset = isNull(data) ? 0 : Long.parseLong(data);
 						
 						ConsumerOffset co = new ConsumerOffset(consumer, consumerOffset);
@@ -122,7 +115,7 @@ public class LocalOffsetAdmin {
 						
 						// consumer_offset
 						String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topic, partition.getPartition(), consumer);
-						data = getPathData(zkclientx, partitionConsumerRollbackOffsetPath);
+						data = readDataByPath(zkclientx, partitionConsumerRollbackOffsetPath);
 						if (!isNull(data)) {
 							ConcurrentLinkedQueue<?> offsets = JsonUtils.unmarshalFromString(data, ConcurrentLinkedQueue.class);
 							Object object = offsets.poll();
@@ -147,9 +140,7 @@ public class LocalOffsetAdmin {
 	}
 
 	public void startup() {
-		if (isRunning) {
-			return;
-		}
+
 
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
@@ -162,50 +153,18 @@ public class LocalOffsetAdmin {
 			}
 		}
 
-		// 定时持久化offset
-		executorService.scheduleAtFixedRate(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					// offset 数据持久化
-					saveAll();
-
-				} catch (Exception e) {
-					LOGGER.warn("offsetAdmin err: ", e);
-				}
-
-			}
-		}, 30, 30, TimeUnit.SECONDS);
-
-		isRunning = true;
 	}
 
 	/**
 	 * 关闭
 	 */
 	public void close() {
-		if (!isRunning) {
-			return;
-		}
-
-		isRunning = false;
-
-		try {
-			// 关闭定时任务
-			executorService.shutdown();
-
-			// 提交本地剩余offset
-			saveAll();
-		} catch (Exception e) {
-			isRunning = true;
-		}
-
 	}
 
 	/**
 	 * offsets 持久化
 	 */
-	private void saveAll() {
+	public void saveAll() {
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (Entry<Integer, PoolCfg> poolEntry : poolCfgMap.entrySet()) {
 			PoolCfg poolCfg = poolEntry.getValue();
@@ -235,6 +194,7 @@ public class LocalOffsetAdmin {
 
 	// 获取offset
 	public long getOffset(TopicCfg topicCfg, String user, int partition) {
+		
 		BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
 		ConsumerOffset cOffset = partitionOffset.getConsumerOffsetByConsumer(user);
 		long offset = cOffset.getNewOffset();
@@ -289,7 +249,10 @@ public class LocalOffsetAdmin {
 		}
 	}
 	
-	private String getPathData(ZkClientx zkclientx, String path) {
+	
+	
+	// 
+	private String readDataByPath(ZkClientx zkclientx, String path) {
 		
 		if ( !zkclientx.exists(path) ) {
 			zkclientx.createPersistent(path, null, true);
@@ -307,7 +270,7 @@ public class LocalOffsetAdmin {
 		}
 	}
 	
-	private void writePath(ZkClientx zkclientx, String path, String value) {
+	private void writeDataByPath(ZkClientx zkclientx, String path, String value) {
 		if (!zkclientx.exists(path)) {
 			zkclientx.createPersistent(path, null, true);
 		}
