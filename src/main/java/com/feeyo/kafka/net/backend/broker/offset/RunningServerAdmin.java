@@ -1,6 +1,5 @@
 package com.feeyo.kafka.net.backend.broker.offset;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.I0Itec.zkclient.IZkStateListener;
@@ -11,13 +10,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.OffsetManageCfg;
-import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
 import com.feeyo.kafka.net.backend.broker.zk.ZkPathUtil;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningData;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningListener;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningMonitor;
-import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.util.NetworkUtil;
 
 
@@ -59,7 +56,6 @@ import com.feeyo.util.NetworkUtil;
 public class RunningServerAdmin {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger(RunningServerAdmin.class);
-	private static final String ZK_CFG_FILE = "kafka.xml"; // zk settings is in server.xml
 	
 	private ZkClientx  zkclientx;
 	
@@ -67,30 +63,10 @@ public class RunningServerAdmin {
 	private ServerRunningMonitor runningMonitor;	// HA 监控
 	
 	private String address;
-	private OffsetManageCfg offsetManageCfg;
 	private ZkPathUtil zkPathUtil;
 	
-	private static RunningServerAdmin INSTANCE;
-	private static Object _lock = new Object();
-	
-	public static RunningServerAdmin INSTANCE() {
-		if (INSTANCE == null) {
-			synchronized (_lock) {
-				if (INSTANCE == null) {
-					try {
-						INSTANCE = new RunningServerAdmin();
-					} catch (Exception e) {
-						LOGGER.error("", e);
-					}
-				}
-			}
-		}
-		return INSTANCE;
-	}
-	
-	private RunningServerAdmin() throws FileNotFoundException, IOException {
+	public RunningServerAdmin(OffsetManageCfg offsetManageCfg, final RunningOffsetAdmin runningOffsetAdmin) {
 		
-		offsetManageCfg = KafkaConfigLoader.loadOffsetManageCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
 		zkPathUtil = new ZkPathUtil(offsetManageCfg.getPath());
 		
 		address = NetworkUtil.getLocalAddress();
@@ -106,14 +82,14 @@ public class RunningServerAdmin {
 
 			@Override
 			public void processStop() {
-				RunningOffsetAdmin.INSTANCE().close();
+				runningOffsetAdmin.close();
 			}
 
 			@Override
 			public void processActiveEnter() {
 				// start
 				try {
-					RunningOffsetAdmin.INSTANCE().startup(offsetManageCfg);
+					runningOffsetAdmin.startup();
 				} catch (Exception e) {
 					LOGGER.error("offset load err:", e);
 				}
@@ -121,7 +97,7 @@ public class RunningServerAdmin {
 
 			@Override
 			public void processActiveExit() {
-				RunningOffsetAdmin.INSTANCE().close();
+				runningOffsetAdmin.close();
 			}
         });
         

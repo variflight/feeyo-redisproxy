@@ -34,19 +34,15 @@ public class RunningOffsetAdmin {
 	private static Logger LOGGER = LoggerFactory.getLogger(RunningOffsetAdmin.class);
 
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-
-	private static RunningOffsetAdmin INSTANCE = new RunningOffsetAdmin();
-
+	
 	private OffsetManageCfg offsetManageCfg;
 	private ZkPathUtil zkPathUtil;
 
 	private boolean isRunning = false;
 
-	public static RunningOffsetAdmin INSTANCE() {
-		return INSTANCE;
-	}
-
-	private RunningOffsetAdmin() {
+	public RunningOffsetAdmin(OffsetManageCfg offsetManageCfg) {
+		this.offsetManageCfg = offsetManageCfg;
+		this.zkPathUtil = new ZkPathUtil(offsetManageCfg.getPath());
 	}
 
 	private void savePartitionOffsets(String topic, Map<Integer, BrokerPartitionOffset> partitionOffsetMap,
@@ -148,13 +144,10 @@ public class RunningOffsetAdmin {
 		}
 	}
 
-	public void startup(OffsetManageCfg offsetManageCfg) {
+	public void startup() {
 		if (isRunning) {
 			return;
 		}
-
-		this.offsetManageCfg = offsetManageCfg;
-		this.zkPathUtil = new ZkPathUtil(offsetManageCfg.getPath());
 
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {

@@ -4,24 +4,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
-import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningData;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.JedisPool;
 import com.feeyo.util.jedis.RedisCommand;
 
 public class RemoteOffsetAdmin {
-	private static RemoteOffsetAdmin INSTANCE = new RemoteOffsetAdmin();
 	private JedisHolder jedisHolder = new JedisHolder();
 	
-	public static RemoteOffsetAdmin INSTANCE() {
-		return INSTANCE;
-	}
-	
 	// 获取offset
-	public long getOffset(String user, String topic, int partition) {
+	public long getOffset(String remoteAddress, String user, String topic, int partition) {
 		long offset = -1;
-		ServerRunningData activeData =  RunningServerAdmin.INSTANCE().getMasterServerRunningData();
-		JedisPool jedisPool = jedisHolder.getJedisPool(activeData.getAddress());
+		JedisPool jedisPool = jedisHolder.getJedisPool(remoteAddress);
 		JedisConnection conn = jedisPool.getResource();
 		try {
 			conn.sendCommand(RedisCommand.AUTH, user);
@@ -43,9 +36,8 @@ public class RemoteOffsetAdmin {
 	}
 	
 	// 获取offset
-	public String rollbackConsumerOffset(String user, String topic, int partition, long offset) {
-		ServerRunningData activeData =  RunningServerAdmin.INSTANCE().getMasterServerRunningData();
-		JedisPool jedisPool = jedisHolder.getJedisPool(activeData.getAddress());
+	public String rollbackConsumerOffset(String remoteAddress, String user, String topic, int partition, long offset) {
+		JedisPool jedisPool = jedisHolder.getJedisPool(remoteAddress);
 		JedisConnection conn = jedisPool.getResource();
 		try {
 			conn.sendCommand(RedisCommand.AUTH, user);
