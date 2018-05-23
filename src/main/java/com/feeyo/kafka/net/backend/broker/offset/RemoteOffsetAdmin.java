@@ -9,6 +9,7 @@ import com.feeyo.util.jedis.JedisPool;
 import com.feeyo.util.jedis.RedisCommand;
 
 public class RemoteOffsetAdmin {
+	
 	private JedisHolder jedisHolder = new JedisHolder();
 	
 	// 获取offset

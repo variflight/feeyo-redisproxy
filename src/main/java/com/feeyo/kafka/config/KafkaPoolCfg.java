@@ -66,7 +66,8 @@ public class KafkaPoolCfg extends PoolCfg {
 				} else {
 					
 					// partition -> data offset
-					ConcurrentHashMap<Integer, BrokerPartitionOffset> offsetMap = new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
+					ConcurrentHashMap<Integer, BrokerPartitionOffset> offsetMap = 
+							new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
 
 					for (BrokerPartition partition : newTopicCfg.getRunningOffset().getBrokerPartitions()) {
 						BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), 0, 0);
