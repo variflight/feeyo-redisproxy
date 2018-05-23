@@ -12,6 +12,7 @@ import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
+import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.Manage;
@@ -201,7 +202,7 @@ public class RedisFrontSession {
 				}
 				
 				// pusub 和 kpartitions 指令提前返回
-				if ( interceptPubsub( routeResult ) || interceptKpartitions( routeResult )) {
+				if ( interceptPubsub( routeResult ) || interceptKafkaCmds( routeResult )) {
 					return;
 				}
 				
@@ -494,11 +495,18 @@ public class RedisFrontSession {
 	
 	
 	// 拦截 PUBSUB
-	public boolean interceptKpartitions(RouteResult routeResult) throws IOException {
+	public boolean interceptKafkaCmds(RouteResult routeResult) throws IOException {
 		boolean isIntercepted = false;
 		
+		
+		ByteBuffer bb;
+		byte ASTERISK = '*';
+		byte DOLLAR = '$';
+		byte[] CRLF = "\r\n".getBytes();	
+		
 		RedisRequest request = routeResult.getRequests().get(0);
-		if ( request.getPolicy().getHandleType() == CommandParse.PARTITIONS_CMD ) {
+		switch(request.getPolicy().getHandleType()) {
+		case CommandParse.PARTITIONS_CMD:
 			isIntercepted = true;
 			
 			int poolId = frontCon.getUserCfg().getPoolId();
@@ -507,13 +515,9 @@ public class RedisFrontSession {
 			TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
 			BrokerPartition[] partitions = tc.getRunningOffset().getBrokerPartitions();
 			
-			// 申请1k buffer （肯定够）
-			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
-			byte ASTERISK = '*';
-			byte DOLLAR = '$';
-			byte[] CRLF = "\r\n".getBytes();		
-			
 			byte[] size = ProtoUtils.convertIntToByteArray(partitions.length);
+			
+			bb = NetSystem.getInstance().getBufferPool().allocate(1024);
 			bb.put(ASTERISK).put(size).put(CRLF);
 			for (BrokerPartition dataPartition : partitions) {
 				byte[] partition = ProtoUtils.convertIntToByteArray(dataPartition.getPartition());
@@ -522,6 +526,37 @@ public class RedisFrontSession {
 			}
 			
 			frontCon.write(bb);
+			break;
+		case CommandParse.POSITION_CMD:
+			
+			KafkaRouteNode node = (KafkaRouteNode) routeResult.getRouteNodes().get(0);
+			if(node != null) {
+				isIntercepted = true;
+				
+				int partition =  node.getPartition();
+				long offset = node.getOffset();
+				
+				byte[] partitionArr = String.valueOf(partition).getBytes();
+				byte[] partitionLength = ProtoUtils.convertIntToByteArray(partitionArr.length);
+				byte[] offsetArr = String.valueOf(offset).getBytes();
+				byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
+				
+				bb = NetSystem.getInstance().getBufferPool().allocate(1024);
+				bb.put(ASTERISK).put(ProtoUtils.convertIntToByteArray(2)).put(CRLF);
+				bb.put(DOLLAR).put(partitionLength).put(CRLF).put(partitionArr).put(CRLF);
+				bb.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF);
+				
+				frontCon.write(bb);
+			}
+			
+			break;
+			//TODO
+		case CommandParse.REVERT_CMD:
+			
+			break;
+		case CommandParse.UPDATE_CMD:
+			
+			break;
 		}
 		
 		return isIntercepted;

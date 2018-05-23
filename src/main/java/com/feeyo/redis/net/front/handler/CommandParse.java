@@ -34,8 +34,10 @@ public class CommandParse {
 	public static final byte PRODUCE_CMD    	= 14;       // 生产指令
 	public static final byte CONSUMER_CMD    	= 15;       // 消费指令
 	public static final byte PARTITIONS_CMD    	= 16;       // 消费指令
-	public static final byte OFFSET_CMD    	= 17;       // 消费指令
-	
+	public static final byte OFFSET_CMD    		= 17;       // 消费指令
+	public static final byte POSITION_CMD    	= 18;       // 位置指令
+	public static final byte REVERT_CMD	    	= 19;       // 位置指令
+	public static final byte UPDATE_CMD    		= 20;       // 位置指令
 	
 	// RW 
 	public static final byte WRITE_CMD = 1;
@@ -57,6 +59,9 @@ public class CommandParse {
 		_cmds.put("KPOP", 				new RedisRequestPolicy(KAFKA_CMD, CONSUMER_CMD, WRITE_CMD));
 		_cmds.put("KPARTITIONS", 		new RedisRequestPolicy(KAFKA_CMD, PARTITIONS_CMD, READ_CMD));
 		_cmds.put("KOFFSET", 			new RedisRequestPolicy(KAFKA_CMD, OFFSET_CMD, READ_CMD));
+		_cmds.put("KPOSITION", 			new RedisRequestPolicy(KAFKA_CMD, POSITION_CMD, READ_CMD));
+		_cmds.put("KREVERT", 			new RedisRequestPolicy(KAFKA_CMD, REVERT_CMD, READ_CMD));
+		_cmds.put("KUPDATE", 			new RedisRequestPolicy(KAFKA_CMD, UPDATE_CMD, READ_CMD));
 		
 		// Cluster
 		_cmds.put("CLUSTER", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));

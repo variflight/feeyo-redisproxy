@@ -129,6 +129,43 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				
 				break;
 			}
+			
+		case CommandParse.POSITION_CMD:
+			{
+				if(request.getNumArgs() != 2) {
+					throw new InvalidRequestExistsException("wrong number of arguments");
+				}
+				
+				partition = topicCfg.getRunningOffset().getConsumerBrokerPartition();
+				offset = RunningOffsetService.INSTANCE().getOffset(topicCfg, userCfg.getPassword(), partition.getPartition());
+				break;
+			}
+			
+		case CommandParse.REVERT_CMD:
+			{
+				if(request.getNumArgs() != 4) {
+					throw new InvalidRequestExistsException("wrong number of arguments");
+				}
+				
+				int revertPartition = Integer.parseInt(new String(request.getArgs()[2]));
+				offset = Long.parseLong(new String(request.getArgs()[3]));
+				RunningOffsetService.INSTANCE().rollbackConsumerOffset(userCfg.getPassword(), topicName, revertPartition, offset);
+				return new RouteResult(RedisRequestType.KAFKA, requests, null);
+			}
+		case CommandParse.UPDATE_CMD:
+			{
+				if(request.getNumArgs() != 5) {
+					throw new InvalidRequestExistsException("wrong number of arguments");
+				}
+				
+				int updatePartition = Integer.parseInt(new String(request.getArgs()[2]));
+				offset = Long.parseLong(new String(request.getArgs()[3]));
+				long logStartOffset = Long.parseLong(new String(request.getArgs()[4]));
+				
+				RunningOffsetService.INSTANCE().updateProducerOffset(userCfg.getPassword(), topicName, updatePartition, offset, logStartOffset);
+				return new RouteResult(RedisRequestType.KAFKA, requests,null);
+			}
+			
 		}
 
 		if ( partition == null ) {
