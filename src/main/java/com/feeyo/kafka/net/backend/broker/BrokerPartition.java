@@ -152,7 +152,7 @@ public class BrokerPartition {
 				
 			} else {
 				ConsumerOffset consumerOffset = getConsumerOffset(consumer);
-				consumerOffset.revertOldOffset(offset);
+				consumerOffset.returnOldOffset(offset);
 			}
 		}
 		
