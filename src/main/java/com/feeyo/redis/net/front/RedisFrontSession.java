@@ -450,7 +450,7 @@ public class RedisFrontSession {
 			return result || interceptKpartitions(request);
 			
 		case CommandParse.PRIVATE_CMD:
-			return result || interceptPrivateCmds(request);
+			return result || interceptKafkaPrivateCmds(request);
 
 		default:
 			return result;
@@ -539,16 +539,19 @@ public class RedisFrontSession {
 	}
 	
 	// 拦截内部调用指令
-	private boolean interceptPrivateCmds(RedisRequest request) throws IOException {
+	private boolean interceptKafkaPrivateCmds(RedisRequest request) throws IOException {
 		String cmd = new String(request.getArgs()[0]).toUpperCase();
 		String topic = new String(request.getArgs()[1]);
 		int partition = Integer.parseInt(new String(request.getArgs()[2]));
 		try {
-			if ( cmd.equals("KCONSUMEOFFSET") ) {
+			// 申请offset
+			if ( cmd.equals("KGETOFFSET") ) {
 				long offset = KafkaOffsetService.INSTANCE().getOffsetForSlave(frontCon.getPassword(), topic, partition);
 				StringBuffer sb = new StringBuffer();
 				sb.append("+").append(offset).append("\r\n");
 				frontCon.write(sb.toString().getBytes());
+				
+			// 返还 offset
 			} else if ( cmd.equals("KRETURNOFFSET") ) {
 				long offset = Long.parseLong(new String(request.getArgs()[3]));
 				KafkaOffsetService.INSTANCE().rollbackConsumerOffsetForSlave(frontCon.getPassword(), topic, partition, offset);

@@ -129,9 +129,9 @@ public class KeyPrefixStrategyFactory {
 		// Kafka nokey
 		keyStrategys.put("KPUSH", 			KeyPrefixStrategy.NoKey);
 		keyStrategys.put("KPOP",  			KeyPrefixStrategy.NoKey);
-		keyStrategys.put("KPARTITIONS", 		KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KPARTITIONS", 	KeyPrefixStrategy.NoKey);
 		keyStrategys.put("KOFFSET",  	    KeyPrefixStrategy.NoKey);
-		keyStrategys.put("KCONSUMEOFFSET",  	KeyPrefixStrategy.NoKey);
+		keyStrategys.put("KGETOFFSET",  	KeyPrefixStrategy.NoKey);
 		keyStrategys.put("KRETURNOFFSET",  	KeyPrefixStrategy.NoKey);
 	}
 	

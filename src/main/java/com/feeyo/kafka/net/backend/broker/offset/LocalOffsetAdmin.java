@@ -204,8 +204,8 @@ public class LocalOffsetAdmin {
 	}
 
 
-	// 获取offset
-	public long getOffset(TopicCfg topicCfg, String user, int partition) {
+	// 申请offset
+	public long getOffset(String user, TopicCfg topicCfg, int partition) {
 		
 		BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
 		ConsumerOffset cOffset = partitionOffset.getConsumerOffsetByConsumer(user);
@@ -213,8 +213,8 @@ public class LocalOffsetAdmin {
 		return offset;
 	}
 
-	// 回收offset
-	public void rollbackConsumerOffset(String user, String topic, int partition, long offset) {
+	// 返还offset
+	public void returnOffset(String user, String topic, int partition, long offset) {
 
 		UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(user);
 		if (userCfg == null) {

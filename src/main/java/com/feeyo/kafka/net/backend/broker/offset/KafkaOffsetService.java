@@ -228,14 +228,14 @@ public class KafkaOffsetService {
 			return -1;
 		}
 		
-		return localAdmin.getOffset(topicCfg, user, partition);
+		return localAdmin.getOffset(user, topicCfg, partition);
 	}
 	
 	// 获取offset
 	public long getOffset(String user, TopicCfg topicCfg, int partition) {
 		long offset;
 		if (runningMonitor.isMineRunning()) {
-			offset = localAdmin.getOffset(topicCfg, user, partition);
+			offset = localAdmin.getOffset(user, topicCfg, partition);
 			
 		} else {
 			ServerRunningData master = this.runningMonitor.getActiveData();
@@ -250,17 +250,17 @@ public class KafkaOffsetService {
 			return;
 		}
 		if (runningMonitor.isMineRunning()) {
-			localAdmin.rollbackConsumerOffset(user, topic, partition, offset);
+			localAdmin.returnOffset(user, topic, partition, offset);
 		} else {
 			ServerRunningData master = this.runningMonitor.getActiveData();
-			remoteAdmin.rollbackConsumerOffset(master.getAddress(), user, topic, partition, offset);
+			remoteAdmin.returnOffset(master.getAddress(), user, topic, partition, offset);
 		}
 	}
 	
 	// 回滚slave节点上的offset
 	public void rollbackConsumerOffsetForSlave(String user, String topic, int partition, long offset) {
 		if (runningMonitor.isMineRunning()) {
-			localAdmin.rollbackConsumerOffset(user, topic, partition, offset);
+			localAdmin.returnOffset(user, topic, partition, offset);
 		}
 	}
 
