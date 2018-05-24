@@ -27,6 +27,7 @@ import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
+import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.loader.zk.ZkClientManage;
@@ -1022,7 +1023,15 @@ public class Manage {
 										line.append(pt).append(", ");
 										line.append(offset.getLogStartOffset()).append(", ");
 										line.append(offset.getProducerOffset()).append(", ");
-										line.append(offset.getAllConsumerOffset());
+
+										for (ConsumerOffset consumerOffset : offset.getConsumerOffsets().values()) {
+											line.append(consumerOffset.getConsumer() );
+											line.append(":");
+											line.append(consumerOffset.getCurrentOffset() );
+											line.append(", ");
+										}
+					
+										
 										lines.add(line.toString());
 									}
 								}

@@ -554,7 +554,7 @@ public class RedisFrontSession {
 			// 返还 offset
 			} else if ( cmd.equals("KRETURNOFFSET") ) {
 				long offset = Long.parseLong(new String(request.getArgs()[3]));
-				KafkaOffsetService.INSTANCE().rollbackConsumerOffsetForSlave(frontCon.getPassword(), topic, partition, offset);
+				KafkaOffsetService.INSTANCE().returnOffsetForSlave(frontCon.getPassword(), topic, partition, offset);
 				frontCon.write(OK);
 			}
 		} catch (Exception e) {

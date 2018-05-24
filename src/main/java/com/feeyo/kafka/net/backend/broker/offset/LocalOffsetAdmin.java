@@ -208,7 +208,7 @@ public class LocalOffsetAdmin {
 	public long getOffset(String user, TopicCfg topicCfg, int partition) {
 		
 		BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
-		ConsumerOffset cOffset = partitionOffset.getConsumerOffsetByConsumer(user);
+		ConsumerOffset cOffset = partitionOffset.getConsumerOffset(user);
 		long offset = cOffset.getNewOffset();
 		return offset;
 	}
@@ -233,7 +233,7 @@ public class LocalOffsetAdmin {
 		
 		BrokerPartitionOffset partitionOffset = topicCfg.getRunningOffset().getPartitionOffset(partition);
 		if (partitionOffset != null) {
-			partitionOffset.rollbackConsumerOffset(user, offset);
+			partitionOffset.returnConsumerOffset(user, offset);
 		}
 	}
 

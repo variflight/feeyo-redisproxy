@@ -231,6 +231,14 @@ public class KafkaOffsetService {
 		return localAdmin.getOffset(user, topicCfg, partition);
 	}
 	
+	// 回滚slave节点上的offset
+	public void returnOffsetForSlave(String user, String topic, int partition, long offset) {
+		if (runningMonitor.isMineRunning()) {
+			localAdmin.returnOffset(user, topic, partition, offset);
+		}
+	}
+	
+	
 	// 获取offset
 	public long getOffset(String user, TopicCfg topicCfg, int partition) {
 		long offset;
@@ -245,7 +253,7 @@ public class KafkaOffsetService {
 	}
 
 	// 回收 offset
-	public void rollbackConsumerOffset(String user, String topic, int partition, long offset) {
+	public void returnOffset(String user, String topic, int partition, long offset) {
 		if (offset < 0) {
 			return;
 		}
@@ -257,12 +265,6 @@ public class KafkaOffsetService {
 		}
 	}
 	
-	// 回滚slave节点上的offset
-	public void rollbackConsumerOffsetForSlave(String user, String topic, int partition, long offset) {
-		if (runningMonitor.isMineRunning()) {
-			localAdmin.returnOffset(user, topic, partition, offset);
-		}
-	}
 
 	// 更新生产offset
 	public void updateProducerOffset(String user, String topic, int partition, long offset, long logStartOffset) {
