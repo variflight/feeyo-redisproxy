@@ -39,7 +39,7 @@ public class LocalOffsetAdmin {
 	}
 
 
-	private void loadOffsetByPoolId(int poolId, Collection<TopicCfg> topicCfgs) {
+	private void recoveryFromZkByPoolId(int poolId, Collection<TopicCfg> topicCfgs) {
 		
 		ZkClientx zkclientx = ZkClientx.getZkClient( zkServerIp );
 		
@@ -118,9 +118,8 @@ public class LocalOffsetAdmin {
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (PoolCfg poolCfg : poolCfgMap.values()) {
 			if (poolCfg instanceof KafkaPoolCfg) {
-				
 				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
-				this.loadOffsetByPoolId(poolCfg.getId(), topicCfgMap.values());
+				this.recoveryFromZkByPoolId(poolCfg.getId(), topicCfgMap.values());
 			}
 		}
 	}
@@ -138,8 +137,8 @@ public class LocalOffsetAdmin {
 	public void flushAll() {
 		
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
-		for (Entry<Integer, PoolCfg> poolEntry : poolCfgMap.entrySet()) {
-			PoolCfg poolCfg = poolEntry.getValue();
+		for (PoolCfg poolCfg: poolCfgMap.values()) {
+
 			if (poolCfg instanceof KafkaPoolCfg) {
 
 				//
@@ -258,7 +257,6 @@ public class LocalOffsetAdmin {
 			brokerPartition.setProducerOffset(offset, logStartOffset);
 		}
 	}
-	
 	
 	
 	// 
