@@ -10,10 +10,9 @@ import com.feeyo.kafka.net.backend.broker.BrokerPartition;
  */
 public class RunningOffset {
 	
+	//
 	private final String name;
 	private final boolean internal;
-	
-	// 分区信息
 	private final int partitionNum;
 	private ConcurrentHashMap<Integer, BrokerPartition> partitions = new ConcurrentHashMap<>();
 	

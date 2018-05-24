@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.I0Itec.zkclient.IZkStateListener;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
@@ -26,16 +27,20 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
+
 public class KafkaOffsetService {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaOffsetService.class );
 	
-	private static final String ZK_CFG_FILE = "kafka.xml"; // zk settings is in server.xml
+	//
+	private static AtomicBoolean running = new AtomicBoolean( false );
 	
+	//
 	private final RemoteOffsetAdmin remoteAdmin;
 	private final LocalOffsetAdmin localAdmin;
 	
-	// 支持 HA
+	// zk ha
+	//
 	private ZkClientx  zkclientx;
 	private ZkPathUtil zkPathUtil;
 	private ServerRunningData runningData;
@@ -43,21 +48,21 @@ public class KafkaOffsetService {
 	
 	private String localIp = null;
 	
-	
-	// 刷新
+	// flush to zk
+	//
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 	
-	
+	//
 	private static KafkaOffsetService INSTANCE = new KafkaOffsetService();
 
 	public static KafkaOffsetService INSTANCE() {
 		return INSTANCE;
 	}
 	
-	
+	//
 	private KafkaOffsetService() {
 		
-		OffsetCfg offsetCfg = KafkaConfigLoader.loadOffsetCfg(ConfigLoader.buidCfgAbsPathFor(ZK_CFG_FILE));
+		OffsetCfg offsetCfg = KafkaConfigLoader.loadOffsetCfg(ConfigLoader.buidCfgAbsPathFor( "kafka.xml" ));
 		this.localAdmin = new LocalOffsetAdmin( offsetCfg );
 		this.remoteAdmin = new RemoteOffsetAdmin();
 		
@@ -101,9 +106,18 @@ public class KafkaOffsetService {
         runningMonitor.init();
 	}
 	
+	public boolean isRunning() {
+		return running.get();
+	}
+	
 	public void start() throws IOException {
 		
-		LOGGER.info("## start offset ha [{}]", localIp);
+		//
+		if ( !running.compareAndSet(false, true) ) {
+			return;
+		}
+		
+		LOGGER.info("## start kafkaOffsetService, localIp={} ", localIp);
 		
 		final String path = zkPathUtil.getClusterHostPath( localIp);
 		initCid(path);
@@ -148,36 +162,36 @@ public class KafkaOffsetService {
 	
 	public void close() {
 		
-		LOGGER.info("## stop offset ha [{}]", localIp);
+		running.set( false );
+		
+		LOGGER.info("## stop kafkaOffsetService, localIp={} ", localIp);
 
+		// stop running
 		if (runningMonitor != null && runningMonitor.isStart()) {
 			runningMonitor.stop();
 		}
 
-		
-		
-		// 释放工作节点
+		// release node
 		final String path = zkPathUtil.getClusterHostPath( localIp );
 		releaseCid(path);
 		
-		
-		//
+		// flush 
 		try {
-			// 关闭定时任务
-			executorService.shutdown();
+			
+			if ( executorService != null )
+				executorService.shutdown();
 
-			// 提交本地剩余offset
 			if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null )
 				localAdmin.flushAll();
 			
 		} catch (Exception e) {
+			// ignore
 		}
-		
 	}
 	
-	///
-	
-
+	//
+	// -----------------------------------------------------------------------------
+	//
 	private void initCid(String path) {
 		// 初始化系统目录
 		if (zkclientx != null) {
@@ -202,6 +216,10 @@ public class KafkaOffsetService {
 			zkclientx.delete(path);
 		}
 	}
+	
+	
+	
+	
 	
 	//-----------------------------------------------------------------------------------------------------
 	

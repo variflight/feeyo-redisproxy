@@ -111,8 +111,7 @@ public class KafkaCtx {
 					newPartitions[i] = newPartition;
 				}
 
-				RunningOffset runningInfo = new RunningOffset(name, internal, newPartitions);
-				topicCfg.setRunningOffset( runningInfo );
+				topicCfg.setRunningOffset( new RunningOffset(name, internal, newPartitions) );
 			}
 			
 		} catch(Throwable e) {

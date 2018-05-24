@@ -5,6 +5,7 @@ import java.util.Map;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 
@@ -20,7 +21,17 @@ public class KafkaPoolCfg extends PoolCfg {
 	@Override
 	public void loadExtraCfg() throws Exception {
 		
-		// 加载kafka配置
+        // 加载 offset service
+		if ( !KafkaOffsetService.INSTANCE().isRunning() ) {
+			KafkaOffsetService.INSTANCE().start();
+	        Runtime.getRuntime().addShutdownHook(new Thread() {
+				public void run() {
+					KafkaOffsetService.INSTANCE().close();
+				}
+			});
+		}
+		
+		// 加载 kafka xml
 		topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
 		KafkaCtx.getInstance().load(topicCfgMap, this);
 	}
