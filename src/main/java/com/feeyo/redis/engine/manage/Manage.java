@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.KafkaPoolCfg;
-import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
@@ -1105,8 +1104,24 @@ public class Manage {
 					
 				// reload kafka
 				} else if ( arg2.equalsIgnoreCase("KAFKA") ) {
-					byte[] buff = KafkaCtx.getInstance().reloadAll();
-					return buff;
+
+					try {
+
+						Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
+						for (PoolCfg poolCfg : poolCfgMap.values()) {
+							if ( poolCfg instanceof KafkaPoolCfg )
+								poolCfg.reloadExtraCfg();
+						}
+						
+					} catch (Exception e) {
+					    LOGGER.error("reload kafka err:", e);
+						
+						StringBuffer sb = new StringBuffer();
+						sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+						return sb.toString().getBytes();
+						
+					} 
+					return "+OK\r\n".getBytes();
 				}
 			}
 			
