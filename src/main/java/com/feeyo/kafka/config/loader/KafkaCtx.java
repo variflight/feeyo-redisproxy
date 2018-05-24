@@ -2,7 +2,6 @@ package com.feeyo.kafka.config.loader;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.kafka.clients.admin.TopicDescription;
@@ -62,9 +61,7 @@ public class KafkaCtx {
 			// 获取kafka中的topic情况
 			Map<String, TopicDescription> remoteTopics = kafkaAdmin.getTopicAndDescriptions();
 
-			for (Entry<String, TopicCfg> entry : topicCfgMap.entrySet()) {
-
-				TopicCfg topicCfg = entry.getValue();
+			for (TopicCfg topicCfg : topicCfgMap.values()) {
 
 				String topicName = topicCfg.getName();
 				short replicationFactor = topicCfg.getReplicationFactor();
@@ -86,40 +83,38 @@ public class KafkaCtx {
 				
 				// 
 				if ( topicDescription == null) {
-					topicCfg.setRunningOffset( null );
-					return;
-					
-				} else {
+					throw new Exception( " kafka topicName=" + topicName  + ", description is null.");
+				} 
+
+				//
+				String name = topicDescription.name();
+				boolean internal = topicDescription.isInternal();
+				int partitionSize = topicDescription.partitions().size();
 				
-					String name = topicDescription.name();
-					boolean internal = topicDescription.isInternal();
-					int partitionSize = topicDescription.partitions().size();
+				//
+				BrokerPartition[] newPartitions = new BrokerPartition[ partitionSize ];
+				for (int i = 0; i < partitionSize; i++) {
 					
-					//
-					BrokerPartition[] newPartitions = new BrokerPartition[ partitionSize ];
-					for (int i = 0; i < partitionSize; i++) {
-						
-						TopicPartitionInfo partitionInfo =  topicDescription.partitions().get(i);
-						int partition = partitionInfo.partition();
-						
-						Node leader = partitionInfo.leader();
-						BrokerNode newLeader = new BrokerNode(leader.id(), leader.host(), leader.port());
-						
-						List<Node> replicas = partitionInfo.replicas();
-						BrokerNode[] newReplicas = new BrokerNode[replicas.size()];
-						for (int j = 0; j < replicas.size(); j++) {
-							newReplicas[j] = new BrokerNode(replicas.get(j).id(), replicas.get(j).host(), replicas.get(j).port());
-						}
-						
-						BrokerPartition newPartition = new BrokerPartition(partition, newLeader, newReplicas);
-						newPartitions[i] = newPartition;
+					TopicPartitionInfo partitionInfo =  topicDescription.partitions().get(i);
+					int partition = partitionInfo.partition();
+					
+					Node leader = partitionInfo.leader();
+					BrokerNode newLeader = new BrokerNode(leader.id(), leader.host(), leader.port());
+					
+					List<Node> replicas = partitionInfo.replicas();
+					BrokerNode[] newReplicas = new BrokerNode[replicas.size()];
+					for (int j = 0; j < replicas.size(); j++) {
+						newReplicas[j] = new BrokerNode(replicas.get(j).id(), replicas.get(j).host(), replicas.get(j).port());
 					}
-	
-					RunningOffset runningInfo = new RunningOffset(name, internal, newPartitions);
-					topicCfg.setRunningOffset( runningInfo );
+					
+					BrokerPartition newPartition = new BrokerPartition(partition, newLeader, newReplicas);
+					newPartitions[i] = newPartition;
 				}
 
+				RunningOffset runningInfo = new RunningOffset(name, internal, newPartitions);
+				topicCfg.setRunningOffset( runningInfo );
 			}
+			
 		} catch(Throwable e) {
 			LOGGER.error("load kafka err:", e);
 			throw e;
