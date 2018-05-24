@@ -44,10 +44,8 @@ public class KafkaPoolCfg extends PoolCfg {
 		}
 		
 		// 加载 kafka xml
-		topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
-		
-	
-		initializeOfKafka( topicCfgMap );
+		this.topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+		this.initializeOfKafka( topicCfgMap );
 	}
 	
 	@Override
@@ -55,7 +53,7 @@ public class KafkaPoolCfg extends PoolCfg {
 		
 		// 1、 加载新的配置 
 		Map<String, TopicCfg> newTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
-		initializeOfKafka( newTopicCfgMap );
+		this.initializeOfKafka( newTopicCfgMap );
 		
 		// 2、增加旧引用
 		Map<String, TopicCfg> oldTopicCfgMap = topicCfgMap;
