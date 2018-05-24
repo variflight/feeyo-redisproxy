@@ -41,7 +41,6 @@ public class ServerRunningMonitor {
     private ServerRunningListener      listener;
 
     public ServerRunningMonitor(ServerRunningData serverData){
-        this();
         this.serverData = serverData;
     }
 

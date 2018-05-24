@@ -3,6 +3,7 @@ package com.feeyo.redis.net.front;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -517,7 +518,8 @@ public class RedisFrontSession {
 		String topic = new String(request.getArgs()[1]);
 		KafkaPoolCfg poolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
 		TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
-		BrokerPartition[] partitions = tc.getRunningOffset().getBrokerPartitions();
+		
+		Collection<BrokerPartition> partitions = tc.getRunningOffset().getPartitions().values();
 
 		// 申请1k buffer （肯定够）
 		ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
@@ -525,7 +527,7 @@ public class RedisFrontSession {
 		byte DOLLAR = '$';
 		byte[] CRLF = "\r\n".getBytes();
 
-		byte[] size = ProtoUtils.convertIntToByteArray(partitions.length);
+		byte[] size = ProtoUtils.convertIntToByteArray(partitions.size());
 		bb.put(ASTERISK).put(size).put(CRLF);
 		for (BrokerPartition dataPartition : partitions) {
 			byte[] partition = ProtoUtils.convertIntToByteArray(dataPartition.getPartition());

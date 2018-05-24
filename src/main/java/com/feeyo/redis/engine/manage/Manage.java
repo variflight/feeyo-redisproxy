@@ -26,11 +26,9 @@ import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
 import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
@@ -1010,21 +1008,17 @@ public class Manage {
 								String topic = new String( request.getArgs()[2] );
 								TopicCfg kafkaCfg = kafkaMap.get(topic);
 								if (kafkaCfg != null) {
-									Map<Integer, BrokerPartitionOffset> offsets = kafkaCfg.getRunningOffset().getPartitionOffsets();
-									BrokerPartition[] partitions = kafkaCfg.getRunningOffset().getBrokerPartitions();
-									
-									for (BrokerPartition partition : partitions) {
+									for (BrokerPartition partition : kafkaCfg.getRunningOffset().getPartitions().values()) {
 										int pt = partition.getPartition();
-										BrokerPartitionOffset offset = offsets.get(pt);
 										
 										StringBuffer line = new StringBuffer();
 										line.append(kafkaCfg.getName()).append(", ");
 										line.append(partition.getLeader().getHost()).append(partition.getLeader().getPort()).append(", ");
 										line.append(pt).append(", ");
-										line.append(offset.getLogStartOffset()).append(", ");
-										line.append(offset.getProducerOffset()).append(", ");
+										line.append(partition.getLogStartOffset()).append(", ");
+										line.append(partition.getProducerOffset()).append(", ");
 
-										for (ConsumerOffset consumerOffset : offset.getConsumerOffsets().values()) {
+										for (ConsumerOffset consumerOffset : partition.getConsumerOffsets().values()) {
 											line.append(consumerOffset.getConsumer() );
 											line.append(":");
 											line.append(consumerOffset.getCurrentOffset() );
@@ -1114,13 +1108,6 @@ public class Manage {
 					byte[] buff = KafkaCtx.getInstance().reloadAll();
 					return buff;
 				}
-			}
-
-		// ZK upload / activation
-		} else if (arg1.length == 2) {
-			if ( (arg1[0] == 'Z' || arg1[0] == 'z' ) &&
-				 (arg1[1] == 'K' || arg1[1] == 'k' ) ) {
-				return ZkClientManage.execute(request);
 			}
 			
 		// cluster 

@@ -1,22 +1,14 @@
 package com.feeyo.kafka.config;
 
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.config.loader.KafkaCtx;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.BrokerPartitionOffset;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 
 public class KafkaPoolCfg extends PoolCfg {
-	
-	private static Logger LOGGER = LoggerFactory.getLogger( KafkaPoolCfg.class );
 	
 	// topicName -> topicCfg
 	private Map<String, TopicCfg> topicCfgMap = null;
@@ -25,66 +17,52 @@ public class KafkaPoolCfg extends PoolCfg {
 		super(id, name, type, minCon, maxCon);
 	}
 	
-	// 加载kafka配置
-	//
 	@Override
-	public boolean loadExtraCfg() {
-		try {
-			
-			// load topic
-			topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, 
-					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
-			
-			// load topic metadata
-			KafkaCtx.getInstance().load(topicCfgMap, this);
-			
-		} catch (Exception e) {
-			LOGGER.error("", e);
-		}
-		return true;
+	public void loadExtraCfg() throws Exception {
+		
+		// 加载kafka配置
+		topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+		KafkaCtx.getInstance().load(topicCfgMap, this);
 	}
 	
 	@Override
-	public boolean reloadExtraCfg() throws Exception {
+	public void reloadExtraCfg() throws Exception {
 		
-		try {
+		// 1、 加载新的配置 
+		Map<String, TopicCfg> newTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+		KafkaCtx.getInstance().load(newTopicCfgMap, this);
+		
+		// 2、增加旧引用
+		Map<String, TopicCfg> oldTopicCfgMap = topicCfgMap;
+		
+		// 3、新旧对比
+		for (TopicCfg newTopicCfg : newTopicCfgMap.values()) {
 			
-			Map<String, TopicCfg> newTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, 
-					ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
-			
-			// load topic 
-			KafkaCtx.getInstance().load(newTopicCfgMap, this);
-			
-			for (Entry<String, TopicCfg> entry : newTopicCfgMap.entrySet()) {
-				String key = entry.getKey();
-				TopicCfg newTopicCfg = entry.getValue();
-				TopicCfg oldTopicCfg = topicCfgMap.get(key);
-				if (oldTopicCfg != null) {
-					// 迁移原来的offset
-					newTopicCfg.getRunningOffset().setPartitionOffsets( oldTopicCfg.getRunningOffset().getPartitionOffsets() );
-
-				} else {
+			//
+			TopicCfg oldTopicCfg = oldTopicCfgMap.get( newTopicCfg.getName() );
+			if ( oldTopicCfg != null) {
+				
+				//
+				for(BrokerPartition newPartition: newTopicCfg.getRunningOffset().getPartitions().values() ) {
 					
-					// partition -> data offset
-					ConcurrentHashMap<Integer, BrokerPartitionOffset> offsetMap = 
-							new ConcurrentHashMap<Integer, BrokerPartitionOffset>();
+					BrokerPartition oldPartition = oldTopicCfg.getRunningOffset().getPartition( newPartition.getPartition() );
+					if ( oldPartition != null ) {
+						newPartition.setProducerConsumerOffset(  oldPartition.getProducerConsumerOffset() );
 
-					for (BrokerPartition partition : newTopicCfg.getRunningOffset().getBrokerPartitions()) {
-						BrokerPartitionOffset partitionOffset = new BrokerPartitionOffset(partition.getPartition(), 0, 0);
-						offsetMap.put(partition.getPartition(), partitionOffset);
+					} else {
+						// TODO
+						// delete old partition
 					}
-
-					newTopicCfg.getRunningOffset().setPartitionOffsets(offsetMap);
 				}
 			}
-			
-			
-		} catch (Exception e) {
-			LOGGER.error("", e);
-			throw e;
 		}
 		
-		return true;
+		// 4、交互
+		this.topicCfgMap = newTopicCfgMap;
+		
+		// 5、旧对象清理
+		
+		
 	}
 
 	public Map<String, TopicCfg> getTopicCfgMap() {

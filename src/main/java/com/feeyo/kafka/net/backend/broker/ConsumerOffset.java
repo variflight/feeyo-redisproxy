@@ -11,7 +11,6 @@ public class ConsumerOffset {
 	private AtomicLong currentOffset;
 	private ConcurrentLinkedQueue<Long> oldOffsetQueue;
 	
-
 	public ConsumerOffset(String consumer, long offset) {
 		this.consumer = consumer;
 		this.currentOffset = new AtomicLong(offset);
@@ -59,7 +58,7 @@ public class ConsumerOffset {
 		return defaultOff.longValue();
 	}
 	
-	public void revertOldOffset(Long offset) {
+	public void returnOldOffset(Long offset) {
 		this.oldOffsetQueue.offer(offset);
 	}
 
@@ -74,6 +73,7 @@ public class ConsumerOffset {
 	public void setCurrentOffset(long currentOffset) {
 		this.currentOffset.set(currentOffset);
 	}
+	
 	
 	public static void main(String[] args) {
 		String s = "[1111111111111,2]";
