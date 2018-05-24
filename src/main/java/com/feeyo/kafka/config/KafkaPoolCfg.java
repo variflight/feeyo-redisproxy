@@ -47,10 +47,8 @@ public class KafkaPoolCfg extends PoolCfg {
 					
 					BrokerPartition oldPartition = oldTopicCfg.getRunningOffset().getPartition( newPartition.getPartition() );
 					if ( oldPartition != null ) {
-						newPartition.setProducerOffset( oldPartition.getProducerOffset() );
-						newPartition.setLogStartOffset( oldPartition.getLogStartOffset() );
-						newPartition.setConsumerOffsets(oldPartition.getConsumerOffsets() );
-						
+						newPartition.setProducerConsumerOffset(  oldPartition.getProducerConsumerOffset() );
+
 					} else {
 						// TODO
 						// delete old partition
