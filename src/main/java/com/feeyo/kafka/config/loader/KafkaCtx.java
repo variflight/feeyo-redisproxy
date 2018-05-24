@@ -35,7 +35,7 @@ public class KafkaCtx {
 	}
 	
 
-	public void load(Map<String, TopicCfg> topicCfgMap, PoolCfg poolCfg) {
+	public void load(Map<String, TopicCfg> topicCfgMap, PoolCfg poolCfg) throws Exception {
 		
 		if (topicCfgMap == null || topicCfgMap.isEmpty()) {
 			return;
@@ -122,6 +122,7 @@ public class KafkaCtx {
 			}
 		} catch(Throwable e) {
 			LOGGER.error("load kafka err:", e);
+			throw e;
 			
 		} finally {
 			if (kafkaAdmin != null)
