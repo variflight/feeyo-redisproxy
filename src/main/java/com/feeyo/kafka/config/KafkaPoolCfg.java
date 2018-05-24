@@ -56,6 +56,13 @@ public class KafkaPoolCfg extends PoolCfg {
 				}
 			}
 		}
+		
+		// 4、交互
+		this.topicCfgMap = newTopicCfgMap;
+		
+		// 5、旧对象清理
+		
+		
 	}
 
 	public Map<String, TopicCfg> getTopicCfgMap() {

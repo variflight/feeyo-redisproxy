@@ -80,6 +80,7 @@ public class BrokerPartition {
 	
 	
 	
+	//
 	public ProducerConsumerOffset getProducerConsumerOffset() {
 		return producerConsumerOffset;
 	}
@@ -170,6 +171,5 @@ public class BrokerPartition {
 		}
 		
 	}
-	
-	
+		
 }

@@ -133,10 +133,11 @@ public class KafkaCtx {
 	
 	// 重新加载
 	public byte[] reloadAll() {
+		
 		try {
+			
 			Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
-			for (Entry<Integer, PoolCfg> entry : poolCfgMap.entrySet()) {
-				PoolCfg poolCfg = entry.getValue();
+			for (PoolCfg poolCfg : poolCfgMap.values()) {
 				if ( poolCfg instanceof KafkaPoolCfg )
 					poolCfg.reloadExtraCfg();
 			}
@@ -148,6 +149,7 @@ public class KafkaCtx {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
 			return sb.toString().getBytes();
+			
 		} finally {
 			lock.unlock();
 		}
