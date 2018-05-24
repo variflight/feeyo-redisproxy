@@ -58,14 +58,12 @@ public class PoolCfg {
 	
 	// Default null implement
 	//
-	public boolean loadExtraCfg() {
+	public void loadExtraCfg() throws Exception {
 		// ignore
-		return true;
 	}
 	
-	public boolean reloadExtraCfg() throws Exception {
+	public void reloadExtraCfg() throws Exception {
 		// ignore
-		return true;
 	}
 	
 	@Override

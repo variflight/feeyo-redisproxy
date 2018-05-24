@@ -71,7 +71,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 					throw new InvalidRequestExistsException("no authority");
 				}
 				
-				partition = topicCfg.getRunningOffset().getProducerBrokerPartition();
+				partition = topicCfg.getRunningOffset().getPartitionByProducer();
 			}
 			
 			break;
@@ -87,13 +87,13 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				
 				// 轮询分区消费
 				if (request.getNumArgs() == 2) {
-					partition = topicCfg.getRunningOffset().getConsumerBrokerPartition();
+					partition = topicCfg.getRunningOffset().getPartitionByConsumer();
 					offset = KafkaOffsetService.INSTANCE().getOffset(userCfg.getPassword(), topicCfg, partition.getPartition());
 					
 				// 指定分区消费
 				} else {
 					int pt = Integer.parseInt(new String(request.getArgs()[2]));
-					partition = topicCfg.getRunningOffset().getConsumerBrokerPartition(pt);
+					partition = topicCfg.getRunningOffset().getPartition(pt);
 					offset = Long.parseLong(new String(request.getArgs()[3]));
 					if (request.getNumArgs() == 5) {
 						maxBytes = Integer.parseInt(new String(request.getArgs()[4]));
@@ -131,7 +131,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				}
 				
 				int pt = Integer.parseInt(new String(request.getArgs()[2]));
-				partition = topicCfg.getRunningOffset().getConsumerBrokerPartition(pt);
+				partition = topicCfg.getRunningOffset().getPartition(pt);
 				
 				break;
 			}

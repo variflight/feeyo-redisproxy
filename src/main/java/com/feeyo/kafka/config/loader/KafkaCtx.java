@@ -142,6 +142,9 @@ public class KafkaCtx {
 			}
 			
 		} catch (Exception e) {
+			
+		    LOGGER.error("reload err:", e);
+			
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
 			return sb.toString().getBytes();
