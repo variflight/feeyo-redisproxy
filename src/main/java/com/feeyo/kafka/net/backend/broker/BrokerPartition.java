@@ -31,7 +31,10 @@ public class BrokerPartition {
 		return replicas;
 	}
 	
-
+	
+	// producer offset
+	// ----------------------------------------------------------------------
+	//
 	public long getLogStartOffset() {
 		return producerConsumerOffset.getLogStartOffset();
 	}
@@ -78,9 +81,9 @@ public class BrokerPartition {
 		return this.producerConsumerOffset.getConsumerOffsets();
 	}
 	
-	
-	
-	//
+
+	// reload , swap offset
+	// 
 	public ProducerConsumerOffset getProducerConsumerOffset() {
 		return producerConsumerOffset;
 	}
