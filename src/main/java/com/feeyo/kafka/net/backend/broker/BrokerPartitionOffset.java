@@ -1,7 +1,5 @@
 package com.feeyo.kafka.net.backend.broker;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -52,19 +50,20 @@ public class BrokerPartitionOffset {
 	public void setPartition(int partition) {
 		this.partition = partition;
 	}
-
 	
-	public List<String> getAllConsumerOffset() {
-		List<String> list = new ArrayList<>();
-		for (ConsumerOffset consumerOffset : consumerOffsets.values()) {
-			StringBuffer sb = new StringBuffer();
-			sb.append(consumerOffset.getConsumer()).append(":").append(consumerOffset.getCurrentOffset());
-			list.add(sb.toString());
+	// consumer offset
+	// ----------------------------------------------------------------------
+	//
+	public ConsumerOffset getConsumerOffset(String consumer) {
+		ConsumerOffset consumerOffset = consumerOffsets.get(consumer);
+		if (consumerOffset == null) {
+			consumerOffset = new ConsumerOffset(consumer, 0);
+			consumerOffsets.put(consumer, consumerOffset);
 		}
-		return list;
+		return consumerOffset;
 	}
 	
-	public void rollbackConsumerOffset(String consumer, long offset) {
+	public void returnConsumerOffset(String consumer, long offset) {
 		
 		if (offset < 0) {
 			return;
@@ -75,31 +74,17 @@ public class BrokerPartitionOffset {
 		// 2:消费快过生产。
 		if ( offset < logStartOffset ) {
 			// 如果是日志被kafka自动清除的点位超出范围，把点位设置成kafka日志开始的点位
-			ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
+			ConsumerOffset consumerOffset = getConsumerOffset(consumer);
 			consumerOffset.setOffsetToLogStartOffset(logStartOffset);
 		} else {
-			ConsumerOffset consumerOffset = getConsumerOffsetByConsumer(consumer);
+			ConsumerOffset consumerOffset = getConsumerOffset(consumer);
 			consumerOffset.revertOldOffset(offset);
 		}
-
 	}
 	
 	
 	public Map<String, ConsumerOffset> getConsumerOffsets() {
 		return consumerOffsets;
 	}
-
-	public void setConsumerOffsets(Map<String, ConsumerOffset> offsets) {
-		this.consumerOffsets = offsets;
-	}
 	
-	public ConsumerOffset getConsumerOffsetByConsumer(String consumer) {
-		ConsumerOffset consumerOffset = consumerOffsets.get(consumer);
-		if (consumerOffset == null) {
-			consumerOffset = new ConsumerOffset(consumer, 0);
-			consumerOffsets.put(consumer, consumerOffset);
-		}
-		return consumerOffset;
-	}
-
 }
