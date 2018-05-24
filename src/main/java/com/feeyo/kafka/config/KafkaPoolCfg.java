@@ -23,7 +23,7 @@ public class KafkaPoolCfg extends PoolCfg {
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaPoolCfg.class );
 	
 	// topicName -> topicCfg
-	private Map<String, TopicCfg> topicCfgMap = null;
+	private volatile Map<String, TopicCfg> topicCfgMap = null;
 
 	public KafkaPoolCfg(int id, String name, int type, int minCon, int maxCon) {
 		super(id, name, type, minCon, maxCon);
