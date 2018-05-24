@@ -157,8 +157,8 @@ public class ServerRunningMonitor {
                 activeData = JsonUtils.unmarshalFromByte(bytes, ServerRunningData.class);
             }
         } catch (ZkNoNodeException e) {
-        		if (path.lastIndexOf(File.separator) > 0) {
-        			String fatherPath = path.substring(0, path.lastIndexOf(File.separator));
+        		if (path.lastIndexOf("/") > 0) {
+        			String fatherPath = path.substring(0, path.lastIndexOf("/"));
 				zkClient.createPersistent(fatherPath, true); // 尝试创建父节点
         			initRunning();
         		} else {
