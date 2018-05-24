@@ -1,6 +1,5 @@
 package com.feeyo.kafka.net.backend.broker.zk.running;
 
-import java.io.File;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -157,8 +156,8 @@ public class ServerRunningMonitor {
                 activeData = JsonUtils.unmarshalFromByte(bytes, ServerRunningData.class);
             }
         } catch (ZkNoNodeException e) {
-        		if (path.lastIndexOf(File.separator) > 0) {
-        			String fatherPath = path.substring(0, path.lastIndexOf(File.separator));
+        		if (path.lastIndexOf("/") > 0) {
+        			String fatherPath = path.substring(0, path.lastIndexOf("/"));
 				zkClient.createPersistent(fatherPath, true); // 尝试创建父节点
         			initRunning();
         		} else {
