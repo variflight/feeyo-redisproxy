@@ -23,6 +23,7 @@ public class KafkaPoolCfg extends PoolCfg {
 		
         // 加载 offset service
 		if ( !KafkaOffsetService.INSTANCE().isRunning() ) {
+			
 			KafkaOffsetService.INSTANCE().start();
 	        Runtime.getRuntime().addShutdownHook(new Thread() {
 				public void run() {
