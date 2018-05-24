@@ -29,7 +29,6 @@ import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.config.loader.zk.ZkClientManage;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
@@ -1109,13 +1108,6 @@ public class Manage {
 					byte[] buff = KafkaCtx.getInstance().reloadAll();
 					return buff;
 				}
-			}
-
-		// ZK upload / activation
-		} else if (arg1.length == 2) {
-			if ( (arg1[0] == 'Z' || arg1[0] == 'z' ) &&
-				 (arg1[1] == 'K' || arg1[1] == 'k' ) ) {
-				return ZkClientManage.execute(request);
 			}
 			
 		// cluster 

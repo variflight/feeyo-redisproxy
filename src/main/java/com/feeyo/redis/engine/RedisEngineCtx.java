@@ -14,7 +14,6 @@ import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.config.loader.zk.ZkClient;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PoolFactory;
 import com.feeyo.redis.net.front.RedisFrontendConnectionFactory;
@@ -384,8 +383,6 @@ public class RedisEngineCtx {
 		lock.lock();
 		try {
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
-			ZkClient.INSTANCE().reloadZkCfg();
-			
 			return "+OK\r\n".getBytes();
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
