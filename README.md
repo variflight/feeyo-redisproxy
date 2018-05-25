@@ -16,7 +16,8 @@
 
 1、功能描述
 
- 简化对 kafka 使用，无缝的引入账户体系及数据访问监控体系 等，安全性及可用性更高
+ 简化大家对 kafka 使用，无缝的引入账户体系及数据访问的监控体系，整体的安全性及可用性更高。
+ 
   
 2、关于 kafka.xml 配置
 
@@ -44,6 +45,11 @@
 | KOFFSET   	| {topic} {partition} {time}	    	 	| 查询分区的点位信息  	 				  | 
 
 注：KPOP 不指定 consume offset， 我们自动管理，  指定点位的，我们不管理，也不更新，需要 client 自己维持 consume offset
+
+4、kafka 管理指令
+
+ 使用 kafka 的队列功能，我们需要提前分配，然后初始化启动 或 通过管理账户的 reload kafka 指令进行热加载，
+ 加载的过程中，我们会检测 topic， 且会自动的新增到后端的 kafka 中
 
 
 ### 扩展的 Redis 运维指令
