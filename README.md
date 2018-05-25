@@ -14,7 +14,26 @@
 
 ### 1.9 版本开始，我们支持通过 Redis 协议，对外提供 kafka 队列服务
 
-kafka 指令描述
+1、功能描述
+  简化 kafka 使用，无缝的引入账户体系及数据访问监控体系，高可用
+  
+2、关于 kafka.xml 配置
+
+    <?xml version="1.0" encoding="UTF-8" ?>
+	<kafka>
+		<!-- kafka 代理 -->
+		<pool id="3">
+			<!-- topic 配置， 主题 、分区数、复制因子、生产者、消费者 -->
+			<topic name="appLogs" partitions="3" replicationFactor="2" producer="producer01" consumer="consumer01,consumer02"/>
+			<topic name="testTopic" partitions="4" replicationFactor="2" producer="producer01" consumer="consumer01,consumer03"/>
+		</pool>
+		
+		<!-- kafka 消费点位管理服务 -->
+		<offset zkServerIp="127.0.0.1:2181" path="/feeyo/kafka"  localIp="192.168.1.28"/>
+	</kafka>
+
+
+3、kafka 指令描述
 
 | 指令        	| 参数      	 								| 描述 		  	 					  |  
 | :------------ | :-------------------------------------   	| :-------------------------------    | 
@@ -89,9 +108,6 @@ server.xml, 网络及堆外内存池的相关配置
 | property   | name	    	 | frontIdleTimeout	 |  前端连接闲置后的超时时间（毫秒）	      	|
 | property   | name	    	 | backendIdleTimeout|  后端连接闲置后的超时时间（毫秒）  			|
 	
-
-zookeeper 配置 （待续）
-
 
 pool.xml, 连接池配置信息
 	
