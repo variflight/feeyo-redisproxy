@@ -13,12 +13,17 @@
 
 
 ### 1.9 版本开始，我们支持通过 Redis 协议，对外提供 kafka 队列服务
-	 KPUSH {topic} {content}
-	 KPOP {topic} 
-	 KPOP {topic} {partition}
-	 KPOP {topic} {partition} {offset}
-	 KPARTITION {topic}
-	 KOFFSET {topic} {partition} {time}
+
+kafka 指令描述
+
+| 指令        	| 参数      	 								| 描述 		  	 					  |  
+| :------------ | :-------------------------------------   	| :-------------------------------    | 
+| KPUSH   		| {topic} {partition} {content} 	    	| 生产指令，注：第二个参数为可选  		  	  |  
+| KPOP   		| {topic} {partition} {offset}	    	 	| 消费指令，注：第二、三个参数为可选 	 	  | 
+| KPARTITION    | {topic}	    	 						| 查询分区信息  	 					  | 
+| KOFFSET   	| {topic} {partition} {time}	    	 	| 查询分区的点位信息  	 				  | 
+
+注：KPOP 不指定 consume offset， 我们自动管理，  指定点位的，我们不管理，也不更新，需要 client 自己维持 consume offset
 
 
 ### 扩展的 Redis 运维指令
