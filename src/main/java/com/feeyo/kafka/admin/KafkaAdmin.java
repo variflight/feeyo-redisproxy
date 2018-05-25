@@ -100,29 +100,21 @@ public class KafkaAdmin {
 	
 	/**
 	 * 获取指定topic的配置信息
-	 * @return
 	 */
-	public TopicDescription getDescriptionByTopicName(String topic) {
+	public TopicDescription getDescriptionByTopicName(String topic) throws Exception {
+		
 		List<String> topics = new ArrayList<String>();
 		topics.add(topic);
-		try {
-			DescribeTopicsOptions dto = new DescribeTopicsOptions();
-			dto.timeoutMs(5 * 1000);
-			DescribeTopicsResult dtr = adminClient.describeTopics(topics, dto);
-			return dtr.all().get().get(topic);
-		} catch (InterruptedException e) {
-			LOGGER.warn("", e);
-		} catch (ExecutionException e) {
-			LOGGER.warn("", e);
-		} catch (Exception e) {
-			LOGGER.warn("", e);
-		}
-		return null;
+
+		DescribeTopicsOptions dto = new DescribeTopicsOptions();
+		dto.timeoutMs(5 * 1000);
+		DescribeTopicsResult dtr = adminClient.describeTopics(topics, dto);
+		return dtr.all().get().get(topic);
+
 	}
 
 	/**
 	 * 获取kafka集群配置信息
-	 * @return
 	 */
 	public Collection<Node> getClusterNodes() {
 		try {

@@ -13,8 +13,8 @@ import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.kafka.net.backend.broker.zk.BooleanMutex;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
+import com.feeyo.kafka.net.backend.broker.zk.util.BooleanMutex;
 import com.feeyo.kafka.util.JsonUtils;
 
 /**
@@ -41,7 +41,6 @@ public class ServerRunningMonitor {
     private ServerRunningListener      listener;
 
     public ServerRunningMonitor(ServerRunningData serverData){
-        this();
         this.serverData = serverData;
     }
 
@@ -156,8 +155,13 @@ public class ServerRunningMonitor {
                 activeData = JsonUtils.unmarshalFromByte(bytes, ServerRunningData.class);
             }
         } catch (ZkNoNodeException e) {
-            zkClient.createPersistent(path, true); // 尝试创建父节点
-            initRunning();
+        		if (path.lastIndexOf("/") > 0) {
+        			String fatherPath = path.substring(0, path.lastIndexOf("/"));
+				zkClient.createPersistent(fatherPath, true); // 尝试创建父节点
+        			initRunning();
+        		} else {
+        			LOGGER.error("running path err, path :" + path + ":", e);
+        		}
         }
     }
 

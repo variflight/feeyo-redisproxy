@@ -9,6 +9,7 @@ import com.feeyo.util.jedis.JedisPool;
 import com.feeyo.util.jedis.RedisCommand;
 
 public class RemoteOffsetAdmin {
+	
 	private JedisHolder jedisHolder = new JedisHolder();
 	
 	// 获取offset
@@ -20,7 +21,7 @@ public class RemoteOffsetAdmin {
 			conn.sendCommand(RedisCommand.AUTH, user);
 			conn.getStatusCodeReply();
 			
-			conn.sendCommand(RedisCommand.KCONSUMEOFFSET, topic, String.valueOf(partition));
+			conn.sendCommand(RedisCommand.KGETOFFSET, topic, String.valueOf(partition));
 			String str = conn.getStatusCodeReply();
 			offset = Long.parseLong(str);
 			
@@ -35,8 +36,8 @@ public class RemoteOffsetAdmin {
 		return offset;
 	}
 	
-	// 获取offset
-	public String rollbackConsumerOffset(String remoteAddress, String user, String topic, int partition, long offset) {
+	// 返还 offset
+	public String returnOffset(String remoteAddress, String user, String topic, int partition, long offset) {
 		JedisPool jedisPool = jedisHolder.getJedisPool(remoteAddress);
 		JedisConnection conn = jedisPool.getResource();
 		try {

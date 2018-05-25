@@ -44,7 +44,9 @@ public class CommandParse {
 	
 	
 	private static final Map<String, RedisRequestPolicy> _cmds = new HashMap<String, RedisRequestPolicy>( 220 );
-	static {		
+	
+	static {	
+		
 		// Manage
 		_cmds.put("SHOW", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, READ_CMD));
 		_cmds.put("RELOAD", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
@@ -58,7 +60,10 @@ public class CommandParse {
 		_cmds.put("KPOP", 				new RedisRequestPolicy(KAFKA_CMD, CONSUMER_CMD, WRITE_CMD));
 		_cmds.put("KPARTITIONS", 		new RedisRequestPolicy(KAFKA_CMD, PARTITIONS_CMD, READ_CMD));
 		_cmds.put("KOFFSET", 			new RedisRequestPolicy(KAFKA_CMD, OFFSET_CMD, READ_CMD));
-		_cmds.put("KCONSUMEOFFSET", 		new RedisRequestPolicy(KAFKA_CMD, PRIVATE_CMD, WRITE_CMD));
+		
+		//
+		// kafka private
+		_cmds.put("KGETOFFSET", 		new RedisRequestPolicy(KAFKA_CMD, PRIVATE_CMD, WRITE_CMD));
 		_cmds.put("KRETURNOFFSET", 		new RedisRequestPolicy(KAFKA_CMD, PRIVATE_CMD, WRITE_CMD));
 		
 		// Cluster

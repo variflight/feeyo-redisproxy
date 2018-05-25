@@ -15,7 +15,7 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.feeyo.kafka.config.OffsetManageCfg;
+import com.feeyo.kafka.config.OffsetCfg;
 import com.feeyo.kafka.config.TopicCfg;
 
 public class KafkaConfigLoader {
@@ -70,8 +70,8 @@ public class KafkaConfigLoader {
 	
 	
 	
-	public static OffsetManageCfg loadOffsetManageCfg(String uri) {
-		OffsetManageCfg offsetCfg = null;
+	public static OffsetCfg loadOffsetCfg(String uri) {
+		OffsetCfg offsetCfg = null;
 		try {
 			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("offset");
 			if (nodeList.getLength() != 1) {
@@ -79,15 +79,17 @@ public class KafkaConfigLoader {
 			}
 			Node node = nodeList.item(0);
 			NamedNodeMap nameNodeMap = node.getAttributes();
-			String server = getAttribute(nameNodeMap, "server", null);
+			String zkServerIp = getAttribute(nameNodeMap, "zkServerIp", null);
 			String path = getAttribute(nameNodeMap, "path", "/feeyo/kafka");
+			String localIp = getAttribute(nameNodeMap, "localIp",  null);
+			
 			int index = path.lastIndexOf('/');
 			if (index > 0 && index == path.length() - 1) {
 				path = path.substring(0, index);
 			}
-			offsetCfg = new OffsetManageCfg(server, path);
+			offsetCfg = new OffsetCfg(zkServerIp, path, localIp);
 		} catch (Exception e) {
-			LOGGER.error("", e);
+			LOGGER.error("load offset cfg err:", e);
 		}
 		return offsetCfg;
 	}

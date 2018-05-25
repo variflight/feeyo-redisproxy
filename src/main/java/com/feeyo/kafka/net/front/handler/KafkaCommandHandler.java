@@ -317,7 +317,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		}
 		
 		private void revertConsumerOffset(String topic, int partition, long offset) {
-			KafkaOffsetService.INSTANCE().rollbackConsumerOffset(frontCon.getPassword(), topic, partition, offset);
+			KafkaOffsetService.INSTANCE().returnOffset(frontCon.getPassword(), topic, partition, offset);
 		}
 	}
 	

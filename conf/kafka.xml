@@ -7,7 +7,7 @@
 		<topic name="etd_entry_k_queue" partitions="3" replicationFactor="2" producer="yzm" consumer="yzm"/>
 	</pool>
 	
-	<offset server="127.0.0.1:2181" path="/feeyo/kafka" />
+	<offset zkServerIp="127.0.0.1:2181" path="/feeyo/kafka"  localIp=""/>
 	
 	
 </kafka>

@@ -174,8 +174,10 @@ public class NetworkUtil {
 
 	public static String getLocalAddress() {
 		String ip = getLocalIp();
+		
 		Map<String, String> map = RedisEngineCtx.INSTANCE().getServerMap();
 		String port = map.get("port");
+		
 		StringBuffer sb = new StringBuffer();
 		sb.append(ip).append(":").append(port);
 		return sb.toString();
