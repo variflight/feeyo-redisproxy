@@ -51,6 +51,7 @@ public class RouteService {
 	// 路由计算, 必须认证后
 	public static RouteResult route(List<RedisRequest> requests, RedisFrontConnection frontCon) 
 			throws InvalidRequestExistsException, FullRequestNoThroughtException, PhysicalNodeUnavailableException {
+		
 		UserCfg userCfg = frontCon.getUserCfg();
 		
 		int poolType = userCfg.getPoolType();

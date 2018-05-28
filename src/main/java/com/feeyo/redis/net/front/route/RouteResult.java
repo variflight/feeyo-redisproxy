@@ -37,7 +37,6 @@ public class RouteResult {
 	public List<RedisRequest> getRequests() {
 		return requests;
 	}
-
 	
 	public List<RouteNode> getRouteNodes() {
 		return nodes;
@@ -97,4 +96,5 @@ public class RouteResult {
 	    if ( nodes != null)
 	    	nodes.clear();
 	}
+	
 }
