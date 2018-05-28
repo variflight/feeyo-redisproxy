@@ -38,7 +38,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	// 0表示producer无需等待leader的确认，1代表需要leader确认写入它的本地log并立即确认，-1代表所有的备份都完成后确认。
 	private static final short ACKS = 1;
-	private static final int TIME_OUT = 1000;
+	private static final int TIME_OUT = 500;
 	private static final int MINBYTES = 1;
 	private static final int MAXBYTES = 1024 * 1024 * 4;
 	
