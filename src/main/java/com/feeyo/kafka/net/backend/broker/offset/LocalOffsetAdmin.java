@@ -13,7 +13,7 @@ import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.OffsetCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
 import com.feeyo.kafka.net.backend.broker.zk.util.ZkPathUtil;
 import com.feeyo.kafka.util.JsonUtils;
