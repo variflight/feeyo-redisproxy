@@ -113,7 +113,7 @@ public class ConfigLoader {
 				map.put(id, poolCfg);
 			}
 		} catch (Exception e) {
-			LOGGER.error("loadPoolCfg err " + e);
+			LOGGER.error("loadPoolCfg err ", e);
 			throw e;
 		}
 		return map;

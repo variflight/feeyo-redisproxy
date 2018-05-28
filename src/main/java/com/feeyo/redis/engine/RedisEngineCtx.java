@@ -1,6 +1,5 @@
 package com.feeyo.redis.engine;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -63,7 +62,7 @@ public class RedisEngineCtx {
 	private ReentrantLock lock;
 	
 	// 初始化
-	public void init() throws IOException {
+	public void init() throws Exception {
 		
 		this.lock = new ReentrantLock();
 
@@ -74,6 +73,7 @@ public class RedisEngineCtx {
 			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 		} catch (Exception e) {
+			throw e;
 		}
 		
 		// 1、Buffer 配置

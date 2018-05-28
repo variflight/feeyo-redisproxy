@@ -27,7 +27,7 @@ import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
-
+//
 public class KafkaOffsetService {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaOffsetService.class );
@@ -36,8 +36,8 @@ public class KafkaOffsetService {
 	private static AtomicBoolean running = new AtomicBoolean( false );
 	
 	//
-	private final RemoteOffsetAdmin remoteAdmin;
-	private final LocalOffsetAdmin localAdmin;
+	private final OffsetRemoteAdmin remoteAdmin;
+	private final OffsetLocalAdmin localAdmin;
 	
 	// zk ha
 	//
@@ -46,6 +46,8 @@ public class KafkaOffsetService {
 	private ServerRunningData runningData;
 	private ServerRunningMonitor runningMonitor;	// HA 监控
 	
+	private String zkServerIp = null;
+	private String path = null;
 	private String localIp = null;
 	
 	// flush to zk
@@ -63,13 +65,17 @@ public class KafkaOffsetService {
 	private KafkaOffsetService() {
 		
 		OffsetCfg offsetCfg = KafkaConfigLoader.loadOffsetCfg(ConfigLoader.buidCfgAbsPathFor( "kafka.xml" ));
-		this.localAdmin = new LocalOffsetAdmin( offsetCfg );
-		this.remoteAdmin = new RemoteOffsetAdmin();
-		
+		this.zkServerIp = offsetCfg.getZkServerIp();
+		this.path = offsetCfg.getPath();
 		this.localIp = offsetCfg.getLocalIp();
-
-		this.zkPathUtil = new ZkPathUtil( offsetCfg.getPath() );
-		this.zkclientx = ZkClientx.getZkClient( offsetCfg.getZkServerIp() );
+		
+		//
+		this.localAdmin = new OffsetLocalAdmin( zkServerIp, path );
+		this.remoteAdmin = new OffsetRemoteAdmin();
+		
+		//
+		this.zkPathUtil = new ZkPathUtil( path );
+		this.zkclientx = ZkClientx.getZkClient( zkServerIp );
 	
 		this.runningData = new ServerRunningData( localIp );
 		this.runningMonitor = new ServerRunningMonitor( runningData );
@@ -216,8 +222,6 @@ public class KafkaOffsetService {
 			zkclientx.delete(path);
 		}
 	}
-	
-	
 	
 	
 	

@@ -29,15 +29,6 @@
 	<property name="frontIdleTimeout">300000</property>
 	<property name="backendIdleTimeout">1800000</property>
 
-	<!-- Zookeeper settings -->
-	<zookeeper>
-		<usingZk value="false" />
-		<autoActivation value="false" />
-		<zkHome value="/root/redis-proxy/" />
-		<conf name="user.xml" />
-		<conf name="pool.xml" />
-		<conf name="mail.properties" />
-		<node ipAndPort="192.168.5.13:2181" />
-	</zookeeper>
+
 </redis>
 

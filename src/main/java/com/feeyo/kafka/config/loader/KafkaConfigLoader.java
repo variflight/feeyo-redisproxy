@@ -62,8 +62,7 @@ public class KafkaConfigLoader {
 				
 			}
 		} catch (Exception e) {
-			LOGGER.error("load kafka.xml err: " + e);
-			throw e;
+			throw new Exception("load kafka.xml err:", e);
 		}
 		return map;
 	}
