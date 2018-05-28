@@ -25,14 +25,14 @@ import com.feeyo.redis.engine.RedisEngineCtx;
  * 
  * @author yangtao
  */
-public class LocalOffsetAdmin {
+public class OffsetLocalAdmin {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger(LocalOffsetAdmin.class);
+	private static Logger LOGGER = LoggerFactory.getLogger(OffsetLocalAdmin.class);
 
 	private String zkServerIp;
 	private ZkPathUtil zkPathUtil;
 
-	public LocalOffsetAdmin(String zkServerIp, String rootPath) {
+	public OffsetLocalAdmin(String zkServerIp, String rootPath) {
 		this.zkServerIp = zkServerIp;
 		this.zkPathUtil = new ZkPathUtil( rootPath );
 	}
@@ -50,7 +50,7 @@ public class LocalOffsetAdmin {
 			try {
 				
 				//
-				for (BrokerPartition p : topicCfg.getRunningOffset().getPartitions().values()) {
+				for (BrokerPartition p : topicCfg.getRunningInfo().getPartitions().values()) {
 					
 					
 					//  producer & log_start
@@ -157,7 +157,7 @@ public class LocalOffsetAdmin {
 				
 					try {
 						
-						for (BrokerPartition p : topicCfg.getRunningOffset().getPartitions().values()) {
+						for (BrokerPartition p : topicCfg.getRunningInfo().getPartitions().values()) {
 							
 							int partition = p.getPartition();
 							
@@ -207,7 +207,7 @@ public class LocalOffsetAdmin {
 
 	// 申请offset
 	public long getOffset(String user, TopicCfg topicCfg, int partition) {
-		BrokerPartition brokerPartition = topicCfg.getRunningOffset().getPartition(partition);
+		BrokerPartition brokerPartition = topicCfg.getRunningInfo().getPartition(partition);
 		ConsumerOffset cOffset = brokerPartition.getConsumerOffset(user);
 		long offset = cOffset.getNewOffset();
 		return offset;
@@ -231,7 +231,7 @@ public class LocalOffsetAdmin {
 			return;
 		}
 		
-		BrokerPartition brokerPartition = topicCfg.getRunningOffset().getPartition(partition);
+		BrokerPartition brokerPartition = topicCfg.getRunningInfo().getPartition(partition);
 		if (brokerPartition != null) {
 			brokerPartition.returnConsumerOffset(user, offset);
 		}
@@ -255,7 +255,7 @@ public class LocalOffsetAdmin {
 			return;
 		}
 		
-		BrokerPartition brokerPartition = topicCfg.getRunningOffset().getPartition(partition);
+		BrokerPartition brokerPartition = topicCfg.getRunningInfo().getPartition(partition);
 		if (brokerPartition != null) {
 			brokerPartition.setProducerOffset(offset, logStartOffset);
 		}

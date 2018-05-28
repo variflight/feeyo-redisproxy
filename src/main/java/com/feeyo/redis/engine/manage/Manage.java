@@ -1007,7 +1007,7 @@ public class Manage {
 								String topic = new String( request.getArgs()[2] );
 								TopicCfg kafkaCfg = kafkaMap.get(topic);
 								if (kafkaCfg != null) {
-									for (BrokerPartition partition : kafkaCfg.getRunningOffset().getPartitions().values()) {
+									for (BrokerPartition partition : kafkaCfg.getRunningInfo().getPartitions().values()) {
 										int pt = partition.getPartition();
 										
 										StringBuffer line = new StringBuffer();

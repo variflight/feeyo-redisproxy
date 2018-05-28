@@ -10,9 +10,9 @@ import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.JedisPool;
 import com.feeyo.util.jedis.RedisCommand;
 
-public class RemoteOffsetAdmin {
+public class OffsetRemoteAdmin {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( RemoteOffsetAdmin.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( OffsetRemoteAdmin.class );
 	
 	private JedisHolder jedisHolder = new JedisHolder();
 	

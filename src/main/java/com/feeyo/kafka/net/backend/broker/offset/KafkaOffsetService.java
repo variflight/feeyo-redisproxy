@@ -36,8 +36,8 @@ public class KafkaOffsetService {
 	private static AtomicBoolean running = new AtomicBoolean( false );
 	
 	//
-	private final RemoteOffsetAdmin remoteAdmin;
-	private final LocalOffsetAdmin localAdmin;
+	private final OffsetRemoteAdmin remoteAdmin;
+	private final OffsetLocalAdmin localAdmin;
 	
 	// zk ha
 	//
@@ -70,8 +70,8 @@ public class KafkaOffsetService {
 		this.localIp = offsetCfg.getLocalIp();
 		
 		//
-		this.localAdmin = new LocalOffsetAdmin( zkServerIp, path );
-		this.remoteAdmin = new RemoteOffsetAdmin();
+		this.localAdmin = new OffsetLocalAdmin( zkServerIp, path );
+		this.remoteAdmin = new OffsetRemoteAdmin();
 		
 		//
 		this.zkPathUtil = new ZkPathUtil( path );

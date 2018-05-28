@@ -13,8 +13,8 @@ import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.net.backend.broker.BrokerNode;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
+import com.feeyo.kafka.net.backend.broker.BrokerRunningInfo;
 import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
-import com.feeyo.kafka.net.backend.broker.offset.RunningOffset;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 
@@ -66,9 +66,9 @@ public class KafkaPoolCfg extends PoolCfg {
 			if ( oldTopicCfg != null) {
 				
 				//
-				for(BrokerPartition newPartition: newTopicCfg.getRunningOffset().getPartitions().values() ) {
+				for(BrokerPartition newPartition: newTopicCfg.getRunningInfo().getPartitions().values() ) {
 					
-					BrokerPartition oldPartition = oldTopicCfg.getRunningOffset().getPartition( newPartition.getPartition() );
+					BrokerPartition oldPartition = oldTopicCfg.getRunningInfo().getPartition( newPartition.getPartition() );
 					if ( oldPartition != null ) {
 						newPartition.setProducerConsumerOffset(  oldPartition.getProducerConsumerOffset() );
 
@@ -163,7 +163,7 @@ public class KafkaPoolCfg extends PoolCfg {
 					newPartitions[i] = newPartition;
 				}
 
-				topicCfg.setRunningOffset( new RunningOffset(name, internal, newPartitions) );
+				topicCfg.setRunningInfo( new BrokerRunningInfo(name, internal, newPartitions) );
 			}
 			
 		} catch(Throwable e) {
