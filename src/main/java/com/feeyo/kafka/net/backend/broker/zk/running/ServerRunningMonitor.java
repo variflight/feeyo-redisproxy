@@ -124,7 +124,7 @@ public class ServerRunningMonitor {
          }
     }
 
-    public void stop() {
+    public synchronized void stop() {
     	
     	if (!running) {
             throw new RuntimeException(this.getClass().getName() + " isn't start , please check");
