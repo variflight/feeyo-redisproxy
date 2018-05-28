@@ -10,6 +10,7 @@ import org.I0Itec.zkclient.exception.ZkInterruptedException;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.apache.zookeeper.CreateMode;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,15 +42,16 @@ public class ServerRunningMonitor {
     private ServerRunningListener      listener;
 
     public ServerRunningMonitor(ServerRunningData serverData){
+    	
         this.serverData = serverData;
-    }
-
-    public ServerRunningMonitor(){
+        
         // 创建父节点
         dataListener = new IZkDataListener() {
 
             public void handleDataChange(String dataPath, Object data) throws Exception {
                 ServerRunningData runningData = JsonUtils.unmarshalFromByte((byte[]) data, ServerRunningData.class);
+                LOGGER.debug("runningData:{}", JsonUtils.marshalToString(runningData));
+                
                 if (!isMine(runningData.getAddress())) {
                     mutex.set(false);
                 }
@@ -78,12 +80,9 @@ public class ServerRunningMonitor {
                 }
             }
         };
-
+        
     }
 
-    public void init() {
-        processStart();
-    }
 
     public boolean isStart() {
         return running;
@@ -96,24 +95,15 @@ public class ServerRunningMonitor {
 		}
 
 		running = true;
+		
+	    // 如果需要尽可能释放 node资源，不需要监听 running节点，不然即使stop了这台机器，另一台机器立马会start
+        zkClient.subscribeDataChanges(path, dataListener);
+        initRunning();
 
-		processStart();
-		if (zkClient != null) {
-			// 如果需要尽可能释放 channel资源，不需要监听running节点，不然即使stop了这台机器，另一台机器立马会start
-			zkClient.subscribeDataChanges(path, dataListener);
-
-			initRunning();
-		} else {
-			processActiveEnter();// 没有zk，直接启动
-		}
 	}
 
     public void release() {
-        if (zkClient != null) {
-            releaseRunning(); // 尝试一下release
-        } else {
-            processActiveExit(); // 没有zk，直接启动
-        }
+    	 releaseRunning(); // 尝试一下release
     }
 
     public void stop() {
@@ -124,17 +114,12 @@ public class ServerRunningMonitor {
 
 		running = false;
 
-        if (zkClient != null) {
-            zkClient.unsubscribeDataChanges(path, dataListener);
-
-            releaseRunning(); // 尝试一下release
-        } else {
-            processActiveExit(); // 没有zk，直接启动
-        }
-        processStop();
+        zkClient.unsubscribeDataChanges(path, dataListener);
+        releaseRunning(); // 尝试一下release
     }
 
     private void initRunning() {
+    	
         if (!isStart()) {
             return;
         }
@@ -155,13 +140,15 @@ public class ServerRunningMonitor {
                 activeData = JsonUtils.unmarshalFromByte(bytes, ServerRunningData.class);
             }
         } catch (ZkNoNodeException e) {
-        		if (path.lastIndexOf("/") > 0) {
-        			String fatherPath = path.substring(0, path.lastIndexOf("/"));
+        	
+			if (path.lastIndexOf("/") > 0) {
+				String fatherPath = path.substring(0, path.lastIndexOf("/"));
 				zkClient.createPersistent(fatherPath, true); // 尝试创建父节点
-        			initRunning();
-        		} else {
-        			LOGGER.error("running path err, path :" + path + ":", e);
-        		}
+				
+				initRunning();
+			} else {
+				LOGGER.error("running path err, path :" + path + ":", e);
+			}
         }
     }
 
@@ -186,20 +173,20 @@ public class ServerRunningMonitor {
             // 检查下nid是否为自己
             boolean result = isMine(activeData.getAddress());
             if (!result) {
-                LOGGER.warn("kafka cmd is running in node[{}] , but not in node[{}]",
+                LOGGER.warn("node is running in node[{}] , but not in node[{}]",
                     activeData.getAddress(),
                     serverData.getAddress());
             }
             return result;
         } catch (ZkNoNodeException e) {
-            LOGGER.warn("kafka cmd is not run any in node");
+            LOGGER.warn("node is not run any in node");
             return false;
         } catch (ZkInterruptedException e) {
-            LOGGER.warn("kafka cmd check is interrupt");
+            LOGGER.warn("node check is interrupt");
             Thread.interrupted();// 清除interrupt标记
             return check();
         } catch (ZkException e) {
-            LOGGER.warn("kafka cmd check is failed");
+            LOGGER.warn("node check is failed");
             return false;
         }
     }
@@ -218,26 +205,6 @@ public class ServerRunningMonitor {
     //
     private boolean isMine(String address) {
         return address.equals(serverData.getAddress());
-    }
-
-    private void processStart() {
-        if (listener != null) {
-            try {
-                listener.processStart();
-            } catch (Exception e) {
-                LOGGER.error("processStart failed", e);
-            }
-        }
-    }
-
-    private void processStop() {
-        if (listener != null) {
-            try {
-                listener.processStop();
-            } catch (Exception e) {
-                LOGGER.error("processStop failed", e);
-            }
-        }
     }
 
     private void processActiveEnter() {
@@ -259,6 +226,7 @@ public class ServerRunningMonitor {
             }
         }
     }
+
     
     public void setPath(String path) {
 		this.path = path;
