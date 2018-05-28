@@ -92,7 +92,6 @@ public class KafkaOffsetService {
 
 			@Override
 			public void processActiveEnter() {
-				
 				// start
 				//
 				LOGGER.info("###### start master=" + localIp);
@@ -125,15 +124,14 @@ public class KafkaOffsetService {
 			return;
 		}
 		
-		LOGGER.info("## start kafkaOffsetService, localIp={} ", localIp);
+		//
+		initialize(  zkPathUtil.getClusterHostPath( localIp )  );
 		
-		final String path = zkPathUtil.getClusterHostPath( localIp );
-		init( path );
-		
+		//  
 		this.zkclientx.subscribeStateChanges(new IZkStateListener() {
 			public void handleStateChanged(KeeperState state) throws Exception {}
 			public void handleNewSession() throws Exception {
-				init( path );
+				initialize( path );
 			}
 
 			@Override
@@ -147,20 +145,19 @@ public class KafkaOffsetService {
 		}
 		
 		
-		//
-		// 定时持久化offset
+		// flush
+		// 
 		executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
 				try {
-					// offset 数据持久化
-					if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null )
+					if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null ) {
 						localAdmin.flushAll();
+					}
 
 				} catch (Exception e) {
-					LOGGER.warn("offsetAdmin err: ", e);
+					LOGGER.warn("offset flush err: ", e);
 				}
-
 			}
 		}, 30, 30, TimeUnit.SECONDS);
 
@@ -171,16 +168,13 @@ public class KafkaOffsetService {
 		
 		running.set( false );
 		
-		LOGGER.info("## stop kafkaOffsetService, localIp={} ", localIp);
-
 		// stop running
 		if (runningMonitor != null && runningMonitor.isStart()) {
 			runningMonitor.stop();
 		}
 
 		// release node
-		final String path = zkPathUtil.getClusterHostPath( localIp );
-		release(path);
+		release(  zkPathUtil.getClusterHostPath( localIp ) );
 		
 		// flush 
 		try {	
@@ -200,7 +194,9 @@ public class KafkaOffsetService {
 	//
 	
 	//################### cluster path ##################
-	private void init(String path) {
+	// 初始化
+	//
+	private void initialize(String path) {
 		LOGGER.info("## init the path = {}",  path);
 		// 初始化系统目录
 		if (zkclientx != null) {
@@ -218,9 +214,10 @@ public class KafkaOffsetService {
 		}
 	}
 
+	// 卸载
+	//
 	private void release(String path) {
 		 LOGGER.info("## release the path = {}", path);
-		// 初始化系统目录
 		if (zkclientx != null) {
 			zkclientx.delete(path);
 		}
