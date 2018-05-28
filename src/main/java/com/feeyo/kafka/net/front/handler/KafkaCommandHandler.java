@@ -24,6 +24,7 @@ import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
+
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.AbstractCommandHandler;
@@ -114,7 +115,9 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		record.setTimestampDelta(0);
 		ProduceRequest pr = new ProduceRequest(version, ACKS, TIME_OUT, null, partition, record);
 		Struct body = pr.toStruct();
-		RequestHeader rh = new RequestHeader(ApiKeys.PRODUCE.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
+		
+		RequestHeader rh = new RequestHeader(ApiKeys.PRODUCE.id, version, 
+				Thread.currentThread().getName(), Utils.getCorrelationId());
 		Struct header = rh.toStruct();
 		
 		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT);
@@ -135,7 +138,9 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		
 		PartitionData pd = new PartitionData(offset, LOG_START_OFFSET, maxBytes);
 		topicAndPartitionData.addData(partition, pd);
-		RequestHeader rh = new RequestHeader(ApiKeys.FETCH.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
+		
+		RequestHeader rh = new RequestHeader(ApiKeys.FETCH.id, version, 
+				Thread.currentThread().getName(), Utils.getCorrelationId());
 		Struct header = rh.toStruct();
 		Struct body = fr.toStruct();
 		

@@ -6,8 +6,6 @@ import java.util.Map;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartitionInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
@@ -20,8 +18,6 @@ import com.feeyo.redis.config.PoolCfg;
 
 public class KafkaPoolCfg extends PoolCfg {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( KafkaPoolCfg.class );
-	
 	// topicName -> topicCfg
 	private volatile Map<String, TopicCfg> topicCfgMap = null;
 
@@ -32,9 +28,12 @@ public class KafkaPoolCfg extends PoolCfg {
 	@Override
 	public void loadExtraCfg() throws Exception {
 		
-        // 加载 offset service
+		// 加载 kafka xml
+		this.topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+		this.initializeOfKafka( topicCfgMap );
+		
+		// 加载 offset service
 		if ( !KafkaOffsetService.INSTANCE().isRunning() ) {
-			
 			KafkaOffsetService.INSTANCE().start();
 	        Runtime.getRuntime().addShutdownHook(new Thread() {
 				public void run() {
@@ -42,10 +41,6 @@ public class KafkaPoolCfg extends PoolCfg {
 				}
 			});
 		}
-		
-		// 加载 kafka xml
-		this.topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
-		this.initializeOfKafka( topicCfgMap );
 	}
 	
 	@Override
@@ -86,7 +81,13 @@ public class KafkaPoolCfg extends PoolCfg {
 		// 5、旧对象清理
 	}
 	
-	
+	/**
+	 * 
+	 * 
+		zhuamdeMacBook-Pro:logs zhuam$ [2018-05-28 15:26:41,394] INFO [Admin Manager on Broker 0]: 
+		Error processing create topic request for topic test01 with arguments (numPartitions=3, replicationFactor=2, replicasAssignments={}, configs={}) (kafka.server.AdminManager)
+		org.apache.kafka.common.errors.InvalidReplicationFactorException: Replication factor: 2 larger than available brokers: 1.
+	 */
 	private void initializeOfKafka(Map<String, TopicCfg> topicCfgMap) throws Exception {
 		
 		if (topicCfgMap == null || topicCfgMap.isEmpty()) {
@@ -167,7 +168,6 @@ public class KafkaPoolCfg extends PoolCfg {
 			}
 			
 		} catch(Throwable e) {
-			LOGGER.error("initialize kafka err:", e);
 			throw e;
 			
 		} finally {

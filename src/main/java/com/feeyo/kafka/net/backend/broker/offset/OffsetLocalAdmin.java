@@ -120,7 +120,7 @@ public class OffsetLocalAdmin {
 
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (PoolCfg poolCfg : poolCfgMap.values()) {
-			if (poolCfg instanceof KafkaPoolCfg) {
+			if (poolCfg != null && poolCfg instanceof KafkaPoolCfg) {
 				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
 				this.recoveryFromZkByPoolId(poolCfg.getId(), topicCfgMap.values());
 				
@@ -141,9 +141,12 @@ public class OffsetLocalAdmin {
 	public void flushAll() {
 		
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
+		if ( poolCfgMap == null)
+			return;
+		
 		for (PoolCfg poolCfg: poolCfgMap.values()) {
 
-			if (poolCfg instanceof KafkaPoolCfg) {
+			if ( poolCfg != null && poolCfg instanceof KafkaPoolCfg) {
 
 				//
 				ZkClientx zkclientx = ZkClientx.getZkClient( zkServerIp );

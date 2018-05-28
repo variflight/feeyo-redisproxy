@@ -53,7 +53,12 @@ public class RedisServer {
 		/**
 		 * 引擎初始化
 		 */
-		RedisEngineCtx.INSTANCE().init();
+		try {
+			RedisEngineCtx.INSTANCE().init();
+		} catch (Exception e) {
+			// exit
+			System.exit( 0 );
+		}
 		
 		
 		/**
