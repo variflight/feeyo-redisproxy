@@ -77,6 +77,7 @@ public class KafkaOffsetService {
 		this.zkPathUtil = new ZkPathUtil( path );
 		this.zkclientx = ZkClientx.getZkClient( zkServerIp );
 	
+		// select master
 		this.runningData = new ServerRunningData( localIp );
 		this.runningMonitor = new ServerRunningMonitor( runningData );
 		this.runningMonitor.setPath( zkPathUtil.getMasterRunningPath() );
@@ -91,26 +92,27 @@ public class KafkaOffsetService {
 
 			@Override
 			public void processActiveEnter() {
-				try {
+				
+				// start
+				//
+				LOGGER.info("###### start master=" + localIp);
+				if ( localAdmin != null)
 					localAdmin.startup();
-				} catch (Exception e) {
-					LOGGER.error("offset load err:", e);
-				}
 			}
 
 			@Override
 			public void processActiveExit() {
-				localAdmin.close();
+				// stop
+				//
+				LOGGER.info("###### stop master=" + localIp);
+				if ( localAdmin != null)
+					localAdmin.close();
 			}
         });
         
-        if ( zkclientx != null) {
-            runningMonitor.setZkClient(zkclientx);
-        }
-        
-        // 触发创建一下cid节点
-        runningMonitor.init();
+		runningMonitor.setZkClient(zkclientx);
 	}
+	
 	
 	public boolean isRunning() {
 		return running.get();
@@ -125,21 +127,20 @@ public class KafkaOffsetService {
 		
 		LOGGER.info("## start kafkaOffsetService, localIp={} ", localIp);
 		
-		final String path = zkPathUtil.getClusterHostPath( localIp);
-		initCid(path);
-		if (zkclientx != null) {
-			this.zkclientx.subscribeStateChanges(new IZkStateListener() {
-				public void handleStateChanged(KeeperState state) throws Exception {}
-				public void handleNewSession() throws Exception {
-					initCid(path);
-				}
+		final String path = zkPathUtil.getClusterHostPath( localIp );
+		init( path );
+		
+		this.zkclientx.subscribeStateChanges(new IZkStateListener() {
+			public void handleStateChanged(KeeperState state) throws Exception {}
+			public void handleNewSession() throws Exception {
+				init( path );
+			}
 
-				@Override
-				public void handleSessionEstablishmentError(Throwable error) throws Exception {
-					LOGGER.error("failed to connect to zookeeper", error);
-				}
-			});
-		}
+			@Override
+			public void handleSessionEstablishmentError(Throwable error) throws Exception {
+				LOGGER.error("failed to connect to zookeeper", error);
+			}
+		});
 
 		if (runningMonitor != null && !runningMonitor.isStart()) {
 			runningMonitor.start();
@@ -179,11 +180,10 @@ public class KafkaOffsetService {
 
 		// release node
 		final String path = zkPathUtil.getClusterHostPath( localIp );
-		releaseCid(path);
+		release(path);
 		
 		// flush 
-		try {
-			
+		try {	
 			if ( executorService != null )
 				executorService.shutdown();
 
@@ -198,7 +198,10 @@ public class KafkaOffsetService {
 	//
 	// -----------------------------------------------------------------------------
 	//
-	private void initCid(String path) {
+	
+	//################### cluster path ##################
+	private void init(String path) {
+		LOGGER.info("## init the path = {}",  path);
 		// 初始化系统目录
 		if (zkclientx != null) {
 			try {
@@ -210,13 +213,13 @@ public class KafkaOffsetService {
 				zkclientx.createEphemeral(path);
 			} catch (ZkNodeExistsException e) {
 				// ignore
-				// 因为第一次启动时创建了cid,但在stop/start的时可能会关闭和新建,允许出现NodeExists问题s
+				// 因为第一次启动时创建了path,但在stop/start的时可能会关闭和新建,允许出现NodeExists问题
 			}
 		}
 	}
 
-	private void releaseCid(String path) {
-		
+	private void release(String path) {
+		 LOGGER.info("## release the path = {}", path);
 		// 初始化系统目录
 		if (zkclientx != null) {
 			zkclientx.delete(path);
