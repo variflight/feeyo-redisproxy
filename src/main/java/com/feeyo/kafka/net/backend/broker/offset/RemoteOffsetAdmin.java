@@ -3,12 +3,16 @@ package com.feeyo.kafka.net.backend.broker.offset;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.JedisPool;
 import com.feeyo.util.jedis.RedisCommand;
 
 public class RemoteOffsetAdmin {
+	
+	private static Logger LOGGER = LoggerFactory.getLogger( RemoteOffsetAdmin.class );
 	
 	private JedisHolder jedisHolder = new JedisHolder();
 	
@@ -26,7 +30,7 @@ public class RemoteOffsetAdmin {
 			offset = Long.parseLong(str);
 			
 		} catch (Exception e) {
-			// TODO: handle exception
+			LOGGER.error("get offset err:", e);
 		} finally {
 			if (conn != null) {
 				conn.close();
@@ -48,7 +52,7 @@ public class RemoteOffsetAdmin {
 			return conn.getStatusCodeReply();
 			
 		} catch (Exception e) {
-			// TODO: handle exception
+			LOGGER.error("return offset err:", e);
 		} finally {
 			if (conn != null) {
 				conn.close();
@@ -58,7 +62,10 @@ public class RemoteOffsetAdmin {
 		return null;
 	}
 	
+	
+	//
 	class JedisHolder {
+		
 		private ConcurrentHashMap<String, JedisPool> holder = new ConcurrentHashMap<>();
 		
 		// 连接池中最大空闲的连接数
@@ -80,17 +87,16 @@ public class RemoteOffsetAdmin {
 		private int timeBetweenEvictionRunsMillis = 30 * 1000;
 		
 		public JedisPool getJedisPool(String address) {
+			
 			JedisPool jedisPool = holder.get(address);
-
-			if (jedisPool == null) {
+			if ( jedisPool == null ) {
 				synchronized (this) {
-					if (holder.get(address) == null) {
+					jedisPool = holder.get(address);
+					if ( jedisPool == null) {
 						String[] strs = address.split(":");
 						jedisPool = initJedisPool(strs[0], Integer.parseInt(strs[1]));
 						holder.put(address, jedisPool);
-					} else {
-						jedisPool = holder.get(address);
-					}
+					} 
 				}
 			}
 			return jedisPool;
