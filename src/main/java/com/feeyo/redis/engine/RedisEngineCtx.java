@@ -1,6 +1,5 @@
 package com.feeyo.redis.engine;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -10,6 +9,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
@@ -63,7 +64,7 @@ public class RedisEngineCtx {
 	private ReentrantLock lock;
 	
 	// 初始化
-	public void init() throws IOException {
+	public void init() throws Exception {
 		
 		this.lock = new ReentrantLock();
 
@@ -74,6 +75,7 @@ public class RedisEngineCtx {
 			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 		} catch (Exception e) {
+			throw e;
 		}
 		
 		// 1、Buffer 配置
@@ -172,14 +174,33 @@ public class RedisEngineCtx {
         connector.start();
         NetSystem.getInstance().setConnector(connector);     
         
+        
+        
 		// 4、后端物理连接池
 		// ---------------------------------------------------------------------------
+        boolean isKafkaPoolExist = false;
+        
 		this.poolMap = new HashMap<Integer, AbstractPool>( poolCfgMap.size() );
 		for (final PoolCfg poolCfg : poolCfgMap.values()) {
 			AbstractPool pool = PoolFactory.createPoolByCfg(poolCfg);
 			pool.startup();
 			this.poolMap.put(pool.getId(), pool);
+			
+			if ( poolCfg instanceof KafkaPoolCfg ) {
+				isKafkaPoolExist = true;
+			}
 		}
+		
+        // 4.1 KafkaPoolCfg  加载 offset service
+		if ( isKafkaPoolExist == true && !KafkaOffsetService.INSTANCE().isRunning() ) {
+			KafkaOffsetService.INSTANCE().start();
+	        Runtime.getRuntime().addShutdownHook(new Thread() {
+				public void run() {
+					KafkaOffsetService.INSTANCE().close();
+				}
+			});
+		}
+		
         
         // 5、前端配置, 开启对外提供服务
         // ---------------------------------------------------------------------------
@@ -192,7 +213,6 @@ public class RedisEngineCtx {
         Iterator<String> it = userMap.keySet().iterator();
         String authString  = it.hasNext() ? it.next() : "";
         KeepAlived.check(port, authString);
-        
 	}
 	
 	public byte[] reloadAll() {

@@ -1,16 +1,14 @@
-package com.feeyo.kafka.net.backend.broker.offset;
+package com.feeyo.kafka.net.backend.broker;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-
 /*
- * Topic 运行时点位
+ * Broker 中 topic 的运行信息
  */
-public class RunningOffset {
+public class BrokerRunningInfo {
 	
-	//
+	// topic
 	private final String name;
 	private final boolean internal;
 	private final int partitionNum;
@@ -20,7 +18,7 @@ public class RunningOffset {
 	private AtomicInteger producerIndex;
 	private AtomicInteger consumerIndex;
 	
-	public RunningOffset(String name, boolean internal, BrokerPartition[] partitions) {
+	public BrokerRunningInfo(String name, boolean internal, BrokerPartition[] partitions) {
 		this.name = name;
 		this.internal = internal;
 		

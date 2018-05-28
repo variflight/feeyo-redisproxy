@@ -200,7 +200,7 @@ public class RedisFrontSession {
 				if ( routeResult == null ) {
 					frontCon.write( "-ERR unkonw command \r\n".getBytes() );
 					return;
-				}
+				} 
 				
 				// 指令提前返回
 				if ( intercept( routeResult ) ) {
@@ -217,18 +217,32 @@ public class RedisFrontSession {
 				
 			} catch (InvalidRequestExistsException e) {
 				
-				if ( requests.size() > 1 ) {
-					frontCon.write( ERR_INVALID_COMMAND );
+				if ( e.isIsfaultTolerant() ) {
+				
+					if ( requests.size() > 1 ) {
+						frontCon.write( ERR_INVALID_COMMAND );
+					} else {
+						// 此处用于兼容
+						frontCon.write( OK );
+					}
+					
 				} else {
-					// 此处用于兼容
-					frontCon.write( OK );
+					
+					// err
+					StringBuffer errCmdBuffer = new StringBuffer(50);
+					errCmdBuffer.append("-ERR ");
+					errCmdBuffer.append( e.getMessage() );
+					errCmdBuffer.append( ".\r\n" );
+					
+					byte[] ERR_INVALID_COMMAND = errCmdBuffer.toString().getBytes();
+					frontCon.write( ERR_INVALID_COMMAND );
 				}
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
-				
+			
+			// auto response
 			} catch (FullRequestNoThroughtException e) {
 
-				//  自动响应指令
 				for (int i = 0; i < e.getRequests().size(); i++) {
 					RedisRequest request = e.getRequests().get(i);
 					if (request == null) {
@@ -249,6 +263,7 @@ public class RedisFrontSession {
 					}
 				}
 				
+			// node unavailable
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
@@ -519,7 +534,7 @@ public class RedisFrontSession {
 		KafkaPoolCfg poolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get(poolId);
 		TopicCfg tc = poolCfg.getTopicCfgMap().get(topic);
 		
-		Collection<BrokerPartition> partitions = tc.getRunningOffset().getPartitions().values();
+		Collection<BrokerPartition> partitions = tc.getRunningInfo().getPartitions().values();
 
 		// 申请1k buffer （肯定够）
 		ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);

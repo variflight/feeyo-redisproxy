@@ -6,21 +6,16 @@ import java.util.Map;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartitionInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.net.backend.broker.BrokerNode;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
-import com.feeyo.kafka.net.backend.broker.offset.RunningOffset;
+import com.feeyo.kafka.net.backend.broker.BrokerRunningInfo;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 
 public class KafkaPoolCfg extends PoolCfg {
-	
-	private static Logger LOGGER = LoggerFactory.getLogger( KafkaPoolCfg.class );
 	
 	// topicName -> topicCfg
 	private volatile Map<String, TopicCfg> topicCfgMap = null;
@@ -31,17 +26,6 @@ public class KafkaPoolCfg extends PoolCfg {
 	
 	@Override
 	public void loadExtraCfg() throws Exception {
-		
-        // 加载 offset service
-		if ( !KafkaOffsetService.INSTANCE().isRunning() ) {
-			
-			KafkaOffsetService.INSTANCE().start();
-	        Runtime.getRuntime().addShutdownHook(new Thread() {
-				public void run() {
-					KafkaOffsetService.INSTANCE().close();
-				}
-			});
-		}
 		
 		// 加载 kafka xml
 		this.topicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
@@ -66,9 +50,9 @@ public class KafkaPoolCfg extends PoolCfg {
 			if ( oldTopicCfg != null) {
 				
 				//
-				for(BrokerPartition newPartition: newTopicCfg.getRunningOffset().getPartitions().values() ) {
+				for(BrokerPartition newPartition: newTopicCfg.getRunningInfo().getPartitions().values() ) {
 					
-					BrokerPartition oldPartition = oldTopicCfg.getRunningOffset().getPartition( newPartition.getPartition() );
+					BrokerPartition oldPartition = oldTopicCfg.getRunningInfo().getPartition( newPartition.getPartition() );
 					if ( oldPartition != null ) {
 						newPartition.setProducerConsumerOffset(  oldPartition.getProducerConsumerOffset() );
 
@@ -86,7 +70,13 @@ public class KafkaPoolCfg extends PoolCfg {
 		// 5、旧对象清理
 	}
 	
-	
+	/**
+	 * 
+	 * 
+		zhuamdeMacBook-Pro:logs zhuam$ [2018-05-28 15:26:41,394] INFO [Admin Manager on Broker 0]: 
+		Error processing create topic request for topic test01 with arguments (numPartitions=3, replicationFactor=2, replicasAssignments={}, configs={}) (kafka.server.AdminManager)
+		org.apache.kafka.common.errors.InvalidReplicationFactorException: Replication factor: 2 larger than available brokers: 1.
+	 */
 	private void initializeOfKafka(Map<String, TopicCfg> topicCfgMap) throws Exception {
 		
 		if (topicCfgMap == null || topicCfgMap.isEmpty()) {
@@ -163,11 +153,10 @@ public class KafkaPoolCfg extends PoolCfg {
 					newPartitions[i] = newPartition;
 				}
 
-				topicCfg.setRunningOffset( new RunningOffset(name, internal, newPartitions) );
+				topicCfg.setRunningInfo( new BrokerRunningInfo(name, internal, newPartitions) );
 			}
 			
 		} catch(Throwable e) {
-			LOGGER.error("initialize kafka err:", e);
 			throw e;
 			
 		} finally {

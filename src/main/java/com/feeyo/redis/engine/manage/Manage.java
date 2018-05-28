@@ -25,7 +25,7 @@ import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.ConsumerOffset;
+import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -1007,7 +1007,7 @@ public class Manage {
 								String topic = new String( request.getArgs()[2] );
 								TopicCfg kafkaCfg = kafkaMap.get(topic);
 								if (kafkaCfg != null) {
-									for (BrokerPartition partition : kafkaCfg.getRunningOffset().getPartitions().values()) {
+									for (BrokerPartition partition : kafkaCfg.getRunningInfo().getPartitions().values()) {
 										int pt = partition.getPartition();
 										
 										StringBuffer line = new StringBuffer();

@@ -1,6 +1,5 @@
 package com.feeyo.kafka.net.backend.broker.zk;
 
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,9 +19,11 @@ public class ZkClientx extends ZkClient {
 
     // 对于zkclient进行一次缓存，避免一个jvm内部使用多个zk connection
 	private static Map<String, ZkClientx> clients = new ConcurrentHashMap<String, ZkClientx>();
+
 	private static Object _lock = new Object();
 
 	public static ZkClientx getZkClient(String servers) {
+
 		ZkClientx zkClientx = clients.get(servers);
 		if (zkClientx == null) {
 			synchronized (_lock) {
