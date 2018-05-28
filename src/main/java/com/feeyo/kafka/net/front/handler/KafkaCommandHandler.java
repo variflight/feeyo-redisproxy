@@ -38,8 +38,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	
 	// 0表示producer无需等待leader的确认，1代表需要leader确认写入它的本地log并立即确认，-1代表所有的备份都完成后确认。
 	private static final short ACKS = 1;
-	private static final int PRODUCE_TIME_OUT = 500;
-	private static final int CONSUME_TIME_OUT = 200;
+	private static final int PRODUCE_WAIT_TIME_MS = 500;
+	private static final int CONSUME_WAIT_TIME_MS = 100;
 	
 	private static final int MINBYTES = 1;
 	private static final int MAXBYTES = 1024 * 1024 * 4;
@@ -115,7 +115,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		Record record = new Record(0, new String(request.getArgs()[1]), request.getArgs()[1], request.getArgs()[2]);
 		record.setTimestamp(TimeUtil.currentTimeMillis());
 		record.setTimestampDelta(0);
-		ProduceRequest pr = new ProduceRequest(version, ACKS, PRODUCE_TIME_OUT, null, partition, record);
+		ProduceRequest pr = new ProduceRequest(version, ACKS, PRODUCE_WAIT_TIME_MS, null, partition, record);
 		Struct body = pr.toStruct();
 		
 		RequestHeader rh = new RequestHeader(ApiKeys.PRODUCE.id, version, 
@@ -137,7 +137,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		TopicAndPartitionData<PartitionData> topicAndPartitionData = 
 				new TopicAndPartitionData<PartitionData>(new String(request.getArgs()[1]));
 		
-		FetchRequest fr = new FetchRequest(version, REPLICA_ID, maxBytes > 10240 ? CONSUME_TIME_OUT * 5 : CONSUME_TIME_OUT, 
+		FetchRequest fr = new FetchRequest(version, REPLICA_ID, maxBytes > 10240 ? CONSUME_WAIT_TIME_MS * 5 : CONSUME_WAIT_TIME_MS, 
 				MINBYTES, MAXBYTES, ISOLATION_LEVEL, 
 				topicAndPartitionData, null, FetchMetadata.LEGACY);
 		
