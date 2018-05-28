@@ -38,101 +38,96 @@ public class RedisServer {
 		//System.setProperty("com.sun.management.jmxremote.ssl", "false");
 		//System.setProperty("com.sun.management.jmxremote.authenticate", "false");
 		
-	    /**
-         * 检查 FEEYO_HOME
-         */
+		// 检查 FEEYO_HOME
         if ( System.getProperty("FEEYO_HOME") == null ) {
             System.setProperty("FEEYO_HOME", System.getProperty("user.dir"));  
         }
         
-        /**
-         * 设置 LOG4J
-         */
+        // 设置 LOG4J
 		Log4jInitializer.configureAndWatch(System.getProperty("FEEYO_HOME"), "log4j.xml", 30000L);
 
-		/**
-		 * 引擎初始化
-		 */
 		try {
+			
+			// 引擎初始化
 			RedisEngineCtx.INSTANCE().init();
-		} catch (Exception e) {
+			
+			
+			// 弱精度的计时器
+			heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
+				@Override
+				public void run() {		
+					TimeUtil.update();
+				}			
+			}, 0, 10L, TimeUnit.MILLISECONDS);
+			
+			
+			// IDLE 连接检查, 关闭
+			scheduler.scheduleAtFixedRate(new Runnable(){
+				@Override
+				public void run() {		
+					NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
+						@Override
+						public void run() {
+							NetSystem.getInstance().checkConnections();
+						}
+					});
+				}			
+			}, 0L, 1 * 1000L, TimeUnit.MILLISECONDS);	
+			
+			// 连接池有效性
+			heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
+				@Override
+				public void run() {		
+					
+					NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
+						@Override
+						public void run() {
+							
+							Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+							for(AbstractPool pool : pools.values() ) {
+								pool.availableCheck();
+							}
+
+						}
+					});
+				}			
+			}, 10L, 10L, TimeUnit.SECONDS);	
+			
+			
+			/*
+			 * 连接池心跳 检测
+			 * 1、IDLE 连接的有效性检测，无效 close
+			 * 2、连接池过大、过小的动态调整
+			 */
+			heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
+				static final long TIMEOUT = 2 * 60 * 1000L;
+				
+				@Override
+				public void run() {
+					
+					NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
+						@Override
+						public void run() {
+							Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+							for(AbstractPool pool : pools.values() ) {
+								pool.heartbeatCheck( TIMEOUT );
+							}
+						}
+					});
+				}			
+			}, 30L, 30L, TimeUnit.SECONDS);
+			
+			// CONSOLE 
+			System.out.println("Home directory=" + System.getProperty("FEEYO_HOME") + ", startup=" + System.currentTimeMillis());
+			
+			
+		} catch (Throwable e) {
+			
 			// exit
 			System.exit( 0 );
 		}
 		
 		
-		/**
-		 *  弱精度的计时器
-		 */
-		heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
-			@Override
-			public void run() {		
-				TimeUtil.update();
-			}			
-		}, 0, 20L, TimeUnit.MILLISECONDS);
-		
-		
-		/**
-		 *  IDLE 连接检查, 关闭
-		 */
-		scheduler.scheduleAtFixedRate(new Runnable(){
-			@Override
-			public void run() {		
-				NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
-					@Override
-					public void run() {
-						NetSystem.getInstance().checkConnections();
-					}
-				});
-			}			
-		}, 0L, 1 * 1000L, TimeUnit.MILLISECONDS);	
-		
-		/**
-		 *  连接池有效性
-		 */
-		heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
-			@Override
-			public void run() {		
-				
-				NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
-					@Override
-					public void run() {
-						
-						Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
-						for(AbstractPool pool : pools.values() ) {
-							pool.availableCheck();
-						}
-
-					}
-				});
-			}			
-		}, 10L, 10L, TimeUnit.SECONDS);	
-		
-		
-		/**
-		 * 连接池心跳 检测
-		 * 1、IDLE 连接的有效性检测，无效 close
-		 * 2、连接池过大、过小的动态调整
-		 */
-		heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
-			static final long TIMEOUT = 2 * 60 * 1000L;
-			
-			@Override
-			public void run() {
-				
-				NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
-					@Override
-					public void run() {
-						Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
-						for(AbstractPool pool : pools.values() ) {
-							pool.heartbeatCheck( TIMEOUT );
-						}
-					}
-				});
-			}			
-		}, 30L, 30L, TimeUnit.SECONDS);
-		
-		// CONSOLE 
-		System.out.println("Home directory=" + System.getProperty("FEEYO_HOME") + ", startup=" + System.currentTimeMillis());
+	
 	}
 }
