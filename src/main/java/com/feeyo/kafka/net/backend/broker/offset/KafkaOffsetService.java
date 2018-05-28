@@ -77,6 +77,7 @@ public class KafkaOffsetService {
 		this.zkPathUtil = new ZkPathUtil( path );
 		this.zkclientx = ZkClientx.getZkClient( zkServerIp );
 	
+		//
 		this.runningData = new ServerRunningData( localIp );
 		this.runningMonitor = new ServerRunningMonitor( runningData );
 		this.runningMonitor.setPath( zkPathUtil.getMasterRunningPath() );
