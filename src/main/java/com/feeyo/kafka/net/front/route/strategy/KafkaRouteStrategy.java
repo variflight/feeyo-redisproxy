@@ -6,7 +6,7 @@ import java.util.List;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
+import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
@@ -94,7 +94,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 					// 轮询分区
 					if (request.getNumArgs() == 2) {
 						partition = topicCfg.getRunningInfo().getPartitionByConsumer();
-						offset = KafkaOffsetService.INSTANCE().getOffset(userCfg.getPassword(), topicCfg,
+						offset = BrokerOffsetService.INSTANCE().getOffset(userCfg.getPassword(), topicCfg,
 								partition.getPartition());
 		
 					// 指定分区

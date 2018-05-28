@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -75,10 +74,8 @@ public class KafkaAdmin {
 			dto.timeoutMs(15 * 1000);
 			DescribeTopicsResult dtr = adminClient.describeTopics(ltr.names().get(), dto);
 			return dtr.all().get();
-		} catch (InterruptedException e) {
-			LOGGER.warn("", e);
-		} catch (ExecutionException e) {
-			LOGGER.warn("", e);
+		} catch (Exception e) {
+			LOGGER.error("get err:", e);
 		}
 		return null;
 	}
