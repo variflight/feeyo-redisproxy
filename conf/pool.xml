@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <redis>
 	<!-- type 0:非集群; 1:集群; 2:自定义集群; 3:kafka 集群 -->
+	<!-- 
 	<pool id="1" name="pool1" type="0" maxCon="2000" minCon="1">
 	      <node ip="127.0.0.1" port="6379" />
 	</pool>	 
@@ -11,10 +12,9 @@
 	      <node ip="127.0.0.1" port="7001" />
 	      <node ip="127.0.0.1" port="7002" />
 	</pool>
-	
+	 -->
+	 
 	<pool id="3" name="pool3" type="3" maxCon="200" minCon="1">
-	      <node ip="127.0.0.1" port="9090" />
-	      <node ip="127.0.0.1" port="9091" />
 	      <node ip="127.0.0.1" port="9092" />
 	 </pool>
 
@@ -26,7 +26,5 @@
 		<node ip="192.168.1.101" port="7007" suffix="B"/>
 	</pool>
 	 -->
-	 
 
-	 
 </redis>

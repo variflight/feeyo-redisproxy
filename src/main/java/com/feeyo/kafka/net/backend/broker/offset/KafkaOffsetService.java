@@ -83,11 +83,30 @@ public class KafkaOffsetService {
 		this.runningMonitor.setPath( zkPathUtil.getMasterRunningPath() );
 		this.runningMonitor.setListener(new ServerRunningListener() {
 			@Override
-			public void processStart() {}
+			public void processStart() {
+				
+				 if (zkclientx != null) {
+					 initialize(path);
+                     zkclientx.subscribeStateChanges(new IZkStateListener() {
+                         public void handleStateChanged(KeeperState state) throws Exception {
+                         }
+                         public void handleNewSession() throws Exception {
+                        	 initialize(path);
+                         }
+                         @Override
+                         public void handleSessionEstablishmentError(Throwable error) throws Exception {
+                             LOGGER.error("failed to connect to zookeeper", error);
+                         }
+                     });
+                 }
+			
+			}
 
 			@Override
 			public void processStop() {
-				localAdmin.close();
+				if (zkclientx != null) {
+					release(path);
+                }
 			}
 
 			@Override
@@ -97,6 +116,7 @@ public class KafkaOffsetService {
 				LOGGER.info("###### start master=" + localIp);
 				if ( localAdmin != null)
 					localAdmin.startup();
+			
 			}
 
 			@Override
@@ -106,6 +126,7 @@ public class KafkaOffsetService {
 				LOGGER.info("###### stop master=" + localIp);
 				if ( localAdmin != null)
 					localAdmin.close();
+				
 			}
         });
         
@@ -127,7 +148,7 @@ public class KafkaOffsetService {
 		//
 		initialize(  zkPathUtil.getClusterHostPath( localIp )  );
 		
-		//  
+		 // 创建所有工作节点
 		this.zkclientx.subscribeStateChanges(new IZkStateListener() {
 			public void handleStateChanged(KeeperState state) throws Exception {}
 			public void handleNewSession() throws Exception {
@@ -187,6 +208,11 @@ public class KafkaOffsetService {
 		} catch (Exception e) {
 			// ignore
 		}
+		
+		//
+		if (zkclientx != null) {
+            zkclientx.close();
+        }
 	}
 	
 	//
@@ -224,7 +250,7 @@ public class KafkaOffsetService {
 	}
 	
 	
-	
+	//
 	//-----------------------------------------------------------------------------------------------------
 	
 	// slave 节点从master上获取 offset
