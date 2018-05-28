@@ -28,9 +28,9 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 //
-public class KafkaOffsetService {
+public class BrokerOffsetService {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( KafkaOffsetService.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( BrokerOffsetService.class );
 	
 	//
 	private static AtomicBoolean running = new AtomicBoolean( false );
@@ -55,14 +55,14 @@ public class KafkaOffsetService {
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 	
 	//
-	private static KafkaOffsetService INSTANCE = new KafkaOffsetService();
+	private static BrokerOffsetService INSTANCE = new BrokerOffsetService();
 
-	public static KafkaOffsetService INSTANCE() {
+	public static BrokerOffsetService INSTANCE() {
 		return INSTANCE;
 	}
 	
 	//
-	private KafkaOffsetService() {
+	private BrokerOffsetService() {
 		
 		OffsetCfg offsetCfg = KafkaConfigLoader.loadOffsetCfg(ConfigLoader.buidCfgAbsPathFor( "kafka.xml" ));
 		this.zkServerIp = offsetCfg.getZkServerIp();

@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
+import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -563,7 +563,7 @@ public class RedisFrontSession {
 		try {
 			// 申请offset
 			if ( cmd.equals("KGETOFFSET") ) {
-				long offset = KafkaOffsetService.INSTANCE().getOffsetForSlave(frontCon.getPassword(), topic, partition);
+				long offset = BrokerOffsetService.INSTANCE().getOffsetForSlave(frontCon.getPassword(), topic, partition);
 				StringBuffer sb = new StringBuffer();
 				sb.append("+").append(offset).append("\r\n");
 				frontCon.write(sb.toString().getBytes());
@@ -571,7 +571,7 @@ public class RedisFrontSession {
 			// 返还 offset
 			} else if ( cmd.equals("KRETURNOFFSET") ) {
 				long offset = Long.parseLong(new String(request.getArgs()[3]));
-				KafkaOffsetService.INSTANCE().returnOffsetForSlave(frontCon.getPassword(), topic, partition, offset);
+				BrokerOffsetService.INSTANCE().returnOffsetForSlave(frontCon.getPassword(), topic, partition, offset);
 				frontCon.write(OK);
 			}
 		} catch (Exception e) {

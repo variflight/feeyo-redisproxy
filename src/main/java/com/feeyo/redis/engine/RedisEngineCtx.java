@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
-import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
+import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
@@ -192,11 +192,11 @@ public class RedisEngineCtx {
 		}
 		
         // 4.1 KafkaPoolCfg  加载 offset service
-		if ( isKafkaPoolExist == true && !KafkaOffsetService.INSTANCE().isRunning() ) {
-			KafkaOffsetService.INSTANCE().start();
+		if ( isKafkaPoolExist == true && !BrokerOffsetService.INSTANCE().isRunning() ) {
+			BrokerOffsetService.INSTANCE().start();
 	        Runtime.getRuntime().addShutdownHook(new Thread() {
 				public void run() {
-					KafkaOffsetService.INSTANCE().close();
+					BrokerOffsetService.INSTANCE().close();
 				}
 			});
 		}
