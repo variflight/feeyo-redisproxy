@@ -185,7 +185,7 @@ public class BrokerOffsetService {
 
 	}
 	
-	public void close() {
+	public void stop() {
 		
 		running.set( false );
 		
