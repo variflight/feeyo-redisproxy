@@ -11,7 +11,7 @@ public class ZkPathUtil {
 	// 集群
 	private static final String CLUSTER                	    				= "{0}/cluster";										// 集群		
 	private static final String CLUSTER_HOST								= "{0}/cluster/{1}";									// 集群节点
-	private static final String MASTER_RUNNING                     			= "{0}/master/running";								// 服务端当前正在提供服务的running节点
+	private static final String MASTER_RUNNING                     			= "{0}/master/running";									// 服务端当前正在提供服务的running节点
 
 	// 分区点位
 	private static final String PARTITION									= "{0}/poolId/{1}/topic/{2}/partition";
@@ -20,7 +20,7 @@ public class ZkPathUtil {
 	
 	private static final String PARTITION_CONSUMER              			= "{0}/poolId/{1}/topic/{2}/partition/{3}/offset/consumers";				 // 消费者
 	private static final String PARTITION_CONSUMER_OFFSET             		= "{0}/poolId/{1}/topic/{2}/partition/{3}/offset/consumers/{4}";			 // 消费者点位
-	private static final String PARTITION_CONSUMER_ROLLBACK_OFFSET    		= "{0}/poolId/{1}/topic/{2}/partition/{3}/offset/consumers/{4}/rollback";   // 消费不成功，回退的点位
+	private static final String PARTITION_CONSUMER_RETURN_OFFSET    		= "{0}/poolId/{1}/topic/{2}/partition/{3}/offset/consumers/{4}/return";   	 // 消费不成功，回退的点位
 
 	private String rootPath = null;
 	
@@ -60,7 +60,7 @@ public class ZkPathUtil {
         return MessageFormat.format(PARTITION_CONSUMER_OFFSET, rootPath, poolId, topic, partition, consumer);
     }
     
-    public String getPartitionConsumerRollbackOffsetPath(int poolId, String topic, int partition, String consumer) {
-        return MessageFormat.format(PARTITION_CONSUMER_ROLLBACK_OFFSET, rootPath, poolId, topic, partition, consumer);
+    public String getPartitionConsumerReturnOffsetPath(int poolId, String topic, int partition, String consumer) {
+        return MessageFormat.format(PARTITION_CONSUMER_RETURN_OFFSET, rootPath, poolId, topic, partition, consumer);
     }
 }

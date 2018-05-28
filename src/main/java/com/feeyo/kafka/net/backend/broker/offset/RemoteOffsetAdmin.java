@@ -19,6 +19,7 @@ public class RemoteOffsetAdmin {
 	// 获取offset
 	public long getOffset(String remoteAddress, String user, String topic, int partition) {
 		long offset = -1;
+		
 		JedisPool jedisPool = jedisHolder.getJedisPool(remoteAddress);
 		JedisConnection conn = jedisPool.getResource();
 		try {
@@ -30,18 +31,18 @@ public class RemoteOffsetAdmin {
 			offset = Long.parseLong(str);
 			
 		} catch (Exception e) {
-			LOGGER.error("get offset err:", e);
+			LOGGER.error("get remote offset err:", e);
 		} finally {
 			if (conn != null) {
 				conn.close();
 			}
 		}
-		
 		return offset;
 	}
 	
 	// 返还 offset
 	public String returnOffset(String remoteAddress, String user, String topic, int partition, long offset) {
+		
 		JedisPool jedisPool = jedisHolder.getJedisPool(remoteAddress);
 		JedisConnection conn = jedisPool.getResource();
 		try {
@@ -52,7 +53,7 @@ public class RemoteOffsetAdmin {
 			return conn.getStatusCodeReply();
 			
 		} catch (Exception e) {
-			LOGGER.error("return offset err:", e);
+			LOGGER.error("return remote offset err:", e);
 		} finally {
 			if (conn != null) {
 				conn.close();
@@ -66,7 +67,7 @@ public class RemoteOffsetAdmin {
 	//
 	class JedisHolder {
 		
-		private ConcurrentHashMap<String, JedisPool> holder = new ConcurrentHashMap<>();
+		private ConcurrentHashMap<String, JedisPool> pools = new ConcurrentHashMap<>();
 		
 		// 连接池中最大空闲的连接数
 		private int maxIdle = 50;
@@ -88,21 +89,21 @@ public class RemoteOffsetAdmin {
 		
 		public JedisPool getJedisPool(String address) {
 			
-			JedisPool jedisPool = holder.get(address);
+			JedisPool jedisPool = pools.get(address);
 			if ( jedisPool == null ) {
 				synchronized (this) {
-					jedisPool = holder.get(address);
+					jedisPool = pools.get(address);
 					if ( jedisPool == null) {
 						String[] strs = address.split(":");
-						jedisPool = initJedisPool(strs[0], Integer.parseInt(strs[1]));
-						holder.put(address, jedisPool);
+						jedisPool = initialize(strs[0], Integer.parseInt(strs[1]));
+						pools.put(address, jedisPool);
 					} 
 				}
 			}
 			return jedisPool;
 		}
 		
-		private JedisPool initJedisPool(String host, int port) {
+		private JedisPool initialize(String host, int port) {
 
 			GenericObjectPoolConfig jedisPoolConfig = new GenericObjectPoolConfig();
 			jedisPoolConfig.setMaxIdle(maxIdle);

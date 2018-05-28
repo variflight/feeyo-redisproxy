@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
-import com.feeyo.kafka.config.OffsetCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
@@ -33,33 +32,36 @@ public class LocalOffsetAdmin {
 	private String zkServerIp;
 	private ZkPathUtil zkPathUtil;
 
-	public LocalOffsetAdmin(OffsetCfg offsetCfg) {
-		this.zkServerIp = offsetCfg.getZkServerIp();
-		this.zkPathUtil = new ZkPathUtil( offsetCfg.getPath() );
+	public LocalOffsetAdmin(String zkServerIp, String rootPath) {
+		this.zkServerIp = zkServerIp;
+		this.zkPathUtil = new ZkPathUtil( rootPath );
 	}
 
 
 	private void recoveryFromZkByPoolId(int poolId, Collection<TopicCfg> topicCfgs) {
 		
+		
+		LOGGER.info("recoveryFromZkByPoolId: poolId={}", poolId);
+		
 		ZkClientx zkclientx = ZkClientx.getZkClient( zkServerIp );
 		
 		for (TopicCfg topicCfg : topicCfgs) {
-			
-			String topic = topicCfg.getName();
-			
+
 			try {
+				
+				//
 				for (BrokerPartition p : topicCfg.getRunningOffset().getPartitions().values()) {
 					
 					
 					//  producer & log_start
 					//
-					String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topic, p.getPartition());
-					String data = readDataByPath(zkclientx, partitionLogStartOffsetPath);
-					long logStartOffset = isNull(data) ? 0 : Long.parseLong(data);
+					String partitionLogStartOffsetPath = zkPathUtil.getPartitionLogStartOffsetPath(poolId, topicCfg.getName(), p.getPartition());
+					String logStartOffsetData = readDataByPath(zkclientx, partitionLogStartOffsetPath);
+					long logStartOffset = isNull(logStartOffsetData) ? 0 : Long.parseLong(logStartOffsetData);
 					
-					String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topic, p.getPartition());
-					data = readDataByPath(zkclientx, partitionProducerOffsetPath);
-					long producerOffset = isNull(data) ? 0 : Long.parseLong(data);
+					String partitionProducerOffsetPath = zkPathUtil.getPartitionProducerOffsetPath(poolId, topicCfg.getName(), p.getPartition());
+					String producerOffsetData = readDataByPath(zkclientx, partitionProducerOffsetPath);
+					long producerOffset = isNull(producerOffsetData) ? 0 : Long.parseLong(producerOffsetData);
 					
 					// load producer & log_start
 					p.setProducerOffset(producerOffset);
@@ -68,28 +70,29 @@ public class LocalOffsetAdmin {
 					
 					// consumer 
 					//
-					String partitionConsumerPath = zkPathUtil.getPartitionConsumerPath(poolId, topic, p.getPartition());
-					if (!zkclientx.exists(partitionConsumerPath)) {
+					String consumerPath = zkPathUtil.getPartitionConsumerPath(poolId, topicCfg.getName(), p.getPartition());
+					if (!zkclientx.exists(consumerPath)) {
 						continue;
 					}
 					
 					//
-					List<String> childrenPath = zkclientx.getChildren(partitionConsumerPath);
+					List<String> childrenPath = zkclientx.getChildren(consumerPath);
 					for (String consumer : childrenPath) {
-						// consumer_offset
-						String partitionConsumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topic, p.getPartition(), consumer);
-						data = readDataByPath(zkclientx, partitionConsumerOffsetPath);
-						long offset = isNull(data) ? 0 : Long.parseLong(data);
+						
+						// consumer offset
+						String consumerOffsetPath = zkPathUtil.getPartitionConsumerOffsetPath(poolId, topicCfg.getName(), p.getPartition(), consumer);
+						String consumerOffsetData = readDataByPath(zkclientx, consumerOffsetPath);
+						long offset = isNull( consumerOffsetData ) ? 0 : Long.parseLong( consumerOffsetData );
 						
 						// load consumer offset
 						ConsumerOffset consumerOffset = new ConsumerOffset(consumer, offset);
 						p.addConsumerOffset( consumerOffset );
 						
-						// consumer_offset
-						String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topic, p.getPartition(), consumer);
-						data = readDataByPath(zkclientx, partitionConsumerRollbackOffsetPath);
-						if (!isNull(data)) {
-							ConcurrentLinkedQueue<?> offsets = JsonUtils.unmarshalFromString(data, ConcurrentLinkedQueue.class);
+						// consumer return offset
+						String consumerReturnOffsetPath = zkPathUtil.getPartitionConsumerReturnOffsetPath(poolId, topicCfg.getName(), p.getPartition(), consumer);
+						String consumerReturnOffsetData = readDataByPath(zkclientx, consumerReturnOffsetPath);
+						if ( !isNull( consumerReturnOffsetData ) ) {
+							ConcurrentLinkedQueue<?> offsets = JsonUtils.unmarshalFromString(consumerReturnOffsetData, ConcurrentLinkedQueue.class);
 							Object object = offsets.poll();
 							while (object != null) {
 								if (object instanceof Integer) {
@@ -120,6 +123,7 @@ public class LocalOffsetAdmin {
 			if (poolCfg instanceof KafkaPoolCfg) {
 				Map<String, TopicCfg> topicCfgMap = ((KafkaPoolCfg) poolCfg).getTopicCfgMap();
 				this.recoveryFromZkByPoolId(poolCfg.getId(), topicCfgMap.values());
+				
 			}
 		}
 	}
@@ -175,7 +179,7 @@ public class LocalOffsetAdmin {
 								writeDataByPath(zkclientx, partitionConsumerOffsetPath, String.valueOf(consumeOffset.getCurrentOffset()));
 								
 								// 消费者回退点位
-								String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerRollbackOffsetPath(poolId, topicName, partition, consumer);
+								String partitionConsumerRollbackOffsetPath = zkPathUtil.getPartitionConsumerReturnOffsetPath(poolId, topicName, partition, consumer);
 								writeDataByPath(zkclientx, partitionConsumerRollbackOffsetPath, consumeOffset.getOldOffsetQueue().toString());
 
 							}
@@ -197,7 +201,6 @@ public class LocalOffsetAdmin {
 		if ("".equals(str) || "null".equals(str) || "NULL".equals(str)) {
 			return true;
 		}
-
 		return false;
 	}
 

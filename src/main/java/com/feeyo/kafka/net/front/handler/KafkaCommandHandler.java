@@ -10,6 +10,7 @@ import com.feeyo.kafka.codec.FetchRequest;
 import com.feeyo.kafka.codec.FetchRequest.PartitionData;
 import com.feeyo.kafka.codec.FetchRequest.TopicAndPartitionData;
 import com.feeyo.kafka.codec.FetchResponse;
+import com.feeyo.kafka.codec.IsolationLevel;
 import com.feeyo.kafka.codec.ListOffsetRequest;
 import com.feeyo.kafka.codec.ListOffsetResponse;
 import com.feeyo.kafka.codec.ProduceRequest;
@@ -40,8 +41,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	private static final int MINBYTES = 1;
 	private static final int MAXBYTES = 1024 * 1024 * 4;
 	
-	// (isolation_level = 0) makes all records visible. With READ_COMMITTED (isolation_level = 1)
-	private static final byte ISOLATION_LEVEL = 0;
+	// (isolation_level = 0) 
+	private static final byte ISOLATION_LEVEL = IsolationLevel.READ_UNCOMMITTED.id();
 	
 	// Broker id of the follower. For normal consumers, use -1.
 	private static final int REPLICA_ID = -1;
@@ -104,6 +105,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		writeToBackend(node.getPhysicalNode(), buffer, backendCallback);
 	}
 
+	//
 	private ByteBuffer produceEncode(RedisRequest request, int partition) {
 		short version = BrokerApiVersion.getProduceVersion();
 		
@@ -122,11 +124,15 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		return buffer;
 	}
 	
+	//
 	private ByteBuffer consumerEncode(RedisRequest request, int partition, long offset, int maxBytes) {
+		
 		short version = BrokerApiVersion.getConsumerVersion();
 		
 		TopicAndPartitionData<PartitionData> topicAndPartitionData = new TopicAndPartitionData<PartitionData>(new String(request.getArgs()[1]));
-		FetchRequest fr = new FetchRequest(version, REPLICA_ID, TIME_OUT, MINBYTES, MAXBYTES, ISOLATION_LEVEL, topicAndPartitionData, null, FetchMetadata.LEGACY);
+		FetchRequest fr = new FetchRequest(version, REPLICA_ID, TIME_OUT, MINBYTES, MAXBYTES, ISOLATION_LEVEL, 
+				topicAndPartitionData, null, FetchMetadata.LEGACY);
+		
 		PartitionData pd = new PartitionData(offset, LOG_START_OFFSET, maxBytes);
 		topicAndPartitionData.addData(partition, pd);
 		RequestHeader rh = new RequestHeader(ApiKeys.FETCH.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
@@ -141,10 +147,13 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		return buffer;
 	}
 	
+	//
 	private ByteBuffer listOffsetsEncode(RedisRequest request) {
+		
 		short version = BrokerApiVersion.getListOffsetsVersion();
 		
-		RequestHeader rh = new RequestHeader(ApiKeys.LIST_OFFSETS.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
+		RequestHeader rh = new RequestHeader(ApiKeys.LIST_OFFSETS.id, version, 
+				Thread.currentThread().getName(), Utils.getCorrelationId());
 		
 		String topic = new String(request.getArgs()[1]);
 		int partition = Integer.parseInt(new String(request.getArgs()[2]));
