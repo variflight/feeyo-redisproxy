@@ -385,7 +385,9 @@ public abstract class AbstractConnection implements ClosableConnection {
 		
 		ByteBuffer buffer = allocate( size );
 		buffer = writeToBuffer(data, buffer);
-		writeNotSend( buffer );
+		
+		writeQueue.offer(buffer);
+		
 		data = null;
 	}
 
