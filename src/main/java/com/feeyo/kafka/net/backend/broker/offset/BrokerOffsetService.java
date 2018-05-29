@@ -269,7 +269,7 @@ public class BrokerOffsetService {
 			
 		} else {
 			ServerRunningData master = this.runningMonitor.getActiveData();
-			offset = remoteAdmin.getOffset(master.getAddress(), user, topicCfg.getName(), partition);
+			offset = remoteAdmin.getOffset(master.getIp(), master.getPort(), user, topicCfg.getName(), partition);
 		}
 		return offset;
 	}
@@ -283,7 +283,7 @@ public class BrokerOffsetService {
 			localAdmin.returnOffset(user, topic, partition, offset);
 		} else {
 			ServerRunningData master = this.runningMonitor.getActiveData();
-			remoteAdmin.returnOffset(master.getAddress(), user, topic, partition, offset);
+			remoteAdmin.returnOffset(master.getIp(), master.getPort(), user, topic, partition, offset);
 		}
 	}
 	

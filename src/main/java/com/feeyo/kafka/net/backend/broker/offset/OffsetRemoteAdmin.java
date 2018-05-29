@@ -17,10 +17,10 @@ public class OffsetRemoteAdmin {
 	private JedisHolder jedisHolder = new JedisHolder();
 	
 	// 获取offset
-	public long getOffset(String remoteAddress, String user, String topic, int partition) {
+	public long getOffset(String ip, int port, String user, String topic, int partition) {
 		long offset = -1;
 		
-		JedisPool jedisPool = jedisHolder.getJedisPool(remoteAddress);
+		JedisPool jedisPool = jedisHolder.getJedisPool(ip, port);
 		JedisConnection conn = jedisPool.getResource();
 		try {
 			conn.sendCommand(RedisCommand.AUTH, user);
@@ -41,9 +41,9 @@ public class OffsetRemoteAdmin {
 	}
 	
 	// 返还 offset
-	public String returnOffset(String remoteAddress, String user, String topic, int partition, long offset) {
+	public String returnOffset(String ip, int port, String user, String topic, int partition, long offset) {
 		
-		JedisPool jedisPool = jedisHolder.getJedisPool(remoteAddress);
+		JedisPool jedisPool = jedisHolder.getJedisPool(ip, port);
 		JedisConnection conn = jedisPool.getResource();
 		try {
 			conn.sendCommand(RedisCommand.AUTH, user);
@@ -87,15 +87,17 @@ public class OffsetRemoteAdmin {
 		// “空闲链接”检测线程，检测的周期，毫秒数。如果为负值，表示不运行“检测线程”。默认为-1
 		private int timeBetweenEvictionRunsMillis = 30 * 1000;
 		
-		public JedisPool getJedisPool(String address) {
+		public JedisPool getJedisPool(String ip, int port) {
+			StringBuffer sb = new StringBuffer();
+			sb.append(ip).append(":").append(port);
+			String address = sb.toString();
 			
 			JedisPool jedisPool = pools.get(address);
 			if ( jedisPool == null ) {
 				synchronized (this) {
 					jedisPool = pools.get(address);
 					if ( jedisPool == null) {
-						String[] strs = address.split(":");
-						jedisPool = initialize(strs[0], Integer.parseInt(strs[1]));
+						jedisPool = initialize(ip, port);
 						pools.put(address, jedisPool);
 					} 
 				}
