@@ -14,28 +14,9 @@
 
 ### 1.9 版本开始，我们支持通过 Redis 协议，对外提供 kafka 队列服务
 
-1、功能描述
+1、关于 kafka 代理， 参见 kafka.xml
 
- 简化大家对 kafka 使用，无缝的引入账户体系及数据访问的监控体系，整体的安全性及可用性更高。
- 
-  
-2、关于 kafka.xml 配置
-
-    <?xml version="1.0" encoding="UTF-8" ?>
-	<kafka>
-		<!-- kafka 代理 -->
-		<pool id="3">
-			<!-- topic 配置， 主题 、分区数、复制因子、生产者、消费者 -->
-			<topic name="appLogs" partitions="3" replicationFactor="2" producer="producer01" consumer="consumer01,consumer02"/>
-			<topic name="testTopic" partitions="4" replicationFactor="2" producer="producer01" consumer="consumer01,consumer03"/>
-		</pool>
-		
-		<!-- kafka 消费点位管理服务 -->
-		<offset zkServerIp="127.0.0.1:2181" path="/feeyo/kafka"  localIp="192.168.1.28"/>
-	</kafka>
-
-
-3、kafka 指令描述
+2、kafka 指令描述
 
 | 指令        	| 参数      	 								| 描述 		  	 					  |  
 | :------------ | :-------------------------------------   	| :-------------------------------    | 
@@ -46,7 +27,7 @@
 
 注：KPOP 不指定 consume offset， 我们自动管理，  指定点位的，我们不管理，也不更新，需要 client 自己维持 consume offset
 
-4、kafka 管理指令
+3、kafka 管理指令
 
  使用 kafka 的队列功能，我们需要提前分配，然后初始化启动 或 通过管理账户的 reload kafka 指令进行热加载，
  加载的过程中，我们会检测 topic， 且会自动的新增到后端的 kafka 中
