@@ -196,7 +196,7 @@ public class RedisEngineCtx {
 			BrokerOffsetService.INSTANCE().start();
 	        Runtime.getRuntime().addShutdownHook(new Thread() {
 				public void run() {
-					BrokerOffsetService.INSTANCE().close();
+					BrokerOffsetService.INSTANCE().stop();
 				}
 			});
 		}

@@ -9,5 +9,5 @@
 	</pool>
 	
 	<!-- kafka 消费点位管理服务 -->
-	<offset zkServerIp="127.0.0.1:2181" path="/feeyo/kafka"  localIp="127.0.0.1"/>
+	<offset zkServerIp="127.0.0.1:2181" path="/feeyo/kafka"  localIp="127.0.0.1:8066"/>
 </kafka>

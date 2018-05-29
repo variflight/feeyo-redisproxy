@@ -82,33 +82,7 @@ public class BrokerOffsetService {
 		this.runningMonitor = new ServerRunningMonitor( runningData );
 		this.runningMonitor.setPath( zkPathUtil.getMasterRunningPath() );
 		this.runningMonitor.setListener(new ServerRunningListener() {
-			@Override
-			public void processStart() {
-				
-				 if (zkclientx != null) {
-					 initialize(path);
-                     zkclientx.subscribeStateChanges(new IZkStateListener() {
-                         public void handleStateChanged(KeeperState state) throws Exception {
-                         }
-                         public void handleNewSession() throws Exception {
-                        	 initialize(path);
-                         }
-                         @Override
-                         public void handleSessionEstablishmentError(Throwable error) throws Exception {
-                             LOGGER.error("failed to connect to zookeeper", error);
-                         }
-                     });
-                 }
-			
-			}
-
-			@Override
-			public void processStop() {
-				if (zkclientx != null) {
-					release(path);
-                }
-			}
-
+	
 			@Override
 			public void processActiveEnter() {
 				// start
@@ -146,7 +120,8 @@ public class BrokerOffsetService {
 		}
 		
 		//
-		initialize(  zkPathUtil.getClusterHostPath( localIp )  );
+		String localIpPath = zkPathUtil.getClusterHostPath( localIp );
+		initialize(  localIpPath  );
 		
 		 // 创建所有工作节点
 		this.zkclientx.subscribeStateChanges(new IZkStateListener() {
@@ -182,10 +157,9 @@ public class BrokerOffsetService {
 			}
 		}, 30, 30, TimeUnit.SECONDS);
 
-
 	}
 	
-	public void close() {
+	public void stop() {
 		
 		running.set( false );
 		
@@ -295,7 +269,7 @@ public class BrokerOffsetService {
 			
 		} else {
 			ServerRunningData master = this.runningMonitor.getActiveData();
-			offset = remoteAdmin.getOffset(master.getAddress(), user, topicCfg.getName(), partition);
+			offset = remoteAdmin.getOffset(master.getIp(), master.getPort(), user, topicCfg.getName(), partition);
 		}
 		return offset;
 	}
@@ -309,7 +283,7 @@ public class BrokerOffsetService {
 			localAdmin.returnOffset(user, topic, partition, offset);
 		} else {
 			ServerRunningData master = this.runningMonitor.getActiveData();
-			remoteAdmin.returnOffset(master.getAddress(), user, topic, partition, offset);
+			remoteAdmin.returnOffset(master.getIp(), master.getPort(), user, topic, partition, offset);
 		}
 	}
 	
