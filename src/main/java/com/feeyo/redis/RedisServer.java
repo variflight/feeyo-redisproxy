@@ -11,6 +11,7 @@ import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.Log4jInitializer;
+import com.feeyo.util.NeverBUG;
 
 /**
  * redis-benchmark -p 8066 -c 100 -t set,get,lpush,LPOP,sAdd,spop,incr -n 500000
@@ -118,7 +119,7 @@ public class RedisServer {
 			}, 30L, 30L, TimeUnit.SECONDS);
 			
 			// CONSOLE 
-			System.out.println("Home directory=" + System.getProperty("FEEYO_HOME") + ", startup=" + System.currentTimeMillis());
+			System.out.println( NeverBUG.help( System.getProperty("FEEYO_HOME") ) );
 			
 			
 		} catch (Throwable e) {
