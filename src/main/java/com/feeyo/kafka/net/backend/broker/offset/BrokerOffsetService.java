@@ -19,18 +19,18 @@ import com.feeyo.kafka.config.OffsetCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
+import com.feeyo.kafka.net.backend.broker.zk.ZkPathUtil;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningData;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningListener;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningMonitor;
-import com.feeyo.kafka.net.backend.broker.zk.util.ZkPathUtil;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 //
-public class KafkaOffsetService {
+public class BrokerOffsetService {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( KafkaOffsetService.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( BrokerOffsetService.class );
 	
 	//
 	private static AtomicBoolean running = new AtomicBoolean( false );
@@ -55,14 +55,14 @@ public class KafkaOffsetService {
 	private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 	
 	//
-	private static KafkaOffsetService INSTANCE = new KafkaOffsetService();
+	private static BrokerOffsetService INSTANCE = new BrokerOffsetService();
 
-	public static KafkaOffsetService INSTANCE() {
+	public static BrokerOffsetService INSTANCE() {
 		return INSTANCE;
 	}
 	
 	//
-	private KafkaOffsetService() {
+	private BrokerOffsetService() {
 		
 		OffsetCfg offsetCfg = KafkaConfigLoader.loadOffsetCfg(ConfigLoader.buidCfgAbsPathFor( "kafka.xml" ));
 		this.zkServerIp = offsetCfg.getZkServerIp();
@@ -83,21 +83,40 @@ public class KafkaOffsetService {
 		this.runningMonitor.setPath( zkPathUtil.getMasterRunningPath() );
 		this.runningMonitor.setListener(new ServerRunningListener() {
 			@Override
-			public void processStart() {}
+			public void processStart() {
+				
+				 if (zkclientx != null) {
+					 initialize(path);
+                     zkclientx.subscribeStateChanges(new IZkStateListener() {
+                         public void handleStateChanged(KeeperState state) throws Exception {
+                         }
+                         public void handleNewSession() throws Exception {
+                        	 initialize(path);
+                         }
+                         @Override
+                         public void handleSessionEstablishmentError(Throwable error) throws Exception {
+                             LOGGER.error("failed to connect to zookeeper", error);
+                         }
+                     });
+                 }
+			
+			}
 
 			@Override
 			public void processStop() {
-				localAdmin.close();
+				if (zkclientx != null) {
+					release(path);
+                }
 			}
 
 			@Override
 			public void processActiveEnter() {
-				
 				// start
 				//
 				LOGGER.info("###### start master=" + localIp);
 				if ( localAdmin != null)
 					localAdmin.startup();
+			
 			}
 
 			@Override
@@ -107,6 +126,7 @@ public class KafkaOffsetService {
 				LOGGER.info("###### stop master=" + localIp);
 				if ( localAdmin != null)
 					localAdmin.close();
+				
 			}
         });
         
@@ -125,15 +145,14 @@ public class KafkaOffsetService {
 			return;
 		}
 		
-		LOGGER.info("## start kafkaOffsetService, localIp={} ", localIp);
+		//
+		initialize(  zkPathUtil.getClusterHostPath( localIp )  );
 		
-		final String path = zkPathUtil.getClusterHostPath( localIp );
-		init( path );
-		
+		 // 创建所有工作节点
 		this.zkclientx.subscribeStateChanges(new IZkStateListener() {
 			public void handleStateChanged(KeeperState state) throws Exception {}
 			public void handleNewSession() throws Exception {
-				init( path );
+				initialize( path );
 			}
 
 			@Override
@@ -147,40 +166,36 @@ public class KafkaOffsetService {
 		}
 		
 		
-		//
-		// 定时持久化offset
+		// flush
+		// 
 		executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
 				try {
-					// offset 数据持久化
-					if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null )
+					if ( runningMonitor != null && runningMonitor.isMineRunning() && localAdmin != null ) {
 						localAdmin.flushAll();
+					}
 
 				} catch (Exception e) {
-					LOGGER.warn("offsetAdmin err: ", e);
+					LOGGER.warn("offset flush err: ", e);
 				}
-
 			}
 		}, 30, 30, TimeUnit.SECONDS);
 
 
 	}
 	
-	public void close() {
+	public void stop() {
 		
 		running.set( false );
 		
-		LOGGER.info("## stop kafkaOffsetService, localIp={} ", localIp);
-
 		// stop running
 		if (runningMonitor != null && runningMonitor.isStart()) {
 			runningMonitor.stop();
 		}
 
 		// release node
-		final String path = zkPathUtil.getClusterHostPath( localIp );
-		release(path);
+		release(  zkPathUtil.getClusterHostPath( localIp ) );
 		
 		// flush 
 		try {	
@@ -193,6 +208,11 @@ public class KafkaOffsetService {
 		} catch (Exception e) {
 			// ignore
 		}
+		
+		//
+		if (zkclientx != null) {
+            zkclientx.close();
+        }
 	}
 	
 	//
@@ -200,7 +220,9 @@ public class KafkaOffsetService {
 	//
 	
 	//################### cluster path ##################
-	private void init(String path) {
+	// 初始化
+	//
+	private void initialize(String path) {
 		LOGGER.info("## init the path = {}",  path);
 		// 初始化系统目录
 		if (zkclientx != null) {
@@ -218,16 +240,17 @@ public class KafkaOffsetService {
 		}
 	}
 
+	// 卸载
+	//
 	private void release(String path) {
 		 LOGGER.info("## release the path = {}", path);
-		// 初始化系统目录
 		if (zkclientx != null) {
 			zkclientx.delete(path);
 		}
 	}
 	
 	
-	
+	//
 	//-----------------------------------------------------------------------------------------------------
 	
 	// slave 节点从master上获取 offset

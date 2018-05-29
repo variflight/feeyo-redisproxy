@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.I0Itec.zkclient.IZkConnection;
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.ZkConnection;
 import org.I0Itec.zkclient.exception.ZkException;
 import org.I0Itec.zkclient.exception.ZkInterruptedException;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
@@ -41,15 +42,15 @@ public class ZkClientx extends ZkClient {
     }
 
     public ZkClientx(String zkServers, int connectionTimeout){
-        this(new ZooKeeperx(zkServers), connectionTimeout);
+        this(new ZkConnection(zkServers), connectionTimeout);
     }
 
     public ZkClientx(String zkServers, int sessionTimeout, int connectionTimeout){
-        this(new ZooKeeperx(zkServers, sessionTimeout), connectionTimeout);
+        this(new ZkConnection(zkServers, sessionTimeout), connectionTimeout);
     }
 
     public ZkClientx(String zkServers, int sessionTimeout, int connectionTimeout, ZkSerializer zkSerializer){
-        this(new ZooKeeperx(zkServers, sessionTimeout), connectionTimeout, zkSerializer);
+        this(new ZkConnection(zkServers, sessionTimeout), connectionTimeout, zkSerializer);
     }
 
     private ZkClientx(IZkConnection connection, int connectionTimeout){

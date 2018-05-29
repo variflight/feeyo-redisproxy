@@ -6,7 +6,7 @@ import java.util.List;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
+import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.redis.config.UserCfg;
@@ -27,134 +27,130 @@ import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
  * @author yangtao
  */
 public class KafkaRouteStrategy extends AbstractRouteStrategy {
-	
-	
-    @Override
-    public RouteResult route(UserCfg userCfg, List<RedisRequest> requests) 
+
+	@Override
+	public RouteResult route(UserCfg userCfg, List<RedisRequest> requests)
 			throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
-    	
-    	RedisRequest request = requests.get(0);
-    	if ( request.getNumArgs() < 2 ) {
-    		throw new InvalidRequestExistsException("wrong number of arguments");
-    	}
-    	
-    	// 获取 topic
-    	String topicName = new String( request.getArgs()[1] );
-    		KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( userCfg.getPoolId() );
-    		if (kafkaPoolCfg == null) {
-    			throw new InvalidRequestExistsException("kafka pool not exists");
-    		}
-    		
-		TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get( topicName );
-		if (topicCfg == null) {
-			throw new InvalidRequestExistsException("topic not exists");
+
+		RedisRequest request = requests.get(0);
+		if (request.getNumArgs() < 2) {
+			throw new InvalidRequestExistsException("wrong number of arguments", false);
 		}
-		
+
+		// 获取 topic
+		String topicName = new String(request.getArgs()[1]);
+		KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( userCfg.getPoolId() );
+		if (kafkaPoolCfg == null) {
+			throw new InvalidRequestExistsException("kafka pool not exists", false);
+		}
+
+		TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topicName);
+		if (topicCfg == null) {
+			throw new InvalidRequestExistsException("topic not exists", false);
+		}
+
 		if (topicCfg.getRunningInfo() == null) {
-			throw new InvalidRequestExistsException("topic not create or not load to kafka...");
-		} 
-		
+			throw new InvalidRequestExistsException("topic not create or not load to kafka...", false);
+		}
+
 		// 分区
 		BrokerPartition partition = null;
 		long offset = -1;
 		int maxBytes = 1;
-	
+
 		// 参数有效性校验
-		switch( request.getPolicy().getHandleType() ) {
-		case CommandParse.PRODUCE_CMD:
-			{
-				if (request.getNumArgs() != 3 && request.getNumArgs() != 4) {
-					throw new InvalidRequestExistsException("wrong number of arguments");
+		switch (request.getPolicy().getHandleType()) {
+		
+			case CommandParse.PRODUCE_CMD: {
+					if (request.getNumArgs() != 3 && request.getNumArgs() != 4) {
+						throw new InvalidRequestExistsException("wrong number of arguments", false);
+					}
+		
+					if (!topicCfg.isProducer(userCfg.getPassword())) {
+						throw new InvalidRequestExistsException("no authority", false);
+					}
+		
+					// 轮询分区
+					if (request.getNumArgs() == 3) {
+						partition = topicCfg.getRunningInfo().getPartitionByProducer();
+		
+					// 指定分区
+					} else {
+						int pt = Integer.parseInt(new String(request.getArgs()[3]));
+						partition = topicCfg.getRunningInfo().getPartition(pt);
+					}
 				}
 	
-				if ( !topicCfg.isProducer( userCfg.getPassword() )) {
-					throw new InvalidRequestExistsException("no authority");
+				break;
+			case CommandParse.CONSUMER_CMD: {
+					if (request.getNumArgs() != 2 && request.getNumArgs() != 4 && request.getNumArgs() != 5) {
+						throw new InvalidRequestExistsException("wrong number of arguments", false);
+					}
+		
+					if (!topicCfg.isConsumer(userCfg.getPassword())) {
+						throw new InvalidRequestExistsException("no authority", false);
+					}
+		
+					// 轮询分区
+					if (request.getNumArgs() == 2) {
+						partition = topicCfg.getRunningInfo().getPartitionByConsumer();
+						offset = BrokerOffsetService.INSTANCE().getOffset(userCfg.getPassword(), topicCfg,
+								partition.getPartition());
+		
+					// 指定分区
+					} else {
+						int pt = Integer.parseInt(new String(request.getArgs()[2]));
+						partition = topicCfg.getRunningInfo().getPartition(pt);
+						offset = Long.parseLong(new String(request.getArgs()[3]));
+						if (request.getNumArgs() == 5) {
+							maxBytes = Integer.parseInt(new String(request.getArgs()[4]));
+						}
+					}
+		
 				}
-				
-				// 轮询分区生产
-				if (request.getNumArgs() == 3) {
-					partition = topicCfg.getRunningInfo().getPartitionByProducer();
-					
-				// 指定分区生产
-				} else {
-					int pt = Integer.parseInt(new String(request.getArgs()[3]));
-					partition = topicCfg.getRunningInfo().getPartition(pt);
-				} 
-			}
+				break;
+			case CommandParse.PARTITIONS_CMD: {
+					if (request.getNumArgs() != 2) {
+						throw new InvalidRequestExistsException("wrong number of arguments", false);
+					}
+		
+					if (!topicCfg.isConsumer(userCfg.getPassword())) {
+						throw new InvalidRequestExistsException("no authority", false);
+					}
+		
+					return new RouteResult(RedisRequestType.KAFKA, requests, null);
+				}
 			
-			break;
-		case CommandParse.CONSUMER_CMD:
-			{
-				if (request.getNumArgs() != 2 && request.getNumArgs() != 4 && request.getNumArgs() != 5 ) {
-					throw new InvalidRequestExistsException("wrong number of arguments");
+			case CommandParse.PRIVATE_CMD: {
+					// 全部内部代码调用 省掉验证部分
+					return new RouteResult(RedisRequestType.KAFKA, requests, null);
 				}
-				
-				if ( !topicCfg.isConsumer( userCfg.getPassword() )) {
-					throw new InvalidRequestExistsException("no authority");
-				}
-				
-				// 轮询分区消费
-				if (request.getNumArgs() == 2) {
-					partition = topicCfg.getRunningInfo().getPartitionByConsumer();
-					offset = KafkaOffsetService.INSTANCE().getOffset(userCfg.getPassword(), topicCfg, partition.getPartition());
-					
-				// 指定分区消费
-				} else {
+	
+			case CommandParse.OFFSET_CMD: {
+					if (request.getNumArgs() != 4) {
+						throw new InvalidRequestExistsException("wrong number of arguments", false);
+					}
+		
+					if (!topicCfg.isConsumer(userCfg.getPassword())) {
+						throw new InvalidRequestExistsException("no authority", false);
+					}
+		
 					int pt = Integer.parseInt(new String(request.getArgs()[2]));
 					partition = topicCfg.getRunningInfo().getPartition(pt);
-					offset = Long.parseLong(new String(request.getArgs()[3]));
-					if (request.getNumArgs() == 5) {
-						maxBytes = Integer.parseInt(new String(request.getArgs()[4]));
-					}
-				} 
-				
-			}
-			break;
-		case CommandParse.PARTITIONS_CMD: 
-			{
-				if (request.getNumArgs() != 2) {
-					throw new InvalidRequestExistsException("wrong number of arguments");
 				}
-	
-				if (!topicCfg.isConsumer(userCfg.getPassword())) {
-					throw new InvalidRequestExistsException("no authority");
-				}
-				
-				return new RouteResult(RedisRequestType.KAFKA, requests, null);
-			}
-		case CommandParse.PRIVATE_CMD: 
-			{
-				// 全部内部代码调用 省掉验证部分
-				return new RouteResult(RedisRequestType.KAFKA, requests, null);
-			}
-			
-		case CommandParse.OFFSET_CMD: 
-			{
-				if (request.getNumArgs() != 4) {
-					throw new InvalidRequestExistsException("wrong number of arguments");
-				}
-				
-				if (!topicCfg.isConsumer(userCfg.getPassword())) {
-					throw new InvalidRequestExistsException("no authority");
-				}
-				
-				int pt = Integer.parseInt(new String(request.getArgs()[2]));
-				partition = topicCfg.getRunningInfo().getPartition(pt);
-				
 				break;
-			}
 		}
 
-		if ( partition == null ) {
-			throw new InvalidRequestExistsException("wrong partition");
+		if (partition == null) {
+			throw new InvalidRequestExistsException("wrong partition", false);
 		}
-		
+
 		//
-		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get( topicCfg.getPoolId() );
-		PhysicalNode physicalNode = pool.getPhysicalNode( partition.getLeader().getId() );
+		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
+		PhysicalNode physicalNode = pool.getPhysicalNode(partition.getLeader().getId());
 		if (physicalNode == null)
 			throw new PhysicalNodeUnavailableException("node unavailable.");
-		
+
 		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);

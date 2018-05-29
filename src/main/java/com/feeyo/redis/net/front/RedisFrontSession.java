@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
-import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
+import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -200,7 +200,7 @@ public class RedisFrontSession {
 				if ( routeResult == null ) {
 					frontCon.write( "-ERR unkonw command \r\n".getBytes() );
 					return;
-				}
+				} 
 				
 				// 指令提前返回
 				if ( intercept( routeResult ) ) {
@@ -217,18 +217,32 @@ public class RedisFrontSession {
 				
 			} catch (InvalidRequestExistsException e) {
 				
-				if ( requests.size() > 1 ) {
-					frontCon.write( ERR_INVALID_COMMAND );
+				if ( e.isIsfaultTolerant() ) {
+				
+					if ( requests.size() > 1 ) {
+						frontCon.write( ERR_INVALID_COMMAND );
+					} else {
+						// 此处用于兼容
+						frontCon.write( OK );
+					}
+					
 				} else {
-					// 此处用于兼容
-					frontCon.write( OK );
+					
+					// err
+					StringBuffer errCmdBuffer = new StringBuffer(50);
+					errCmdBuffer.append("-ERR ");
+					errCmdBuffer.append( e.getMessage() );
+					errCmdBuffer.append( ".\r\n" );
+					
+					byte[] ERR_INVALID_COMMAND = errCmdBuffer.toString().getBytes();
+					frontCon.write( ERR_INVALID_COMMAND );
 				}
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
-				
+			
+			// auto response
 			} catch (FullRequestNoThroughtException e) {
 
-				//  自动响应指令
 				for (int i = 0; i < e.getRequests().size(); i++) {
 					RedisRequest request = e.getRequests().get(i);
 					if (request == null) {
@@ -249,6 +263,7 @@ public class RedisFrontSession {
 					}
 				}
 				
+			// node unavailable
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
@@ -548,7 +563,7 @@ public class RedisFrontSession {
 		try {
 			// 申请offset
 			if ( cmd.equals("KGETOFFSET") ) {
-				long offset = KafkaOffsetService.INSTANCE().getOffsetForSlave(frontCon.getPassword(), topic, partition);
+				long offset = BrokerOffsetService.INSTANCE().getOffsetForSlave(frontCon.getPassword(), topic, partition);
 				StringBuffer sb = new StringBuffer();
 				sb.append("+").append(offset).append("\r\n");
 				frontCon.write(sb.toString().getBytes());
@@ -556,7 +571,7 @@ public class RedisFrontSession {
 			// 返还 offset
 			} else if ( cmd.equals("KRETURNOFFSET") ) {
 				long offset = Long.parseLong(new String(request.getArgs()[3]));
-				KafkaOffsetService.INSTANCE().returnOffsetForSlave(frontCon.getPassword(), topic, partition, offset);
+				BrokerOffsetService.INSTANCE().returnOffsetForSlave(frontCon.getPassword(), topic, partition, offset);
 				frontCon.write(OK);
 			}
 		} catch (Exception e) {

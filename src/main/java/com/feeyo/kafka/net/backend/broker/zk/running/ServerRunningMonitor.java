@@ -14,8 +14,8 @@ import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.kafka.net.backend.broker.zk.BooleanMutex;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
-import com.feeyo.kafka.net.backend.broker.zk.util.BooleanMutex;
 import com.feeyo.kafka.util.JsonUtils;
 
 /**
@@ -82,53 +82,77 @@ public class ServerRunningMonitor {
         };
         
     }
-
-
+    
     public boolean isStart() {
         return running;
     }
     
-	public void start() {
-
+    public void init() {
+        processStart();
+    }
+    
+	public synchronized void start() {
+		
 		if (running) {
-			return; // throw error...
+			throw new RuntimeException(this.getClass().getName() + " has startup , don't repeat start");
 		}
 
 		running = true;
 		
-	    // 如果需要尽可能释放 node资源，不需要监听 running节点，不然即使stop了这台机器，另一台机器立马会start
-        zkClient.subscribeDataChanges(path, dataListener);
-        initRunning();
+		try {
+			processStart();
+			if (zkClient != null) { // 如果需要尽可能释放instance资源，不需要监听running节点，不然即使stop了这台机器，另一台机器立马会start
+				zkClient.subscribeDataChanges(path, dataListener);
+
+				initRunning();
+			} else {
+				processActiveEnter();// 没有zk，直接启动
+			}
+		} catch (Exception e) {
+			LOGGER.error("start failed", e);
+			// 没有正常启动，重置一下状态，避免干扰下一次start
+			stop();
+		}
 
 	}
 
     public void release() {
-    	 releaseRunning(); // 尝试一下release
+    	 if (zkClient != null) {
+             releaseRunning(); // 尝试一下release
+         } else {
+             processActiveExit(); // 没有zk，直接启动
+         }
     }
 
-    public void stop() {
-       
-		if (!running) {
-			return; //
+    public synchronized void stop() {
+    	
+    	if (!running) {
+            throw new RuntimeException(this.getClass().getName() + " isn't start , please check");
+        }
+
+        running = false;
+
+		if (zkClient != null) {
+			zkClient.unsubscribeDataChanges(path, dataListener);
+
+			releaseRunning(); // 尝试一下release
+		} else {
+			processActiveExit(); // 没有zk，直接启动
 		}
-
-		running = false;
-
-        zkClient.unsubscribeDataChanges(path, dataListener);
-        releaseRunning(); // 尝试一下release
-    }
+		processStop();
+	}
 
     private void initRunning() {
     	
         if (!isStart()) {
             return;
         }
-
+        
         // 序列化
         byte[] bytes = JsonUtils.marshalToByte(serverData);
         try {
             mutex.set(false);
-            zkClient.create(path, bytes, CreateMode.EPHEMERAL);	// 
+            zkClient.create(path, bytes, CreateMode.EPHEMERAL);
             activeData = serverData;
             processActiveEnter();// 触发一下事件
             mutex.set(true);
@@ -140,8 +164,7 @@ public class ServerRunningMonitor {
                 activeData = JsonUtils.unmarshalFromByte(bytes, ServerRunningData.class);
             }
         } catch (ZkNoNodeException e) {
-        	
-			if (path.lastIndexOf("/") > 0) {
+        	if (path.lastIndexOf("/") > 0) {
 				String fatherPath = path.substring(0, path.lastIndexOf("/"));
 				zkClient.createPersistent(fatherPath, true); // 尝试创建父节点
 				
@@ -154,14 +177,14 @@ public class ServerRunningMonitor {
 
     /**
      * 阻塞等待自己成为active，如果自己成为active，立马返回
-     * 
-     * @throws InterruptedException
      */
     public void waitForActive() throws InterruptedException {
         initRunning();
         mutex.get();
     }
-
+    
+    
+    
     /**
      * 检查当前的状态
      */
@@ -173,26 +196,27 @@ public class ServerRunningMonitor {
             // 检查下nid是否为自己
             boolean result = isMine(activeData.getAddress());
             if (!result) {
-                LOGGER.warn("node is running in node[{}] , but not in node[{}]",
+            	LOGGER.warn("canal is running in node[{}] , but not in node[{}]",
                     activeData.getAddress(),
                     serverData.getAddress());
             }
             return result;
         } catch (ZkNoNodeException e) {
-            LOGGER.warn("node is not run any in node");
+        	LOGGER.warn("server is not run any in node");
             return false;
         } catch (ZkInterruptedException e) {
-            LOGGER.warn("node check is interrupt");
+        	LOGGER.warn("server check is interrupt");
             Thread.interrupted();// 清除interrupt标记
             return check();
         } catch (ZkException e) {
-            LOGGER.warn("node check is failed");
+        	LOGGER.warn("server check is failed");
             return false;
         }
     }
 
     private boolean releaseRunning() {
-        if (check()) {
+    	
+    	if (check()) {
             zkClient.delete(path);
             mutex.set(false);
             processActiveExit();
@@ -202,18 +226,36 @@ public class ServerRunningMonitor {
         return false;
     }
     
+    // ====================== helper method ======================
     //
     private boolean isMine(String address) {
         return address.equals(serverData.getAddress());
     }
 
-    private void processActiveEnter() {
+    
+    private void processStart() {
         if (listener != null) {
             try {
-                listener.processActiveEnter();
+                listener.processStart();
             } catch (Exception e) {
-                LOGGER.error("processActiveEnter failed", e);
+            	LOGGER.error("processStart failed", e);
             }
+        }
+    }
+
+    private void processStop() {
+        if (listener != null) {
+            try {
+                listener.processStop();
+            } catch (Exception e) {
+            	LOGGER.error("processStop failed", e);
+            }
+        }
+    }
+
+    private void processActiveEnter() {
+        if (listener != null) {
+            listener.processActiveEnter();
         }
     }
 
@@ -222,11 +264,10 @@ public class ServerRunningMonitor {
             try {
                 listener.processActiveExit();
             } catch (Exception e) {
-                LOGGER.error("processActiveExit failed", e);
+            	LOGGER.error("processActiveExit failed", e);
             }
         }
     }
-
     
     public void setPath(String path) {
 		this.path = path;

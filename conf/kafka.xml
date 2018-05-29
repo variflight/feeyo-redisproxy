@@ -4,11 +4,10 @@
 	<!-- kafka 代理 -->
 	<pool id="3">
 		<!-- topic 配置， 主题 、分区数、复制因子、生产者、消费者 -->
-		<topic name="test6" partitions="3" replicationFactor="2" producer="pwd05" consumer="pwd05,pwd06"/>
-		<topic name="test7" partitions="3" replicationFactor="2" producer="pwd05" consumer="pwd05,pwd06"/>
-		<topic name="etd_entry_k_queue" partitions="3" replicationFactor="2" producer="yzm" consumer="yzm"/>
+		<topic name="test01" partitions="3" replicationFactor="1" producer="pwd04" consumer="pwd04,pwd05"/>
+		<topic name="test02" partitions="3" replicationFactor="1" producer="pwd05" consumer="pwd04,pwd05"/>
 	</pool>
 	
 	<!-- kafka 消费点位管理服务 -->
-	<offset zkServerIp="127.0.0.1:2181" path="/feeyo/kafka"  localIp=""/>
+	<offset zkServerIp="127.0.0.1:2181" path="/feeyo/kafka"  localIp="127.0.0.1"/>
 </kafka>

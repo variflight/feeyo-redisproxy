@@ -18,7 +18,7 @@ import com.feeyo.kafka.codec.ProduceResponse;
 import com.feeyo.kafka.codec.Record;
 import com.feeyo.kafka.codec.RequestHeader;
 import com.feeyo.kafka.net.backend.broker.BrokerApiVersion;
-import com.feeyo.kafka.net.backend.broker.offset.KafkaOffsetService;
+import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
@@ -226,7 +226,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
 			if (pr.isCorrect()) {
 				
-				KafkaOffsetService.INSTANCE().updateProducerOffset(frontCon.getPassword(), pr.getTopic(), partition,
+				BrokerOffsetService.INSTANCE().updateProducerOffset(frontCon.getPassword(), pr.getTopic(), partition,
 						pr.getOffset(), pr.getLogStartOffset());
 				
 				byte[] size = ProtoUtils.convertIntToByteArray(PRODUCE_RESPONSE_SIZE);
@@ -277,7 +277,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 				List<Record> records = fr.getRecords();
 				if (records == null || records.isEmpty()) {
 					if ( isErrorOffsetRecovery )
-						revertConsumerOffset(topic, partition, consumeOffset);
+						returnConsumerOffset(topic, partition, consumeOffset);
 					frontCon.write(NULL);
 					return;
 				}
@@ -290,7 +290,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 					
 					if (value == null) {
 						if ( isErrorOffsetRecovery )
-							revertConsumerOffset(topic, partition, consumeOffset);
+							returnConsumerOffset(topic, partition, consumeOffset);
 						
 						frontCon.write(NULL);
 						return;
@@ -319,7 +319,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
 				
 				if ( isErrorOffsetRecovery )
-					revertConsumerOffset(topic, partition, consumeOffset);
+					returnConsumerOffset(topic, partition, consumeOffset);
 				
 				frontCon.write(NULL);
 				
@@ -327,7 +327,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			} else {
 				
 				if ( isErrorOffsetRecovery )
-					revertConsumerOffset(topic, partition, consumeOffset);
+					returnConsumerOffset(topic, partition, consumeOffset);
 				
 				StringBuffer sb = new StringBuffer();
 				sb.append("-ERR ").append(fr.getErrorMessage()).append("\r\n");
@@ -335,8 +335,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			}
 		}
 		
-		private void revertConsumerOffset(String topic, int partition, long offset) {
-			KafkaOffsetService.INSTANCE().returnOffset(frontCon.getPassword(), topic, partition, offset);
+		private void returnConsumerOffset(String topic, int partition, long offset) {
+			BrokerOffsetService.INSTANCE().returnOffset(frontCon.getPassword(), topic, partition, offset);
 		}
 	}
 	
