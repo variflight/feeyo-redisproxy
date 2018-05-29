@@ -86,11 +86,7 @@ public class ServerRunningMonitor {
     public boolean isStart() {
         return running;
     }
-    
-    public void init() {
-        processStart();
-    }
-    
+
 	public synchronized void start() {
 		
 		if (running) {
@@ -100,14 +96,11 @@ public class ServerRunningMonitor {
 		running = true;
 		
 		try {
-			processStart();
-			if (zkClient != null) { // 如果需要尽可能释放instance资源，不需要监听running节点，不然即使stop了这台机器，另一台机器立马会start
-				zkClient.subscribeDataChanges(path, dataListener);
 
-				initRunning();
-			} else {
-				processActiveEnter();// 没有zk，直接启动
-			}
+			// 如果需要尽可能释放instance资源，不需要监听running节点，不然即使stop了这台机器，另一台机器立马会start
+			zkClient.subscribeDataChanges(path, dataListener);
+			initRunning();
+			
 		} catch (Exception e) {
 			LOGGER.error("start failed", e);
 			// 没有正常启动，重置一下状态，避免干扰下一次start
@@ -120,7 +113,7 @@ public class ServerRunningMonitor {
     	 if (zkClient != null) {
              releaseRunning(); // 尝试一下release
          } else {
-             processActiveExit(); // 没有zk，直接启动
+             processActiveExit(); 
          }
     }
 
@@ -132,14 +125,10 @@ public class ServerRunningMonitor {
 
         running = false;
 
-		if (zkClient != null) {
-			zkClient.unsubscribeDataChanges(path, dataListener);
-
-			releaseRunning(); // 尝试一下release
-		} else {
-			processActiveExit(); // 没有zk，直接启动
-		}
-		processStop();
+        zkClient.unsubscribeDataChanges(path, dataListener);
+        
+        // 尝试 release
+		releaseRunning(); 
 	}
 
     private void initRunning() {
@@ -230,27 +219,6 @@ public class ServerRunningMonitor {
     //
     private boolean isMine(String address) {
         return address.equals(serverData.getAddress());
-    }
-
-    
-    private void processStart() {
-        if (listener != null) {
-            try {
-                listener.processStart();
-            } catch (Exception e) {
-            	LOGGER.error("processStart failed", e);
-            }
-        }
-    }
-
-    private void processStop() {
-        if (listener != null) {
-            try {
-                listener.processStop();
-            } catch (Exception e) {
-            	LOGGER.error("processStop failed", e);
-            }
-        }
     }
 
     private void processActiveEnter() {
