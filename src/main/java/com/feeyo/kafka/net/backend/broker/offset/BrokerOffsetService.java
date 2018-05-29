@@ -124,22 +124,11 @@ public class BrokerOffsetService {
 		initialize(  localIpPath  );
 		
 		 // 创建所有工作节点
-		this.zkclientx.subscribeStateChanges(new IZkStateListener() {
-			public void handleStateChanged(KeeperState state) throws Exception {}
-			public void handleNewSession() throws Exception {
-				initialize( path );
-			}
-
-			@Override
-			public void handleSessionEstablishmentError(Throwable error) throws Exception {
-				LOGGER.error("failed to connect to zookeeper", error);
-			}
-		});
+		this.zkclientx.subscribeStateChanges(new ZkStateListener());
 
 		if (runningMonitor != null && !runningMonitor.isStart()) {
 			runningMonitor.start();
 		}
-		
 		
 		// flush
 		// 
@@ -231,7 +220,7 @@ public class BrokerOffsetService {
 	public long getOffsetForSlave(String user, String topic, int partition) {
 		
 		// 如果本机不是master,说明网络异常，目前没有master
-		if (!runningMonitor.isMineRunning()) {
+		if (!runningMonitor.isZkAlive() || !runningMonitor.isMineRunning()) {
 			return -1;
 		}
 		
@@ -255,7 +244,8 @@ public class BrokerOffsetService {
 	
 	// 回滚slave节点上的offset
 	public void returnOffsetForSlave(String user, String topic, int partition, long offset) {
-		if (runningMonitor.isMineRunning()) {
+		
+		if (runningMonitor.isZkAlive() && runningMonitor.isMineRunning()) {
 			localAdmin.returnOffset(user, topic, partition, offset);
 		}
 	}
@@ -263,6 +253,11 @@ public class BrokerOffsetService {
 	
 	// 获取offset
 	public long getOffset(String user, TopicCfg topicCfg, int partition) {
+		
+		if(!runningMonitor.isZkAlive()) {
+			return -1;
+		}
+		
 		long offset;
 		if (runningMonitor.isMineRunning()) {
 			offset = localAdmin.getOffset(user, topicCfg, partition);
@@ -276,7 +271,7 @@ public class BrokerOffsetService {
 
 	// 回收 offset
 	public void returnOffset(String user, String topic, int partition, long offset) {
-		if (offset < 0) {
+		if (offset < 0 || !runningMonitor.isZkAlive()) {
 			return;
 		}
 		if (runningMonitor.isMineRunning()) {
@@ -291,8 +286,36 @@ public class BrokerOffsetService {
 	// 更新生产offset
 	public void updateProducerOffset(String user, String topic, int partition, long offset, long logStartOffset) {
 		// TODO 因为影响很小，所以为了减少slave master之间的调用，对slave节点不更新生产点位
-		if (runningMonitor.isMineRunning()) {
+		if (runningMonitor.isZkAlive() && runningMonitor.isMineRunning()) {
 			localAdmin.updateProducerOffset(user, topic, partition, offset, logStartOffset);
+		}
+	}
+	
+	class ZkStateListener implements IZkStateListener{
+		
+		private ServerRunningData recentMaster = null;
+		
+		@Override
+		public void handleStateChanged(KeeperState state) throws Exception {
+			
+			if(state == KeeperState.Disconnected) {
+				recentMaster = runningMonitor.getActiveData();
+				runningMonitor.zkDisconnected();
+				
+			}else if(state == KeeperState.SyncConnected) {
+				if(recentMaster != null)
+					runningMonitor.zkConnected(recentMaster);
+			}
+		}
+		
+		@Override
+		public void handleNewSession() throws Exception {
+			initialize( path );
+		}
+
+		@Override
+		public void handleSessionEstablishmentError(Throwable error) throws Exception {
+			LOGGER.error("failed to connect to zookeeper", error);
 		}
 	}
 }
