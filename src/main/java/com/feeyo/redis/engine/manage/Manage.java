@@ -126,6 +126,7 @@ public class Manage {
 	 *  SHOW VM
 	 *  SHOW POOL
 	 *  SHOW COST
+	 *  SHOW WAIT_COST
 	 *  SHOW USER_DAY_NET_IO
 	 *  SHOW POOL_NET_IO POOLNAME
 	 *  SHOW TOPIC
@@ -240,10 +241,12 @@ public class Manage {
 						StringBuffer sBuffer = new StringBuffer();
 						sBuffer.append("total=").append( result.totalCount ).append(", ");
 						sBuffer.append("slow=").append( result.slowCount ).append(", ");
+						sBuffer.append("waitSlow=").append( result.waitSlowCount ).append(", ");
 						sBuffer.append("max=").append( result.maxCount ).append(", ");
 						sBuffer.append("min=").append( result.minCount ).append(", ");
 						sBuffer.append("avg=").append( result.avgCount ).append(", ");
 						sBuffer.append("procTime=").append( result.procTime ).append(", ");
+						sBuffer.append("waitTime=").append( result.waitTime ).append(", ");
 						sBuffer.append("created=").append( result.created );
 						
 						lines.add( sBuffer.toString() );
@@ -914,6 +917,18 @@ public class Manage {
 				// SHOW COST
 				} else if (arg2.equalsIgnoreCase("COST")) {
 					Collection<Entry<String, AtomicLong>> entrys = StatUtil.getCommandProcTimeMap().entrySet();
+
+					List<String> lines = new ArrayList<String>();
+					for (Entry<String, AtomicLong> entry : entrys) {
+						StringBuffer sBuffer = new StringBuffer();
+						sBuffer.append(entry.getKey()).append(": ").append(entry.getValue().get());
+						lines.add(sBuffer.toString());
+					}
+					return encode(lines);
+					
+				// SHOW WAIT_COST
+				} else if (arg2.equalsIgnoreCase("WAIT_COST")) {
+					Collection<Entry<String, AtomicLong>> entrys = StatUtil.getCommandWaitTimeMap().entrySet();
 
 					List<String> lines = new ArrayList<String>();
 					for (Entry<String, AtomicLong> entry : entrys) {
