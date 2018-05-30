@@ -1,5 +1,6 @@
 package com.feeyo.kafka.config;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -102,7 +103,7 @@ public class KafkaPoolCfg extends PoolCfg {
 			
 			// 获取kafka中的topic情况
 			Map<String, TopicDescription> remoteTopics = kafkaAdmin.getTopicAndDescriptions();
-
+			Collection<Node> clusterNodes = kafkaAdmin.getClusterNodes();
 			for (TopicCfg topicCfg : topicCfgMap.values()) {
 
 				String topicName = topicCfg.getName();
@@ -117,7 +118,13 @@ public class KafkaPoolCfg extends PoolCfg {
 						kafkaAdmin.addPartitionsForTopic(topicName, partitionNum);
 						topicDescription = kafkaAdmin.getDescriptionByTopicName(topicName);
 					}
+					
 				} else {
+					//verify
+					if(clusterNodes == null || replicationFactor > clusterNodes.size()) {
+						throw new Exception( "kafka topicName="+ topicName + ", no enough alive physical nodes for replication");
+					}
+					
 					// create topic
 					kafkaAdmin.createTopic(topicName, partitionNum, replicationFactor);
 					topicDescription = kafkaAdmin.getDescriptionByTopicName(topicName);
