@@ -14,10 +14,11 @@ public class CmdAccessCollector implements StatCollector {
 	private static ConcurrentHashMap<String, Command> commandCountMap = new ConcurrentHashMap<String, Command>();
 	private static ConcurrentHashMap<String, UserCommand> userCommandCountMap = new ConcurrentHashMap<String, UserCommand>();
 	private static ConcurrentHashMap<String, AtomicLong> commandProcTimeMap = new ConcurrentHashMap<String, AtomicLong>();
+	private static ConcurrentHashMap<String, AtomicLong> commandWaitTimeMap = new ConcurrentHashMap<String, AtomicLong>();
 	
 
 	@Override
-	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, boolean isCommandOnly ) {
+	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, int waitTimeMills, boolean isCommandOnly ) {
 	
 		UserCommand userCommand = userCommandCountMap.get(password);
 		if ( userCommand == null ) {
@@ -60,34 +61,43 @@ public class CmdAccessCollector implements StatCollector {
 		}			
 		
 		userCommand.incrementCommandCount( cmd );
-		// 计算指令消耗时间分布，5个档（小于5，小于10，小于20，小于50，大于50）
-    	String timeKey = null;
-    	if ( procTimeMills < 5 ) {
-    		timeKey = "<5   ";
-        } else if ( procTimeMills < 10 ) {
-        	timeKey = "5-10 ";
-        } else if ( procTimeMills < 20 ) {
-        	timeKey = "10-20";
-        } else if ( procTimeMills < 50 ) {
-        	timeKey = "20-50";
-        } else {
-        	timeKey = ">50  ";
-        }
-    	
-    	AtomicLong count = commandProcTimeMap.get(timeKey);
-    	if (count == null) {
-    		commandProcTimeMap.put(timeKey, new AtomicLong(1));
-    	} else {
-    		count.incrementAndGet();
-    	}
 		
+		// 计算指令消耗
+		timeMillsCollect(procTimeMills, commandProcTimeMap);
+		// 计算等待消耗
+		timeMillsCollect(waitTimeMills, commandWaitTimeMap);
+		
+	}
+
+	private void timeMillsCollect(int timeMills, ConcurrentHashMap<String, AtomicLong> timeMap) {
+		// 计算指令消耗时间分布，5个档（小于5，小于10，小于20，小于50，大于50）
+		String timeKey = null;
+		if (timeMills < 5) {
+			timeKey = "<5   ";
+		} else if (timeMills < 10) {
+			timeKey = "5-10 ";
+		} else if (timeMills < 20) {
+			timeKey = "10-20";
+		} else if (timeMills < 50) {
+			timeKey = "20-50";
+		} else {
+			timeKey = ">50  ";
+		}
+
+		AtomicLong count = timeMap.get(timeKey);
+		if (count == null) {
+			timeMap.put(timeKey, new AtomicLong(1));
+		} else {
+			count.incrementAndGet();
+		}
 	}
 
 	@Override
 	public void onScheduleToZore() {
 		commandCountMap.clear();
-		commandProcTimeMap.clear();
 		userCommandCountMap.clear();
+		commandProcTimeMap.clear();
+		commandWaitTimeMap.clear();
 	}
 
 	@Override
@@ -97,6 +107,10 @@ public class CmdAccessCollector implements StatCollector {
 	public ConcurrentHashMap<String, AtomicLong> getCommandProcTimeMap() {
     		return commandProcTimeMap;
     }
+	
+	public ConcurrentHashMap<String, AtomicLong> getCommandWaitTimeMap() {
+		return commandWaitTimeMap;
+	}
 
     public ConcurrentHashMap<String, Command> getCommandCountMap() {
     		return commandCountMap;

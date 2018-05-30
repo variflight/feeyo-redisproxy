@@ -65,8 +65,9 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 				long requestTimeMills = frontCon.getSession().getRequestTimeMills();			
 				long responseTimeMills = TimeUtil.currentTimeMillis();
 				
+				int waitTimeMills = (int)(conn.getLastReadTime() - conn.getLastWriteTime());
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), waitTimeMills, false);
 			}
 			
 			// 后端链接释放

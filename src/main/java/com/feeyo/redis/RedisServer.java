@@ -59,7 +59,7 @@ public class RedisServer {
 				public void run() {		
 					TimeUtil.update();
 				}			
-			}, 0, 10L, TimeUnit.MILLISECONDS);
+			}, 0, 3L, TimeUnit.MILLISECONDS);
 			
 			
 			// IDLE 连接检查, 关闭

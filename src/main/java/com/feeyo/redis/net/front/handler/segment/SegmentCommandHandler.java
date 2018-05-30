@@ -95,10 +95,11 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                         
                         // 释放
                         releaseBackendConnection(backendCon);
-
+                        
+                        int waitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
                         // 数据收集
                         StatUtil.collect(password, cmd, key, requestSize, responseSize,
-                                (int) (responseTimeMills - requestTimeMills), false);
+                                (int) (responseTimeMills - requestTimeMills), waitTimeMills, false);
                         
                     } catch (IOException e2) {
                         if (frontCon != null) {

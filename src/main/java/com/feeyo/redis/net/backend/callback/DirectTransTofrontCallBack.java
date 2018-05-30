@@ -122,8 +122,9 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				
 				// 后段链接释放
 				backendCon.release();	
+				int waitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), false);
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, (int)(responseTimeMills - requestTimeMills), waitTimeMills, false);
 				
 			} catch(IOException e2) {
 				

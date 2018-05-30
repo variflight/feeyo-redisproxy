@@ -226,7 +226,7 @@ public class StatUtil {
 	 * @param isCommandOnly 用于判断此次收集是否只用于command（pipeline指令的子指令）收集。
 	 */
 	public static void collect(final String password, final String cmd, final byte[] key, 
-			final int requestSize, final int responseSize, final int procTimeMills, final boolean isCommandOnly) {
+			final int requestSize, final int responseSize, final int procTimeMills, final int waitTimeMills, final boolean isCommandOnly) {
 		
 		if ( cmd == null ) {
 			return;
@@ -241,7 +241,7 @@ public class StatUtil {
 				String keyStr = new String(key);
 				for(StatCollector listener: collectors) {
 					try {
-						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, isCommandOnly);
+						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, waitTimeMills, isCommandOnly);
 					} catch(Exception e) {
 						LOGGER.error("error:",e);
 					}
@@ -257,11 +257,11 @@ public class StatUtil {
 		        try {
 		        	// password 
 		            AccessStatInfo stat1 = getAccessStatInfo(password, currentTimeMillis);
-		            stat1.collect(currentTimeMillis, procTimeMills, requestSize, responseSize);
+		            stat1.collect(currentTimeMillis, procTimeMills, waitTimeMills, requestSize, responseSize);
 		        	
 		            // all
 		            AccessStatInfo stat2 = getAccessStatInfo(STAT_KEY, currentTimeMillis);
-		            stat2.collect(currentTimeMillis, procTimeMills, requestSize, responseSize);
+		            stat2.collect(currentTimeMillis, procTimeMills, waitTimeMills, requestSize, responseSize);
 		            
 		        } catch (Exception e) {
 		        }
@@ -295,6 +295,10 @@ public class StatUtil {
     public static ConcurrentHashMap<String, AtomicLong> getCommandProcTimeMap() {
     	return cmdAccessCollector.getCommandProcTimeMap();
     }
+    
+    public static ConcurrentHashMap<String, AtomicLong> getCommandWaitTimeMap() {
+    	return cmdAccessCollector.getCommandWaitTimeMap();
+    }
 
     public static ConcurrentHashMap<String, Command> getCommandCountMap() {
     	return cmdAccessCollector.getCommandCountMap();
@@ -318,8 +322,10 @@ public class StatUtil {
 		private String key;
 	    private int currentIndex;
 	    private AtomicInteger[] procTimes = null;
+	    private AtomicInteger[] waitTimes = null;
 	    private AtomicInteger[] totalCounter = null;
 	    private AtomicInteger[] slowCounter = null;
+	    private AtomicInteger[] waitSlowCounter = null;
 	    private AtomicLong[] netInBytes = null;
 	    private AtomicLong[] netOutBytes = null;
 	    
@@ -332,8 +338,10 @@ public class StatUtil {
 	    public AccessStatInfo(String key, long currentTimeMillis, int length) {
 	    	this.key = key;
 	        this.procTimes = initAtomicIntegerArr(length);
+	        this.waitTimes = initAtomicIntegerArr(length);
 	        this.totalCounter = initAtomicIntegerArr(length);
 	        this.slowCounter = initAtomicIntegerArr(length);
+	        this.waitSlowCounter = initAtomicIntegerArr(length);
 	        this.netInBytes = initAtomicLongArr(length);
 	        this.netOutBytes = initAtomicLongArr(length);        
 	        this.length = length;
@@ -366,7 +374,7 @@ public class StatUtil {
 	     * @param currentTimeMillis
 	     * @param procTimeMills
 	     */
-	    public void collect(long currentTimeMillis, long procTimeMills, int requestSize, int responseSize) {
+	    public void collect(long currentTimeMillis, long procTimeMills, long waitTimeMills, int requestSize, int responseSize) {
 	    	
 	        int tempIndex = getIndex(currentTimeMillis, length);
 	        if (currentIndex != tempIndex) {
@@ -380,12 +388,16 @@ public class StatUtil {
 	        }
 	        
 	        procTimes[currentIndex].addAndGet((int) procTimeMills);
+	        waitTimes[currentIndex].addAndGet((int) waitTimeMills);
 	        totalCounter[currentIndex].incrementAndGet();
 	        netInBytes[currentIndex].addAndGet( requestSize );
 	        netOutBytes[currentIndex].addAndGet( responseSize );
 	        
 	        if (procTimeMills >= SLOW_COST) {
 	            slowCounter[currentIndex].incrementAndGet();
+	        }	        
+	        if (waitTimeMills >= SLOW_COST) {
+	        		waitSlowCounter[currentIndex].incrementAndGet();
 	        }	        
 	    }
 	    
@@ -408,7 +420,9 @@ public class StatUtil {
 				int currentIndex = (startIndex - i + length) % length;
 				result.totalCount += totalCounter[currentIndex].get();
 				result.slowCount += slowCounter[currentIndex].get();
+				result.waitSlowCount += waitSlowCounter[currentIndex].get();
 				result.procTime += procTimes[currentIndex].get();
+				result.waitTime += waitTimes[currentIndex].get();
 
 				if (totalCounter[currentIndex].get() > result.maxCount) {
 					result.maxCount = totalCounter[currentIndex].get();
@@ -457,8 +471,10 @@ public class StatUtil {
 
 		private void reset(int index) {
 			procTimes[index].set(0);
+			waitTimes[index].set(0);
 			totalCounter[index].set(0);
 			slowCounter[index].set(0);
+			waitSlowCounter[index].set(0);
 			netInBytes[index].set(0);
 			netOutBytes[index].set(0);
 		}    
@@ -468,7 +484,9 @@ public class StatUtil {
 		public String key;
 		public int  totalCount  = 0;
 		public int  slowCount  = 0;
+		public int  waitSlowCount  = 0;
 		public int  procTime = 0;
+		public int  waitTime = 0;
 		public int  maxCount = -1;
 		public int  minCount = -1;	
 		public int avgCount = -1;
