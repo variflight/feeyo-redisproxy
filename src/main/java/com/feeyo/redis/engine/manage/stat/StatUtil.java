@@ -471,8 +471,10 @@ public class StatUtil {
 
 		private void reset(int index) {
 			procTimes[index].set(0);
+			waitTimes[index].set(0);
 			totalCounter[index].set(0);
 			slowCounter[index].set(0);
+			waitSlowCounter[index].set(0);
 			netInBytes[index].set(0);
 			netOutBytes[index].set(0);
 		}    
