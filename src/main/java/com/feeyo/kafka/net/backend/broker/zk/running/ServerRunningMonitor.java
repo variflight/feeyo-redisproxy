@@ -10,7 +10,6 @@ import org.I0Itec.zkclient.exception.ZkInterruptedException;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.apache.zookeeper.CreateMode;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -265,21 +264,4 @@ public class ServerRunningMonitor {
 		return mutex.state();
 	}
 	
-	public boolean isZkAlive() {
-		return activeData != null;
-	}
-
-	public void zkDisconnected() {
-		activeData = null;
-		processActiveExit();
-		mutex.set(false);
-	}
-	
-	public void zkConnected(ServerRunningData leaseMaster) {
-        activeData = leaseMaster;
-        processActiveEnter();
-        if(isMine(activeData.getAddress()))
-        	mutex.set(true);
-	}
-
 }

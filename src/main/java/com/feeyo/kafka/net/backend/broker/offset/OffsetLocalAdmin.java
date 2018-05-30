@@ -116,7 +116,7 @@ public class OffsetLocalAdmin {
 	/**
 	 * 启动
 	 */
-	public void startup() {
+	public void init() {
 
 		final Map<Integer, PoolCfg> poolCfgMap = RedisEngineCtx.INSTANCE().getPoolCfgMap();
 		for (PoolCfg poolCfg : poolCfgMap.values()) {
@@ -128,13 +128,6 @@ public class OffsetLocalAdmin {
 		}
 	}
 
-	/**
-	 * 关闭
-	 */
-	public void close() {
-	}
-
-	
 	/**
 	 * offsets 持久化
 	 */
