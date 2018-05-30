@@ -264,5 +264,22 @@ public class ServerRunningMonitor {
 	public boolean isMineRunning() {
 		return mutex.state();
 	}
+	
+	public boolean isZkAlive() {
+		return activeData != null;
+	}
+
+	public void zkDisconnected() {
+		activeData = null;
+		processActiveExit();
+		mutex.set(false);
+	}
+	
+	public void zkConnected(ServerRunningData leaseMaster) {
+        activeData = leaseMaster;
+        processActiveEnter();
+        if(isMine(activeData.getAddress()))
+        	mutex.set(true);
+	}
 
 }
