@@ -83,10 +83,9 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
 
+						int waitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 						// 后段链接释放
 						releaseBackendConnection(backendCon);
-
-						int waitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 						// 数据收集
 						StatUtil.collect(password, RedisRequestType.PIPELINE.getCmd(), RedisRequestType.PIPELINE.getCmd().getBytes(), requestSize, responseSize,
 								(int) (responseTimeMills - requestTimeMills), waitTimeMills, false);
