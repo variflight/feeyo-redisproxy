@@ -362,7 +362,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 				break;
 			} else {
 				buffer.put(src, offset, remaining);				
-				writeNotSend(buffer);	
+				writeQueue.offer(buffer); // write not send
 				
 				int chunkSize = NetSystem.getInstance().getBufferPool().getMinChunkSize();
 				buffer = allocate( chunkSize );
@@ -373,10 +373,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 			}
 		}
 		return buffer;
-	}
-	
-	private final void writeNotSend(ByteBuffer buffer) {
-		 writeQueue.offer(buffer);
 	}
 	
 	// data ->  N 个 minChunk buffer
