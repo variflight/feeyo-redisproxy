@@ -615,21 +615,22 @@ public class Manage {
 				// SHOW POOL_NET_IO POOLNAME
 				} else if ( arg2.equalsIgnoreCase("POOL_NET_IO")  && numArgs == 3 ) {
 					
-					// TODO
-					String poolName = new String( request.getArgs()[2] );
-					
 					List<String> lines = new ArrayList<String>();
+
+					long minStartupTime = -1;
+					long maxLastLargeMessageTime = -1;
+					long totalLargeCounter = 0;
+					long totalNetInCounter = 0;
+					long totalNetInBytes = 0;
+					long totalNetOutCounter = 0;
+					long totalNetOutBytes = 0;
+					
+					String poolName = new String( request.getArgs()[2] );
 					
 					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
 					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
-					long minStartupTime = -1;
-					long maxLastLargeMessageTime = -1;
-					long totalLargeCount = 0;
-					long totalNetInCount = 0;
-					long totalNetInBytes = 0;
-					long totalNetOutBytes = 0;
-					
 					while (it.hasNext()) {
+						
 						AbstractConnection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
 							// 统计每个redis池的连接数 
@@ -638,27 +639,30 @@ public class Manage {
 								sb.append("ID=").append(c.getId()).append(". ");
 								sb.append("StartupTime=").append(c.getStartupTime()).append(". ");
 								sb.append("LastLargeMessageTime=").append(c.getLastLargeMessageTime()).append(". ");
-								sb.append("LargeCount=").append(c.getLargeCount()).append(". ");
-								sb.append("NetInCount=").append(c.getNetInCount()).append(". ");
+								sb.append("LargeCount=").append(c.getLargeCounter()).append(". ");
+								sb.append("NetInCount=").append(c.getNetInCounter()).append(". ");
 								sb.append("NetInBytes=").append(c.getNetInBytes()).append(". ");
 								sb.append("NetOutBytes=").append(c.getNetOutBytes()).append(". ");
 								lines.add( sb.toString() );
 								
 								minStartupTime = minStartupTime < 0 ? c.getStartupTime() : Math.min(minStartupTime, c.getStartupTime());
 								maxLastLargeMessageTime = Math.max(maxLastLargeMessageTime, c.getLastLargeMessageTime());
-								totalLargeCount = totalLargeCount + c.getLargeCount();
-								totalNetInCount = totalNetInCount + c.getNetInCount();
-								totalNetInBytes = totalNetInBytes + c.getNetInBytes();
-								totalNetOutBytes = totalNetOutBytes + c.getNetOutBytes();
+								totalLargeCounter 	+= c.getLargeCounter();
+								totalNetInCounter 	+= c.getNetInCounter();
+								totalNetInBytes 	+= c.getNetInBytes();
+								totalNetOutCounter  += c.getNetOutCounter();
+								totalNetOutBytes 	+= c.getNetOutBytes();
 							}
 						}
 					}
+					
 					StringBuffer end = new StringBuffer();
 					end.append("MinStartupTime=").append(minStartupTime).append(". ");
 					end.append("MaxLastLargeMessageTime=").append(maxLastLargeMessageTime).append(". ");
-					end.append("TotalLargeCount=").append(totalLargeCount).append(". ");
-					end.append("TotalNetInCount=").append(totalNetInCount).append(". ");
+					end.append("TotalLargeCounter=").append(totalLargeCounter).append(". ");
+					end.append("TotalNetInCounter=").append(totalNetInCounter).append(". ");
 					end.append("TotalNetInBytes=").append(totalNetInBytes).append(". ");
+					end.append("totalNetOutCounter=").append(totalNetOutCounter).append(". ");
 					end.append("TotalNetOutBytes=").append(totalNetOutBytes).append(". ");
 					lines.add(end.toString());
 					
