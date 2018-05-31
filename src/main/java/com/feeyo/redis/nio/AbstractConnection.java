@@ -328,8 +328,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 		try {
 			//利用缓存队列和写缓冲记录保证写的可靠性，返回true则为全部写入成功
 			boolean noMoreData = write0();	
-				
-			//lastWriteTime = TimeUtil.currentTimeMillis();
 			
 		    //如果全部写入成功而且写入队列为空（有可能在写入过程中又有新的Bytebuffer加入到队列），则取消注册写事件
             //否则，继续注册写事件

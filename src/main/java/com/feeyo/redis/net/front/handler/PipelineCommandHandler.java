@@ -83,19 +83,26 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
 
-						int waitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+						int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
+						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+						
+						if( backendWaitTimeMills > procTimeMills ) {
+							LOGGER.warn("proc time err:  requestTime={}, responseTime={}, lastReadTime={}, lastWriteTime={}",
+									new Object[]{ requestTimeMills, responseTimeMills, backendCon.getLastReadTime(), backendCon.getLastWriteTime() } );
+						}
+						
 						// 后段链接释放
 						releaseBackendConnection(backendCon);
+						
 						// 数据收集
 						StatUtil.collect(password, RedisRequestType.PIPELINE.getCmd(), RedisRequestType.PIPELINE.getCmd().getBytes(), requestSize, responseSize,
-								(int) (responseTimeMills - requestTimeMills), waitTimeMills, false);
+								procTimeMills, backendWaitTimeMills, false);
 
 						// child 收集
 						for (RedisRequest req : rrs.getRequests()) {
 							String childCmd = new String( req.getArgs()[0] );
 							byte[] requestKey = req.getNumArgs() > 1 ? req.getArgs()[1] : null;
-							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize,
-									(int) (responseTimeMills - requestTimeMills), waitTimeMills, true);
+							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize, procTimeMills,  backendWaitTimeMills, true);
 						}
 						
 					} catch (IOException e2) {
