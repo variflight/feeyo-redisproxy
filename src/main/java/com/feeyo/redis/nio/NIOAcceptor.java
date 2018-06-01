@@ -40,8 +40,8 @@ public final class NIOAcceptor extends Thread {
 		this.serverChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
 		this.serverChannel.setOption(StandardSocketOptions.SO_RCVBUF, 1024 * 32); // 32K
 		
-		// backlog=200
-		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 500);
+		// backlog=20480
+		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 2048);
 		this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 		this.factory = factory;
 		this.reactorPool = reactorPool;

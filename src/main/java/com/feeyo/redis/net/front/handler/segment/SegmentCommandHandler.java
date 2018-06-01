@@ -93,13 +93,21 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
                         
+                        
+                        int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
+						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+						
+						if( backendWaitTimeMills > procTimeMills ) {
+							LOGGER.warn("proc time err:  requestTime={}, responseTime={}, lastReadTime={}, lastWriteTime={}",
+									new Object[]{ requestTimeMills, responseTimeMills, backendCon.getLastReadTime(), backendCon.getLastWriteTime() } );
+						}
+                        
+             
                         // 释放
                         releaseBackendConnection(backendCon);
                         
-                        int waitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
                         // 数据收集
-                        StatUtil.collect(password, cmd, key, requestSize, responseSize,
-                                (int) (responseTimeMills - requestTimeMills), waitTimeMills, false);
+                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false);
                         
                     } catch (IOException e2) {
                         if (frontCon != null) {
