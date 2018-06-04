@@ -112,6 +112,8 @@ public class RedisFrontConnection extends Connection {
 		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp( startupTime ) );
 		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp( lastReadTime ) );
 		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp( lastWriteTime ) );
+		sbuffer.append(", writeAttempts=").append( writeAttempts );	//
+		
 		if ( isClosed.get() ) {
 			sbuffer.append(", closeTime=").append( TimeUtil.formatTimestamp( closeTime ) );
 			sbuffer.append(", closeReason=").append( closeReason );
