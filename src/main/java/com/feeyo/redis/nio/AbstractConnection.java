@@ -430,6 +430,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 	}
 	
 	private boolean write0() throws IOException {
+		
 		int written = 0;
 		ByteBuffer buffer = writeBuffer;
 		if (buffer != null) {	
@@ -775,6 +776,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 		sbuffer.append(", startupTime=").append( startupTime );
 		sbuffer.append(", lastReadTime=").append( lastReadTime );
 		sbuffer.append(", lastWriteTime=").append( lastWriteTime );
+		sbuffer.append(", writeAttempts=").append( writeAttempts );	//
 		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();
