@@ -109,7 +109,13 @@ public final class NIOConnector extends Thread {
 			}
 		} catch (Throwable e) {
 			
-			LOGGER.warn("caught err ",e);
+			String host = "";
+			int port = 0;
+			if (c != null) {
+				host = c.getHost();
+				port = c.getPort();
+			}
+			LOGGER.warn("caught err : host={}, port={}, Exception={}", new Object[] {host, port, e});
 			
 			//异常, 将key清空
 			clearSelectionKey(key);
