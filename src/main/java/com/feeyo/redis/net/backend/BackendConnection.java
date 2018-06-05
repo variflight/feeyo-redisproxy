@@ -72,16 +72,17 @@ public class BackendConnection extends Connection {
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Connection [reactor=").append( reactor );
+		sbuffer.append( "Con [reactor=").append( reactor );
 		sbuffer.append(", host=").append( host ).append("/").append( port );
 		sbuffer.append(", id=").append( id );
 		sbuffer.append(", borrowed=").append( borrowed );
-		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp(startupTime) );
-		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp(lastReadTime) );
-		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp(lastWriteTime) );
-		sbuffer.append(", writeAttempts=").append( writeAttempts );	//
+		sbuffer.append(", startup=").append( TimeUtil.formatTimestamp(startupTime) );
+		sbuffer.append(", lastRT=").append( TimeUtil.formatTimestamp(lastReadTime) );
+		sbuffer.append(", lastWT=").append( TimeUtil.formatTimestamp(lastWriteTime) );
+		sbuffer.append(", attempts=").append( writeAttempts );	//
+		sbuffer.append(", counter=").append( netInCounter ).append("/").append( netOutCounter );	//
 		if ( heartbeatTime > 0 ) {
-			sbuffer.append(", heartbeatTime=").append( TimeUtil.formatTimestamp(heartbeatTime) );
+			sbuffer.append(", HT=").append( TimeUtil.formatTimestamp(heartbeatTime) );
 		}
 		
 		if ( isClosed.get() ) {
