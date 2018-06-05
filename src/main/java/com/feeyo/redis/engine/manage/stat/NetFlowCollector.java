@@ -9,7 +9,7 @@ public class NetFlowCollector implements StatCollector {
 
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
-			boolean isCommandOnly) {
+			int waitTimeMills, boolean isCommandOnly) {
 		
 		if (isCommandOnly) {
 			return;

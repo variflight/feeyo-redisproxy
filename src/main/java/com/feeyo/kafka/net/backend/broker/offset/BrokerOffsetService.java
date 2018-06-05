@@ -10,7 +10,6 @@ import org.I0Itec.zkclient.IZkStateListener;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,7 +88,7 @@ public class BrokerOffsetService {
 				//
 				LOGGER.info("###### start master=" + localIp);
 				if ( localAdmin != null)
-					localAdmin.startup();
+					localAdmin.init();
 			
 			}
 
@@ -98,8 +97,6 @@ public class BrokerOffsetService {
 				// stop
 				//
 				LOGGER.info("###### stop master=" + localIp);
-				if ( localAdmin != null)
-					localAdmin.close();
 				
 			}
         });

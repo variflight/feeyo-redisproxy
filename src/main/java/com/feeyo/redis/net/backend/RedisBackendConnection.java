@@ -5,7 +5,6 @@ import java.nio.channels.SocketChannel;
 
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
-import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
  * REDIS 后端连接
@@ -129,30 +128,6 @@ public class RedisBackendConnection extends BackendConnection {
 
 	public void setHeartbeatTime(long heartbeatTime) {
 		this.heartbeatTime = heartbeatTime;
-	}
-
-	@Override
-	public String toString() {
-		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Connection [reactor=").append( reactor );
-		sbuffer.append(", host=").append( host ).append("/").append( port );
-		sbuffer.append(", id=").append( id );
-		sbuffer.append(", borrowed=").append( borrowed );
-		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp(startupTime) );
-		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp(lastReadTime) );
-		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp(lastWriteTime) );
-		if ( heartbeatTime > 0 ) {
-			sbuffer.append(", heartbeatTime=").append( TimeUtil.formatTimestamp(heartbeatTime) );
-		}
-		
-		if ( isClosed.get() ) {
-			sbuffer.append(", isClosed=").append( isClosed );
-			sbuffer.append(", closedTime=").append( TimeUtil.formatTimestamp( closeTime) );
-			sbuffer.append(", closeReason=").append( closeReason );
-		}
-		
-		sbuffer.append("]");
-		return  sbuffer.toString();
 	}
 	
 }

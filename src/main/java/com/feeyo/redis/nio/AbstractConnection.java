@@ -59,7 +59,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 	protected AtomicBoolean writing = new AtomicBoolean(false);
 
 	protected long lastLargeMessageTime;
-	protected long largeCount;
+	protected long largeCounter;
 	
 	protected static final int maxCapacity = 1024 * 1024 * 16;			// 最大 16 兆
 	
@@ -72,9 +72,13 @@ public abstract class AbstractConnection implements ClosableConnection {
 	protected long closeTime;											// debug
 	protected String closeReason = null;
 	
-	protected long netInCount;
-	protected long netInBytes;											//
+																		//
+	protected long netInCounter;
+	protected long netInBytes;											
+	
+	protected long netOutCounter;
 	protected long netOutBytes;
+	
 	protected int writeAttempts;
 	
 	private long idleTimeout;
@@ -157,24 +161,28 @@ public abstract class AbstractConnection implements ClosableConnection {
 	public long getNetInBytes() {
 		return netInBytes;
 	}
+	
+	public long getNetInCounter() {
+		return netInCounter;
+	}
 
 	public long getNetOutBytes() {
 		return netOutBytes;
 	}
 
-	public long getNetInCount() {
-		return netInCount;
+	public long getNetOutCounter() {
+		return netOutCounter;
 	}
-	
-	
+
+
 	// 最后扩容时间
 	public long getLastLargeMessageTime() {
 		return lastLargeMessageTime;
 	}
 
 	// 扩容的次数
-	public long getLargeCount() {
-		return largeCount;
+	public long getLargeCounter() {
+		return largeCounter;
 	}
 
 	public void setHandler(NIOHandler<? extends AbstractConnection> handler) {
@@ -320,8 +328,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 		try {
 			//利用缓存队列和写缓冲记录保证写的可靠性，返回true则为全部写入成功
 			boolean noMoreData = write0();	
-				
-			//lastWriteTime = TimeUtil.currentTimeMillis();
 			
 		    //如果全部写入成功而且写入队列为空（有可能在写入过程中又有新的Bytebuffer加入到队列），则取消注册写事件
             //否则，继续注册写事件
@@ -356,7 +362,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 				break;
 			} else {
 				buffer.put(src, offset, remaining);				
-				writeNotSend(buffer);	
+				writeQueue.offer(buffer); // write not send
 				
 				int chunkSize = NetSystem.getInstance().getBufferPool().getMinChunkSize();
 				buffer = allocate( chunkSize );
@@ -369,8 +375,22 @@ public abstract class AbstractConnection implements ClosableConnection {
 		return buffer;
 	}
 	
-	private final void writeNotSend(ByteBuffer buffer) {
-		 writeQueue.offer(buffer);
+	// data ->  N 个 minChunk buffer
+	public void writeNotSend(byte[] data) {
+		if (data == null)
+			return;
+		
+		int size = data.length;
+		if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
+			size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
+		}
+		
+		ByteBuffer buffer = allocate( size );
+		buffer = writeToBuffer(data, buffer);
+		
+		writeQueue.offer(buffer);
+		
+		data = null;
 	}
 
 	// data ->  N 个 minChunk buffer
@@ -388,7 +408,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 		write( buffer );
 		data = null;
 	}
-	
+
 	public void write(ByteBuffer srcBuffer) {
 		
 		this.writeQueue.offer( srcBuffer );
@@ -410,6 +430,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 	}
 	
 	private boolean write0() throws IOException {
+		
 		int written = 0;
 		ByteBuffer buffer = writeBuffer;
 		if (buffer != null) {	
@@ -418,6 +439,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 			while (buffer.hasRemaining()) {
 				written = channel.write(buffer);
 				if (written > 0) {
+					netOutCounter++;
 					netOutBytes += written;
 					lastWriteTime = TimeUtil.currentTimeMillis();
 				} else {
@@ -449,8 +471,9 @@ public abstract class AbstractConnection implements ClosableConnection {
 					written = channel.write(buffer);   // java.io.IOException:
 													   // Connection reset by peer
 					if (written > 0) {
-						lastWriteTime = TimeUtil.currentTimeMillis();
+						netOutCounter++;
 						netOutBytes += written;
+						lastWriteTime = TimeUtil.currentTimeMillis();
 					} else {
 						break;
 					}
@@ -591,14 +614,13 @@ public abstract class AbstractConnection implements ClosableConnection {
 					return;
 				}
 				netInBytes += length;
+				netInCounter++;
 				
 				// 流量检测，超过max 触发限流
 				if ( isFlowLimit() && flowMonitor.pool(length) ) {
 					flowClean();
 					return;
 				}
-				
-				netInCount++;
 				
 				// 空间不足
 				if ( !readBuffer.hasRemaining() ) {
@@ -621,7 +643,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 					recycle(readBuffer);
 					readBuffer = newBuffer;
 					lastLargeMessageTime = TimeUtil.currentTimeMillis();
-					largeCount++;
+					largeCounter++;
 					
 					// 拿完整包
 					continue;		
@@ -754,6 +776,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 		sbuffer.append(", startupTime=").append( startupTime );
 		sbuffer.append(", lastReadTime=").append( lastReadTime );
 		sbuffer.append(", lastWriteTime=").append( lastWriteTime );
+		sbuffer.append(", writeAttempts=").append( writeAttempts );	//
 		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();

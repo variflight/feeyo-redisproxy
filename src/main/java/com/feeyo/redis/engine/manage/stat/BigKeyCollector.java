@@ -45,7 +45,7 @@ public class BigKeyCollector implements StatCollector {
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
-			int procTimeMills, boolean isCommandOnly ) {
+			int procTimeMills, int waitTimeMills, boolean isCommandOnly ) {
 		
 		if (isCommandOnly) {
 			return;

@@ -10,7 +10,6 @@ import org.I0Itec.zkclient.exception.ZkInterruptedException;
 import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.apache.zookeeper.CreateMode;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -264,5 +263,5 @@ public class ServerRunningMonitor {
 	public boolean isMineRunning() {
 		return mutex.state();
 	}
-
+	
 }

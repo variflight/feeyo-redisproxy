@@ -13,8 +13,11 @@ public interface ClosableConnection {
 	String getHost();
 	int getPort();
 	int getLocalPort();
-
+	
+	long getNetInCounter();
 	long getNetInBytes();
+	
+	long getNetOutCounter();
 	long getNetOutBytes();
 
 	// 限流 ( 限流开关、流量清洗 )
