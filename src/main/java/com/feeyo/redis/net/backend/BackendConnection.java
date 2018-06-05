@@ -79,6 +79,7 @@ public class BackendConnection extends Connection {
 		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp(startupTime) );
 		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp(lastReadTime) );
 		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp(lastWriteTime) );
+		sbuffer.append(", writeAttempts=").append( writeAttempts );	//
 		if ( heartbeatTime > 0 ) {
 			sbuffer.append(", heartbeatTime=").append( TimeUtil.formatTimestamp(heartbeatTime) );
 		}

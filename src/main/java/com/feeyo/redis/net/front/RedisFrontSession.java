@@ -166,9 +166,15 @@ public class RedisFrontSession {
 						(cmd[2] == 'T' || cmd[2] == 't') && 
 						(cmd[3] == 'H' || cmd[3] == 'h')) {
 
-					auth( firstRequest );
-					requests.remove(0);
-					if ( requests.isEmpty() ) {
+					boolean isPass = auth( firstRequest );
+					if ( isPass ) {
+						
+						requests.remove(0);
+						if ( requests.isEmpty() ) {
+							return;
+						}
+						
+					} else {
 						return;
 					}
 
