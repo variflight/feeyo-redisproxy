@@ -1,6 +1,6 @@
 package com.feeyo.util;
 
-public class NeverBUG {
+public class About {
 	
 	public static String help(String path ) {
 		
@@ -24,8 +24,8 @@ public class NeverBUG {
 		buffer.append("     \\  \\ `-.   \\_ __\\ /__ _/   .-` /  /").append("\n");
 		buffer.append("======`-.____`-.___\\_____/___.-`____.-'======").append("\n");
 		buffer.append("").append("\n");
-		buffer.append("============== 佛祖保佑  用无Bug ==============").append("\n");
-		buffer.append("----         Feeyo-RedisProxy           ").append("\n");
+		buffer.append("============== 佛祖保佑  永无BUG ==============").append("\n");
+		buffer.append("----          Redis & Kafka Proxy          ").append("\n");
 		buffer.append("----         path=").append( path ).append("\n");
 		buffer.append("----         startup=").append( System.currentTimeMillis() ).append("\n");
 		buffer.append("=============================================\n");

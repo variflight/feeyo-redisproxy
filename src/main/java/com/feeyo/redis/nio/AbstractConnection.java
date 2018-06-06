@@ -22,7 +22,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  */
 public abstract class AbstractConnection implements ClosableConnection {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( "Connection" );
+	private static Logger LOGGER = LoggerFactory.getLogger( AbstractConnection.class );
 
 	public static final int STATE_CONNECTING = 0;
 	public static final int STATE_CONNECTED = 1;
@@ -746,20 +746,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 	public void flowClean() {
 		LOGGER.warn("Flow cleaning,  {}", this );
 		// ignore
-	}
-	
-	public String toSampleString() {
-		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Connection [ " );
-		sbuffer.append(" reactor=").append( reactor );
-		sbuffer.append(", host=").append( host );
-		sbuffer.append(", port=").append( port );
-		sbuffer.append(", id=").append( id );
-		sbuffer.append(", isClosed=").append( isClosed );
-		sbuffer.append(", isConnected=").append( isConnected() );
-		sbuffer.append(", state=").append( state );
-		sbuffer.append("]");
-		return  sbuffer.toString();
 	}
 
 	@Override
