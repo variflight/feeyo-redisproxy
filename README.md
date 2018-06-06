@@ -16,10 +16,10 @@
 
 	1、kafka 配置, 参见 kafka.xml
 	2、kafka 指令描述
-		KPUSH 		 {topic} {partition} {content} 	   注：第二个参数为可选 
-		KPOP 		 {topic} {partition} {offset}	   注：第二、三个参数为可选 
-		KPARTITION   {topic}	    	 				
-		KOFFSET 	 {topic} {partition} {time}	    	 				  
+		KPUSH {topic}{partition}{content} 	   注：第二个参数为可选 
+		KPOP {topic}{partition}{offset}	   注：第二、三个参数为可选 
+		KPARTITION {topic}	    	 				
+		KOFFSET {topic}{partition}{time}	    	 				  
 	
 		注：KPOP 不指定 consume offset， 我们自动管理， 指定点位的，我们不管理，也不更新，
 		   需要 client 自己维持 consume offset
