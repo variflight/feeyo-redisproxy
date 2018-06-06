@@ -22,19 +22,19 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 	protected void commonHandle(RouteResult routeResult) throws IOException {
 		
 		RouteNode node = routeResult.getRouteNodes().get(0);
-		RedisRequest request = routeResult.getRequests().get(0);
+		RedisRequest firstRequest = routeResult.getRequests().get(0);
 		
-		String cmd = new String(request.getArgs()[0]).toUpperCase();
-		byte[] requestKey = request.getNumArgs() > 1 ? request.getArgs()[1] : null;
+		String cmd = new String(firstRequest.getArgs()[0]).toUpperCase();
+		byte[] requestKey = firstRequest.getNumArgs() > 1 ? firstRequest.getArgs()[1] : null;
 		
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( cmd );
 		frontCon.getSession().setRequestKey(requestKey);
-		frontCon.getSession().setRequestSize(request.getSize());
+		frontCon.getSession().setRequestSize(firstRequest.getSize());
 		
 		// 透传
-		writeToBackend(node.getPhysicalNode(), request.encode(), new DirectTransTofrontCallBack());
+		writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
 	}
 	
 	public void writeToCustomerBackend(PhysicalNode physicalNode, ByteBuffer buffer, AbstractBackendCallback callBack) throws IOException {

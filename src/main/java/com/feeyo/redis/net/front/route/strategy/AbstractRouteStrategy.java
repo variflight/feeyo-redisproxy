@@ -7,6 +7,7 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
+import com.feeyo.redis.net.backend.pool.PoolType;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterCRC16Util;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.backend.pool.xcluster.XClusterPool;
@@ -21,24 +22,27 @@ import com.feeyo.redis.net.front.route.RouteNode;
  * The abstract route strategy
  *
  * @author Tr!bf wangyamin@variflight.com
+ * @author yangtao
+ * @author xuwenfeng
  */
 public abstract class AbstractRouteStrategy {
 	
 	
-	// 分片
-	protected List<RouteNode> doSharding(int poolId, List<RedisRequest> requests) 
+	// request list 分片
+	protected List<RouteNode> requestSharding(int poolId, List<RedisRequest> requests) 
 			throws PhysicalNodeUnavailableException {
 		
 		List<RouteNode> nodes = new ArrayList<RouteNode>();
 		
 		// 非集群池
 		AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get( poolId );
-		if ( pool.getType() == 0) {
+		if ( pool.getType() == PoolType.REDIS_STANDALONE ) {
 			RouteNode node = new RouteNode();
 			
 			PhysicalNode physicalNode = pool.getPhysicalNode();
 			if ( physicalNode == null )
 				throw new PhysicalNodeUnavailableException("node unavailable.");
+			
 			node.setPhysicalNode( physicalNode );
 			
 			for(int i = 0; i < requests.size(); i++) {
@@ -48,7 +52,7 @@ public abstract class AbstractRouteStrategy {
 			nodes.add( node );
 			
 		// 集群池
-		} else if ( pool.getType() == 1) {
+		} else if ( pool.getType() == PoolType.REDIS_CLUSTER ) {
 			
 			RedisClusterPool clusterPool =  (RedisClusterPool) pool;
 			for (int i = 0; i < requests.size(); i++) {
@@ -70,9 +74,9 @@ public abstract class AbstractRouteStrategy {
 				if ( physicalNode == null )
 					throw new PhysicalNodeUnavailableException("node unavailable.");
 
-				arrangePhyNode(nodes, i, physicalNode);
+				allocateRequestIdxToPhysicalNode(nodes, i, physicalNode);
 			}
-		} else if ( pool.getType() == 2) {
+		} else if ( pool.getType() == PoolType.REDIS_X_CLUSTER ) {
 			
 			XClusterPool xPool = (XClusterPool) pool;
 			for (int i = 0; i < requests.size(); i++) {
@@ -88,23 +92,26 @@ public abstract class AbstractRouteStrategy {
 				PhysicalNode physicalNode = xPool.getPhysicalNode( suffix );
 				if ( physicalNode == null )
 					throw new PhysicalNodeUnavailableException("node unavailable.");
-				arrangePhyNode(nodes, i, physicalNode);
+				
+				allocateRequestIdxToPhysicalNode(nodes, i, physicalNode);
 			}
 		}
+		
 		return nodes;
 	}
 
-	private void arrangePhyNode(List<RouteNode> nodes, int requestIdx, PhysicalNode physicalNode) {
-		boolean isFind = false;
+	// 分配 request index 给 physicalNode
+	private void allocateRequestIdxToPhysicalNode(List<RouteNode> nodes, int requestIdx, PhysicalNode physicalNode) {
+		boolean isNotFound = true;
 		for (RouteNode node: nodes) {
 			if ( node.getPhysicalNode() == physicalNode ) {
 				node.addRequestIndex(requestIdx);
-				isFind = true;
+				isNotFound = false;
 				break;
 			}
 		}
 
-		if ( !isFind ) {
+		if ( isNotFound ) {
 			RouteNode node = new RouteNode();
 			node.setPhysicalNode( physicalNode );
 			node.addRequestIndex(requestIdx);
