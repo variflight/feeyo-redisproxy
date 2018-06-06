@@ -1,8 +1,6 @@
 package com.feeyo.redis.nio;
 
 import java.io.IOException;
-import java.net.StandardSocketOptions;
-import java.nio.channels.NetworkChannel;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -174,14 +172,11 @@ public class NetSystem {
 			sosndbuf = netConfig.getBacksocketsosndbuf();
 		}
 		
-		NetworkChannel channel = con.getChannel();
-		
 		// LINUX 2.6 该 RCVBUF 会自动调节
-		//channel.setOption(StandardSocketOptions.SO_RCVBUF, sorcvbuf);
-		channel.setOption(StandardSocketOptions.SO_SNDBUF, sosndbuf);
-		channel.setOption(StandardSocketOptions.TCP_NODELAY, true);
-		channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-		channel.setOption(StandardSocketOptions.SO_KEEPALIVE, true);
-		
+		// con.getChannel().socket().setReceiveBufferSize( sorcvbuf );
+		con.getChannel().socket().setSendBufferSize( sosndbuf  );  // SO_TCPNODELAY  关闭算法
+		con.getChannel().socket().setTcpNoDelay( true );
+		con.getChannel().socket().setKeepAlive( true );
+		con.getChannel().socket().setReuseAddress( true );
 	}
 }
