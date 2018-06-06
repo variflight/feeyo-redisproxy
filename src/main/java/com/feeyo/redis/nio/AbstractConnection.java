@@ -1,8 +1,6 @@
 package com.feeyo.redis.nio;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -23,6 +21,11 @@ import com.feeyo.redis.nio.util.TimeUtil;
 public abstract class AbstractConnection implements ClosableConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractConnection.class );
+	
+	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
+	public enum Direction {
+		in, out
+	}
 
 	public static final int STATE_CONNECTING = 0;
 	public static final int STATE_CONNECTED = 1;
@@ -37,18 +40,12 @@ public abstract class AbstractConnection implements ClosableConnection {
 	protected Object attachement;
 	protected int state = STATE_CONNECTING;
 
-	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
-	public enum Direction {
-		in, out
-	}
-
 	protected Direction direction = Direction.out;
 
 	protected final SocketChannel channel;
-
-	private SelectionKey processKey;
-	private static final int OP_NOT_READ = ~SelectionKey.OP_READ;
-	private static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
+	protected SelectionKey processKey;
+	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
+	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
 	
 	
 	protected volatile ByteBuffer readBuffer;  //读缓冲区
@@ -336,6 +333,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 					enableWrite(false);
 				}
 			}
+			
 		} catch (IOException e) {
 			if ( LOGGER.isDebugEnabled() ) {
 				LOGGER.debug("caught err:", e);
@@ -370,24 +368,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 		}
 		return buffer;
 	}
-	
-	// data ->  N 个 minChunk buffer
-	public void writeNotSend(byte[] data) {
-		if (data == null)
-			return;
-		
-		int size = data.length;
-		if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
-			size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
-		}
-		
-		ByteBuffer buffer = allocate( size );
-		buffer = writeToBuffer(data, buffer);
-		
-		writeQueue.offer(buffer);
-		
-		data = null;
-	}
 
 	// data ->  N 个 minChunk buffer
 	public void write(byte[] data) {
@@ -417,12 +397,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 			this.close("write err:" + e);
 			//throw new IOException( e );
 		}
-	}
-
-	public static String getStackTrace(Throwable t) {
-	    StringWriter sw = new StringWriter();
-	    t.printStackTrace(new PrintWriter(sw));
-	    return sw.toString();
 	}
 	
 	private boolean write0() throws IOException {

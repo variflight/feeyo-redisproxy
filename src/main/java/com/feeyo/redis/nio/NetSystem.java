@@ -18,11 +18,12 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * 存放当前所有连接的信息，包括客户端和服务端等，以及Network部分所使用共用对象
  *
  * @author wuzhih
+ * @author zhuam
  *
  */
 public class NetSystem {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( "Connection" );
+	private static Logger LOGGER = LoggerFactory.getLogger( NetSystem.class );
 	
 	public static final int RUNNING = 0;
 	public static final int SHUTING_DOWN = -1;
