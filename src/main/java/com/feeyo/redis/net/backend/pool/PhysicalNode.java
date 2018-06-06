@@ -209,6 +209,20 @@ public class PhysicalNode {
 
 	public void setPort(int port) {
 		this.port = port;
-	}		
+	}	
+	
+	@Override
+	public String toString() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("name:").append(name).append(".");
+		sb.append("size:").append(size).append(".");
+		sb.append("poolType:").append(poolType).append(".");
+		sb.append("poolName:").append(poolName).append(".");
+		sb.append("host:").append(host).append(".");
+		sb.append("port:").append(port).append(".");
+		sb.append("minCon:").append(minCon).append(".");
+		sb.append("maxCon:").append(maxCon).append(".");
+		return sb.toString();
+	}
 	
 }
