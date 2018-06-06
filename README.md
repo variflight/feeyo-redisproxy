@@ -16,7 +16,9 @@
 
 	1、kafka 配置, 参见 kafka.xml
 	2、kafka 指令描述
+		KPUSH {topic}{content}
 		KPUSH {topic}{partition}{content}
+		KPOP {topic}
 		KPOP {topic}{partition}{offset}
 		KPARTITION {topic}	    	 				
 		KOFFSET {topic}{partition}{time}	    	 				  
