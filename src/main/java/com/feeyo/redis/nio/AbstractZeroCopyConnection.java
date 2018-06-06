@@ -118,6 +118,11 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	public void write(byte[] buf) {
 		
+		// TODO 
+		// 1、考虑 rwLock 自旋
+		// 2、考虑 buf size 大于 mappedByteBuffer 的情况，分块
+		// 3、 write0 确保写OK
+		
 		mappedByteBuffer.put(buf);
 
 		try {
