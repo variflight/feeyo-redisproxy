@@ -30,8 +30,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	protected FileChannel fileChannel;
 	private MappedByteBuffer mappedByteBuffer;
 
-	protected long position;
-	protected long count;
 	
 	// r/w lock
 	protected AtomicBoolean rwLock = new AtomicBoolean( false );
@@ -123,7 +121,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		mappedByteBuffer.put(buf);
 
 		try {
-			write0();
+			write0(0,0);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -131,7 +129,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 
 	@Override
 	public void write(ByteBuffer buf) {
-		
 		
 		try {
 			
@@ -143,7 +140,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			}
 			mappedByteBuffer.position(position + writed);
 			
-			write0();
+			write0(0, 0);
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -152,12 +149,12 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		
 	}
 	
-	private void write0() throws IOException {
-		
+	private void write0(long position, long count) throws IOException {
 		//
-		fileChannel.transferTo(position, count, channel);
+		//
+		long written = fileChannel.transferTo(position, count, channel);
 		
-		boolean noMoreData = false;
+		boolean noMoreData = ( written == count );
 		if (noMoreData) {
 		    if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) != 0)) {
 		        disableWrite();
@@ -170,7 +167,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		}
 		
 	}
-	
 
 	@Override
 	public void doNextWriteCheck() {
