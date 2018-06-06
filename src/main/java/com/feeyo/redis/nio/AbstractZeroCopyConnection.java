@@ -23,8 +23,9 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractZeroCopyConnection.class );
 
+	private static final boolean IS_WINDOWS = System.getProperty("os.name").toUpperCase().startsWith("WIN");
 	private static final int TOTAL_SIZE = 1024 * 1024 * 1;  
-
+	
 	//
 	private RandomAccessFile randomAccessFile;
 	protected FileChannel fileChannel;
@@ -33,24 +34,30 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	// r/w lock
 	protected AtomicBoolean rwLock = new AtomicBoolean( false );
-
+	
 	public AbstractZeroCopyConnection(SocketChannel channel) {
 
 		super(channel);
 
 		try {
-			this.randomAccessFile = new RandomAccessFile(id + ".mapped", "rw");
+			
+			String filename = "/dev/shm/" + id + ".mapped";
+			if ( IS_WINDOWS )
+				filename = "c:/" + id + ".mapped";
+			
+			this.randomAccessFile = new RandomAccessFile(filename, "rw");
 			this.randomAccessFile.setLength(TOTAL_SIZE);
+			this.randomAccessFile.seek(0);
 
 			this.fileChannel = randomAccessFile.getChannel();
 			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, TOTAL_SIZE);
 
 		} catch (IOException e) {
-			e.printStackTrace();
+			LOGGER.error("create mapped err:", e);
 		}
 		
 	}
-	
+
 	/**
 	 * 异步读取,该方法在 reactor 中被调用
 	 */
