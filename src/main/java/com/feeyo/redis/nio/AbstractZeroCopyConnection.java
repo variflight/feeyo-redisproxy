@@ -23,8 +23,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
 public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractZeroCopyConnection.class );
-
-	private static final boolean IS_WINDOWS = System.getProperty("os.name").toUpperCase().startsWith("WIN");
+	
 	private static final int TOTAL_SIZE = 1024 * 1024 * 1;  
 	
 	//
@@ -36,15 +35,41 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	// r/w lock
 	protected AtomicBoolean rwLock = new AtomicBoolean( false );
 	
+	// OS
+	private static int OS_TYPE = -1;
+	private static final int WIN = 1;
+	private static final int MAC = 2;
+	private static final int LINUX = 3;
+
+	static {
+		String osName = System.getProperty("os.name").toUpperCase();
+		if ( osName.startsWith("WIN") ) {
+			OS_TYPE  = WIN;
+		} else if ( osName.startsWith("MAC") ) {
+			OS_TYPE = MAC;
+		} else {
+			OS_TYPE = LINUX;
+		}
+	}
+	
+	
 	public AbstractZeroCopyConnection(SocketChannel channel) {
 
 		super(channel);
 
 		try {
 			
-			String filename = "/dev/shm/" + id + ".mapped";
-			if ( IS_WINDOWS )
-				filename = "c:/" + id + ".mapped";
+			String path = null;
+			if ( OS_TYPE == WIN ) {
+				path = "c:/";
+				
+			} else if ( OS_TYPE == MAC ) {
+				path = "";
+				
+			} else if ( OS_TYPE == LINUX ) {
+				path = "/dev/shm/";
+			}
+			String filename = path + id + ".mapped";
 			
 			this.randomAccessFile = new RandomAccessFile(filename, "rw");
 			this.randomAccessFile.setLength(TOTAL_SIZE);
