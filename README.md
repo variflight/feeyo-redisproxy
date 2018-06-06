@@ -19,9 +19,10 @@
 		KPUSH 		 {topic} {partition} {content} 	   注：第二个参数为可选 
 		KPOP 		 {topic} {partition} {offset}	   注：第二、三个参数为可选 
 		KPARTITION   {topic}	    	 				
-		KOFFSET 	 {topic} {partition} {time}	    	 				  | 
+		KOFFSET 	 {topic} {partition} {time}	    	 				  
 	
-		注：KPOP 不指定 consume offset， 我们自动管理，  指定点位的，我们不管理，也不更新，需要 client 自己维持 consume offset
+		注：KPOP 不指定 consume offset， 我们自动管理， 指定点位的，我们不管理，也不更新，
+		   需要 client 自己维持 consume offset
 	3、kafka 管理指令
 	 使用 kafka 的队列功能，我们需要提前分配，然后初始化启动 或 通过管理账户的 reload kafka 指令进行热加载，
 	 加载的过程中，我们会检测 topic， 且会自动的新增到后端的 kafka 中
