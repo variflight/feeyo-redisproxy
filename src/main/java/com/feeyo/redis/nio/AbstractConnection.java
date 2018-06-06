@@ -467,6 +467,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 					written = channel.write(buffer);   // java.io.IOException:
 													   // Connection reset by peer
 					if (written > 0) {
+						lastWriteTime = TimeUtil.currentTimeMillis();
 						netOutCounter++;
 						netOutBytes += written;
 						lastWriteTime = TimeUtil.currentTimeMillis();
@@ -769,10 +770,10 @@ public abstract class AbstractConnection implements ClosableConnection {
 		sbuffer.append(", host=").append( host );
 		sbuffer.append(", port=").append( port );
 		sbuffer.append(", id=").append( id );
-		sbuffer.append(", startupTime=").append( startupTime );
-		sbuffer.append(", lastReadTime=").append( lastReadTime );
-		sbuffer.append(", lastWriteTime=").append( lastWriteTime );
-		sbuffer.append(", writeAttempts=").append( writeAttempts );	//
+		sbuffer.append(", startup=").append( startupTime );
+		sbuffer.append(", lastRT=").append( lastReadTime );
+		sbuffer.append(", lastWT=").append( lastWriteTime );
+		sbuffer.append(", attempts=").append( writeAttempts );	//
 		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();

@@ -5,7 +5,6 @@ import java.nio.channels.SocketChannel;
 import com.feeyo.redis.net.Connection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
  * 后端连接
@@ -76,18 +75,18 @@ public class BackendConnection extends Connection {
 		sbuffer.append(", host=").append( host ).append("/").append( port );
 		sbuffer.append(", id=").append( id );
 		sbuffer.append(", borrowed=").append( borrowed );
-		sbuffer.append(", startup=").append( TimeUtil.formatTimestamp(startupTime) );
-		sbuffer.append(", lastRT=").append( TimeUtil.formatTimestamp(lastReadTime) );
-		sbuffer.append(", lastWT=").append( TimeUtil.formatTimestamp(lastWriteTime) );
+		sbuffer.append(", startup=").append( startupTime );
+		sbuffer.append(", lastRT=").append( lastReadTime );
+		sbuffer.append(", lastWT=").append( lastWriteTime );
 		sbuffer.append(", attempts=").append( writeAttempts );	//
-		sbuffer.append(", counter=").append( netInCounter ).append("/").append( netOutCounter );	//
+		sbuffer.append(", cc=").append( netInCounter ).append("/").append( netOutCounter );	//
 		if ( heartbeatTime > 0 ) {
-			sbuffer.append(", HT=").append( TimeUtil.formatTimestamp(heartbeatTime) );
+			sbuffer.append(", HT=").append( heartbeatTime );
 		}
 		
 		if ( isClosed.get() ) {
 			sbuffer.append(", isClosed=").append( isClosed );
-			sbuffer.append(", closedTime=").append( TimeUtil.formatTimestamp( closeTime) );
+			sbuffer.append(", closedTime=").append( closeTime );
 			sbuffer.append(", closeReason=").append( closeReason );
 		}
 		
