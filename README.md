@@ -16,8 +16,8 @@
 
 	1、kafka 配置, 参见 kafka.xml
 	2、kafka 指令描述
-		KPUSH {topic}{partition}{content} 	   注：第二个参数为可选 
-		KPOP {topic}{partition}{offset}	   注：第二、三个参数为可选 
+		KPUSH {topic}{partition}{content}
+		KPOP {topic}{partition}{offset}
 		KPARTITION {topic}	    	 				
 		KOFFSET {topic}{partition}{time}	    	 				  
 	
