@@ -1,10 +1,11 @@
 package com.feeyo.redis.engine.manage.stat;
 
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -15,33 +16,36 @@ public class BigKeyCollector implements StatCollector {
 	public static int LENGTH = 500;
 	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	
-	
-	private List<BigKey> keys = new ArrayList<BigKey>( LENGTH );
-	
+	private TreeMap<String, BigKey> reqKeyMap = new TreeMap<String, BigKey>();
+	private TreeMap<String, BigKey> respKeyMap = new TreeMap<String, BigKey>();
 	
 	private AtomicBoolean locking = new AtomicBoolean(false);
 	
-	
 	public List<BigKey> getBigkeys() {
+		
 		try {
 			while (!locking.compareAndSet(false, true)) {
 			}
+			// 合并
+			TreeMap<String, BigKey> mergeMap =  mapCombine(reqKeyMap, respKeyMap);
 			
 			// 处理排序, 降序
-			Collections.sort(keys, new BigKeyKeyComparator( false ));
+			mergeMap = sortBigKeyMap(mergeMap, false);
 			
-			int len = keys.size() > 100 ? 100 : keys.size();
+			int len = mergeMap.size() > 100 ? 100 : mergeMap.size();
 			List<BigKey> newList = new ArrayList<BigKey>( len );
+			
+			Iterator<BigKey> iter = mergeMap.values().iterator();
 			for(int i = 0; i < len; i++) {
-				newList.add( keys.get(i) );
+				newList.add( iter.next() );
 			}
+			
 			return newList;
 			
 		} finally {
 			locking.set(false);
 		}
 	}
-
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
@@ -51,11 +55,17 @@ public class BigKeyCollector implements StatCollector {
 			return;
 		}
 		
-		// 大key 校验
-		if (  requestSize < BIGKEY_SIZE && responseSize < BIGKEY_SIZE  ) {	
-			return;
+		if(requestSize >= BIGKEY_SIZE) {
+			deal(reqKeyMap, cmd, key, requestSize);
 		}
 		
+		if(responseSize >= BIGKEY_SIZE) {
+			deal(respKeyMap, cmd, key, responseSize);
+		}
+	}
+	
+	
+	private void deal(TreeMap<String, BigKey> keyMap,  String cmd, String key, int size) {
 		
 		if ( !locking.compareAndSet(false, true) ) {
 			return;
@@ -63,43 +73,60 @@ public class BigKeyCollector implements StatCollector {
 		
 		//
 		try {
-			if ( keys.size() == LENGTH ) {
-				// 处理排序, 降序
-				Collections.sort(keys, new BigKeyKeyComparator( false ));
+			if ( keyMap.size() == LENGTH ) {
 				
+				// 处理排序, 降序
+				keyMap = sortBigKeyMap(keyMap, false);
 				// 缩容
-				while (keys.size() >= ( LENGTH * 0.5 ) ) {
-					int index = keys.size() - 1;
-					keys.remove( index );
+				while (keyMap.size() >= ( LENGTH * 0.5 ) ) {
+					keyMap.pollLastEntry();
 				}
 			}
 			
 			BigKey newBigKey = new BigKey();
 			newBigKey.key = new String(key);
 			
-			
-			int index = keys.indexOf( newBigKey );
-			if (index >= 0) {
-				BigKey oldBigKey = keys.get(index);
+			if (keyMap.containsKey(key)) {
+				BigKey oldBigKey = keyMap.get(key);
 				oldBigKey.cmd = cmd;
-				oldBigKey.size = requestSize > responseSize ? requestSize : responseSize;
+				oldBigKey.size = size;
 				oldBigKey.lastUseTime = TimeUtil.currentTimeMillis();
 				oldBigKey.count.incrementAndGet();
 				
 			} else {
 				newBigKey.cmd = cmd;
-				newBigKey.size = requestSize > responseSize ? requestSize : responseSize;
+				newBigKey.size = size;
 				newBigKey.lastUseTime = TimeUtil.currentTimeMillis();
-				keys.add( newBigKey );
+				keyMap.put(key, newBigKey );
 			}
-			
 			
 		} finally {
 			locking.set(false);
 		}
-
 		
 	}
+	
+	private TreeMap<String, BigKey> mapCombine(TreeMap<String, BigKey> m1, TreeMap<String, BigKey>m2  ) {  
+	    
+    	TreeMap<String, BigKey> map = new TreeMap<String, BigKey>();
+        List<TreeMap<String, BigKey>> list = new ArrayList<TreeMap<String, BigKey>>();
+		list.add(m1);
+		list.add(m2);
+        for (TreeMap<String, BigKey> m : list) {  
+            Iterator<Entry<String, BigKey>> it = m.entrySet().iterator();  
+            while (it.hasNext()) { 
+            	Entry<String, BigKey> entry = it.next();
+            	String key = entry.getKey();
+            	BigKey value = entry.getValue();
+                if (!map.containsKey(key)) {  
+                    map.put(key, value);
+                } else if(map.get(key).count.get() < value.count.get()){ 
+                	 map.put(key, value);
+                }  
+            }  
+        }  
+        return map;  
+    }
 
 	@Override
 	public void onScheduleToZore() {
@@ -107,58 +134,28 @@ public class BigKeyCollector implements StatCollector {
 			while (!locking.compareAndSet(false, true)) {
 			}
 			
-			keys.clear();
+			reqKeyMap.clear();
+			respKeyMap.clear();
 			
 		} finally {
 			locking.set(false);
 		}
 	}
 
-
 	@Override
 	public void onSchedulePeroid(int peroid) {
 	}
 	
-	
-	
-	// sort
-	public class BigKeyKeyComparator implements Comparator<BigKey> {
-
-		boolean isASC;
-		
-		public BigKeyKeyComparator(boolean isASC) {
-			this.isASC = isASC;
-		}
-		
-		@Override
-		public int compare(BigKey o1, BigKey o2) {
-			
-			if ( o1 == null || o2 == null ) {
-				return -1;
-			}
-			
-			long a, b;
-            if ( isASC ) {
-                a = o1.count.get();
-                b = o2.count.get();
-            } else {
-                a = o2.count.get();
-                b = o1.count.get();
-            }
-			
-            if (a > b)
-                return 1;	// 大于
-            else if (a == b)
-                return 0;	//等于
-            else
-                return -1;	//小于
-		}
-		
+	//sort
+	private TreeMap<String, BigKey> sortBigKeyMap(TreeMap<String, BigKey> keyMap, boolean isAsc) {
+		TreeMap<String, BigKey> sortMap = new TreeMap<String, BigKey>(new BigKeyKeyComparator(keyMap, isAsc));
+		sortMap.putAll(keyMap);
+		return sortMap;
 	}
 	
 	// TODO 待完善
 	public boolean isResponseBigkey(String key, String cmd) {
-		return false;
+		return respKeyMap.containsKey(key);
 	}
 	
 	public static class BigKey {
@@ -179,5 +176,42 @@ public class BigKeyCollector implements StatCollector {
 			BigKey bigkey = (BigKey) obj;
 			return this.key.equals(bigkey.key);
 		}
+	}
+	
+	class BigKeyKeyComparator implements Comparator<String> {
+		
+		private boolean isASC;
+		private TreeMap<String, BigKey> keyMap;
+		
+		public BigKeyKeyComparator(TreeMap<String, BigKey> keyMap, boolean isASC) {
+			this.keyMap = keyMap;
+			this.isASC = isASC;
+		}
+		
+		@Override
+		public int compare(String o1, String o2) {
+			
+			if ( o1 == null || o2 == null || 
+					keyMap.get(o1) == null || keyMap.get(o2) == null ) {
+				return -1;
+			}
+			
+			long a, b;
+	        if ( isASC ) {
+	            a = keyMap.get(o1).count.get();
+	            b = keyMap.get(o2).count.get();
+	        } else {
+	            a = keyMap.get(o2).count.get();
+	            b = keyMap.get(o1).count.get();
+	        }
+			
+	        if (a > b)
+	            return 1;	// 大于
+	        else if (a == b)
+	            return o1.compareTo(o2);	//等于
+	        else
+	            return -1;	//小于
+		}
+		
 	}
 }
