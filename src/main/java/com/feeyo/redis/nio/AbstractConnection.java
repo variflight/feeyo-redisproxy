@@ -86,7 +86,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 	@SuppressWarnings("rawtypes")
 	protected NIOHandler handler;
 	
-	protected NetFlowMonitor flowMonitor;
+	protected NetFlowMonitor netFlowMonitor;
 
 	public AbstractConnection(SocketChannel channel) {
 		this.channel = channel;
@@ -194,12 +194,8 @@ public abstract class AbstractConnection implements ClosableConnection {
 		return this.handler;
 	}
 	
-	public void setFlowMonitor(NetFlowMonitor fm) {
-		this.flowMonitor = fm;
-	}
-	
-	public NetFlowMonitor getFlowMonitor() {
-		return this.flowMonitor;
+	public void setNetFlowMonitor(NetFlowMonitor nfm) {
+		this.netFlowMonitor = nfm;
 	}
 
 	public boolean isConnected() {
@@ -617,7 +613,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 				netInCounter++;
 				
 				// 流量检测，超过max 触发限流
-				if ( isFlowLimit() && flowMonitor.pool(length) ) {
+				if ( isFlowLimit() && netFlowMonitor.pool(length) ) {
 					flowClean();
 					return;
 				}
