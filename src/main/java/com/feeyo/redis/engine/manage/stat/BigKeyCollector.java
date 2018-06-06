@@ -156,6 +156,11 @@ public class BigKeyCollector implements StatCollector {
 		
 	}
 	
+	// TODO 待完善
+	public boolean isResponseBigkey(String key, String cmd) {
+		return false;
+	}
+	
 	public static class BigKey {
 		public String cmd;
 		public String key;
