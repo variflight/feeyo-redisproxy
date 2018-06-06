@@ -25,7 +25,7 @@ public class RedisBackendConnectionFactory implements BackendConnectionFactory {
 
 		// 设置NIOHandlers
 		c.setHandler( new RedisBackendConnectionHandler() );
-		c.setFlowMonitor( RedisEngineCtx.INSTANCE().getFlowMonitor() );
+		c.setNetFlowMonitor( RedisEngineCtx.INSTANCE().getFlowMonitor() );
 		
 		c.setHost( host );
 		c.setPort( port );
