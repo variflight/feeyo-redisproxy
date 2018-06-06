@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.nio.util.MappedByteBufferUtil;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
@@ -188,15 +189,23 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	@Override
 	protected void cleanup() {
-		// clear buffer
+		
+		// clear file
 		try {
-			if ( randomAccessFile != null )
-				randomAccessFile.close();
+			
+			if ( mappedByteBuffer != null ) {
+				mappedByteBuffer.force();
+				MappedByteBufferUtil.clean(mappedByteBuffer);
+			}
 			
 			if ( fileChannel != null)
 				fileChannel.close();
+			
+			if ( randomAccessFile != null )
+				randomAccessFile.close();
+			
 		} catch (IOException e) {
-			// ignore
+			LOGGER.error("close file error", e);
 		}		
 	}
 
