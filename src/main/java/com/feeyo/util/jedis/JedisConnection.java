@@ -343,7 +343,20 @@ public class JedisConnection {
 			throw new JedisConnectionException("Unknown reply: " + (char) b);
 		}
 	}
-
+	
+	private static byte[] getBinaryReply(final RedisInputStream is) {
+		try {
+			return is.readAll();
+		} catch (Exception e) {
+			throw new JedisConnectionException(e);
+		}
+	}
+	
+	public byte[] getBinaryReply() {
+		flush();
+		return getBinaryReply(inputStream);
+	}
+	
 	private static byte[] processStatusCodeReply(final RedisInputStream is) {
 		return is.readLineBytes();
 	}
@@ -369,7 +382,7 @@ public class JedisConnection {
 
 		return read;
 	}
-
+	
 	private static Long processInteger(final RedisInputStream is) {
 		return is.readLongCrLf();
 	}
