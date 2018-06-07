@@ -51,7 +51,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		super(channel);
 
 		try {
-			
 			if ( IS_LINUX ) {
 				fileName = "/dev/shm/" + id + ".mapped";
 			} else {
@@ -98,11 +97,11 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			// 循环处理字节信息
 			for(;;) {
 				
-				final int position = mappedByteBuffer.position();
-				final int count    = TOTAL_SIZE - position;
-				int tranfered = (int) fileChannel.transferFrom(channel, position, count);
+				int oldPos = mappedByteBuffer.position();
+				int count    = TOTAL_SIZE - oldPos;
+				int tranfered = (int) fileChannel.transferFrom(channel, oldPos, count);
 				
-				mappedByteBuffer.position( position + tranfered );
+				mappedByteBuffer.position( oldPos + tranfered );
 				
 				// fixbug: transferFrom() always return 0 when client closed abnormally!
 				// --------------------------------------------------------------------
@@ -113,18 +112,18 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				
 				if ( tranfered > 0 ) {
 					
-					// 负责解析报文并处理
-					int oldPos = mappedByteBuffer.position();
-					mappedByteBuffer.position( position );
-					
+					//
 					byte[] data = new byte[ tranfered ];
-					mappedByteBuffer.get(data);
 					
-					mappedByteBuffer.position(oldPos);
+					//
+					int newPos = mappedByteBuffer.position();
+					mappedByteBuffer.position( oldPos );
+					mappedByteBuffer.get(data);
+					mappedByteBuffer.position( newPos );
 					
 					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
 					
-					//
+					// 负责解析报文并处理
 					handler.handleReadEvent(this, data);
 					break;
 					
@@ -144,7 +143,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					this.close("stream closed");
 					return;
 				}
-				
 			}
 			
 		} finally {
@@ -231,7 +229,8 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			
 			// 删除文件
 			File file = new File( fileName );
-			file.delete();		
+			if ( file.exists() )
+				file.delete();		
 			
 		} catch (IOException e) {				
 			LOGGER.error(" cleanup err: fileName=" + fileName, e);			
