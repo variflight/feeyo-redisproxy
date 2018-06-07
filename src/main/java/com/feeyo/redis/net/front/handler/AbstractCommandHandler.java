@@ -31,6 +31,7 @@ public abstract class AbstractCommandHandler {
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractCommandHandler.class );
 	
 	public static final byte[] NOT_SUPPORTED = "-ERR Not supported.\r\n".getBytes();
+	public static final byte[] BEYOND_TASK_QUEUE = "-ERR too much bigkey.\r\n".getBytes();
 	
 	public static final String PIPELIEN_CMD = "pipeline";
 	public static final byte[] PIPELIEN_KEY = PIPELIEN_CMD.getBytes();
