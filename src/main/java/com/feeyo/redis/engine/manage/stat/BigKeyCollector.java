@@ -159,9 +159,16 @@ public class BigKeyCollector implements StatCollector {
 		return sortMap;
 	}
 	
-	// TODO 待完善
 	public boolean isResponseBigkey(String key, String cmd) {
-		return respKeyMap.containsKey(key);
+		BigKey bk = respKeyMap.get(key);
+		if (bk != null && bk.cmd.equals(cmd)) {
+			return true;
+		}
+		return false;
+	}
+	
+	public void delResponseBigkey(String key) {
+		respKeyMap.remove(key);
 	}
 	
 	public static class BigKey {

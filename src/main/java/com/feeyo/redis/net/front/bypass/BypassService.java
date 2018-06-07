@@ -1,5 +1,7 @@
 package com.feeyo.redis.net.front.bypass;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -12,6 +14,7 @@ import com.feeyo.redis.engine.manage.stat.BigKeyCollector;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.codec.RedisRequest;
+import com.feeyo.redis.net.codec.RedisResponse;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.NameableExecutor;
 import com.feeyo.redis.nio.util.TimeUtil;
@@ -33,6 +36,8 @@ public class BypassService {
 	private int bigkeySize;
 	private int bigkeyQueueSize;
 	private int bigkeyThreadSize;
+	
+	private static final byte[] TIMEOUT_RESPONSE = "-ERR time out.\r\n".getBytes();
 	
 	public static BypassService INSTANCE() {
 		return instance;
@@ -71,25 +76,56 @@ public class BypassService {
 				throw new BeyondTaskQueueException();
 			}
 			
-			bigkeyExecutor.execute( new Runnable() {
+			bigkeyExecutor.execute(new Runnable() {
 				@Override
 				public void run() {
-					if (timeout != -1 && TimeUtil.currentTimeMillis() - frontConn.getSession().getRequestTimeMills() > timeout) {
-						frontConn.write("-ERR time out.\r\n".getBytes());
+					if (timeout != -1
+							&& TimeUtil.currentTimeMillis() - frontConn.getSession().getRequestTimeMills() > timeout) {
+						frontConn.write(TIMEOUT_RESPONSE);
 						return;
 					}
-					JedisPool jedisPool = JedisHolder.INSTANCE().getJedisPool(physicalNode.getHost(), physicalNode.getPort());
+
+					JedisPool jedisPool = JedisHolder.INSTANCE().getJedisPool(physicalNode.getHost(),
+							physicalNode.getPort());
 					JedisConnection conn = jedisPool.getResource();
 					try {
-						
+						conn.sendCommand(request);
+						List<RedisResponse> resps = conn.getResponses();
+						if (resps != null) {
+							String password = frontConn.getPassword();
+							String cmd = frontConn.getSession().getRequestCmd();
+							byte[] key = frontConn.getSession().getRequestKey();
+							int requestSize = frontConn.getSession().getRequestSize();
+							long requestTimeMills = frontConn.getSession().getRequestTimeMills();
+							long responseTimeMills = TimeUtil.currentTimeMillis();
+							int responseSize = 0;
+
+							for (RedisResponse resp : resps)
+								responseSize += writeToFront(frontConn, resp, 0);
+
+							resps.clear(); // help GC
+							resps = null;
+
+							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
+
+							if (requestSize < bigkeySize && responseSize < bigkeySize) {
+								bigKeyCollector.delResponseBigkey(new String(key));
+							}
+							// 数据收集
+							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills,
+									procTimeMills, false);
+						}
 					} catch (Exception e) {
-						LOGGER.error("return remote offset err:", e);
+						if (frontConn != null) {
+							frontConn.close("write err");
+						}
+						// 由 reactor close
+						LOGGER.error("backend write to front err:", e);
 					} finally {
 						if (conn != null) {
 							conn.close();
 						}
 					}
-					
 				}
 			});
 			return true;
@@ -125,6 +161,54 @@ public class BypassService {
 		return "+OK\r\n".getBytes();
 	}
 	
+	// 写入到前端
+	private int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {
+
+		int tmpSize = size;
+
+		if (frontCon.isClosed()) {
+			throw new IOException("front conn is closed!");
+		}
+
+		if (response.type() == '+' || response.type() == '-' || response.type() == ':' || response.type() == '$') {
+
+			byte[] buf = (byte[]) response.data();
+			tmpSize += buf.length;
+
+			frontCon.write(buf);
+
+			// fast GC
+			response.clear();
+
+		} else {
+			if (response.data() instanceof byte[]) {
+				byte[] buf = (byte[]) response.data();
+				tmpSize += buf.length;
+				frontCon.write(buf);
+
+				// fast GC
+				response.clear();
+
+			} else {
+				RedisResponse[] items = (RedisResponse[]) response.data();
+				for (int i = 0; i < items.length; i++) {
+					if (i == 0) {
+						byte[] buf = (byte[]) items[i].data();
+						tmpSize += buf.length;
+						frontCon.write(buf);
+
+						// fast GC
+						response.clear();
+
+					} else {
+						tmpSize = writeToFront(frontCon, items[i], tmpSize);
+					}
+				}
+			}
+		}
+		return tmpSize;
+	}
+
 	public static void main(String[] args) throws InterruptedException {
 			NameableExecutor ne = ExecutorUtil.create("BigkeyExecutor-", 2);
 			for (int i = 0 ; i< 10;i++) {

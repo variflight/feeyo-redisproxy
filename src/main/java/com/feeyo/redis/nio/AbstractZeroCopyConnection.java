@@ -121,7 +121,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					mappedByteBuffer.get(data);
 					mappedByteBuffer.position( newPos );
 					
-					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
+//					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
 					
 					// 负责解析报文并处理
 					handler.handleReadEvent(this, data);

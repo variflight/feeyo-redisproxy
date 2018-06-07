@@ -43,7 +43,7 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 			
 		// 任务队列满了
 		} catch (BeyondTaskQueueException e) {
-			// TODO: handle exception
+			frontCon.write(BEYOND_TASK_QUEUE);
 		}
 		
 	}
