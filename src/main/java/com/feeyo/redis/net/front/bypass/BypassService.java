@@ -6,6 +6,7 @@ import java.util.concurrent.RejectedExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
@@ -48,7 +49,7 @@ public class BypassService {
 		this.bigkeyQueueSize = bigkeyQueueSizeString == null ? 100 : Integer.parseInt(bigkeyQueueSizeString);
 		this.timeout = bigkeyQueueTimeoutString == null ? 3000 : Integer.parseInt(bigkeyQueueTimeoutString);
 		
-		this.bigkeyExecutor = ExecutorUtil.create("BusinessExecutor-", bigkeyThreadSize);
+		this.bigkeyExecutor = ExecutorUtil.create("BigkeyExecutor-", bigkeyThreadSize);
 		this.bigKeyCollector = StatUtil.getBigKeyCollector();
 		bigKeyCollector.setBigkeySize(bigkeySize);
 	}
@@ -97,13 +98,35 @@ public class BypassService {
 		}
 	}
 	
-	// TODO
-	public void reload() {
-		
+	public byte[] reload() {
+		try {
+			Map<String, String> serverMap = ConfigLoader.loadServerMap(ConfigLoader.buidCfgAbsPathFor("server.xml"));
+			String bigkeySizeString = serverMap.get("bigkeySize"); 
+			String bigkeyThreadSizeString = serverMap.get("bigkeyThreadSize"); 
+			String bigkeyQueueSizeString = serverMap.get("bigkeyQueueSize"); 
+			String bigkeyQueueTimeoutString = serverMap.get("bigkeyQueueTimeout"); 
+			this.bigkeySize = bigkeySizeString == null ? 256 * 1024 : Integer.parseInt(bigkeySizeString);
+			this.bigkeyThreadSize = bigkeyThreadSizeString == null ? 4 : Integer.parseInt(bigkeyThreadSizeString);
+			this.bigkeyQueueSize = bigkeyQueueSizeString == null ? 100 : Integer.parseInt(bigkeyQueueSizeString);
+			this.timeout = bigkeyQueueTimeoutString == null ? 3000 : Integer.parseInt(bigkeyQueueTimeoutString);
+			
+			if (bigkeyThreadSize != bigkeyExecutor.getCorePoolSize()) {
+				NameableExecutor newBigkeyExecutor = ExecutorUtil.create("BigkeyExecutor-", bigkeyThreadSize);
+				NameableExecutor oldBigkeyExecutor = this.bigkeyExecutor;
+				this.bigkeyExecutor = newBigkeyExecutor;
+				oldBigkeyExecutor.shutdown();
+			}
+			bigKeyCollector.setBigkeySize(bigkeySize);
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
+		}
+		return "+OK\r\n".getBytes();
 	}
 	
 	public static void main(String[] args) throws InterruptedException {
-			NameableExecutor ne = ExecutorUtil.create("BusinessExecutor-", 2);
+			NameableExecutor ne = ExecutorUtil.create("BigkeyExecutor-", 2);
 			for (int i = 0 ; i< 10;i++) {
 				try {
 					ne.execute( new Runnable() {
