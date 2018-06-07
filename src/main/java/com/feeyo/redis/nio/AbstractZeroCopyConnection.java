@@ -21,14 +21,19 @@ import com.feeyo.redis.nio.util.TimeUtil;
 /**
  * ZeroCopy
  * 
+ * @see http://osxdaily.com/2007/03/23/create-a-ram-disk-in-mac-os-x/
+ * 
  * @author zhuam
  */
 public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractZeroCopyConnection.class );
 	
-	private int totalSize =  1024 * 1024 * 2;  
-	private int marked = Math.round( totalSize * 0.6F );
+	private static final boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
+	
+	//
+	private static final int TOTAL_SIZE =  1024 * 1024 * 2;  
+	private static final int MARKED = Math.round( TOTAL_SIZE * 0.6F );
 	
 	//
 	private String fileName;
@@ -39,9 +44,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	// r/w lock
 	protected AtomicBoolean rwLock = new AtomicBoolean( false );
-	
-	// OS
-	private static boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
 	
 	
 	public AbstractZeroCopyConnection(SocketChannel channel) {
@@ -57,11 +59,11 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			} 
 			
 			this.randomAccessFile = new RandomAccessFile(fileName, "rw");
-			this.randomAccessFile.setLength(totalSize);
+			this.randomAccessFile.setLength(TOTAL_SIZE);
 			this.randomAccessFile.seek(0);
 
 			this.fileChannel = randomAccessFile.getChannel();
-			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, totalSize);
+			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, TOTAL_SIZE);
 
 		} catch (IOException e) {
 			LOGGER.error("create mapped err:", e);
@@ -97,7 +99,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			for(;;) {
 				
 				final int position = mappedByteBuffer.position();
-				final int count    = totalSize - position;
+				final int count    = TOTAL_SIZE - position;
 				int tranfered = (int) fileChannel.transferFrom(channel, position, count);
 				
 				mappedByteBuffer.position( position + tranfered );
@@ -214,7 +216,9 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	//
 	private void rewind() {
 		int pos = this.mappedByteBuffer.position();
-		if ( pos > marked ) {
+		if ( pos > MARKED ) {
+			
+			LOGGER.info("mapped bytebuffer rewind, pos={}, marked={}", pos, MARKED);
 			
 			this.mappedByteBuffer.position(0);
 			this.mappedByteBuffer.limit( pos );
