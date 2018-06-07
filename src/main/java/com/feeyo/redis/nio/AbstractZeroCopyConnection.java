@@ -224,7 +224,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		try {
 			unmap(mappedByteBuffer);			
 			randomAccessFile.close();
-			socketChannel.close();	
+			fileChannel.close();	
 			
 			// 删除文件
 			File file = new File( fileName );
