@@ -33,7 +33,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	private static final boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
 	
 	//
-	private static final int TOTAL_SIZE =  1024 * 1024 * 2;  
+	private static final int TOTAL_SIZE =  100; // 1024 * 1024 * 2;  
 	private static final int MARKED = Math.round( TOTAL_SIZE * 0.6F );
 	
 	//
@@ -79,6 +79,8 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	protected void asynRead() throws IOException {
 		
+		System.out.println(" asynRead 1 ... ");
+		
 		if (isClosed.get()) {
 			return;
 		}
@@ -100,6 +102,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				int count    = TOTAL_SIZE - oldPos;
 				int tranfered = (int) fileChannel.transferFrom(socketChannel, oldPos, count);
 				
+				System.out.println( "asynRead 2 :" + ( oldPos + tranfered) + ",, " + mappedByteBuffer.limit() );
 				mappedByteBuffer.position( oldPos + tranfered );
 				
 				// fixbug: transferFrom() always return 0 when client closed abnormally!
@@ -120,7 +123,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					mappedByteBuffer.get(data);
 					mappedByteBuffer.position( newPos );
 					
-//					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
+					System.out.println( "asynRead 3, tranfered="+ tranfered + ",  " + new String(data)  );
 					
 					// 负责解析报文并处理
 					handler.handleReadEvent(this, data);
@@ -145,7 +148,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			}
 			
 		} finally {
-			LOCK.compareAndSet(true, false);
+			LOCK.set(false);
 		}
 		
 	}
@@ -177,6 +180,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			mappedByteBuffer.position( position + count );
 			
 			write0( position, count );
+			
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -211,11 +215,11 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		int pos = this.mappedByteBuffer.position();
 		if ( pos > MARKED ) {
 			
-			LOGGER.info("mapped bytebuffer rewind, pos={}, marked={}", pos, MARKED);
+			LOGGER.warn("mapped bytebuffer rewind, pos={}, marked={}", pos, MARKED);
 			
 			this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
 			this.mappedByteBuffer.position(0);
-			this.mappedByteBuffer.limit( pos );
+			this.mappedByteBuffer.limit( TOTAL_SIZE ); //pos
 		}
 	}
 	
