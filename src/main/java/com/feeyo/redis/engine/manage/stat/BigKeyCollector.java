@@ -16,7 +16,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
 public class BigKeyCollector implements StatCollector {
 	
 	public static int LENGTH = 500;
-	public static final int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
+	public static int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
 	
 	private HashMap<String, BigKey> reqKeyMap = new HashMap<String, BigKey>();
 	private HashMap<String, BigKey> respKeyMap = new HashMap<String, BigKey>();
@@ -142,6 +142,10 @@ public class BigKeyCollector implements StatCollector {
 		} finally {
 			locking.set(false);
 		}
+	}
+	
+	public void setBigkeySize(int size) {
+		BIGKEY_SIZE = size;
 	}
 
 	@Override

@@ -29,6 +29,11 @@
 	<property name="frontIdleTimeout">300000</property>
 	<property name="backendIdleTimeout">1800000</property>
 
+	<!-- bigkey pass -->
+	<property name="bigkeySize">262144</property>
+	<property name="bigkeyThreadSize">4</property>
+	<property name="bigkeyQueueSize">20</property>
+	<property name="bigkeyQueueTimeout">3000</property>
 
 </redis>
 
