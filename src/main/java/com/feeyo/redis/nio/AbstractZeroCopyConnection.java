@@ -22,6 +22,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * ZeroCopy
  * 
  * @see http://osxdaily.com/2007/03/23/create-a-ram-disk-in-mac-os-x/
+ * @see https://www.ibm.com/developerworks/cn/java/j-zerocopy/
  * 
  * @author zhuam
  */
@@ -52,11 +53,12 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 
 		try {
 			if ( IS_LINUX ) {
-				fileName = "/dev/shm/" + id + ".mapped";
+				fileName = "/dev/shm/" + id + ".mapped";		// 在Linux中，用 tmpfs
 			} else {
 				fileName =  id + ".mapped";
 			} 
 			
+			// mmap
 			this.randomAccessFile = new RandomAccessFile(fileName, "rw");
 			this.randomAccessFile.setLength(TOTAL_SIZE);
 			this.randomAccessFile.seek(0);
@@ -89,9 +91,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		//
 		lastReadTime = TimeUtil.currentTimeMillis();
 		
-		//
-		rewind();
-		
 		try {
 			
 			// 循环处理字节信息
@@ -99,7 +98,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				
 				int oldPos = mappedByteBuffer.position();
 				int count    = TOTAL_SIZE - oldPos;
-				int tranfered = (int) fileChannel.transferFrom(channel, oldPos, count);
+				int tranfered = (int) fileChannel.transferFrom(socketChannel, oldPos, count);
 				
 				mappedByteBuffer.position( oldPos + tranfered );
 				
@@ -107,7 +106,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				// --------------------------------------------------------------------
 				// So decide whether the connection closed or not by read()! 
 				if( tranfered == 0 && count > 0 ){
-					tranfered = channel.read(mappedByteBuffer);
+					tranfered = socketChannel.read(mappedByteBuffer);
 				}
 				
 				if ( tranfered > 0 ) {
@@ -121,7 +120,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					mappedByteBuffer.get(data);
 					mappedByteBuffer.position( newPos );
 					
-					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
+//					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
 					
 					// 负责解析报文并处理
 					handler.handleReadEvent(this, data);
@@ -131,13 +130,13 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					
 					LOGGER.warn("sockect read abnormal, tranfered={}", tranfered);
 					
-					if (!this.channel.isOpen()) {
+					if (!this.socketChannel.isOpen()) {
 						this.close("socket closed");
 						return;
 					}
 					
 					// not enough space
-					//
+					rewind();
 					
 				} else {
 					this.close("stream closed");
@@ -187,7 +186,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	// 往 socketChannel 写入数据
 	private void write0(int position, int count) throws IOException {
 		
-		int tranfered = (int) fileChannel.transferTo(position, count, channel);
+		int tranfered = (int) fileChannel.transferTo(position, count, socketChannel);
 		
 		boolean noMoreData = tranfered == count;
 		if (noMoreData) {
@@ -214,18 +213,20 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			
 			LOGGER.info("mapped bytebuffer rewind, pos={}, marked={}", pos, MARKED);
 			
+			this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
 			this.mappedByteBuffer.position(0);
 			this.mappedByteBuffer.limit( pos );
-			this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
 		}
 	}
 	
 	@Override
 	protected void cleanup() {
 		try {
-			cleanMapped(mappedByteBuffer);			
+			mappedByteBuffer.rewind();
+			
+			unmap(mappedByteBuffer);			
 			randomAccessFile.close();
-			channel.close();	
+			fileChannel.close();	
 			
 			// 删除文件
 			File file = new File( fileName );
@@ -237,12 +238,11 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		} 	
 	}
 	
-	
-	// clean mapped
-	private void cleanMapped(final Object buffer) {
-		AccessController.doPrivileged(new PrivilegedAction<Object>() {
+	// unmap
+	private void unmap(final MappedByteBuffer buffer) {
+		AccessController.doPrivileged(new PrivilegedAction<MappedByteBuffer>() {
 			@SuppressWarnings("restriction")
-			public Object run() {
+			public MappedByteBuffer run() {
 				try {
 					Method cleanerMethod = buffer.getClass().getMethod("cleaner", new Class[0]);
 					cleanerMethod.setAccessible(true);

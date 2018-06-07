@@ -65,7 +65,7 @@ public class RedisFrontSession {
 	
 	// 
 	private String requestCmd;
-	private byte[] requestKey;
+	private String requestKey;
 	private int requestSize;
 	private long requestTimeMills; 
 	
@@ -428,11 +428,11 @@ public class RedisFrontSession {
 		this.requestCmd = requestCmd;
 	}
 
-	public byte[] getRequestKey() {
+	public String getRequestKey() {
 		return requestKey;
 	}
 
-	public void setRequestKey(byte[] requestKey) {
+	public void setRequestKey(String requestKey) {
 		this.requestKey = requestKey;
 	}
 

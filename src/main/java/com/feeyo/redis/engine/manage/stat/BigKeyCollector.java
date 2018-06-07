@@ -16,16 +16,24 @@ import com.feeyo.redis.nio.util.TimeUtil;
 public class BigKeyCollector implements StatCollector {
 	
 	public static int LENGTH = 500;
-	public static int BIGKEY_SIZE = 1024 * 256;  				// 大于 256K
+	
+	// required size
+	public static int REQUIRED_SIZE = 1024 * 256;  				// 大于 256K
 	
 	private HashMap<String, BigKey> reqKeyMap = new HashMap<String, BigKey>();
 	private HashMap<String, BigKey> respKeyMap = new HashMap<String, BigKey>();
 	
 	private AtomicBoolean locking = new AtomicBoolean(false);
 	
+	public void setSize(int size) {
+		if ( size >= 1024 * 256 && size <= 1024 * 1024 * 2 )
+			REQUIRED_SIZE = size;
+	}
+	
 	public List<BigKey> getBigkeys() {
 		
 		try {
+			
 			while (!locking.compareAndSet(false, true)) {
 			}
 			// 合并
@@ -57,11 +65,11 @@ public class BigKeyCollector implements StatCollector {
 			return;
 		}
 		
-		if(requestSize >= BIGKEY_SIZE) {
+		if(requestSize >= REQUIRED_SIZE) {
 			dealKeyMap(reqKeyMap, cmd, key, requestSize);
 		}
 		
-		if(responseSize >= BIGKEY_SIZE) {
+		if(responseSize >= REQUIRED_SIZE) {
 			dealKeyMap(respKeyMap, cmd, key, responseSize);
 		}
 	}
@@ -79,6 +87,7 @@ public class BigKeyCollector implements StatCollector {
 				
 				// 处理排序, 降序
 				TreeMap<String, BigKey> sortKeyMap = sortBigKeyMap(keyMap, false);
+				
 				// 缩容
 				while (keyMap.size() >= ( LENGTH * 0.5 ) ) {
 					keyMap.remove(sortKeyMap.pollLastEntry().getKey());
@@ -143,10 +152,6 @@ public class BigKeyCollector implements StatCollector {
 			locking.set(false);
 		}
 	}
-	
-	public void setBigkeySize(int size) {
-		BIGKEY_SIZE = size;
-	}
 
 	@Override
 	public void onSchedulePeroid(int peroid) {
@@ -159,9 +164,16 @@ public class BigKeyCollector implements StatCollector {
 		return sortMap;
 	}
 	
-	// TODO 待完善
-	public boolean isResponseBigkey(String key, String cmd) {
-		return respKeyMap.containsKey(key);
+	public boolean isResponseBigkey(String cmd, String key) {
+		BigKey bk = respKeyMap.get(key);
+		if (bk != null && bk.cmd.equals(cmd)) {
+			return true;
+		}
+		return false;
+	}
+	
+	public void delResponseBigkey(String key) {
+		respKeyMap.remove(key);
 	}
 	
 	public static class BigKey {

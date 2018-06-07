@@ -82,7 +82,7 @@ public final class NIOConnector extends Thread {
 		AbstractConnection c = null;
 		while ((c = connectQueue.poll()) != null) {
 			try {
-				SocketChannel channel = (SocketChannel) c.getChannel();
+				SocketChannel channel = (SocketChannel) c.getSocketChannel();
 				//注册OP_CONNECT监听与后端连接是否真正建立
 				channel.register(selector, SelectionKey.OP_CONNECT, c);
 				 //主动连接
@@ -99,7 +99,7 @@ public final class NIOConnector extends Thread {
 		AbstractConnection c = (AbstractConnection) att;
 		try {
 			 //做原生NIO连接是否完成的判断和操作
-			if (finishConnect(c, (SocketChannel) c.channel)) {
+			if (finishConnect(c, (SocketChannel) c.socketChannel)) {
 				clearSelectionKey(key);
 				//c.setId( ConnectIdGenerator.getINSTNCE().getId() );
 				
