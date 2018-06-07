@@ -22,6 +22,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * ZeroCopy
  * 
  * @see http://osxdaily.com/2007/03/23/create-a-ram-disk-in-mac-os-x/
+ * @see https://www.ibm.com/developerworks/cn/java/j-zerocopy/
  * 
  * @author zhuam
  */
@@ -52,11 +53,12 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 
 		try {
 			if ( IS_LINUX ) {
-				fileName = "/dev/shm/" + id + ".mapped";
+				fileName = "/dev/shm/" + id + ".mapped";		// 在Linux中，用 tmpfs
 			} else {
 				fileName =  id + ".mapped";
 			} 
 			
+			// mmap
 			this.randomAccessFile = new RandomAccessFile(fileName, "rw");
 			this.randomAccessFile.setLength(TOTAL_SIZE);
 			this.randomAccessFile.seek(0);
@@ -88,9 +90,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				
 		//
 		lastReadTime = TimeUtil.currentTimeMillis();
-		
-		//
-		rewind();
 		
 		try {
 			
@@ -137,7 +136,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					}
 					
 					// not enough space
-					//
+					rewind();
 					
 				} else {
 					this.close("stream closed");
@@ -223,7 +222,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	protected void cleanup() {
 		try {
-			cleanMapped(mappedByteBuffer);			
+			unmap(mappedByteBuffer);			
 			randomAccessFile.close();
 			channel.close();	
 			
@@ -237,12 +236,11 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		} 	
 	}
 	
-	
-	// clean mapped
-	private void cleanMapped(final Object buffer) {
-		AccessController.doPrivileged(new PrivilegedAction<Object>() {
+	// unmap
+	private void unmap(final MappedByteBuffer buffer) {
+		AccessController.doPrivileged(new PrivilegedAction<MappedByteBuffer>() {
 			@SuppressWarnings("restriction")
-			public Object run() {
+			public MappedByteBuffer run() {
 				try {
 					Method cleanerMethod = buffer.getClass().getMethod("cleaner", new Class[0]);
 					cleanerMethod.setAccessible(true);
