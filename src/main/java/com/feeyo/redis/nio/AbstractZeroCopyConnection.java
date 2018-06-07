@@ -43,7 +43,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 
 	
 	// r/w lock
-	protected AtomicBoolean rwLock = new AtomicBoolean( false );
+	protected AtomicBoolean LOCK = new AtomicBoolean( false );
 	
 	
 	public AbstractZeroCopyConnection(SocketChannel channel) {
@@ -82,8 +82,8 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			return;
 		}
 		
-		// rw 进行中
-		if ( !rwLock.compareAndSet(false, true) ) {
+		//
+		if ( !LOCK.compareAndSet(false, true) ) {
 			return;
 		}
 				
@@ -114,8 +114,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				if ( tranfered > 0 ) {
 					
 					// 负责解析报文并处理
-					
-					//
 					int oldPos = mappedByteBuffer.position();
 					mappedByteBuffer.position( position );
 					
@@ -136,6 +134,8 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					
 				} else if ( tranfered == 0 ) {
 					
+					LOGGER.warn("sockect read abnormal, tranfered={}", tranfered);
+					
 					if (!this.channel.isOpen()) {
 						this.close("socket closed");
 						return;
@@ -152,7 +152,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			}
 			
 		} finally {
-			rwLock.set( false );
+			LOCK.compareAndSet(true, false);
 		}
 		
 	}
@@ -213,7 +213,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		// ignore
 	}
 
-	//
+	// 
 	private void rewind() {
 		int pos = this.mappedByteBuffer.position();
 		if ( pos > MARKED ) {
