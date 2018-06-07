@@ -134,11 +134,11 @@ public class NetSystem {
 					if ( c.getAttachement() != null ) {
 						errBuffer.append(" , and attach it " ).append( c.getAttachement() );
 					}
-					errBuffer.append( " , channel isConnected: " ).append(backendCon.getChannel().isConnected());
-			        errBuffer.append( " , channel isBlocking: " ).append(backendCon.getChannel().isBlocking());
-			        errBuffer.append( " , channel isOpen: " ).append(backendCon.getChannel().isOpen());
-			        errBuffer.append( " , socket isConnected: " ).append(backendCon.getChannel().socket().isConnected());
-			        errBuffer.append( " , socket isClosed: " ).append(backendCon.getChannel().socket().isClosed());
+					errBuffer.append( " , channel isConnected: " ).append(backendCon.getSocketChannel().isConnected());
+			        errBuffer.append( " , channel isBlocking: " ).append(backendCon.getSocketChannel().isBlocking());
+			        errBuffer.append( " , channel isOpen: " ).append(backendCon.getSocketChannel().isOpen());
+			        errBuffer.append( " , socket isConnected: " ).append(backendCon.getSocketChannel().socket().isConnected());
+			        errBuffer.append( " , socket isClosed: " ).append(backendCon.getSocketChannel().socket().isClosed());
 			        
 					LOGGER.warn( errBuffer.toString() );
 					
@@ -175,9 +175,9 @@ public class NetSystem {
 		
 		// LINUX 2.6 该 RCVBUF 会自动调节
 		// con.getChannel().socket().setReceiveBufferSize( sorcvbuf );
-		con.getChannel().socket().setSendBufferSize( sosndbuf  );  // SO_TCPNODELAY  关闭算法
-		con.getChannel().socket().setTcpNoDelay( true );
-		con.getChannel().socket().setKeepAlive( true );
-		con.getChannel().socket().setReuseAddress( true );
+		con.getSocketChannel().socket().setSendBufferSize( sosndbuf  );  // SO_TCPNODELAY  关闭算法
+		con.getSocketChannel().socket().setTcpNoDelay( true );
+		con.getSocketChannel().socket().setKeepAlive( true );
+		con.getSocketChannel().socket().setReuseAddress( true );
 	}
 }

@@ -98,7 +98,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				
 				int oldPos = mappedByteBuffer.position();
 				int count    = TOTAL_SIZE - oldPos;
-				int tranfered = (int) fileChannel.transferFrom(channel, oldPos, count);
+				int tranfered = (int) fileChannel.transferFrom(socketChannel, oldPos, count);
 				
 				mappedByteBuffer.position( oldPos + tranfered );
 				
@@ -106,7 +106,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				// --------------------------------------------------------------------
 				// So decide whether the connection closed or not by read()! 
 				if( tranfered == 0 && count > 0 ){
-					tranfered = channel.read(mappedByteBuffer);
+					tranfered = socketChannel.read(mappedByteBuffer);
 				}
 				
 				if ( tranfered > 0 ) {
@@ -130,7 +130,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					
 					LOGGER.warn("sockect read abnormal, tranfered={}", tranfered);
 					
-					if (!this.channel.isOpen()) {
+					if (!this.socketChannel.isOpen()) {
 						this.close("socket closed");
 						return;
 					}
@@ -186,7 +186,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	// 往 socketChannel 写入数据
 	private void write0(int position, int count) throws IOException {
 		
-		int tranfered = (int) fileChannel.transferTo(position, count, channel);
+		int tranfered = (int) fileChannel.transferTo(position, count, socketChannel);
 		
 		boolean noMoreData = tranfered == count;
 		if (noMoreData) {
@@ -224,7 +224,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		try {
 			unmap(mappedByteBuffer);			
 			randomAccessFile.close();
-			channel.close();	
+			socketChannel.close();	
 			
 			// 删除文件
 			File file = new File( fileName );
