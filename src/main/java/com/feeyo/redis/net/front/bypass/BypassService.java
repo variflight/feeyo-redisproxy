@@ -32,17 +32,8 @@ public class BypassService {
 	private static Logger LOGGER = LoggerFactory.getLogger( BypassService.class );
 	
 	public static final byte[] BUSY_RESP = "-ERR bypass busy.\r\n".getBytes();
-	
-<<<<<<< Upstream, based on origin/1.9
-	private NameableExecutor bigkeyExecutor;
-	private int timeout;
-	private BigKeyCollector bigKeyCollector;
-	private int bigkeySize;
-	private int bigkeyQueueSize;
-	private int bigkeyThreadSize;
-	
+
 	private static final byte[] TIMEOUT_RESPONSE = "-ERR time out.\r\n".getBytes();
-=======
 	private static final BypassService _INSTANCE = new BypassService();
 	
 	private NameableExecutor threadPoolExecutor;
@@ -53,7 +44,6 @@ public class BypassService {
 	private int queueSize;
 	
 	private int timeout;		// 单位秒
->>>>>>> 35a0f70 rt
 	
 	public static BypassService INSTANCE() {
 		return _INSTANCE;
@@ -100,15 +90,7 @@ public class BypassService {
 		
 		try {
 			
-<<<<<<< Upstream, based on origin/1.9
-			if (bigkeyExecutor.getQueue().size() >= bigkeyQueueSize) {
-				throw new BeyondTaskQueueException();
-			}
-			
-			bigkeyExecutor.execute(new Runnable() {
-=======
 			threadPoolExecutor.execute( new Runnable() {
->>>>>>> 35a0f70 rt
 				@Override
 				public void run() {
 					if (timeout != -1
@@ -117,8 +99,7 @@ public class BypassService {
 						return;
 					}
 
-					JedisPool jedisPool = JedisHolder.INSTANCE().getJedisPool(physicalNode.getHost(),
-							physicalNode.getPort());
+					JedisPool jedisPool = JedisHolder.INSTANCE().getJedisPool(physicalNode.getHost(), physicalNode.getPort());
 					JedisConnection conn = jedisPool.getResource();
 					try {
 						conn.sendCommand(request);
@@ -140,8 +121,8 @@ public class BypassService {
 
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
 
-							if (requestSize < bigkeySize && responseSize < bigkeySize) {
-								bigKeyCollector.delResponseBigkey(new String(key));
+							if (requestSize < sizeLimit && responseSize < sizeLimit) {
+								StatUtil.getBigKeyCollector().delResponseBigkey(new String(key));
 							}
 							// 数据收集
 							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills,
@@ -203,7 +184,6 @@ public class BypassService {
 		}
 		return "+OK\r\n".getBytes();
 	}
-<<<<<<< Upstream, based on origin/1.9
 	
 	// 写入到前端
 	private int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {
@@ -253,34 +233,4 @@ public class BypassService {
 		return tmpSize;
 	}
 
-	public static void main(String[] args) throws InterruptedException {
-			NameableExecutor ne = ExecutorUtil.create("BigkeyExecutor-", 2);
-			for (int i = 0 ; i< 10;i++) {
-				try {
-					ne.execute( new Runnable() {
-						@Override
-						public void run() {
-							try {
-								System.out.println(1111);
-								Thread.sleep(1000);
-							} catch (InterruptedException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						}
-					});
-					System.out.println(ne.getQueue().size());
-				} catch (RejectedExecutionException r) {
-					System.out.println("error");
-					Thread.sleep(1000);
-				}
-			}
-			while (ne.getQueue().size() != 0) {
-				Thread.sleep(1000);
-			}
-	}
-	
-=======
->>>>>>> 35a0f70 rt
- 	
 }

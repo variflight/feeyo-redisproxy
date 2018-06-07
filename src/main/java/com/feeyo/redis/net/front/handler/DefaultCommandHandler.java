@@ -39,15 +39,9 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) ) {
 			BypassService.INSTANCE().queuing(firstRequest, frontCon, node.getPhysicalNode());
 			
-<<<<<<< Upstream, based on origin/1.9
-		// 任务队列满了
-		} catch (BeyondTaskQueueException e) {
-			frontCon.write(BEYOND_TASK_QUEUE);
-=======
 		}  else {
 			//
 			writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
->>>>>>> 35a0f70 rt
 		}
 		
 	}
