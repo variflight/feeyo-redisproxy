@@ -58,7 +58,7 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( rrs.getRequestType().getCmd());
-		frontCon.getSession().setRequestKey( rrs.getRequestType().getCmd().getBytes());
+		frontCon.getSession().setRequestKey( rrs.getRequestType().getCmd() );
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
     }
     
@@ -82,7 +82,7 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                     try {
                         String password = frontCon.getPassword();
         				String cmd = frontCon.getSession().getRequestCmd();
-        				byte[] key = frontCon.getSession().getRequestKey();
+        				String key = frontCon.getSession().getRequestKey();
                         int requestSize = frontCon.getSession().getRequestSize();
                         long requestTimeMills = frontCon.getSession().getRequestTimeMills();
                         long responseTimeMills = TimeUtil.currentTimeMillis();

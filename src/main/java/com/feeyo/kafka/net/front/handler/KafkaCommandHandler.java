@@ -101,7 +101,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( cmd );
-		frontCon.getSession().setRequestKey( requestKey );
+		frontCon.getSession().setRequestKey( new String( requestKey ) );
 		frontCon.getSession().setRequestSize( buffer.position() );
 		
 		// 透传

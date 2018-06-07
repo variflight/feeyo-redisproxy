@@ -26,13 +26,13 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		RedisRequest firstRequest = routeResult.getRequests().get(0);
 		
 		String cmd = new String(firstRequest.getArgs()[0]).toUpperCase();
-		byte[] requestKey = firstRequest.getNumArgs() > 1 ? firstRequest.getArgs()[1] : null;
+		String requestKey = firstRequest.getNumArgs() > 1 ? new String(firstRequest.getArgs()[1]) : null;
 		int requestSize = firstRequest.getSize();
 		
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( cmd );
-		frontCon.getSession().setRequestKey(requestKey);
+		frontCon.getSession().setRequestKey( requestKey );
 		frontCon.getSession().setRequestSize(firstRequest.getSize());
 		
 		// 旁路排队服务

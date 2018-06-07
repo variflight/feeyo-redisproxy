@@ -74,13 +74,13 @@ public class BypassService {
 		this.threadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize, 
 				timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>( queueSize ), true);
 		
-		StatUtil.getBigKeyCollector().setBigkeySize( requireSize );
+		StatUtil.getBigKeyCollector().setSize( requireSize );
 	}
 	
 	// 检测
-	public boolean testing(String requestCmd, byte[] requestKey, int requestSize) {
+	public boolean testing(String requestCmd, String requestKey, int requestSize) {
 		
-		if ( requestSize >= requireSize || StatUtil.getBigKeyCollector().isResponseBigkey(new String(requestKey), requestCmd)) {
+		if ( requestSize >= requireSize || StatUtil.getBigKeyCollector().isResponseBigkey(requestCmd, requestKey)) {
 			return true;
 		}
 		
@@ -104,7 +104,7 @@ public class BypassService {
 						if (resps != null) {
 							String password = frontConn.getPassword();
 							String cmd = frontConn.getSession().getRequestCmd();
-							byte[] key = frontConn.getSession().getRequestKey();
+							String key = frontConn.getSession().getRequestKey();
 							int requestSize = frontConn.getSession().getRequestSize();
 							long requestTimeMills = frontConn.getSession().getRequestTimeMills();
 							long responseTimeMills = TimeUtil.currentTimeMillis();
@@ -118,7 +118,7 @@ public class BypassService {
 							
 							//
 							if (requestSize < requireSize && responseSize < requireSize) {
-								StatUtil.getBigKeyCollector().delResponseBigkey(new String(key));
+								StatUtil.getBigKeyCollector().delResponseBigkey( key );
 							}
 							
 							// 数据收集
@@ -175,7 +175,9 @@ public class BypassService {
 				this.threadPoolExecutor = newThreadPoolExecutor;
 				oldThreadPoolExecutor.shutdown();
 			}
-			StatUtil.getBigKeyCollector().setBigkeySize(requireSize);
+			
+			StatUtil.getBigKeyCollector().setSize( requireSize );
+			
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");

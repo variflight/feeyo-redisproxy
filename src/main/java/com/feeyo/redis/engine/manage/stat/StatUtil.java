@@ -225,7 +225,7 @@ public class StatUtil {
 	 * @param spot
 	 * @param isCommandOnly 用于判断此次收集是否只用于command（pipeline指令的子指令）收集。
 	 */
-	public static void collect(final String password, final String cmd, final byte[] key, 
+	public static void collect(final String password, final String cmd, final String key, 
 			final int requestSize, final int responseSize, final int procTimeMills, final int waitTimeMills, final boolean isCommandOnly) {
 		
 		if ( cmd == null ) {
@@ -238,10 +238,9 @@ public class StatUtil {
 			@Override
 			public void run() {
 				
-				String keyStr = new String(key);
 				for(StatCollector listener: collectors) {
 					try {
-						listener.onCollect(password, cmd, keyStr, requestSize, responseSize, procTimeMills, waitTimeMills, isCommandOnly);
+						listener.onCollect(password, cmd, key, requestSize, responseSize, procTimeMills, waitTimeMills, isCommandOnly);
 					} catch(Exception e) {
 						LOGGER.error("error:",e);
 					}
