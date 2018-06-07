@@ -113,10 +113,9 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					
 					// 负责解析报文并处理
 					
-					
 					//
 					int oldPos = mappedByteBuffer.position();
-					mappedByteBuffer.position( 0 );
+					mappedByteBuffer.position( position );
 					
 					// 
 					ByteBuffer copyBuf = mappedByteBuffer.slice();
@@ -192,9 +191,9 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	// 往 socketChannel 写入数据
 	private void write0(int position, int count) throws IOException {
 		
-		int writed = (int) fileChannel.transferTo(position, count, channel);
+		int tranfered = (int) fileChannel.transferTo(position, count, channel);
 		
-		boolean noMoreData = writed == count;
+		boolean noMoreData = tranfered == count;
 		if (noMoreData) {
 		    if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) != 0)) {
 		        disableWrite();
