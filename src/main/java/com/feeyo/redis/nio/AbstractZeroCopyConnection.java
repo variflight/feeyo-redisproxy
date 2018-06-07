@@ -1,18 +1,21 @@
 package com.feeyo.redis.nio;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.nio.util.MappedByteBufferUtil;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
@@ -24,9 +27,24 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractZeroCopyConnection.class );
 	
-	private static final int TOTAL_SIZE = 1024 * 1024 * 1;  
+	/*
+	  mappedByteBuffer 目前没有rewind， read & write 操作都始终在前移为止，没有回转，
+	  最好的做法是发现已经使用了1/2的容量（或2/3）后，以及不够写数据的情况下，rewind回去
+	  
+	  redis client ------ ( r/w buffer ) ------>  front connection
+	  back connection  ------ ( r/w buffer )  ------> redis server
+	  
+	  1、read socket data, adjust writePos
+	  2、write byte buffer, adjust writePos 
+	  3、write data to socket, adjust readPos
+	 */
+	private int totalSize =  1024 * 1024 * 1;  
+	private int readPos;
+	private int writePos;
+	private int marked = Math.round( totalSize * 0.6F );
 	
 	//
+	private String fileName;
 	private RandomAccessFile randomAccessFile;
 	protected FileChannel fileChannel;
 	private MappedByteBuffer mappedByteBuffer;
@@ -36,21 +54,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	protected AtomicBoolean rwLock = new AtomicBoolean( false );
 	
 	// OS
-	private static int OS_TYPE = -1;
-	private static final int WIN = 1;
-	private static final int MAC = 2;
-	private static final int LINUX = 3;
-
-	static {
-		String osName = System.getProperty("os.name").toUpperCase();
-		if ( osName.startsWith("WIN") ) {
-			OS_TYPE  = WIN;
-		} else if ( osName.startsWith("MAC") ) {
-			OS_TYPE = MAC;
-		} else {
-			OS_TYPE = LINUX;
-		}
-	}
+	private static boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
 	
 	
 	public AbstractZeroCopyConnection(SocketChannel channel) {
@@ -59,24 +63,18 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 
 		try {
 			
-			String path = null;
-			if ( OS_TYPE == WIN ) {
-				path = "c:/";
-				
-			} else if ( OS_TYPE == MAC ) {
-				path = "";
-				
-			} else if ( OS_TYPE == LINUX ) {
-				path = "/dev/shm/";
-			}
-			String filename = path + id + ".mapped";
+			if ( IS_LINUX ) {
+				fileName = "/dev/shm/" + id + ".mapped";
+			} else {
+				fileName =  id + ".mapped";
+			} 
 			
-			this.randomAccessFile = new RandomAccessFile(filename, "rw");
-			this.randomAccessFile.setLength(TOTAL_SIZE);
+			this.randomAccessFile = new RandomAccessFile(fileName, "rw");
+			this.randomAccessFile.setLength(totalSize);
 			this.randomAccessFile.seek(0);
 
 			this.fileChannel = randomAccessFile.getChannel();
-			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, TOTAL_SIZE);
+			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, totalSize);
 
 		} catch (IOException e) {
 			LOGGER.error("create mapped err:", e);
@@ -87,6 +85,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	/**
 	 * 异步读取,该方法在 reactor 中被调用
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	protected void asynRead() throws IOException {
 		
@@ -102,15 +101,22 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		//
 		lastReadTime = TimeUtil.currentTimeMillis();
 		
+		//
+		if ( isOutOfBounds() )
+			rewind();
+		
 		try {
 			
 			// 循环处理字节信息
 			for(;;) {
 				
 				final int position = mappedByteBuffer.position();
-				final int count    = TOTAL_SIZE - position;
+				final int count    = totalSize - position;
 				int tranfered = (int) fileChannel.transferFrom(channel, position, count);
-				mappedByteBuffer.position(position + tranfered);
+				
+				// 写入位置
+				writePos = position + tranfered;
+				mappedByteBuffer.position( writePos );
 				
 				// fixbug: transferFrom() always return 0 when client closed abnormally!
 				// --------------------------------------------------------------------
@@ -119,27 +125,46 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					tranfered = channel.read(mappedByteBuffer);
 				}
 				
-				switch ( tranfered ) {
-				case 0:
+				if ( tranfered > 0 ) {
+					
+					// 负责解析报文并处理
+					byte[] data = new byte[ tranfered ];
+					
+					//
+					int oldPos = mappedByteBuffer.position();
+					mappedByteBuffer.position( readPos );
+					
+					ByteBuffer copyBuf = mappedByteBuffer.slice();
+					copyBuf.limit( tranfered );
+					
+					copyBuf.get(data);
+					
+					mappedByteBuffer.position(oldPos);
+					
+
+					
+					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
+					
+					//
+					handler.handleReadEvent(this, data);
+
+					break;
+					
+				} else if ( tranfered == 0 ) {
+					
 					if (!this.channel.isOpen()) {
 						this.close("socket closed");
 						return;
 					}
 					
 					// not enough space
-					// 
-					
-					break;
-				case -1:
-					this.close("stream closed");
-					break;
-				default:
-					
 					//
-					// 负责解析报文并处理
 					
-					break;
+				} else {
+					this.close("stream closed");
+					return;
 				}
+				
 			}
 			
 		} finally {
@@ -150,49 +175,51 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 
 	@Override
 	public void write(byte[] buf) {
+		write( ByteBuffer.wrap(buf) );
+	}
+
+	@Override
+	public void write(ByteBuffer buf) {
 		
 		// TODO 
 		// 1、考虑 rwLock 自旋
 		// 2、考虑 buf size 大于 mappedByteBuffer 的情况，分块
 		// 3、 write0 确保写OK
 		
-		mappedByteBuffer.put(buf);
-
 		try {
-			write0(0,0);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	@Override
-	public void write(ByteBuffer buf) {
-		
-		try {
+			
+			if ( isOutOfBounds() )
+				rewind();
 			
 			int position = mappedByteBuffer.position();
-			int writed = fileChannel.write(mappedByteBuffer, position);
-			
-			if (buf.hasRemaining()) {
-				throw new IOException("can't write whole buf ,writed " + writed + " remains " + buf.remaining());
+			int writed = fileChannel.write(buf, position);
+			if ( buf.hasRemaining() ) {
+				throw new IOException("can't write whole buffer ,writed " + writed + " remains " + buf.remaining());
 			}
-			mappedByteBuffer.position(position + writed);
 			
-			write0(0, 0);
+			// 写入位置
+			writePos = position + writed;
+			mappedByteBuffer.position( writePos );
+			
+			write0();
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
 	}
 	
-	private void write0(long position, long count) throws IOException {
-		//
-		//
-		long written = fileChannel.transferTo(position, count, channel);
+	// 往 socketChannel 写入数据
+	private void write0() throws IOException {
 		
-		boolean noMoreData = ( written == count );
+		int writeEnd = mappedByteBuffer.position();
+		int writeCount = writeEnd - readPos;
+		int writed = (int) fileChannel.transferTo(readPos, writeCount, channel);
+		this.readPos += writed;		
+		
+		LOGGER.info("#{} write data to socket, writed = {}, readPos = {}, writePos = {}",
+				new Object[]{ fileName, writed, readPos, writePos });
+		
+		boolean noMoreData = writed == writeCount;
 		if (noMoreData) {
 		    if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) != 0)) {
 		        disableWrite();
@@ -203,7 +230,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		        enableWrite(false);
 		    }
 		}
-		
 	}
 
 	@Override
@@ -212,26 +238,62 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	}
 	
 	
+	//
+	private boolean isOutOfBounds() {
+		if (readPos > marked || writePos > marked) {
+			LOGGER.info("#{} buffer is out of bounds, readPos = {}, writePos = {}, totalSize = {}, marked = {}  ",
+					new Object[] { fileName, readPos, writePos, totalSize, marked });
+			return true;
+		}
+		return false;
+	}
+
+	//
+	private void rewind() {
+
+		int length = writePos - readPos;
+
+		this.mappedByteBuffer.position(readPos);
+		this.mappedByteBuffer.limit(writePos);
+		this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
+
+		this.readPos = 0;
+		this.writePos = length;
+	}
+	
 	@Override
 	protected void cleanup() {
-		
-		// clear file
 		try {
+			cleanMapped(mappedByteBuffer);			
+			randomAccessFile.close();
+			channel.close();	
 			
-			if ( mappedByteBuffer != null ) {
-				mappedByteBuffer.force();
-				MappedByteBufferUtil.clean(mappedByteBuffer);
+			// 删除文件
+			File file = new File( fileName );
+			file.delete();		
+			
+		} catch (IOException e) {				
+			LOGGER.error(" cleanup err: fileName=" + fileName, e);			
+		} 	
+	}
+	
+	
+	// clean mapped
+	private void cleanMapped(final Object buffer) {
+		AccessController.doPrivileged(new PrivilegedAction<Object>() {
+			@SuppressWarnings("restriction")
+			public Object run() {
+				try {
+					Method cleanerMethod = buffer.getClass().getMethod("cleaner", new Class[0]);
+					cleanerMethod.setAccessible(true);
+					sun.misc.Cleaner cleaner = (sun.misc.Cleaner) cleanerMethod.invoke(buffer, new Object[0]);
+					cleaner.clean();
+				} catch (Exception e) {
+					LOGGER.error("cannot clean Buffer", e);
+				}
+				return null;
 			}
-			
-			if ( fileChannel != null)
-				fileChannel.close();
-			
-			if ( randomAccessFile != null )
-				randomAccessFile.close();
-			
-		} catch (IOException e) {
-			LOGGER.error("close file error", e);
-		}		
+		});
 	}
 
 }
