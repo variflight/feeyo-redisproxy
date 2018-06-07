@@ -32,13 +32,13 @@ public class BypassService {
 	private static Logger LOGGER = LoggerFactory.getLogger( BypassService.class );
 	
 	public static final byte[] BUSY_RESP = "-ERR bypass busy.\r\n".getBytes();
-
-	private static final byte[] TIMEOUT_RESPONSE = "-ERR time out.\r\n".getBytes();
-	private static final BypassService _INSTANCE = new BypassService();
+	private static final byte[] TIMEOUT_RESP = "-ERR time out.\r\n".getBytes();
+	
+	private static BypassService _INSTANCE = null;
 	
 	private NameableExecutor threadPoolExecutor;
 	
-	private int sizeLimit;
+	private int requireSize;
 	private int corePoolSize;
 	private int maxPoolSize;
 	private int queueSize;
@@ -46,19 +46,27 @@ public class BypassService {
 	private int timeout;		// 单位秒
 	
 	public static BypassService INSTANCE() {
+		
+		if ( _INSTANCE == null ) {
+			synchronized ( BypassService.class) {
+				if ( _INSTANCE == null ) 
+					_INSTANCE = new BypassService();
+			}
+		}
+		
 		return _INSTANCE;
 	}
 	
 	private BypassService () {
 	
 		Map<String, String> map = RedisEngineCtx.INSTANCE().getServerMap();
-		String sizeLimitString = map.get("bypassSizeLimit"); 
+		String requireSizeString = map.get("bypassRequireSize"); 
 		String corePoolSizeString = map.get("bypassCorePoolSize"); 
 		String maxPoolSizeString = map.get("bypassMaxPoolSize");
 		String queueSizeString = map.get("bypassQueueSize"); 
 		String timeoutString = map.get("bypassTimeoutSize"); 
 		
-		this.sizeLimit = sizeLimitString == null ? 256 * 1024 : Integer.parseInt(sizeLimitString);
+		this.requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
 		this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
 		this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
 		this.queueSize = queueSizeString == null ? 20 : Integer.parseInt( queueSizeString);
@@ -67,12 +75,12 @@ public class BypassService {
 		this.threadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize, 
 				timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>( queueSize ), true);
 		
-		StatUtil.getBigKeyCollector().setBigkeySize( sizeLimit );
+		StatUtil.getBigKeyCollector().setBigkeySize( requireSize );
 	}
 	
 	public boolean testing(String requestCmd, byte[] requestKey, int requestSize) {
 		
-		if ( requestSize >= sizeLimit || StatUtil.getBigKeyCollector().isResponseBigkey(new String(requestKey), requestCmd)) {
+		if ( requestSize >= requireSize || StatUtil.getBigKeyCollector().isResponseBigkey(new String(requestKey), requestCmd)) {
 			return true;
 		}
 		
@@ -95,7 +103,7 @@ public class BypassService {
 				public void run() {
 					if (timeout != -1
 							&& TimeUtil.currentTimeMillis() - frontConn.getSession().getRequestTimeMills() > timeout) {
-						frontConn.write(TIMEOUT_RESPONSE);
+						frontConn.write(TIMEOUT_RESP);
 						return;
 					}
 
@@ -121,7 +129,7 @@ public class BypassService {
 
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
 
-							if (requestSize < sizeLimit && responseSize < sizeLimit) {
+							if (requestSize < requireSize && responseSize < requireSize) {
 								StatUtil.getBigKeyCollector().delResponseBigkey(new String(key));
 							}
 							// 数据收集
@@ -141,6 +149,7 @@ public class BypassService {
 					}
 				}
 			});
+			
 		} catch (RejectedExecutionException rejectException) {	
 			
 			frontConn.write( BUSY_RESP );
@@ -154,37 +163,39 @@ public class BypassService {
 	}
 	
 	public byte[] reload() {
+		
 		try {
 			Map<String, String> map = ConfigLoader.loadServerMap(ConfigLoader.buidCfgAbsPathFor("server.xml"));
-			String sizeLimitString = map.get("bypassSizeLimit"); 
-			String corePoolSizeString = map.get("bypassCorePoolSize"); 
+			String requireSizeString = map.get("bypassRequireSize");
+			String corePoolSizeString = map.get("bypassCorePoolSize");
 			String maxPoolSizeString = map.get("bypassMaxPoolSize");
-			String queueSizeString = map.get("bypassQueueSize"); 
-			String timeoutString = map.get("bypassTimeoutSize"); 
-			
-			this.sizeLimit = sizeLimitString == null ? 256 * 1024 : Integer.parseInt(sizeLimitString);
+			String queueSizeString = map.get("bypassQueueSize");
+			String timeoutString = map.get("bypassTimeoutSize");
+
+			this.requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
 			this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
 			this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
-			this.queueSize = queueSizeString == null ? 20 : Integer.parseInt( queueSizeString);
+			this.queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
 			this.timeout = timeoutString == null ? 3000 : Integer.parseInt(timeoutString);
-			
-			if ( corePoolSize != threadPoolExecutor.getCorePoolSize()) {
-				NameableExecutor newThreadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize, 
-						timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>( queueSize ), true);
-				
+
+			if (corePoolSize != threadPoolExecutor.getCorePoolSize()) {
+				NameableExecutor newThreadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize,
+						timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(queueSize), true);
+
 				NameableExecutor oldThreadPoolExecutor = this.threadPoolExecutor;
 				this.threadPoolExecutor = newThreadPoolExecutor;
 				oldThreadPoolExecutor.shutdown();
 			}
-			StatUtil.getBigKeyCollector().setBigkeySize( sizeLimit );
+			StatUtil.getBigKeyCollector().setBigkeySize(requireSize);
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
 			return sb.toString().getBytes();
 		}
+		
 		return "+OK\r\n".getBytes();
 	}
-	
+
 	// 写入到前端
 	private int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {
 

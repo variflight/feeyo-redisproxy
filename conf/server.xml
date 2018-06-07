@@ -30,7 +30,7 @@
 	<property name="backendIdleTimeout">1800000</property>
 
 	<!-- bypass cfg -->
-	<property name="bypassSizeLimit">262144</property>
+	<property name="bypassRequireSize">262144</property>
 	<property name="bypassCorePoolSize">2</property>
 	<property name="bypassMaxPoolSize">4</property>
 	<property name="bypassQueueSize">20</property>
