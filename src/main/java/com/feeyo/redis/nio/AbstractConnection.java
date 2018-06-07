@@ -466,7 +466,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 		return true;
 	}
 
-	private void disableWrite() {
+	protected void disableWrite() {
 		try {
 			SelectionKey key = this.processKey;
 			key.interestOps(key.interestOps() & OP_NOT_WRITE);
@@ -475,7 +475,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 		}
 	}
 
-	private void enableWrite(boolean wakeup) {
+	protected void enableWrite(boolean wakeup) {
 		boolean needWakeup = false;
 		try {
 			SelectionKey key = this.processKey;
@@ -536,9 +536,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 	}
 
 	/**
-	 * 异步读取数据,only nio thread call
-	 * 
-	 * @throws IOException
+	 * 异步读取,该方法在 reactor 中被调用
 	 */
 	@SuppressWarnings("unchecked")
 	protected void asynRead() throws IOException {
