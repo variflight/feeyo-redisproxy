@@ -3,14 +3,15 @@ package com.feeyo.redis.net.front.bypass;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.engine.manage.stat.BigKeyCollector;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.codec.RedisRequest;
@@ -23,13 +24,16 @@ import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.JedisHolder;
 import com.feeyo.util.jedis.JedisPool;
 
-// 旁路服务
+/*
+ * 旁路服务
+ */
 public class BypassService {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( BypassService.class );
 	
-	final private static BypassService instance = new BypassService();
+	public static final byte[] BUSY_RESP = "-ERR bypass busy.\r\n".getBytes();
 	
+<<<<<<< Upstream, based on origin/1.9
 	private NameableExecutor bigkeyExecutor;
 	private int timeout;
 	private BigKeyCollector bigKeyCollector;
@@ -38,28 +42,52 @@ public class BypassService {
 	private int bigkeyThreadSize;
 	
 	private static final byte[] TIMEOUT_RESPONSE = "-ERR time out.\r\n".getBytes();
+=======
+	private static final BypassService _INSTANCE = new BypassService();
+	
+	private NameableExecutor threadPoolExecutor;
+	
+	private int sizeLimit;
+	private int corePoolSize;
+	private int maxPoolSize;
+	private int queueSize;
+	
+	private int timeout;		// 单位秒
+>>>>>>> 35a0f70 rt
 	
 	public static BypassService INSTANCE() {
-		return instance;
+		return _INSTANCE;
 	}
 	
 	private BypassService () {
-		Map<String, String> serverMap = RedisEngineCtx.INSTANCE().getServerMap();
-		String bigkeySizeString = serverMap.get("bigkeySize"); 
-		String bigkeyThreadSizeString = serverMap.get("bigkeyThreadSize"); 
-		String bigkeyQueueSizeString = serverMap.get("bigkeyQueueSize"); 
-		String bigkeyQueueTimeoutString = serverMap.get("bigkeyQueueTimeout"); 
-		this.bigkeySize = bigkeySizeString == null ? 256 * 1024 : Integer.parseInt(bigkeySizeString);
-		this.bigkeyThreadSize = bigkeyThreadSizeString == null ? 4 : Integer.parseInt(bigkeyThreadSizeString);
-		this.bigkeyQueueSize = bigkeyQueueSizeString == null ? 100 : Integer.parseInt(bigkeyQueueSizeString);
-		this.timeout = bigkeyQueueTimeoutString == null ? 3000 : Integer.parseInt(bigkeyQueueTimeoutString);
+	
+		Map<String, String> map = RedisEngineCtx.INSTANCE().getServerMap();
+		String sizeLimitString = map.get("bypassSizeLimit"); 
+		String corePoolSizeString = map.get("bypassCorePoolSize"); 
+		String maxPoolSizeString = map.get("bypassMaxPoolSize");
+		String queueSizeString = map.get("bypassQueueSize"); 
+		String timeoutString = map.get("bypassTimeoutSize"); 
 		
-		this.bigkeyExecutor = ExecutorUtil.create("BigkeyExecutor-", bigkeyThreadSize);
-		this.bigKeyCollector = StatUtil.getBigKeyCollector();
-		bigKeyCollector.setBigkeySize(bigkeySize);
+		this.sizeLimit = sizeLimitString == null ? 256 * 1024 : Integer.parseInt(sizeLimitString);
+		this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
+		this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
+		this.queueSize = queueSizeString == null ? 20 : Integer.parseInt( queueSizeString);
+		this.timeout = timeoutString == null ? 3000 : Integer.parseInt(timeoutString);
+		
+		this.threadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize, 
+				timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>( queueSize ), true);
+		
+		StatUtil.getBigKeyCollector().setBigkeySize( sizeLimit );
 	}
 	
-	
+	public boolean testing(String requestCmd, byte[] requestKey, int requestSize) {
+		
+		if ( requestSize >= sizeLimit || StatUtil.getBigKeyCollector().isResponseBigkey(new String(requestKey), requestCmd)) {
+			return true;
+		}
+		
+		return false;
+	}
 
 	// 单例
 	// 固定 coreSize maxSize queue threadPool
@@ -68,15 +96,19 @@ public class BypassService {
 	// 支持 request & response bigkey 检测 ， response bigkey, 需要 ttl scan 
 	// 第一步支持 单请求， 后续考虑支持 pipeline 等 
 	// 
-	public boolean goQueuing(final RedisRequest request, final RedisFrontConnection frontConn, final PhysicalNode physicalNode) throws BeyondTaskQueueException {
-		if (frontConn.getSession().getRequestSize() >= bigkeySize 
-				|| bigKeyCollector.isResponseBigkey(new String(frontConn.getSession().getRequestKey()), frontConn.getSession().getRequestCmd())) {
+	public void queuing(final RedisRequest request, final RedisFrontConnection frontConn, final PhysicalNode physicalNode) {
+		
+		try {
 			
+<<<<<<< Upstream, based on origin/1.9
 			if (bigkeyExecutor.getQueue().size() >= bigkeyQueueSize) {
 				throw new BeyondTaskQueueException();
 			}
 			
 			bigkeyExecutor.execute(new Runnable() {
+=======
+			threadPoolExecutor.execute( new Runnable() {
+>>>>>>> 35a0f70 rt
 				@Override
 				public void run() {
 					if (timeout != -1
@@ -128,31 +160,42 @@ public class BypassService {
 					}
 				}
 			});
-			return true;
-		} else {
-			return false;
-		}
+		} catch (RejectedExecutionException rejectException) {	
+			
+			frontConn.write( BUSY_RESP );
+			
+			LOGGER.warn("process thread pool is full, reject, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
+					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
+							threadPoolExecutor.getMaximumPoolSize(),threadPoolExecutor.getTaskCount()} );						
+		}	
+		
+		
 	}
 	
 	public byte[] reload() {
 		try {
-			Map<String, String> serverMap = ConfigLoader.loadServerMap(ConfigLoader.buidCfgAbsPathFor("server.xml"));
-			String bigkeySizeString = serverMap.get("bigkeySize"); 
-			String bigkeyThreadSizeString = serverMap.get("bigkeyThreadSize"); 
-			String bigkeyQueueSizeString = serverMap.get("bigkeyQueueSize"); 
-			String bigkeyQueueTimeoutString = serverMap.get("bigkeyQueueTimeout"); 
-			this.bigkeySize = bigkeySizeString == null ? 256 * 1024 : Integer.parseInt(bigkeySizeString);
-			this.bigkeyThreadSize = bigkeyThreadSizeString == null ? 4 : Integer.parseInt(bigkeyThreadSizeString);
-			this.bigkeyQueueSize = bigkeyQueueSizeString == null ? 100 : Integer.parseInt(bigkeyQueueSizeString);
-			this.timeout = bigkeyQueueTimeoutString == null ? 3000 : Integer.parseInt(bigkeyQueueTimeoutString);
+			Map<String, String> map = ConfigLoader.loadServerMap(ConfigLoader.buidCfgAbsPathFor("server.xml"));
+			String sizeLimitString = map.get("bypassSizeLimit"); 
+			String corePoolSizeString = map.get("bypassCorePoolSize"); 
+			String maxPoolSizeString = map.get("bypassMaxPoolSize");
+			String queueSizeString = map.get("bypassQueueSize"); 
+			String timeoutString = map.get("bypassTimeoutSize"); 
 			
-			if (bigkeyThreadSize != bigkeyExecutor.getCorePoolSize()) {
-				NameableExecutor newBigkeyExecutor = ExecutorUtil.create("BigkeyExecutor-", bigkeyThreadSize);
-				NameableExecutor oldBigkeyExecutor = this.bigkeyExecutor;
-				this.bigkeyExecutor = newBigkeyExecutor;
-				oldBigkeyExecutor.shutdown();
+			this.sizeLimit = sizeLimitString == null ? 256 * 1024 : Integer.parseInt(sizeLimitString);
+			this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
+			this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
+			this.queueSize = queueSizeString == null ? 20 : Integer.parseInt( queueSizeString);
+			this.timeout = timeoutString == null ? 3000 : Integer.parseInt(timeoutString);
+			
+			if ( corePoolSize != threadPoolExecutor.getCorePoolSize()) {
+				NameableExecutor newThreadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize, 
+						timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>( queueSize ), true);
+				
+				NameableExecutor oldThreadPoolExecutor = this.threadPoolExecutor;
+				this.threadPoolExecutor = newThreadPoolExecutor;
+				oldThreadPoolExecutor.shutdown();
 			}
-			bigKeyCollector.setBigkeySize(bigkeySize);
+			StatUtil.getBigKeyCollector().setBigkeySize( sizeLimit );
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
@@ -160,6 +203,7 @@ public class BypassService {
 		}
 		return "+OK\r\n".getBytes();
 	}
+<<<<<<< Upstream, based on origin/1.9
 	
 	// 写入到前端
 	private int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {
@@ -236,5 +280,7 @@ public class BypassService {
 			}
 	}
 	
+=======
+>>>>>>> 35a0f70 rt
  	
 }

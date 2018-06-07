@@ -1,6 +1,8 @@
 package com.feeyo.util;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.TimeUnit;
 
 import com.feeyo.redis.nio.NameableExecutor;
 import com.feeyo.redis.nio.NameableThreadFactory;
@@ -16,8 +18,15 @@ public class ExecutorUtil {
         return create(name, size, true);
     }
 
-    private static final NameableExecutor create(String name, int size, boolean isDaemon) {
+    public static final NameableExecutor create(String name, int size, boolean isDaemon) {
         NameableThreadFactory factory = new NameableThreadFactory(name, isDaemon);
         return new NameableExecutor(name, size, new LinkedTransferQueue<Runnable>(), factory);
+    }
+    
+    public static final NameableExecutor create(String name, int corePoolSize, int maximumPoolSize, int keepalive, 
+    		TimeUnit unit, BlockingQueue<Runnable> queue, boolean isDaemon) {
+    	
+        NameableThreadFactory factory = new NameableThreadFactory(name, isDaemon);
+        return new NameableExecutor(name, corePoolSize, maximumPoolSize, keepalive, unit, queue, factory);
     }
 }

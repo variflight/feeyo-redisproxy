@@ -8,7 +8,6 @@ import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.net.front.bypass.BeyondTaskQueueException;
 import com.feeyo.redis.net.front.bypass.BypassService;
 import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.RouteResult;
@@ -28,6 +27,7 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		
 		String cmd = new String(firstRequest.getArgs()[0]).toUpperCase();
 		byte[] requestKey = firstRequest.getNumArgs() > 1 ? firstRequest.getArgs()[1] : null;
+		int requestSize = firstRequest.getSize();
 		
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
@@ -35,15 +35,19 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestKey(requestKey);
 		frontCon.getSession().setRequestSize(firstRequest.getSize());
 		
-		try {
-			if (!BypassService.INSTANCE().goQueuing(firstRequest, frontCon, node.getPhysicalNode())) {
-				
-				writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
-			}
+		// 旁路排队服务
+		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) ) {
+			BypassService.INSTANCE().queuing(firstRequest, frontCon, node.getPhysicalNode());
 			
+<<<<<<< Upstream, based on origin/1.9
 		// 任务队列满了
 		} catch (BeyondTaskQueueException e) {
 			frontCon.write(BEYOND_TASK_QUEUE);
+=======
+		}  else {
+			//
+			writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
+>>>>>>> 35a0f70 rt
 		}
 		
 	}
