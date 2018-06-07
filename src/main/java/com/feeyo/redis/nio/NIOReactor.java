@@ -20,7 +20,7 @@ public final class NIOReactor {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOReactor.class );
 	
-	private final static long SELECTOR_TIMEOUT = 100L; // 500L
+	private final static long SELECTOR_TIMEOUT = 40L; // 500L
 	
 	private final String name;
 	private final RW reactorR;
@@ -77,7 +77,7 @@ public final class NIOReactor {
 
 					// 查看有无连接就绪
 					selector.select( SELECTOR_TIMEOUT );
-					
+
 					final Set<SelectionKey> keys = selector.selectedKeys();
 					if ( keys.isEmpty() ) {
 						
@@ -88,16 +88,15 @@ public final class NIOReactor {
 						continue;
 						
 					} else if ((ioTimes > 5) & !pendingQueue.isEmpty()) {
+						
 						ioTimes = 0;
 						processPendingQueue(selector); 		// 处理注册队列
 					}
 					
-				
-					
 
 					ioTimes++;
 					for (final SelectionKey key : keys) {
-						
+
 						AbstractConnection con = null;
 						
 						try {

@@ -34,7 +34,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	//
 	private static final int TOTAL_SIZE =  100; // 1024 * 1024 * 2;  
-	private static final int MARKED = Math.round( TOTAL_SIZE * 0.6F );
 	
 	//
 	private String fileName;
@@ -79,8 +78,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	protected void asynRead() throws IOException {
 		
-		System.out.println(" asynRead 1 ... ");
-		
 		if (isClosed.get()) {
 			return;
 		}
@@ -101,8 +98,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				int oldPos = mappedByteBuffer.position();
 				int count    = TOTAL_SIZE - oldPos;
 				int tranfered = (int) fileChannel.transferFrom(socketChannel, oldPos, count);
-				
-				System.out.println( "asynRead 2 :" + ( oldPos + tranfered) + ",, " + mappedByteBuffer.limit() );
 				mappedByteBuffer.position( oldPos + tranfered );
 				
 				// fixbug: transferFrom() always return 0 when client closed abnormally!
@@ -117,13 +112,10 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					//
 					byte[] data = new byte[ tranfered ];
 					
-					//
-					int newPos = mappedByteBuffer.position();
-					mappedByteBuffer.position( oldPos );
-					mappedByteBuffer.get(data);
-					mappedByteBuffer.position( newPos );
+					mappedByteBuffer.flip();
+					mappedByteBuffer.get(data, 0, tranfered);
 					
-					System.out.println( "asynRead 3, tranfered="+ tranfered + ",  " + new String(data)  );
+					System.out.println( "asynRead, tranfered="+ tranfered + ",  " + new String(data)  );
 					
 					// 负责解析报文并处理
 					handler.handleReadEvent(this, data);
@@ -139,7 +131,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					}
 					
 					// not enough space
-					rewind();
+					this.mappedByteBuffer.position(0);
 					
 				} else {
 					this.close("stream closed");
@@ -168,18 +160,15 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		
 		try {
 			
-			rewind();
+			mappedByteBuffer.clear();
 			
-			int position = mappedByteBuffer.position();
-			int count = fileChannel.write(buf, position);
+			int pos = 0;
+			int count = fileChannel.write(buf, pos);
 			if ( buf.hasRemaining() ) {
 				throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
 			}
 			
-			//
-			mappedByteBuffer.position( position + count );
-			
-			write0( position, count );
+			write0( pos, count );
 			
 			
 		} catch (IOException e) {
@@ -208,19 +197,6 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	public void doNextWriteCheck() {
 		// ignore
-	}
-
-	// 
-	private void rewind() {
-		int pos = this.mappedByteBuffer.position();
-		if ( pos > MARKED ) {
-			
-			LOGGER.warn("mapped bytebuffer rewind, pos={}, marked={}", pos, MARKED);
-			
-			this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
-			this.mappedByteBuffer.position(0);
-			this.mappedByteBuffer.limit( TOTAL_SIZE ); //pos
-		}
 	}
 	
 	@Override
