@@ -31,8 +31,7 @@ public class BypassService {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( BypassService.class );
 	
-	public static final byte[] BUSY_RESP = "-ERR bypass busy.\r\n".getBytes();
-	private static final byte[] TIMEOUT_RESP = "-ERR time out.\r\n".getBytes();
+	public static final byte[] ERR_RESP = "-ERR bypass busy.\r\n".getBytes();
 	
 	private static BypassService _INSTANCE = null;
 	
@@ -101,11 +100,6 @@ public class BypassService {
 			threadPoolExecutor.execute( new Runnable() {
 				@Override
 				public void run() {
-					if (timeout != -1
-							&& TimeUtil.currentTimeMillis() - frontConn.getSession().getRequestTimeMills() > timeout) {
-						frontConn.write(TIMEOUT_RESP);
-						return;
-					}
 
 					JedisPool jedisPool = JedisHolder.INSTANCE().getJedisPool(physicalNode.getHost(), physicalNode.getPort());
 					JedisConnection conn = jedisPool.getResource();
@@ -126,15 +120,15 @@ public class BypassService {
 
 							resps.clear(); // help GC
 							resps = null;
-
-							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
-
+							
+							//
 							if (requestSize < requireSize && responseSize < requireSize) {
 								StatUtil.getBigKeyCollector().delResponseBigkey(new String(key));
 							}
+							
 							// 数据收集
-							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills,
-									procTimeMills, false);
+							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
+							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false);
 						}
 					} catch (Exception e) {
 						if (frontConn != null) {
@@ -152,7 +146,7 @@ public class BypassService {
 			
 		} catch (RejectedExecutionException rejectException) {	
 			
-			frontConn.write( BUSY_RESP );
+			frontConn.write( ERR_RESP );
 			
 			LOGGER.warn("process thread pool is full, reject, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
