@@ -4,12 +4,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
+import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.net.front.route.RouteResult;
+import com.feeyo.redis.net.front.bypass.BypassService;
 import com.feeyo.redis.net.front.route.RouteNode;
+import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class DefaultCommandHandler extends AbstractCommandHandler {
@@ -22,19 +23,27 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 	protected void commonHandle(RouteResult routeResult) throws IOException {
 		
 		RouteNode node = routeResult.getRouteNodes().get(0);
-		RedisRequest request = routeResult.getRequests().get(0);
+		RedisRequest firstRequest = routeResult.getRequests().get(0);
 		
-		String cmd = new String(request.getArgs()[0]).toUpperCase();
-		byte[] requestKey = request.getNumArgs() > 1 ? request.getArgs()[1] : null;
+		String cmd = new String(firstRequest.getArgs()[0]).toUpperCase();
+		byte[] requestKey = firstRequest.getNumArgs() > 1 ? firstRequest.getArgs()[1] : null;
+		int requestSize = firstRequest.getSize();
 		
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( cmd );
 		frontCon.getSession().setRequestKey(requestKey);
-		frontCon.getSession().setRequestSize(request.getSize());
+		frontCon.getSession().setRequestSize(firstRequest.getSize());
 		
-		// 透传
-		writeToBackend(node.getPhysicalNode(), request.encode(), new DirectTransTofrontCallBack());
+		// 旁路排队服务
+		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) ) {
+			BypassService.INSTANCE().queuing(firstRequest, frontCon, node.getPhysicalNode());
+			
+		}  else {
+			//
+			writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
+		}
+		
 	}
 	
 	public void writeToCustomerBackend(PhysicalNode physicalNode, ByteBuffer buffer, AbstractBackendCallback callBack) throws IOException {

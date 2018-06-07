@@ -288,6 +288,10 @@ public class StatUtil {
     	return bigKeyCollector.getBigkeys();
     }
     
+    public static BigKeyCollector getBigKeyCollector() {
+    	return bigKeyCollector;
+    }
+    
     public static ConcurrentHashMap<String, BigLength> getBigLengthMap() {
     	return bigLengthCollector.getBigLengthMap();
     }

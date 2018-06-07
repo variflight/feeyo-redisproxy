@@ -46,6 +46,7 @@ import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+import com.feeyo.redis.net.front.bypass.BypassService;
 import com.feeyo.redis.nio.AbstractConnection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.buffer.BufferPool;
@@ -95,6 +96,7 @@ public class Manage {
 	 *  RELOAD FRONT
 	 *  RELOAD PATH
 	 *  RELOAD KAFKA
+	 *  RELOAD BIGKEY
 	 *  
 	 *  JVM 指令依赖 JAVA_HOME 
 	 *  ----------------------------------------
@@ -1141,6 +1143,11 @@ public class Manage {
 						
 					} 
 					return "+OK\r\n".getBytes();
+					
+				// reload bigkey
+				} else if ( arg2.equalsIgnoreCase("BIGKEY") ) {
+					byte[] buff = BypassService.INSTANCE().reload();
+					return buff;
 				}
 			}
 			

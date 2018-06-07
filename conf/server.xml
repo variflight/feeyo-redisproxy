@@ -29,6 +29,12 @@
 	<property name="frontIdleTimeout">300000</property>
 	<property name="backendIdleTimeout">1800000</property>
 
+	<!-- bypass cfg -->
+	<property name="bypassRequireSize">262144</property>
+	<property name="bypassCorePoolSize">2</property>
+	<property name="bypassMaxPoolSize">4</property>
+	<property name="bypassQueueSize">20</property>
+	<property name="bypassTimeoutSize">3000</property>
 
 </redis>
 

@@ -16,14 +16,15 @@
 
 	1、kafka 配置, 参见 kafka.xml
 	2、kafka 指令描述
-	| 指令        	| 参数      	 								| 描述 		  	 					  |  
-	| :------------ | :-------------------------------------   	| :-------------------------------    | 
-	| KPUSH   		| {topic} {partition} {content} 	    	| 生产指令，注：第二个参数为可选  		  	  |  
-	| KPOP   		| {topic} {partition} {offset}	    	 	| 消费指令，注：第二、三个参数为可选 	 	  | 
-	| KPARTITION    | {topic}	    	 						| 查询分区信息  	 					  | 
-	| KOFFSET   	| {topic} {partition} {time}	    	 	| 查询分区的点位信息  	 				  | 
+		KPUSH {topic}{content}
+		KPUSH {topic}{partition}{content}
+		KPOP {topic}
+		KPOP {topic}{partition}{offset}
+		KPARTITION {topic}	    	 				
+		KOFFSET {topic}{partition}{time}	    	 				  
 	
-		注：KPOP 不指定 consume offset， 我们自动管理，  指定点位的，我们不管理，也不更新，需要 client 自己维持 consume offset
+		注：KPOP 不指定 consume offset， 我们自动管理， 指定点位的，我们不管理，也不更新，
+		   需要 client 自己维持 consume offset
 	3、kafka 管理指令
 	 使用 kafka 的队列功能，我们需要提前分配，然后初始化启动 或 通过管理账户的 reload kafka 指令进行热加载，
 	 加载的过程中，我们会检测 topic， 且会自动的新增到后端的 kafka 中

@@ -59,7 +59,7 @@ public class RedisInputStream extends FilterInputStream {
 
     return reply;
   }
-
+  
   public byte[] readLineBytes() {
 
     /*
@@ -175,6 +175,16 @@ public class RedisInputStream extends FilterInputStream {
     System.arraycopy(buf, count, b, off, length);
     count += length;
     return length;
+  }
+  
+  public byte[] readAll() throws JedisConnectionException {
+	 
+	  ensureFill();
+	  final int length = limit -count;
+	  byte[] ret = new byte[length]; 
+	  System.arraycopy(buf, count, ret, 0, length);
+	  count += length;
+	  return ret;
   }
 
   /**

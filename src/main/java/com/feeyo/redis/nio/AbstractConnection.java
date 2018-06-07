@@ -1,8 +1,6 @@
 package com.feeyo.redis.nio;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -22,7 +20,12 @@ import com.feeyo.redis.nio.util.TimeUtil;
  */
 public abstract class AbstractConnection implements ClosableConnection {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( "Connection" );
+	private static Logger LOGGER = LoggerFactory.getLogger( AbstractConnection.class );
+	
+	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
+	public enum Direction {
+		in, out
+	}
 
 	public static final int STATE_CONNECTING = 0;
 	public static final int STATE_CONNECTED = 1;
@@ -37,18 +40,12 @@ public abstract class AbstractConnection implements ClosableConnection {
 	protected Object attachement;
 	protected int state = STATE_CONNECTING;
 
-	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
-	public enum Direction {
-		in, out
-	}
-
 	protected Direction direction = Direction.out;
 
 	protected final SocketChannel channel;
-
-	private SelectionKey processKey;
-	private static final int OP_NOT_READ = ~SelectionKey.OP_READ;
-	private static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
+	protected SelectionKey processKey;
+	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
+	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
 	
 	
 	protected volatile ByteBuffer readBuffer;  //读缓冲区
@@ -336,6 +333,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 					enableWrite(false);
 				}
 			}
+			
 		} catch (IOException e) {
 			if ( LOGGER.isDebugEnabled() ) {
 				LOGGER.debug("caught err:", e);
@@ -370,24 +368,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 		}
 		return buffer;
 	}
-	
-	// data ->  N 个 minChunk buffer
-	public void writeNotSend(byte[] data) {
-		if (data == null)
-			return;
-		
-		int size = data.length;
-		if ( size >= NetSystem.getInstance().getBufferPool().getDecomposeBufferSize() ) {
-			size = NetSystem.getInstance().getBufferPool().getMinChunkSize();
-		}
-		
-		ByteBuffer buffer = allocate( size );
-		buffer = writeToBuffer(data, buffer);
-		
-		writeQueue.offer(buffer);
-		
-		data = null;
-	}
 
 	// data ->  N 个 minChunk buffer
 	public void write(byte[] data) {
@@ -417,12 +397,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 			this.close("write err:" + e);
 			//throw new IOException( e );
 		}
-	}
-
-	public static String getStackTrace(Throwable t) {
-	    StringWriter sw = new StringWriter();
-	    t.printStackTrace(new PrintWriter(sw));
-	    return sw.toString();
 	}
 	
 	private boolean write0() throws IOException {
@@ -467,6 +441,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 					written = channel.write(buffer);   // java.io.IOException:
 													   // Connection reset by peer
 					if (written > 0) {
+						lastWriteTime = TimeUtil.currentTimeMillis();
 						netOutCounter++;
 						netOutBytes += written;
 						lastWriteTime = TimeUtil.currentTimeMillis();
@@ -491,7 +466,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 		return true;
 	}
 
-	private void disableWrite() {
+	protected void disableWrite() {
 		try {
 			SelectionKey key = this.processKey;
 			key.interestOps(key.interestOps() & OP_NOT_WRITE);
@@ -500,7 +475,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 		}
 	}
 
-	private void enableWrite(boolean wakeup) {
+	protected void enableWrite(boolean wakeup) {
 		boolean needWakeup = false;
 		try {
 			SelectionKey key = this.processKey;
@@ -561,9 +536,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 	}
 
 	/**
-	 * 异步读取数据,only nio thread call
-	 * 
-	 * @throws IOException
+	 * 异步读取,该方法在 reactor 中被调用
 	 */
 	@SuppressWarnings("unchecked")
 	protected void asynRead() throws IOException {
@@ -746,20 +719,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 		LOGGER.warn("Flow cleaning,  {}", this );
 		// ignore
 	}
-	
-	public String toSampleString() {
-		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Connection [ " );
-		sbuffer.append(" reactor=").append( reactor );
-		sbuffer.append(", host=").append( host );
-		sbuffer.append(", port=").append( port );
-		sbuffer.append(", id=").append( id );
-		sbuffer.append(", isClosed=").append( isClosed );
-		sbuffer.append(", isConnected=").append( isConnected() );
-		sbuffer.append(", state=").append( state );
-		sbuffer.append("]");
-		return  sbuffer.toString();
-	}
 
 	@Override
 	public String toString() {
@@ -769,10 +728,10 @@ public abstract class AbstractConnection implements ClosableConnection {
 		sbuffer.append(", host=").append( host );
 		sbuffer.append(", port=").append( port );
 		sbuffer.append(", id=").append( id );
-		sbuffer.append(", startupTime=").append( startupTime );
-		sbuffer.append(", lastReadTime=").append( lastReadTime );
-		sbuffer.append(", lastWriteTime=").append( lastWriteTime );
-		sbuffer.append(", writeAttempts=").append( writeAttempts );	//
+		sbuffer.append(", startup=").append( startupTime );
+		sbuffer.append(", lastRT=").append( lastReadTime );
+		sbuffer.append(", lastWT=").append( lastWriteTime );
+		sbuffer.append(", attempts=").append( writeAttempts );	//
 		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();
