@@ -4,12 +4,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
+import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.net.front.route.RouteResult;
+import com.feeyo.redis.net.front.bypass.BeyondTaskQueueException;
+import com.feeyo.redis.net.front.bypass.BypassService;
 import com.feeyo.redis.net.front.route.RouteNode;
+import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 public class DefaultCommandHandler extends AbstractCommandHandler {
@@ -33,8 +35,17 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestKey(requestKey);
 		frontCon.getSession().setRequestSize(firstRequest.getSize());
 		
-		// 透传
-		writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
+		try {
+			if (!BypassService.INSTANCE().goQueuing(firstRequest, frontCon, node.getPhysicalNode())) {
+				
+				writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
+			}
+			
+		// 任务队列满了
+		} catch (BeyondTaskQueueException e) {
+			// TODO: handle exception
+		}
+		
 	}
 	
 	public void writeToCustomerBackend(PhysicalNode physicalNode, ByteBuffer buffer, AbstractBackendCallback callBack) throws IOException {
