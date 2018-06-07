@@ -117,12 +117,8 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					int oldPos = mappedByteBuffer.position();
 					mappedByteBuffer.position( position );
 					
-					// 
-					ByteBuffer copyBuf = mappedByteBuffer.slice();
-					copyBuf.limit( tranfered );
-					
 					byte[] data = new byte[ tranfered ];
-					copyBuf.get(data);
+					mappedByteBuffer.get(data);
 					
 					mappedByteBuffer.position(oldPos);
 					
