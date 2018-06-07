@@ -27,20 +27,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( AbstractZeroCopyConnection.class );
 	
-	/*
-	  mappedByteBuffer 目前没有rewind， read & write 操作都始终在前移为止，没有回转，
-	  最好的做法是发现已经使用了1/2的容量（或2/3）后，以及不够写数据的情况下，rewind回去
-	  
-	  redis client ------ ( r/w buffer ) ------>  front connection
-	  back connection  ------ ( r/w buffer )  ------> redis server
-	  
-	  1、read socket data, adjust writePos
-	  2、write byte buffer, adjust writePos 
-	  3、write data to socket, adjust readPos
-	 */
-	private int totalSize =  1024 * 1024 * 1;  
-	private int readPos;
-	private int writePos;
+	private int totalSize =  1024 * 1024 * 2;  
 	private int marked = Math.round( totalSize * 0.6F );
 	
 	//
@@ -102,8 +89,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		lastReadTime = TimeUtil.currentTimeMillis();
 		
 		//
-		if ( isOutOfBounds() )
-			rewind();
+		rewind();
 		
 		try {
 			
@@ -114,9 +100,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				final int count    = totalSize - position;
 				int tranfered = (int) fileChannel.transferFrom(channel, position, count);
 				
-				// 写入位置
-				writePos = position + tranfered;
-				mappedByteBuffer.position( writePos );
+				mappedByteBuffer.position( position + tranfered );
 				
 				// fixbug: transferFrom() always return 0 when client closed abnormally!
 				// --------------------------------------------------------------------
@@ -128,26 +112,25 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				if ( tranfered > 0 ) {
 					
 					// 负责解析报文并处理
-					byte[] data = new byte[ tranfered ];
+					
 					
 					//
 					int oldPos = mappedByteBuffer.position();
-					mappedByteBuffer.position( readPos );
+					mappedByteBuffer.position( 0 );
 					
+					// 
 					ByteBuffer copyBuf = mappedByteBuffer.slice();
 					copyBuf.limit( tranfered );
 					
+					byte[] data = new byte[ tranfered ];
 					copyBuf.get(data);
 					
 					mappedByteBuffer.position(oldPos);
-					
-
 					
 					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
 					
 					//
 					handler.handleReadEvent(this, data);
-
 					break;
 					
 				} else if ( tranfered == 0 ) {
@@ -188,20 +171,18 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		
 		try {
 			
-			if ( isOutOfBounds() )
-				rewind();
+			rewind();
 			
 			int position = mappedByteBuffer.position();
-			int writed = fileChannel.write(buf, position);
+			int count = fileChannel.write(buf, position);
 			if ( buf.hasRemaining() ) {
-				throw new IOException("can't write whole buffer ,writed " + writed + " remains " + buf.remaining());
+				throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
 			}
 			
-			// 写入位置
-			writePos = position + writed;
-			mappedByteBuffer.position( writePos );
+			//
+			mappedByteBuffer.position( position + count );
 			
-			write0();
+			write0( position, count );
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -209,17 +190,11 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	}
 	
 	// 往 socketChannel 写入数据
-	private void write0() throws IOException {
+	private void write0(int position, int count) throws IOException {
 		
-		int writeEnd = mappedByteBuffer.position();
-		int writeCount = writeEnd - readPos;
-		int writed = (int) fileChannel.transferTo(readPos, writeCount, channel);
-		this.readPos += writed;		
+		int writed = (int) fileChannel.transferTo(position, count, channel);
 		
-		LOGGER.info("#{} write data to socket, writed = {}, readPos = {}, writePos = {}",
-				new Object[]{ fileName, writed, readPos, writePos });
-		
-		boolean noMoreData = writed == writeCount;
+		boolean noMoreData = writed == count;
 		if (noMoreData) {
 		    if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) != 0)) {
 		        disableWrite();
@@ -236,29 +211,16 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	public void doNextWriteCheck() {
 		// ignore
 	}
-	
-	
-	//
-	private boolean isOutOfBounds() {
-		if (readPos > marked || writePos > marked) {
-			LOGGER.info("#{} buffer is out of bounds, readPos = {}, writePos = {}, totalSize = {}, marked = {}  ",
-					new Object[] { fileName, readPos, writePos, totalSize, marked });
-			return true;
-		}
-		return false;
-	}
 
 	//
 	private void rewind() {
-
-		int length = writePos - readPos;
-
-		this.mappedByteBuffer.position(readPos);
-		this.mappedByteBuffer.limit(writePos);
-		this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
-
-		this.readPos = 0;
-		this.writePos = length;
+		int pos = this.mappedByteBuffer.position();
+		if ( pos > marked ) {
+			
+			this.mappedByteBuffer.position(0);
+			this.mappedByteBuffer.limit( pos );
+			this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
+		}
 	}
 	
 	@Override
