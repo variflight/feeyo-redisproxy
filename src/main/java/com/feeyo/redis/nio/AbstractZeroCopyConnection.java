@@ -213,15 +213,17 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			
 			LOGGER.info("mapped bytebuffer rewind, pos={}, marked={}", pos, MARKED);
 			
+			this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
 			this.mappedByteBuffer.position(0);
 			this.mappedByteBuffer.limit( pos );
-			this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
 		}
 	}
 	
 	@Override
 	protected void cleanup() {
 		try {
+			mappedByteBuffer.rewind();
+			
 			unmap(mappedByteBuffer);			
 			randomAccessFile.close();
 			fileChannel.close();	
