@@ -2,50 +2,46 @@ package com.feeyo.redis.engine.manage.stat;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.feeyo.redis.nio.util.TimeUtil;
 
+// 
 public class BigKeyCollector implements StatCollector {
 	
 	public static int LENGTH = 500;
 	
 	// required size
-	public static int REQUIRED_SIZE = 1024 * 256;  				// 大于 256K
+	public static int REQUIRED_SIZE = 1024 * 256;  				
 	
-	private ConcurrentHashMap<String, BigKey> keyMap = new ConcurrentHashMap<String, BigKey>();
-	
+	//
+	//
+	private ConcurrentHashMap<String, BigKey> bkHashMap = new ConcurrentHashMap<String, BigKey>();	// use search
+	private List<BigKey> bkList = new ArrayList<BigKey>(); 											// use sort, 降序
 	private AtomicBoolean locking = new AtomicBoolean(false);
+	
 	
 	public void setSize(int size) {
 		if ( size >= 1024 * 256 && size <= 1024 * 1024 * 2 )
 			REQUIRED_SIZE = size;
 	}
 	
-	public List<BigKey> getBigkeys() {
+	public List<BigKey> getTop100() {
 		
 		try {
 			
 			while (!locking.compareAndSet(false, true)) {
 			}
+		
+			int len = bkList.size() > 100 ? 100 : bkList.size();
 			
-			// 处理排序, 降序
-			TreeMap<String, BigKey> sortedKeyMap = sortBigKeyMap(keyMap, false);
-			
-			int len = sortedKeyMap.size() > 100 ? 100 : sortedKeyMap.size();
 			List<BigKey> newList = new ArrayList<BigKey>( len );
-			
-			Iterator<BigKey> iter = sortedKeyMap.values().iterator();
 			for(int i = 0; i < len; i++) {
-				newList.add( iter.next() );
+				newList.add( bkList.get(i) );
 			}
-			
 			return newList;
 			
 		} finally {
@@ -55,52 +51,58 @@ public class BigKeyCollector implements StatCollector {
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
-			int procTimeMills, int waitTimeMills, boolean isCommandOnly ) {
+			int procTimeMills, int waitTimeMills, boolean isCommandOnly) {
 		
-		if (isCommandOnly) {
+		if ( isCommandOnly) 
+			return;
+		
+		//  check size
+		if ( requestSize < REQUIRED_SIZE && responseSize < REQUIRED_SIZE  ) {	
 			return;
 		}
 		
-		// 大key 校验
-		if (  requestSize < REQUIRED_SIZE && responseSize < REQUIRED_SIZE  ) {	
-			return;
-		}
-		
+		//
 		if ( !locking.compareAndSet(false, true) ) {
 			return;
 		}
 		
+		//
 		try {
-			if ( keyMap.size() == LENGTH ) {
-				
-				// 处理排序, 降序
-				TreeMap<String, BigKey> sortKeyMap = sortBigKeyMap(keyMap, false);
+			if ( bkList.size() >= LENGTH ) {
 				
 				// 缩容
-				while (keyMap.size() >= ( LENGTH * 0.5 ) ) {
-					keyMap.remove(sortKeyMap.pollLastEntry().getKey());
+				while (bkList.size() >= ( LENGTH * 0.5 ) ) {
+					int index = bkList.size() - 1;
+					BigKey bk = bkList.remove( index );
+					if ( bk != null ) {
+						bkHashMap.remove( bk.key );
+					}
 				}
 			}
 			
-			BigKey newBigKey = new BigKey();
-			newBigKey.key = new String(key);
+			//
+			BigKey newBK = new BigKey();
+			newBK.key = key;
 			
-			if (keyMap.containsKey(key)) {
-				BigKey oldBigKey = keyMap.get(key);
-				oldBigKey.cmd = cmd;
-				oldBigKey.size = requestSize > responseSize ? requestSize : responseSize;
-				oldBigKey.lastUseTime = TimeUtil.currentTimeMillis();
-				oldBigKey.count.incrementAndGet();
-				oldBigKey.isReqHolder = requestSize >= REQUIRED_SIZE;
-				oldBigKey.isRespHolder = responseSize >= REQUIRED_SIZE;
+			int index = bkList.indexOf( newBK );
+			if (index >= 0) {
+				
+				BigKey oldBK = bkHashMap.get(key);
+				oldBK.lastCmd = cmd;
+				oldBK.size = requestSize > responseSize ? requestSize : responseSize;
+				oldBK.lastUseTime = TimeUtil.currentTimeMillis();
+				oldBK.count.incrementAndGet();
+				oldBK.fromReq = requestSize >= REQUIRED_SIZE;
+				oldBK.fromResp = responseSize >= REQUIRED_SIZE;
 				
 			} else {
-				newBigKey.cmd = cmd;
-				newBigKey.size = requestSize > responseSize ? requestSize : responseSize;
-				newBigKey.lastUseTime = TimeUtil.currentTimeMillis();
-				newBigKey.isReqHolder = requestSize >= REQUIRED_SIZE;
-				newBigKey.isRespHolder = responseSize >= REQUIRED_SIZE;
-				keyMap.put(key, newBigKey );
+				newBK.lastCmd = cmd;
+				newBK.size = requestSize > responseSize ? requestSize : responseSize;
+				newBK.lastUseTime = TimeUtil.currentTimeMillis();
+				newBK.fromReq = requestSize >= REQUIRED_SIZE;
+				newBK.fromResp = responseSize >= REQUIRED_SIZE;
+				bkList.add( newBK );
+				bkHashMap.put(key, newBK );
 			}
 			
 		} finally {
@@ -110,53 +112,60 @@ public class BigKeyCollector implements StatCollector {
 	
 	@Override
 	public void onScheduleToZore() {
+		//
 		try {
 			while (!locking.compareAndSet(false, true)) {
 			}
-			keyMap.clear();
+			
+			bkList.clear();
+			bkHashMap.clear();
 			
 		} finally {
 			locking.set(false);
 		}
+		
 	}
 
 	@Override
 	public void onSchedulePeroid(int peroid) {
+		// ignore
 	}
 	
-	//sort
-	private TreeMap<String, BigKey> sortBigKeyMap(Map<String, BigKey> keyMap, boolean isAsc) {
-		TreeMap<String, BigKey> sortedKeyMap = new TreeMap<String, BigKey>(new BigKeyKeyComparator(keyMap, isAsc));
-		sortedKeyMap.putAll(keyMap);
-		return sortedKeyMap;
-	}
 	
 	public boolean isResponseBigkey(String cmd, String key) {
-		BigKey bk = keyMap.get(key);
-		if (bk != null && bk.cmd.equals(cmd) && bk.isRespHolder) {
+		
+		BigKey bk = bkHashMap.get(key);
+		if (bk != null && bk.lastCmd.equals(cmd) && bk.fromResp) {
 			return true;
 		}
 		return false;
 	}
 	
-	public void delResponseBigkey(String key) {
+	public void deleteResponseBigkey(String key) {
 		
-		BigKey bk = keyMap.get(key);
-		if (bk != null && bk.isReqHolder) {
-			bk.isRespHolder = false;
-		} else {
-			keyMap.remove(key);
-		}
+		bkHashMap.remove(key);
+		
+//		BigKey bk = bkHashMap.get(key);
+//		if (bk != null && bk.fromReq) {
+//			bk.fromResp = false;
+//		} else {
+//			bkHashMap.remove(key);
+//		}
 	}
 	
-	public static class BigKey {
-		public String cmd;
+	//
+	// 
+	public static class BigKey implements Comparator<BigKey> {
+		
+		public static boolean isASC = false;
+		
+		public String lastCmd;
 		public String key;
 		public int size;
 		public AtomicInteger count = new AtomicInteger(1);
+		public boolean fromReq;	
+		public boolean fromResp;	
 		public long lastUseTime;
-		public boolean isReqHolder;	
-		public boolean isRespHolder;	
 		
 		@Override
 		public boolean equals(Object obj) {
@@ -170,41 +179,30 @@ public class BigKeyCollector implements StatCollector {
 			return this.key.equals(bigkey.key);
 		}
 		
-	}
-	
-	class BigKeyKeyComparator implements Comparator<String> {
-		
-		private boolean isASC;
-		private Map<String, BigKey> keyMap;
-		
-		public BigKeyKeyComparator(Map<String, BigKey> keyMap, boolean isASC) {
-			this.keyMap = keyMap;
-			this.isASC = isASC;
-		}
-		
 		@Override
-		public int compare(String o1, String o2) {
+		public int compare(BigKey o1, BigKey o2) {
 			
-			if ( o1 == null || o2 == null || 
-					keyMap.get(o1) == null || keyMap.get(o2) == null ) {
+			if ( o1 == null || o2 == null ) {
 				return -1;
 			}
 			
 			long a, b;
-	        if ( isASC ) {
-	            a = keyMap.get(o1).count.get();
-	            b = keyMap.get(o2).count.get();
-	        } else {
-	            a = keyMap.get(o2).count.get();
-	            b = keyMap.get(o1).count.get();
-	        }
+            if ( isASC ) {
+                a = o1.count.get();
+                b = o2.count.get();
+            } else {
+                a = o2.count.get();
+                b = o1.count.get();
+            }
 			
-	        if (a > b)
-	            return 1;	// 大于
-	        else if (a == b)
-	            return isASC ? o1.compareTo(o2) : o2.compareTo(o1);	//等于
-	        else
-	            return -1;	//小于
+            if (a > b)
+                return 1;	// 大于
+            else if (a == b)
+                return 0;	//等于
+            else
+                return -1;	//小于
 		}
+		
 	}
+
 }

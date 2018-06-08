@@ -141,10 +141,10 @@ public class StatUtil {
 							// BIG KEY
 							body.append("#############   bigkey status   #################\n");
 							body.append("|    cmd    |     key     |    size    |    count    |");
-							for (BigKey bigkey : bigKeyCollector.getBigkeys() ) {
+							for (BigKey bigkey : bigKeyCollector.getTop100() ) {
 								body.append("\n");
 								body.append("|    ");
-								body.append(bigkey.cmd).append("    |    ");
+								body.append(bigkey.lastCmd).append("    |    ");
 								body.append(bigkey.key).append("    |    ");
 								body.append(bigkey.size).append("    |    ");
 								body.append(bigkey.count).append("    |");
@@ -284,7 +284,7 @@ public class StatUtil {
     }
     
     public static List<BigKey> getBigKeys() {
-    	return bigKeyCollector.getBigkeys();
+    	return bigKeyCollector.getTop100();
     }
     
     public static BigKeyCollector getBigKeyCollector() {
