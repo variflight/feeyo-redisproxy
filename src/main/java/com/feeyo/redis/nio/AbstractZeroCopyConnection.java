@@ -11,7 +11,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,11 +40,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	protected FileChannel fileChannel;
 	private MappedByteBuffer mappedByteBuffer;
 
-	
-	// r/w lock
-	protected AtomicBoolean LOCK = new AtomicBoolean( false );
-	
-	
+	//
 	public AbstractZeroCopyConnection(SocketChannel channel) {
 
 		super(channel);
@@ -83,7 +78,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		}
 		
 		//
-		if ( !LOCK.compareAndSet(false, true) ) {
+		if ( !reading.compareAndSet(false, true) ) {
 			return;
 		}
 				
@@ -140,7 +135,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			}
 			
 		} finally {
-			LOCK.set(false);
+			reading.set(false);	
 		}
 		
 	}
@@ -153,10 +148,17 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	public void write(ByteBuffer buf) {
 		
+		// 
+		while( true ) {
+			if ( writing.compareAndSet(false, true) ) {
+				break;
+			}
+		}
+		
 		// TODO 
-		// 1、考虑 rwLock 自旋
-		// 2、考虑 buf size 大于 mappedByteBuffer 的情况，分块
-		// 3、 write0 确保写OK
+		// 1、考虑 buf size 大于 mappedByteBuffer 的情况，分块
+		// 2、 write0 slow 问题
+		// 3、 rw buffer 不能同时进行
 		
 		try {
 			
@@ -168,27 +170,34 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
 			}
 			
-			// 往 socketChannel 写入数据
-			int tranfered = (int) fileChannel.transferTo(position, count, socketChannel);
-			
-			boolean noMoreData = tranfered == count;
-			if (noMoreData) {
-			    if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) != 0)) {
-			        disableWrite();
-			    }
-
-			} else {
-			    if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) == 0)) {
-			        enableWrite(false);
-			    }
-			}
-			
+			write0(position, count);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
+		} finally {
+			writing.set( false );
 		}
 	}
 	
+	private int write0(int position, int count) throws IOException {
+
+		// 往 socketChannel 写入数据
+		int tranfered = (int) fileChannel.transferTo(position, count, socketChannel);
+		
+		boolean noMoreData = tranfered == count;
+		if (noMoreData) {
+		    if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) != 0)) {
+		        disableWrite();
+		    }
+
+		} else {
+		    if ((processKey.isValid() && (processKey.interestOps() & SelectionKey.OP_WRITE) == 0)) {
+		        enableWrite(false);
+		    }
+		}
+		
+		return tranfered;
+	}
 
 	@Override
 	public void doNextWriteCheck() {
