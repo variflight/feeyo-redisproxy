@@ -15,38 +15,39 @@ import com.feeyo.util.jedis.JedisHolder;
 import com.feeyo.util.jedis.JedisPool;
 
 public class BypassIoConnection {
+	
 	private static Logger LOGGER = LoggerFactory.getLogger( BypassIoConnection.class );
 	
-	private String backendHost;
-	private int backendPort;
+	private String host;
+	private int port;
 	
-	public BypassIoConnection(String backendHost, int backendPort) {
-		this.backendHost = backendHost;
-		this.backendPort = backendPort;
+	public BypassIoConnection(String host, int port) {
+		this.host = host;
+		this.port = port;
 	}
 	
-	public List<RedisResponse> writeToBackend(RedisRequest request) {
-		JedisPool jedisPool = JedisHolder.INSTANCE().getJedisPool(backendHost, backendPort);
-		JedisConnection conn = jedisPool.getResource();
+	//
+	public List<RedisResponse> writeToBackend(RedisRequest request) {	
+		JedisPool jedisPool = JedisHolder.INSTANCE().getJedisPool(host, port);
+		JedisConnection jedisConn = jedisPool.getResource();
 		try {
-			conn.sendCommand(request.getArgs());
+			// block i/o
+			jedisConn.sendCommand(request.getArgs());
+			byte[] response = jedisConn.getBinaryReply();
 			
+			// parse
 			RedisResponseDecoder decoder = new RedisResponseDecoder();
-			byte[] response = conn.getBinaryReply();
-			
 			return decoder.decode(response);
 			
 		} catch (Exception e) {
-			LOGGER.error("bypass err, host={},port={},exception={}", new Object[] {backendHost, backendPort, e});
+			LOGGER.error("bypass err, host=" + host + ":" + port, e);
 		} finally {
-			if (conn != null) {
-				conn.close();
+			if (jedisConn != null) {
+				jedisConn.close();
 			}
 		}
-		
 		return null;
 	}
-	
 	
 	// 写入到前端
 	public int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {
@@ -57,7 +58,7 @@ public class BypassIoConnection {
 			throw new IOException("front conn is closed!");
 		}
 
-		if (response.type() == '+' || response.type() == '-' || response.type() == ':' || response.type() == '$') {
+		if ( response.type() == '+' || response.type() == '-' || response.type() == ':' || response.type() == '$' ) {
 
 			byte[] buf = (byte[]) response.data();
 			tmpSize += buf.length;
