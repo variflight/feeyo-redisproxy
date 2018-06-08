@@ -1,23 +1,23 @@
 package com.feeyo.redis.net.front.route;
 
 
-public class InvalidRequestExistsException extends Exception {
+public class InvalidRequestException extends Exception {
 
 	private static final long serialVersionUID = 1L;
 	
 	// 是否容错
 	private boolean isfaultTolerant = true;
 	
-	public InvalidRequestExistsException(String message) {
+	public InvalidRequestException(String message) {
 		super(message);
 	}
 	
-	public InvalidRequestExistsException(String message, boolean isfaultTolerant) {
+	public InvalidRequestException(String message, boolean isfaultTolerant) {
 		super(message);
 		this.isfaultTolerant = isfaultTolerant;
 	}
 
-	public InvalidRequestExistsException(String message, Throwable cause) {
+	public InvalidRequestException(String message, Throwable cause) {
 		super(message, cause);
 	}
 

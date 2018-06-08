@@ -812,6 +812,32 @@ public class Manage {
 					
 					return encode2( lines );
 					
+				// SHOW DF ( df -h )
+				} else if ( arg2.equalsIgnoreCase("DF") ) {
+					
+					List<String> ret = new ArrayList<String>();
+                    try {
+                    	// df -h /dev/shm
+                        String resp = ShellUtils.execCommand( "bash", "-c", "df -h" );
+                        StringBuilder sb = new StringBuilder();
+                        sb.append(resp);
+                        sb.append(" \n");
+
+                        String[] lines = sb.toString().split("\\n");
+                        ret.add("-------------------------------------df -h-------------------------------------");
+                        for (int i=1; i<lines.length; i++) {
+                            if (lines[i].equals(""))
+                                continue;
+                            ret.add(lines[i]);
+                        }
+
+                    } catch (IOException e) {
+                        LOGGER.error("show vm err:", e );
+                        ret.add( "show df err, df -h  " );
+                    }
+
+                    return encode2(ret);
+					
 				// SHOW VM
 				} else if ( arg2.equalsIgnoreCase("VM") ) {
 				    List<String> ret = new ArrayList<String>();

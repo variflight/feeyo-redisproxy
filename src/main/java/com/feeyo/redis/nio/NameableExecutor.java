@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author wuzh
  */
-public class NameableExecutor extends ThreadPoolExecutor implements NameableExecutorService{
+public class NameableExecutor extends ThreadPoolExecutor {
 	
     protected final String name;
 

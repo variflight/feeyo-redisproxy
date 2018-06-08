@@ -42,7 +42,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 
 	protected Direction direction = Direction.out;
 
-	protected final SocketChannel channel;
+	protected final SocketChannel socketChannel;
 	protected SelectionKey processKey;
 	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
 	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
@@ -85,8 +85,8 @@ public abstract class AbstractConnection implements ClosableConnection {
 	
 	protected NetFlowMonitor netFlowMonitor;
 
-	public AbstractConnection(SocketChannel channel) {
-		this.channel = channel;
+	public AbstractConnection(SocketChannel socketChannel) {
+		this.socketChannel = socketChannel;
 		this.isClosed = new AtomicBoolean(false);
 		this.startupTime = TimeUtil.currentTimeMillis();
 		this.lastReadTime = startupTime;
@@ -139,8 +139,8 @@ public abstract class AbstractConnection implements ClosableConnection {
  		return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + idleTimeout;
 	}
 
-	public SocketChannel getChannel() {
-		return channel;
+	public SocketChannel getSocketChannel() {
+		return socketChannel;
 	}
 
 	public long getStartupTime() {
@@ -280,7 +280,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 	@SuppressWarnings("unchecked")
 	public void register(Selector selector) throws IOException {
 		try {	
-			processKey = channel.register(selector, SelectionKey.OP_READ, this);
+			processKey = socketChannel.register(selector, SelectionKey.OP_READ, this);
 			
 			if ( LOGGER.isDebugEnabled() ) {
 				LOGGER.debug("register:" + this);
@@ -407,7 +407,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 			
 			 //只要写缓冲记录中还有数据就不停写入，但如果写入字节为0，证明网络繁忙，则退出
 			while (buffer.hasRemaining()) {
-				written = channel.write(buffer);
+				written = socketChannel.write(buffer);
 				if (written > 0) {
 					netOutCounter++;
 					netOutBytes += written;
@@ -438,7 +438,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 			buffer.flip();
 			try {
 				while (buffer.hasRemaining()) {
-					written = channel.write(buffer);   // java.io.IOException:
+					written = socketChannel.write(buffer);   // java.io.IOException:
 													   // Connection reset by peer
 					if (written > 0) {
 						lastWriteTime = TimeUtil.currentTimeMillis();
@@ -574,11 +574,11 @@ public abstract class AbstractConnection implements ClosableConnection {
 				}
 				
 				 //从channel中读取数据，并且保存到对应Connection的readBuffer中，readBuffer处于write mode，返回读取了多少字节
-				int length = channel.read( readBuffer );
+				int length = socketChannel.read( readBuffer );
 				if ( length == -1 ) {
 					this.close("stream closed");
 		            return;
-				} else if (length == 0 && !this.channel.isOpen()  ) {
+				} else if (length == 0 && !this.socketChannel.isOpen()  ) {
 					this.close("socket closed");
 					return;
 				}
@@ -670,10 +670,10 @@ public abstract class AbstractConnection implements ClosableConnection {
 	}
 
 	protected void closeSocket() {
-		if ( channel != null ) {		
+		if ( socketChannel != null ) {		
 			
-			if (channel instanceof SocketChannel) {
-				Socket socket = ((SocketChannel) channel).socket();
+			if (socketChannel instanceof SocketChannel) {
+				Socket socket = ((SocketChannel) socketChannel).socket();
 				if (socket != null) {
 					try {
 						socket.close();
@@ -686,10 +686,10 @@ public abstract class AbstractConnection implements ClosableConnection {
 			boolean isSocketClosed = true;
 			try {
 				processKey.cancel();
-				channel.close();
+				socketChannel.close();
 			} catch (Throwable e) {
 			}			
-			boolean closed = isSocketClosed && (!channel.isOpen());
+			boolean closed = isSocketClosed && (!socketChannel.isOpen());
 			if (!closed) {
 				LOGGER.warn("close socket of connnection failed " + this);
 			}

@@ -51,7 +51,7 @@ public class RouteService {
 	
 	// 路由计算, 必须认证后
 	public static RouteResult route(List<RedisRequest> requests, RedisFrontConnection frontCon) 
-			throws InvalidRequestExistsException, FullRequestNoThroughtException, PhysicalNodeUnavailableException {
+			throws InvalidRequestException, FullRequestNoThroughtException, PhysicalNodeUnavailableException {
 		
 		UserCfg userCfg = frontCon.getUserCfg();
 		
@@ -77,7 +77,7 @@ public class RouteService {
 			// 是否存在无效指令
 			boolean invalidRequestExist =  RouteUtil.isInvalidRequest( poolType, policy, isReadOnly, isAdmin, isPipeline );
 			if ( invalidRequestExist ) {
-				throw new InvalidRequestExistsException("invalid request exist");
+				throw new InvalidRequestException("invalid request exist");
 			}
 			
 			// 不需要透传

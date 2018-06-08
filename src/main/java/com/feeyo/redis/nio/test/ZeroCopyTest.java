@@ -35,7 +35,7 @@ public class ZeroCopyTest {
 		
 		
 		ConnectionFactory factory = new ZeroCopyConnectionFactory();
-		NIOReactorPool reactorPool = new NIOReactorPool("nio", 8);
+		NIOReactorPool reactorPool = new NIOReactorPool("nio", 1);
 		
 		final NIOAcceptor acceptor = new NIOAcceptor(name, bindIp, port, factory, reactorPool);
 		acceptor.start();

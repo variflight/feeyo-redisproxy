@@ -27,13 +27,13 @@ public class BlockCommandHandler extends AbstractCommandHandler {
 		RedisRequest request = rrs.getRequests().get(0);
 		
 		String cmd = new String(request.getArgs()[0]).toUpperCase();
-		byte[] requestKey = request.getNumArgs() > 1 ? request.getArgs()[1] : null;
+		String requestKey = request.getNumArgs() > 1 ? new String(request.getArgs()[1]) : null;
 		
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( cmd );
-		frontCon.getSession().setRequestKey(requestKey);
-		frontCon.getSession().setRequestSize(request.getSize());
+		frontCon.getSession().setRequestKey( requestKey );
+		frontCon.getSession().setRequestSize( request.getSize() );
 		
 		// 透传
 		keepConnection = writeToBackend(node.getPhysicalNode(), request.encode(), new BlockDirectTransTofrontCallBack());

@@ -33,38 +33,45 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	private static final boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
 	
 	//
-	private static final int TOTAL_SIZE =  1024 * 1024 * 2;  
-	private static final int MARKED = Math.round( TOTAL_SIZE * 0.6F );
+	private static final int BUF_SIZE =  1024 ; // 1024 * 1024 * 2;  
+	// rw lock
+	protected AtomicBoolean LOCK = new AtomicBoolean(false); 
 	
 	//
+	
+    // 映射的文件
 	private String fileName;
+    private File file;
 	private RandomAccessFile randomAccessFile;
 	protected FileChannel fileChannel;
+	
+	// 映射的内存对象
 	private MappedByteBuffer mappedByteBuffer;
 
-	
-	// r/w lock
-	protected AtomicBoolean LOCK = new AtomicBoolean( false );
-	
-	
+	//
 	public AbstractZeroCopyConnection(SocketChannel channel) {
 
 		super(channel);
 
 		try {
 			if ( IS_LINUX ) {
-				fileName = "/dev/shm/" + id + ".mapped";		// 在Linux中，用 tmpfs
+				this.fileName = "/dev/shm/" + id + ".mapped";		// 在Linux中，用 tmpfs
 			} else {
-				fileName =  id + ".mapped";
+				this.fileName =  id + ".mapped";
 			} 
 			
+			this.file = new File( this.fileName );
+			
+			// ensure
+			ensureDirOK(this.file.getParent());
+			
 			// mmap
-			this.randomAccessFile = new RandomAccessFile(fileName, "rw");
-			this.randomAccessFile.setLength(TOTAL_SIZE);
+			this.randomAccessFile = new RandomAccessFile(file, "rw");
+			this.randomAccessFile.setLength(BUF_SIZE);
 			this.randomAccessFile.seek(0);
 
 			this.fileChannel = randomAccessFile.getChannel();
-			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, TOTAL_SIZE);
+			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, BUF_SIZE);
 
 		} catch (IOException e) {
 			LOGGER.error("create mapped err:", e);
@@ -96,17 +103,16 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			// 循环处理字节信息
 			for(;;) {
 				
-				int oldPos = mappedByteBuffer.position();
-				int count    = TOTAL_SIZE - oldPos;
-				int tranfered = (int) fileChannel.transferFrom(channel, oldPos, count);
-				
-				mappedByteBuffer.position( oldPos + tranfered );
+				int position = mappedByteBuffer.position();
+				int count    = BUF_SIZE - position;
+				int tranfered = (int) fileChannel.transferFrom(socketChannel, position, count);
+				mappedByteBuffer.position( position + tranfered );
 				
 				// fixbug: transferFrom() always return 0 when client closed abnormally!
 				// --------------------------------------------------------------------
 				// So decide whether the connection closed or not by read()! 
 				if( tranfered == 0 && count > 0 ){
-					tranfered = channel.read(mappedByteBuffer);
+					tranfered = socketChannel.read(mappedByteBuffer);
 				}
 				
 				if ( tranfered > 0 ) {
@@ -114,13 +120,10 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					//
 					byte[] data = new byte[ tranfered ];
 					
-					//
-					int newPos = mappedByteBuffer.position();
-					mappedByteBuffer.position( oldPos );
-					mappedByteBuffer.get(data);
-					mappedByteBuffer.position( newPos );
+					mappedByteBuffer.flip();
+					mappedByteBuffer.get(data, 0, tranfered);
 					
-//					System.out.println( "tranfered="+ tranfered + ",  " + new String(data)  );
+					System.out.println( "asynRead, tranfered="+ tranfered + ",  " + new String(data)  );
 					
 					// 负责解析报文并处理
 					handler.handleReadEvent(this, data);
@@ -130,13 +133,13 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 					
 					LOGGER.warn("sockect read abnormal, tranfered={}", tranfered);
 					
-					if (!this.channel.isOpen()) {
+					if (!this.socketChannel.isOpen()) {
 						this.close("socket closed");
 						return;
 					}
 					
 					// not enough space
-					rewind();
+					this.mappedByteBuffer.clear();
 					
 				} else {
 					this.close("stream closed");
@@ -145,7 +148,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			}
 			
 		} finally {
-			LOCK.compareAndSet(true, false);
+			LOCK.set(false);	
 		}
 		
 	}
@@ -158,35 +161,58 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	public void write(ByteBuffer buf) {
 		
+		writeQueue.offer(buf);
+		
+		write();
+	}
+
+	private void write() {
+		if ( !writing.compareAndSet(false, true) ) {
+			return;
+		}
+		
 		// TODO 
-		// 1、考虑 rwLock 自旋
-		// 2、考虑 buf size 大于 mappedByteBuffer 的情况，分块
-		// 3、 write0 确保写OK
+		// 1、考虑 buf size 大于 mappedByteBuffer 的情况，分块
+		// 2、 write0 slow 问题
+		// 3、 rw buffer 不能同时进行
 		
 		try {
-			
-			rewind();
-			
-			int position = mappedByteBuffer.position();
-			int count = fileChannel.write(buf, position);
-			if ( buf.hasRemaining() ) {
-				throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
+			while (true) {
+				if ( !LOCK.compareAndSet(false, true) ) {
+					break;
+				}
 			}
 			
-			//
-			mappedByteBuffer.position( position + count );
+			ByteBuffer buf;
 			
-			write0( position, count );
+			while ((buf = writeQueue.poll()) != null) {
+				mappedByteBuffer.clear();
+				
+				int position = 0;
+				int count = fileChannel.write(buf, position);
+				if ( buf.hasRemaining() ) {
+					throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
+				}
+				
+				write0(position, count);
+			}
+			
 			
 		} catch (IOException e) {
 			e.printStackTrace();
+		} finally {
+			writing.set( false );
+			LOCK.set(false);
+			if (!writeQueue.isEmpty()) {
+				write();
+			}
 		}
 	}
 	
-	// 往 socketChannel 写入数据
-	private void write0(int position, int count) throws IOException {
-		
-		int tranfered = (int) fileChannel.transferTo(position, count, channel);
+	private int write0(int position, int count) throws IOException {
+
+		// 往 socketChannel 写入数据
+		int tranfered = (int) fileChannel.transferTo(position, count, socketChannel);
 		
 		boolean noMoreData = tranfered == count;
 		if (noMoreData) {
@@ -199,24 +225,13 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		        enableWrite(false);
 		    }
 		}
+		
+		return tranfered;
 	}
 
 	@Override
 	public void doNextWriteCheck() {
 		// ignore
-	}
-
-	// 
-	private void rewind() {
-		int pos = this.mappedByteBuffer.position();
-		if ( pos > MARKED ) {
-			
-			LOGGER.info("mapped bytebuffer rewind, pos={}, marked={}", pos, MARKED);
-			
-			this.mappedByteBuffer.position(0);
-			this.mappedByteBuffer.limit( pos );
-			this.mappedByteBuffer.compact(); // 压缩,舍弃position之前的内容
-		}
 	}
 	
 	@Override
@@ -224,12 +239,12 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		try {
 			unmap(mappedByteBuffer);			
 			randomAccessFile.close();
-			channel.close();	
+			fileChannel.close();	
 			
-			// 删除文件
-			File file = new File( fileName );
-			if ( file.exists() )
-				file.delete();		
+			if ( file != null ){
+				boolean result = this.file.delete();
+				LOGGER.info("delete file, name={}, result={}" , this.fileName , result );
+			}
 			
 		} catch (IOException e) {				
 			LOGGER.error(" cleanup err: fileName=" + fileName, e);			
@@ -252,6 +267,16 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				return null;
 			}
 		});
+	}
+	
+	private void ensureDirOK(final String dirName) {
+		if (dirName != null) {
+			File f = new File(dirName);
+			if (!f.exists()) {
+				boolean result = f.mkdirs();
+				LOGGER.info(dirName + " mkdir " + (result ? "OK" : "Failed"));
+			}
+		}
 	}
 
 }

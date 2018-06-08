@@ -6,7 +6,7 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
-import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
+import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
@@ -22,7 +22,7 @@ public class DefaultRouteStrategy extends AbstractRouteStrategy {
 
 	@Override
 	public RouteResult route(UserCfg userCfg, List<RedisRequest> requests)
-			throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
+			throws InvalidRequestException, PhysicalNodeUnavailableException {
 
 		// 切片
 		int poolId = userCfg.getPoolId();

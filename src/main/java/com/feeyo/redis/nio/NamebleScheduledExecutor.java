@@ -3,7 +3,7 @@ package com.feeyo.redis.nio;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 
-public class NamebleScheduledExecutor extends ScheduledThreadPoolExecutor implements NameableExecutorService {
+public class NamebleScheduledExecutor extends ScheduledThreadPoolExecutor {
 	
 	private final String name;
 
@@ -12,7 +12,6 @@ public class NamebleScheduledExecutor extends ScheduledThreadPoolExecutor implem
 		this.name = name;
 	}
 
-	@Override
 	public String getName() {
 		return name;
 	}

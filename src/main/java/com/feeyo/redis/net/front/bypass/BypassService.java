@@ -20,9 +20,6 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.NameableExecutor;
 import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.ExecutorUtil;
-import com.feeyo.util.jedis.JedisConnection;
-import com.feeyo.util.jedis.JedisHolder;
-import com.feeyo.util.jedis.JedisPool;
 
 /*
  * 旁路服务
@@ -74,13 +71,13 @@ public class BypassService {
 		this.threadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize, 
 				timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>( queueSize ), true);
 		
-		StatUtil.getBigKeyCollector().setBigkeySize( requireSize );
+		StatUtil.getBigKeyCollector().setSize( requireSize );
 	}
 	
 	// 检测
-	public boolean testing(String requestCmd, byte[] requestKey, int requestSize) {
+	public boolean testing(String requestCmd, String requestKey, int requestSize) {
 		
-		if ( requestSize >= requireSize || StatUtil.getBigKeyCollector().isResponseBigkey(new String(requestKey), requestCmd)) {
+		if ( requestSize >= requireSize || StatUtil.getBigKeyCollector().isResponseBigkey(requestCmd, requestKey)) {
 			return true;
 		}
 		
@@ -92,48 +89,47 @@ public class BypassService {
 		
 		try {
 			
-			threadPoolExecutor.execute( new Runnable() {
+			threadPoolExecutor.execute(new Runnable() {
 				@Override
 				public void run() {
 
-					JedisPool jedisPool = JedisHolder.INSTANCE().getJedisPool(physicalNode.getHost(), physicalNode.getPort());
-					JedisConnection conn = jedisPool.getResource();
-					try {
-						conn.sendCommand(request);
-						List<RedisResponse> resps = conn.getResponses();
-						if (resps != null) {
+					BypassIoConnection conn = new BypassIoConnection(physicalNode.getHost(), physicalNode.getPort());
+					List<RedisResponse> resps = conn.writeToBackend(request);
+
+					if (resps != null) {
+						try {
 							String password = frontConn.getPassword();
 							String cmd = frontConn.getSession().getRequestCmd();
-							byte[] key = frontConn.getSession().getRequestKey();
+							String key = frontConn.getSession().getRequestKey();
 							int requestSize = frontConn.getSession().getRequestSize();
 							long requestTimeMills = frontConn.getSession().getRequestTimeMills();
 							long responseTimeMills = TimeUtil.currentTimeMillis();
 							int responseSize = 0;
-
+							
 							for (RedisResponse resp : resps)
-								responseSize += writeToFront(frontConn, resp, 0);
-
+								responseSize += conn.writeToFront(frontConn, resp, 0);
+							
 							resps.clear(); // help GC
 							resps = null;
 							
 							//
 							if (requestSize < requireSize && responseSize < requireSize) {
-								StatUtil.getBigKeyCollector().delResponseBigkey(new String(key));
+								StatUtil.getBigKeyCollector().delResponseBigkey(key);
 							}
 							
 							// 数据收集
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
-							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false);
-						}
-					} catch (Exception e) {
-						if (frontConn != null) {
-							frontConn.close("write err");
-						}
-						// 由 reactor close
-						LOGGER.error("backend write to front err:", e);
-					} finally {
-						if (conn != null) {
-							conn.close();
+							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills,
+									false);
+							
+						} catch(IOException e) {
+							
+							if ( frontConn != null) {
+								frontConn.close("write err");
+							}
+
+							// 由 reactor close
+							LOGGER.error("backend write to front err:", e);
 						}
 					}
 				}
@@ -175,7 +171,9 @@ public class BypassService {
 				this.threadPoolExecutor = newThreadPoolExecutor;
 				oldThreadPoolExecutor.shutdown();
 			}
-			StatUtil.getBigKeyCollector().setBigkeySize(requireSize);
+			
+			StatUtil.getBigKeyCollector().setSize( requireSize );
+			
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
@@ -183,54 +181,6 @@ public class BypassService {
 		}
 		
 		return "+OK\r\n".getBytes();
-	}
-
-	// 写入到前端
-	private int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {
-
-		int tmpSize = size;
-
-		if (frontCon.isClosed()) {
-			throw new IOException("front conn is closed!");
-		}
-
-		if (response.type() == '+' || response.type() == '-' || response.type() == ':' || response.type() == '$') {
-
-			byte[] buf = (byte[]) response.data();
-			tmpSize += buf.length;
-
-			frontCon.write(buf);
-
-			// fast GC
-			response.clear();
-
-		} else {
-			if (response.data() instanceof byte[]) {
-				byte[] buf = (byte[]) response.data();
-				tmpSize += buf.length;
-				frontCon.write(buf);
-
-				// fast GC
-				response.clear();
-
-			} else {
-				RedisResponse[] items = (RedisResponse[]) response.data();
-				for (int i = 0; i < items.length; i++) {
-					if (i == 0) {
-						byte[] buf = (byte[]) items[i].data();
-						tmpSize += buf.length;
-						frontCon.write(buf);
-
-						// fast GC
-						response.clear();
-
-					} else {
-						tmpSize = writeToFront(frontCon, items[i], tmpSize);
-					}
-				}
-			}
-		}
-		return tmpSize;
 	}
 
 }

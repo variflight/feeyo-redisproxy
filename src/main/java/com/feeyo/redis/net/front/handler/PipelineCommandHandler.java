@@ -43,7 +43,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
 		frontCon.getSession().setRequestCmd( RedisRequestType.PIPELINE.getCmd() );
-		frontCon.getSession().setRequestKey( RedisRequestType.PIPELINE.getCmd().getBytes() );
+		frontCon.getSession().setRequestKey( RedisRequestType.PIPELINE.getCmd() );
 		frontCon.getSession().setRequestSize( rrs.getRequestSize() );
 	}
 	
@@ -95,13 +95,14 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						releaseBackendConnection(backendCon);
 						
 						// 数据收集
-						StatUtil.collect(password, RedisRequestType.PIPELINE.getCmd(), RedisRequestType.PIPELINE.getCmd().getBytes(), requestSize, responseSize,
+						StatUtil.collect(password, RedisRequestType.PIPELINE.getCmd(), 
+								RedisRequestType.PIPELINE.getCmd(), requestSize, responseSize,
 								procTimeMills, backendWaitTimeMills, false);
 
 						// child 收集
 						for (RedisRequest req : rrs.getRequests()) {
 							String childCmd = new String( req.getArgs()[0] );
-							byte[] requestKey = req.getNumArgs() > 1 ? req.getArgs()[1] : null;
+							String requestKey = req.getNumArgs() > 1 ? new String(req.getArgs()[1]) : null;
 							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize, procTimeMills,  backendWaitTimeMills, true);
 						}
 						

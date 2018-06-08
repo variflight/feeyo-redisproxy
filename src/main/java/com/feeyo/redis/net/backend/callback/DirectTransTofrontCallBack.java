@@ -108,7 +108,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 			try {
 				String password = frontCon.getPassword();
 				String cmd = frontCon.getSession().getRequestCmd();
-				byte[] key = frontCon.getSession().getRequestKey();
+				String key = frontCon.getSession().getRequestKey();
 				int requestSize = frontCon.getSession().getRequestSize();
 				long requestTimeMills = frontCon.getSession().getRequestTimeMills();			
 				long responseTimeMills = TimeUtil.currentTimeMillis();

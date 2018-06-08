@@ -32,7 +32,7 @@ import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
 import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
-import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
+import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.RouteResult;
@@ -65,7 +65,7 @@ public class RedisFrontSession {
 	
 	// 
 	private String requestCmd;
-	private byte[] requestKey;
+	private String requestKey;
 	private int requestSize;
 	private long requestTimeMills; 
 	
@@ -221,7 +221,7 @@ public class RedisFrontSession {
 					isImmediateReleaseConReadLock = false;
 				}
 				
-			} catch (InvalidRequestExistsException e) {
+			} catch (InvalidRequestException e) {
 				
 				if ( e.isIsfaultTolerant() ) {
 				
@@ -428,11 +428,11 @@ public class RedisFrontSession {
 		this.requestCmd = requestCmd;
 	}
 
-	public byte[] getRequestKey() {
+	public String getRequestKey() {
 		return requestKey;
 	}
 
-	public void setRequestKey(byte[] requestKey) {
+	public void setRequestKey(String requestKey) {
 		this.requestKey = requestKey;
 	}
 
