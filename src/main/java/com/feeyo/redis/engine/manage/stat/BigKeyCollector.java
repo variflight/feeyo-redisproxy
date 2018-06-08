@@ -2,12 +2,11 @@ package com.feeyo.redis.engine.manage.stat;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -20,8 +19,7 @@ public class BigKeyCollector implements StatCollector {
 	// required size
 	public static int REQUIRED_SIZE = 1024 * 256;  				// 大于 256K
 	
-	private HashMap<String, BigKey> reqKeyMap = new HashMap<String, BigKey>();
-	private HashMap<String, BigKey> respKeyMap = new HashMap<String, BigKey>();
+	private ConcurrentHashMap<String, BigKey> keyMap = new ConcurrentHashMap<String, BigKey>();
 	
 	private AtomicBoolean locking = new AtomicBoolean(false);
 	
@@ -36,16 +34,14 @@ public class BigKeyCollector implements StatCollector {
 			
 			while (!locking.compareAndSet(false, true)) {
 			}
-			// 合并
-			TreeMap<String, BigKey> mergeMap =  mapCombine(reqKeyMap, respKeyMap);
 			
 			// 处理排序, 降序
-			mergeMap = sortBigKeyMap(mergeMap, false);
+			TreeMap<String, BigKey> sortedKeyMap = sortBigKeyMap(keyMap, false);
 			
-			int len = mergeMap.size() > 100 ? 100 : mergeMap.size();
+			int len = sortedKeyMap.size() > 100 ? 100 : sortedKeyMap.size();
 			List<BigKey> newList = new ArrayList<BigKey>( len );
 			
-			Iterator<BigKey> iter = mergeMap.values().iterator();
+			Iterator<BigKey> iter = sortedKeyMap.values().iterator();
 			for(int i = 0; i < len; i++) {
 				newList.add( iter.next() );
 			}
@@ -65,23 +61,15 @@ public class BigKeyCollector implements StatCollector {
 			return;
 		}
 		
-		if(requestSize >= REQUIRED_SIZE) {
-			dealKeyMap(reqKeyMap, cmd, key, requestSize);
+		// 大key 校验
+		if (  requestSize < REQUIRED_SIZE && responseSize < REQUIRED_SIZE  ) {	
+			return;
 		}
-		
-		if(responseSize >= REQUIRED_SIZE) {
-			dealKeyMap(respKeyMap, cmd, key, responseSize);
-		}
-	}
-	
-	
-	private void dealKeyMap(Map<String, BigKey> keyMap,  String cmd, String key, int size) {
 		
 		if ( !locking.compareAndSet(false, true) ) {
 			return;
 		}
 		
-		//
 		try {
 			if ( keyMap.size() == LENGTH ) {
 				
@@ -100,53 +88,32 @@ public class BigKeyCollector implements StatCollector {
 			if (keyMap.containsKey(key)) {
 				BigKey oldBigKey = keyMap.get(key);
 				oldBigKey.cmd = cmd;
-				oldBigKey.size = size;
+				oldBigKey.size = requestSize > responseSize ? requestSize : responseSize;
 				oldBigKey.lastUseTime = TimeUtil.currentTimeMillis();
 				oldBigKey.count.incrementAndGet();
+				oldBigKey.isReqHolder = requestSize >= REQUIRED_SIZE;
+				oldBigKey.isRespHolder = responseSize >= REQUIRED_SIZE;
 				
 			} else {
 				newBigKey.cmd = cmd;
-				newBigKey.size = size;
+				newBigKey.size = requestSize > responseSize ? requestSize : responseSize;
 				newBigKey.lastUseTime = TimeUtil.currentTimeMillis();
+				newBigKey.isReqHolder = requestSize >= REQUIRED_SIZE;
+				newBigKey.isRespHolder = responseSize >= REQUIRED_SIZE;
 				keyMap.put(key, newBigKey );
 			}
 			
 		} finally {
 			locking.set(false);
 		}
-		
 	}
 	
-	private TreeMap<String, BigKey> mapCombine(HashMap<String, BigKey> m1, HashMap<String, BigKey>m2  ) {  
-		
-		TreeMap<String, BigKey> map = new TreeMap<String, BigKey>();
-        List<HashMap<String, BigKey>> list = new ArrayList<HashMap<String, BigKey>>();
-		list.add(m1);
-		list.add(m2);
-        for (HashMap<String, BigKey> m : list) {  
-            Iterator<Entry<String, BigKey>> it = m.entrySet().iterator();  
-            while (it.hasNext()) { 
-            	Entry<String, BigKey> entry = it.next();
-            	String key = entry.getKey();
-            	BigKey value = entry.getValue();
-                if (!map.containsKey(key)) {  
-                    map.put(key, value);
-                } else if(map.get(key).count.get() < value.count.get()){ 
-                	 map.put(key, value);
-                }  
-            }  
-        }  
-        return map;  
-    }
-
 	@Override
 	public void onScheduleToZore() {
 		try {
 			while (!locking.compareAndSet(false, true)) {
 			}
-			
-			reqKeyMap.clear();
-			respKeyMap.clear();
+			keyMap.clear();
 			
 		} finally {
 			locking.set(false);
@@ -159,21 +126,27 @@ public class BigKeyCollector implements StatCollector {
 	
 	//sort
 	private TreeMap<String, BigKey> sortBigKeyMap(Map<String, BigKey> keyMap, boolean isAsc) {
-		TreeMap<String, BigKey> sortMap = new TreeMap<String, BigKey>(new BigKeyKeyComparator(keyMap, isAsc));
-		sortMap.putAll(keyMap);
-		return sortMap;
+		TreeMap<String, BigKey> sortedKeyMap = new TreeMap<String, BigKey>(new BigKeyKeyComparator(keyMap, isAsc));
+		sortedKeyMap.putAll(keyMap);
+		return sortedKeyMap;
 	}
 	
 	public boolean isResponseBigkey(String cmd, String key) {
-		BigKey bk = respKeyMap.get(key);
-		if (bk != null && bk.cmd.equals(cmd)) {
+		BigKey bk = keyMap.get(key);
+		if (bk != null && bk.cmd.equals(cmd) && bk.isRespHolder) {
 			return true;
 		}
 		return false;
 	}
 	
 	public void delResponseBigkey(String key) {
-		respKeyMap.remove(key);
+		
+		BigKey bk = keyMap.get(key);
+		if (bk != null && bk.isReqHolder) {
+			bk.isRespHolder = false;
+		} else {
+			keyMap.remove(key);
+		}
 	}
 	
 	public static class BigKey {
@@ -182,6 +155,8 @@ public class BigKeyCollector implements StatCollector {
 		public int size;
 		public AtomicInteger count = new AtomicInteger(1);
 		public long lastUseTime;
+		public boolean isReqHolder;	
+		public boolean isRespHolder;	
 		
 		@Override
 		public boolean equals(Object obj) {
@@ -194,6 +169,7 @@ public class BigKeyCollector implements StatCollector {
 			BigKey bigkey = (BigKey) obj;
 			return this.key.equals(bigkey.key);
 		}
+		
 	}
 	
 	class BigKeyKeyComparator implements Comparator<String> {
@@ -230,6 +206,5 @@ public class BigKeyCollector implements StatCollector {
 	        else
 	            return -1;	//小于
 		}
-		
 	}
 }
