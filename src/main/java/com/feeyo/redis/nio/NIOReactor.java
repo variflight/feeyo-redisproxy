@@ -80,7 +80,6 @@ public final class NIOReactor {
 
 					final Set<SelectionKey> keys = selector.selectedKeys();
 					if ( keys.isEmpty() ) {
-						
 						if (!pendingQueue.isEmpty()) {
 							ioTimes = 0;
 							processPendingQueue(selector); 	// 处理注册队列
