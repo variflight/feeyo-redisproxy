@@ -249,7 +249,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		});
 	}
 	
-	public void ensureDirOK(final String dirName) {
+	private void ensureDirOK(final String dirName) {
 		if (dirName != null) {
 			File f = new File(dirName);
 			if (!f.exists()) {
