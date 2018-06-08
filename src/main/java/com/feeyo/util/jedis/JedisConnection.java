@@ -148,7 +148,7 @@ public class JedisConnection {
 	
 	public void sendCommand(RedisRequest request) {
 			
-		if (request == null || request.getArgs().length == 0) {
+		if (request == null || request.getNumArgs() == 0) {
 			return;
 		}
 		
