@@ -32,7 +32,7 @@ import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
 import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
-import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
+import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.RouteResult;
@@ -221,7 +221,7 @@ public class RedisFrontSession {
 					isImmediateReleaseConReadLock = false;
 				}
 				
-			} catch (InvalidRequestExistsException e) {
+			} catch (InvalidRequestException e) {
 				
 				if ( e.isIsfaultTolerant() ) {
 				

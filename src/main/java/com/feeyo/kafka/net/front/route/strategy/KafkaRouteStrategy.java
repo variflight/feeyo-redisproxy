@@ -15,7 +15,7 @@ import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
-import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
+import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.RouteResult;
@@ -30,27 +30,27 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 
 	@Override
 	public RouteResult route(UserCfg userCfg, List<RedisRequest> requests)
-			throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
+			throws InvalidRequestException, PhysicalNodeUnavailableException {
 
 		RedisRequest request = requests.get(0);
 		if (request.getNumArgs() < 2) {
-			throw new InvalidRequestExistsException("wrong number of arguments", false);
+			throw new InvalidRequestException("wrong number of arguments", false);
 		}
 
 		// 获取 topic
 		String topicName = new String(request.getArgs()[1]);
 		KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( userCfg.getPoolId() );
 		if (kafkaPoolCfg == null) {
-			throw new InvalidRequestExistsException("kafka pool not exists", false);
+			throw new InvalidRequestException("kafka pool not exists", false);
 		}
 
 		TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topicName);
 		if (topicCfg == null) {
-			throw new InvalidRequestExistsException("topic not exists", false);
+			throw new InvalidRequestException("topic not exists", false);
 		}
 
 		if (topicCfg.getRunningInfo() == null) {
-			throw new InvalidRequestExistsException("topic not create or not load to kafka...", false);
+			throw new InvalidRequestException("topic not create or not load to kafka...", false);
 		}
 
 		// 分区
@@ -63,11 +63,11 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		
 			case CommandParse.PRODUCE_CMD: {
 					if (request.getNumArgs() != 3 && request.getNumArgs() != 4) {
-						throw new InvalidRequestExistsException("wrong number of arguments", false);
+						throw new InvalidRequestException("wrong number of arguments", false);
 					}
 		
 					if (!topicCfg.isProducer(userCfg.getPassword())) {
-						throw new InvalidRequestExistsException("no authority", false);
+						throw new InvalidRequestException("no authority", false);
 					}
 		
 					// 轮询分区
@@ -84,11 +84,11 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				break;
 			case CommandParse.CONSUMER_CMD: {
 					if (request.getNumArgs() != 2 && request.getNumArgs() != 4 && request.getNumArgs() != 5) {
-						throw new InvalidRequestExistsException("wrong number of arguments", false);
+						throw new InvalidRequestException("wrong number of arguments", false);
 					}
 		
 					if (!topicCfg.isConsumer(userCfg.getPassword())) {
-						throw new InvalidRequestExistsException("no authority", false);
+						throw new InvalidRequestException("no authority", false);
 					}
 		
 					// 轮询分区
@@ -111,11 +111,11 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 				break;
 			case CommandParse.PARTITIONS_CMD: {
 					if (request.getNumArgs() != 2) {
-						throw new InvalidRequestExistsException("wrong number of arguments", false);
+						throw new InvalidRequestException("wrong number of arguments", false);
 					}
 		
 					if (!topicCfg.isConsumer(userCfg.getPassword())) {
-						throw new InvalidRequestExistsException("no authority", false);
+						throw new InvalidRequestException("no authority", false);
 					}
 		
 					return new RouteResult(RedisRequestType.KAFKA, requests, null);
@@ -128,11 +128,11 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 	
 			case CommandParse.OFFSET_CMD: {
 					if (request.getNumArgs() != 4) {
-						throw new InvalidRequestExistsException("wrong number of arguments", false);
+						throw new InvalidRequestException("wrong number of arguments", false);
 					}
 		
 					if (!topicCfg.isConsumer(userCfg.getPassword())) {
-						throw new InvalidRequestExistsException("no authority", false);
+						throw new InvalidRequestException("no authority", false);
 					}
 		
 					int pt = Integer.parseInt(new String(request.getArgs()[2]));
@@ -142,7 +142,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		}
 
 		if (partition == null) {
-			throw new InvalidRequestExistsException("wrong partition", false);
+			throw new InvalidRequestException("wrong partition", false);
 		}
 
 		//

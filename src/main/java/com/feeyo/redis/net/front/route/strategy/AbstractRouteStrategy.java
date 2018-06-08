@@ -13,7 +13,7 @@ import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.backend.pool.xcluster.XClusterPool;
 import com.feeyo.redis.net.backend.pool.xcluster.XNodeUtil;
 import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
+import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
@@ -121,6 +121,6 @@ public abstract class AbstractRouteStrategy {
 
 	// 路由
     public abstract RouteResult route(UserCfg userCfg, List<RedisRequest> requests) 
-    		throws InvalidRequestExistsException, PhysicalNodeUnavailableException;
+    		throws InvalidRequestException, PhysicalNodeUnavailableException;
 
 }
