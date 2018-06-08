@@ -35,9 +35,14 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	private static final int BUF_SIZE =  50; // 1024 * 1024 * 2;  
 	
 	//
+	
+    // 映射的文件
 	private String fileName;
+    private File file;
 	private RandomAccessFile randomAccessFile;
 	protected FileChannel fileChannel;
+	
+	// 映射的内存对象
 	private MappedByteBuffer mappedByteBuffer;
 
 	//
@@ -47,13 +52,18 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 
 		try {
 			if ( IS_LINUX ) {
-				fileName = "/dev/shm/" + id + ".mapped";		// 在Linux中，用 tmpfs
+				this.fileName = "/dev/shm/" + id + ".mapped";		// 在Linux中，用 tmpfs
 			} else {
-				fileName =  id + ".mapped";
+				this.fileName =  id + ".mapped";
 			} 
 			
+			this.file = new File( this.fileName );
+			
+			// ensure
+			ensureDirOK(this.file.getParent());
+			
 			// mmap
-			this.randomAccessFile = new RandomAccessFile(fileName, "rw");
+			this.randomAccessFile = new RandomAccessFile(file, "rw");
 			this.randomAccessFile.setLength(BUF_SIZE);
 			this.randomAccessFile.seek(0);
 
@@ -207,16 +217,14 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	protected void cleanup() {
 		try {
-			mappedByteBuffer.rewind();
-			
 			unmap(mappedByteBuffer);			
 			randomAccessFile.close();
 			fileChannel.close();	
 			
-			// 删除文件
-			File file = new File( fileName );
-			if ( file.exists() )
-				file.delete();		
+			if ( file != null ){
+				boolean result = this.file.delete();
+				LOGGER.info("delete file, name={}, result={}" , this.fileName , result );
+			}
 			
 		} catch (IOException e) {				
 			LOGGER.error(" cleanup err: fileName=" + fileName, e);			
@@ -239,6 +247,16 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 				return null;
 			}
 		});
+	}
+	
+	public void ensureDirOK(final String dirName) {
+		if (dirName != null) {
+			File f = new File(dirName);
+			if (!f.exists()) {
+				boolean result = f.mkdirs();
+				LOGGER.info(dirName + " mkdir " + (result ? "OK" : "Failed"));
+			}
+		}
 	}
 
 }
