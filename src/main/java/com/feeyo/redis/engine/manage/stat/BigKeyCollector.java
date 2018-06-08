@@ -88,7 +88,7 @@ public class BigKeyCollector implements StatCollector {
 			if (index >= 0) {
 				
 				BigKey oldBK = bkHashMap.get(key);
-				oldBK.cmd = cmd;
+				oldBK.lastCmd = cmd;
 				oldBK.size = requestSize > responseSize ? requestSize : responseSize;
 				oldBK.lastUseTime = TimeUtil.currentTimeMillis();
 				oldBK.count.incrementAndGet();
@@ -96,7 +96,7 @@ public class BigKeyCollector implements StatCollector {
 				oldBK.fromResp = responseSize >= REQUIRED_SIZE;
 				
 			} else {
-				newBK.cmd = cmd;
+				newBK.lastCmd = cmd;
 				newBK.size = requestSize > responseSize ? requestSize : responseSize;
 				newBK.lastUseTime = TimeUtil.currentTimeMillis();
 				newBK.fromReq = requestSize >= REQUIRED_SIZE;
@@ -133,21 +133,24 @@ public class BigKeyCollector implements StatCollector {
 	
 	
 	public boolean isResponseBigkey(String cmd, String key) {
-		BigKey bigKey = bkHashMap.get(key);
-		if (bigKey != null && bigKey.cmd.equals(cmd) && bigKey.fromResp) {
+		
+		BigKey bk = bkHashMap.get(key);
+		if (bk != null && bk.lastCmd.equals(cmd) && bk.fromResp) {
 			return true;
 		}
 		return false;
 	}
 	
-	public void delResponseBigkey(String key) {
+	public void deleteResponseBigkey(String key) {
 		
-		BigKey bk = bkHashMap.get(key);
-		if (bk != null && bk.fromReq) {
-			bk.fromResp = false;
-		} else {
-			bkHashMap.remove(key);
-		}
+		bkHashMap.remove(key);
+		
+//		BigKey bk = bkHashMap.get(key);
+//		if (bk != null && bk.fromReq) {
+//			bk.fromResp = false;
+//		} else {
+//			bkHashMap.remove(key);
+//		}
 	}
 	
 	//
@@ -156,7 +159,7 @@ public class BigKeyCollector implements StatCollector {
 		
 		public static boolean isASC = false;
 		
-		public String cmd;
+		public String lastCmd;
 		public String key;
 		public int size;
 		public AtomicInteger count = new AtomicInteger(1);

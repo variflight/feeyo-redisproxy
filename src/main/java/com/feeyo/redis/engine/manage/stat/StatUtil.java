@@ -144,7 +144,7 @@ public class StatUtil {
 							for (BigKey bigkey : bigKeyCollector.getTop100() ) {
 								body.append("\n");
 								body.append("|    ");
-								body.append(bigkey.cmd).append("    |    ");
+								body.append(bigkey.lastCmd).append("    |    ");
 								body.append(bigkey.key).append("    |    ");
 								body.append(bigkey.size).append("    |    ");
 								body.append(bigkey.count).append("    |");
