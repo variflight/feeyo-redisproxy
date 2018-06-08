@@ -7,9 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.codec.RedisResponse;
-import com.feeyo.redis.net.codec.RedisResponseDecoder;
 import com.feeyo.util.jedis.exception.JedisAskDataException;
 import com.feeyo.util.jedis.exception.JedisBusyException;
 import com.feeyo.util.jedis.exception.JedisClusterException;
@@ -136,35 +133,6 @@ public class JedisConnection {
 		return broken;
 	}
 	
-	public void sendCommand(List<RedisRequest> requests) {
-		
-		if(requests == null || requests.size() == 0)
-			return;
-		
-		for(RedisRequest request :requests) {
-			sendCommand(request);
-		}
-	}
-	
-	public void sendCommand(RedisRequest request) {
-			
-		if (request == null || request.getNumArgs() == 0) {
-			return;
-		}
-		
-		byte[] cmd = request.getArgs()[0];
-		byte[][] args = new byte[request.getNumArgs() -1][];
-		System.arraycopy(request.getArgs(), 1, args, 0, request.getNumArgs() -1);
-		sendCommand(RedisCommand.valueOf(new String(cmd).toUpperCase()),args);
-	}
-	
-	public List<RedisResponse> getResponses() {
-		RedisResponseDecoder decoder = new RedisResponseDecoder();
-		byte[] response = getBinaryReply();
-		
-		return decoder.decode(response);
-	}
-
 	// write  get reply
 	//-----------------------------------------------------------------
 	protected void flush() {
@@ -289,6 +257,36 @@ public class JedisConnection {
 	public void sendCommand(final RedisCommand cmd) {
 	    sendCommand(cmd, EMPTY_ARGS);
 	}
+	
+	public void sendCommand(final byte[]... args) {
+		try {
+			connect();
+			sendCommand(outputStream, args);
+			
+		} catch (JedisConnectionException ex) {
+			/*
+			 * When client send request which formed by invalid protocol, Redis
+			 * send back error message before close connection. We try to read
+			 * it to provide reason of failure.
+			 */
+			try {
+				String errorMessage = readErrorLineIfPossible(inputStream);
+				if (errorMessage != null && errorMessage.length() > 0) {
+					ex = new JedisConnectionException(errorMessage, ex.getCause());
+				}
+			} catch (Exception e) {
+				/*
+				 * Catch any IOException or JedisConnectionException occurred
+				 * from InputStream#read and just ignore. This approach is safe
+				 * because reading error message is optional and connection will
+				 * eventually be closed.
+				 */
+			}
+			// Any other exceptions related to connection?
+			broken = true;
+			throw ex;
+		}
+	}
 
 	public void sendCommand(final RedisCommand cmd, final byte[]... args) {
 		try {
@@ -330,6 +328,23 @@ public class JedisConnection {
 			os.write(command);
 			os.writeCrLf();
 
+			for (final byte[] arg : args) {
+				os.write(DOLLAR_BYTE);
+				os.writeIntCrLf(arg.length);
+				os.write(arg);
+				os.writeCrLf();
+			}
+		} catch (IOException e) {
+			throw new JedisConnectionException(e);
+		}
+	}
+	
+	private void sendCommand(final RedisOutputStream os, final byte[]... args) {
+		try {
+			os.write(ASTERISK_BYTE);
+			os.writeIntCrLf(args.length);
+			os.writeCrLf();
+			
 			for (final byte[] arg : args) {
 				os.write(DOLLAR_BYTE);
 				os.writeIntCrLf(arg.length);
