@@ -10,7 +10,7 @@ import com.feeyo.redis.net.codec.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.handler.segment.Segment;
 import com.feeyo.redis.net.front.handler.segment.SegmentType;
-import com.feeyo.redis.net.front.route.InvalidRequestExistsException;
+import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
@@ -25,7 +25,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 	
 
 	private RedisRequestType rewrite(RedisRequest request, List<RedisRequest> newRequests, List<Segment> segments)
-			throws InvalidRequestExistsException {
+			throws InvalidRequestException {
 
 		byte[][] args = request.getArgs();
 		
@@ -36,7 +36,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 		if (cmd.startsWith("MSET")) {
 			
 			if (args.length == 1 || (args.length & 0x01) == 0) {
-				throw new InvalidRequestExistsException("wrong number of arguments");
+				throw new InvalidRequestException("wrong number of arguments");
 			}
 			int[] indexs = new int[(args.length - 1) / 2];
 			for (int j = 1; j < args.length; j += 2) {
@@ -55,7 +55,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 		} else if (cmd.startsWith("MGET")) {
 			
 			if (args.length == 1) {
-	            throw new InvalidRequestExistsException("wrong number of arguments", null);
+	            throw new InvalidRequestException("wrong number of arguments", null);
 	        }
 	        int[] indexs = new int[args.length-1];
 			for (int j = 1; j < args.length; j++) {
@@ -75,7 +75,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 		} else if (cmd.startsWith("DEL")) {
 			
 			if (args.length < 3) {
-	            throw new InvalidRequestExistsException("wrong number of arguments", null);
+	            throw new InvalidRequestException("wrong number of arguments", null);
 	        }
 	    	int[] indexs = new int[args.length-1];
 	        for (int j=1; j<args.length; j++) {
@@ -94,7 +94,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 		} else if (cmd.startsWith("EXISTS")) {
 			
 			if (args.length < 3) {
-	            throw new InvalidRequestExistsException("wrong number of arguments", null);
+	            throw new InvalidRequestException("wrong number of arguments", null);
 	        }
 	    	int[] indexs = new int[args.length-1];
 	        for (int j=1; j<args.length; j++) {
@@ -116,7 +116,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 
 	@Override
 	public RouteResult route(UserCfg userCfg, List<RedisRequest> requests)
-			throws InvalidRequestExistsException, PhysicalNodeUnavailableException {
+			throws InvalidRequestException, PhysicalNodeUnavailableException {
 
 		List<Segment> segments = new ArrayList<Segment>();
 
