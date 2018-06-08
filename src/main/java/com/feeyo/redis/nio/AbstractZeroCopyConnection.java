@@ -11,6 +11,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,9 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	private static final boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
 	
 	//
-	private static final int BUF_SIZE =  50; // 1024 * 1024 * 2;  
+	private static final int BUF_SIZE =  1024 ; // 1024 * 1024 * 2;  
+	// rw lock
+	protected AtomicBoolean LOCK = new AtomicBoolean(false); 
 	
 	//
 	
@@ -88,7 +91,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		}
 		
 		//
-		if ( !reading.compareAndSet(false, true) ) {
+		if ( !LOCK.compareAndSet(false, true) ) {
 			return;
 		}
 				
@@ -145,7 +148,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 			}
 			
 		} finally {
-			reading.set(false);	
+			LOCK.set(false);	
 		}
 		
 	}
@@ -158,11 +161,14 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	@Override
 	public void write(ByteBuffer buf) {
 		
-		// 
-		while( true ) {
-			if ( writing.compareAndSet(false, true) ) {
-				break;
-			}
+		writeQueue.offer(buf);
+		
+		write();
+	}
+
+	private void write() {
+		if ( !writing.compareAndSet(false, true) ) {
+			return;
 		}
 		
 		// TODO 
@@ -171,21 +177,35 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		// 3、 rw buffer 不能同时进行
 		
 		try {
-			
-			mappedByteBuffer.clear();
-			
-			int position = 0;
-			int count = fileChannel.write(buf, position);
-			if ( buf.hasRemaining() ) {
-				throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
+			while (true) {
+				if ( !LOCK.compareAndSet(false, true) ) {
+					break;
+				}
 			}
 			
-			write0(position, count);
+			ByteBuffer buf;
+			
+			while ((buf = writeQueue.poll()) != null) {
+				mappedByteBuffer.clear();
+				
+				int position = 0;
+				int count = fileChannel.write(buf, position);
+				if ( buf.hasRemaining() ) {
+					throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
+				}
+				
+				write0(position, count);
+			}
+			
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
 			writing.set( false );
+			LOCK.set(false);
+			if (!writeQueue.isEmpty()) {
+				write();
+			}
 		}
 	}
 	
