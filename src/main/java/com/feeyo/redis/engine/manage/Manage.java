@@ -563,7 +563,7 @@ public class Manage {
 					List<String> lines = new ArrayList<String>();						
 					for(BigKey bigkey: StatUtil.getBigKeys()) {
 						StringBuffer sBuffer = new StringBuffer();
-						sBuffer.append( bigkey.cmd ).append("  ");
+						sBuffer.append( bigkey.lastCmd ).append("  ");
 						sBuffer.append( bigkey.key ).append( "  " );
 						sBuffer.append( bigkey.size ).append( "  " );
 						sBuffer.append( bigkey.count.get() );

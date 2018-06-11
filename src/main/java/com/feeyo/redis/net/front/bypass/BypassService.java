@@ -118,7 +118,7 @@ public class BypassService {
 							
 							//
 							if (requestSize < requireSize && responseSize < requireSize) {
-								StatUtil.getBigKeyCollector().delResponseBigkey(key);
+								StatUtil.getBigKeyCollector().deleteResponseBigkey( key );
 							}
 							
 							// 数据收集
