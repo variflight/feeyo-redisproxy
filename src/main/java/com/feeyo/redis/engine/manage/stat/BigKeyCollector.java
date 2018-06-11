@@ -134,8 +134,13 @@ public class BigKeyCollector implements StatCollector {
 	
 	public boolean isResponseBigkey(String cmd, String key) {
 		
+		/*
+			后续需要对 指令类别做精细化控制
+			如： HGETALL key  是慢查询， 但  HGET key field 则不是的情况
+		 */
+		
 		BigKey bk = bkHashMap.get(key);
-		if (bk != null && bk.lastCmd.equals(cmd) && bk.fromResp) {
+		if (bk != null && bk.fromResp && bk.lastCmd.equals(cmd) ) {
 			return true;
 		}
 		return false;

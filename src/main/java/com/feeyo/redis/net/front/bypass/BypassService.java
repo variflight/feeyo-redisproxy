@@ -3,10 +3,8 @@ package com.feeyo.redis.net.front.bypass;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +17,7 @@ import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.codec.RedisResponse;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.nio.util.TimeUtil;
-import com.feeyo.util.ExecutorUtil;
+import com.feeyo.util.ThreadFactoryImpl;
 
 /*
  * 旁路服务
@@ -27,9 +25,7 @@ import com.feeyo.util.ExecutorUtil;
 public class BypassService {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( BypassService.class );
-	
-	public static final byte[] ERR_RESP = "-ERR bypass busy.\r\n".getBytes();
-	
+
 	private static BypassService _INSTANCE = null;
 	
 	//
@@ -39,8 +35,6 @@ public class BypassService {
 	private int corePoolSize;
 	private int maxPoolSize;
 	private int queueSize;
-	
-	private int timeout;		// 单位秒
 	
 	public static BypassService INSTANCE() {
 		
@@ -61,7 +55,6 @@ public class BypassService {
 		String corePoolSizeString = map.get("bypassCorePoolSize"); 
 		String maxPoolSizeString = map.get("bypassMaxPoolSize");
 		String queueSizeString = map.get("bypassQueueSize"); 
-		String timeoutString = map.get("bypassTimeoutSize"); 
 		
 		this.requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
 		if ( requireSize < 256 * 1024)
@@ -70,10 +63,11 @@ public class BypassService {
 		this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
 		this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
 		this.queueSize = queueSizeString == null ? 20 : Integer.parseInt( queueSizeString);
-		this.timeout = timeoutString == null ? 3000 : Integer.parseInt(timeoutString);
 		
-		this.threadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize, 
-				timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>( queueSize ), true);
+		
+		this.threadPoolExecutor = new BypassThreadExecutor(
+				corePoolSize, maxPoolSize, queueSize, new ThreadFactoryImpl("BypassService"));
+		this.threadPoolExecutor.prestartAllCoreThreads();
 		
 		StatUtil.getBigKeyCollector().setSize( requireSize );
 	}
@@ -97,9 +91,9 @@ public class BypassService {
 				@Override
 				public void run() {
 
+					//
 					BypassIoConnection conn = new BypassIoConnection(physicalNode.getHost(), physicalNode.getPort());
 					List<RedisResponse> resps = conn.writeToBackend(request);
-
 					if (resps != null) {
 						try {
 							String password = frontConn.getPassword();
@@ -138,9 +132,15 @@ public class BypassService {
 				}
 			});
 			
-		} catch (RejectedExecutionException rejectException) {	
+		} catch (RejectedExecutionException re) {	
 			
-			frontConn.write( ERR_RESP );
+			// write err
+			StringBuffer errorSb = new StringBuffer();
+			errorSb.append("-ERR bypass err: ");
+			errorSb.append(re.getMessage() );
+			errorSb.append("\r\n");
+				
+			frontConn.write( errorSb.toString().getBytes() );
 			
 			LOGGER.warn("process thread pool is full, reject, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
@@ -158,7 +158,6 @@ public class BypassService {
 			String corePoolSizeString = map.get("bypassCorePoolSize");
 			String maxPoolSizeString = map.get("bypassMaxPoolSize");
 			String queueSizeString = map.get("bypassQueueSize");
-			String timeoutString = map.get("bypassTimeoutSize");
 
 			this.requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
 			if ( requireSize < 256 * 1024 )
@@ -167,19 +166,21 @@ public class BypassService {
 			this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
 			this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
 			this.queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
-			this.timeout = timeoutString == null ? 3000 : Integer.parseInt(timeoutString);
 
 			if (corePoolSize != threadPoolExecutor.getCorePoolSize()) {
 				
-				// hold old
+				// hold old threadPool
 				ThreadPoolExecutor oldThreadPoolExecutor = this.threadPoolExecutor;
 				
-				// create new
-				ThreadPoolExecutor newThreadPoolExecutor = ExecutorUtil.create("bypass-Tp-", corePoolSize, maxPoolSize,
-						timeout, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(queueSize), true);
+				// create new threadPool
+				ThreadPoolExecutor newThreadPoolExecutor = new BypassThreadExecutor(
+						corePoolSize, maxPoolSize, queueSize, new ThreadFactoryImpl("BypassService"));
+				newThreadPoolExecutor.prestartAllCoreThreads();
+								
+				// swap threadPool
 				this.threadPoolExecutor = newThreadPoolExecutor;
 				
-				// kill old
+				// kill old threadPool
 				oldThreadPoolExecutor.shutdown();
 			}
 			
