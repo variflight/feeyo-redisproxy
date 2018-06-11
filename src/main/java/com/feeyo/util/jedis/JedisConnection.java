@@ -343,7 +343,6 @@ public class JedisConnection {
 		try {
 			os.write(ASTERISK_BYTE);
 			os.writeIntCrLf(args.length);
-			os.writeCrLf();
 			
 			for (final byte[] arg : args) {
 				os.write(DOLLAR_BYTE);
