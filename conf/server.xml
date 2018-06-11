@@ -34,7 +34,6 @@
 	<property name="bypassCorePoolSize">2</property>
 	<property name="bypassMaxPoolSize">4</property>
 	<property name="bypassQueueSize">20</property>
-	<property name="bypassTimeoutSize">3000</property>
 
 </redis>
 
