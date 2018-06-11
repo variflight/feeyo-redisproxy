@@ -88,6 +88,12 @@ public class BigKeyCollector implements StatCollector {
 			if (index >= 0) {
 				
 				BigKey oldBK = bkHashMap.get(key);
+				
+				// 通过deleteResponseBigkey删掉的key
+				if (oldBK == null) {
+					oldBK = newBK;
+					bkHashMap.put( key, oldBK );
+				}
 				oldBK.lastCmd = cmd;
 				oldBK.size = requestSize > responseSize ? requestSize : responseSize;
 				oldBK.lastUseTime = TimeUtil.currentTimeMillis();
