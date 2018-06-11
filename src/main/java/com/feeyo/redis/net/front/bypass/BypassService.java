@@ -91,9 +91,9 @@ public class BypassService {
 				@Override
 				public void run() {
 
+					//
 					BypassIoConnection conn = new BypassIoConnection(physicalNode.getHost(), physicalNode.getPort());
 					List<RedisResponse> resps = conn.writeToBackend(request);
-
 					if (resps != null) {
 						try {
 							String password = frontConn.getPassword();
