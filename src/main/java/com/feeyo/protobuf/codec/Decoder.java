@@ -1,7 +1,10 @@
 package com.feeyo.protobuf.codec;
 
-public abstract class Decoder {
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.MessageLite;
 
-	public abstract <T> T decode(Class<T> clazz, byte[] protobuf);
+public interface Decoder {
+
+	public MessageLite decode(byte[] protobuf) throws InvalidProtocolBufferException;
 	
 }

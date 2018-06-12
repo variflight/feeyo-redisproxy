@@ -1,9 +1,12 @@
 package com.feeyo.protobuf.codec;
 
+import java.util.List;
+
 import com.google.protobuf.InvalidProtocolBufferException;
 
-public abstract class Encoder<T> {
+public interface Encoder {
 	
-	public abstract byte[] encode(T obj) throws InvalidProtocolBufferException;
+	public <T> byte[] encode( T msg) throws InvalidProtocolBufferException;
 
+	public <T> void encode(T msg, List<Object> out) throws InvalidProtocolBufferException;
 }

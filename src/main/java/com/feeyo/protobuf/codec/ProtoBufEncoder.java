@@ -1,16 +1,15 @@
 package com.feeyo.protobuf.codec;
 
-import java.nio.ByteBuffer;
+import java.util.List;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
 //
-public class ProtoBufEncoder<T> extends Encoder<T> {
-	
+public class ProtoBufEncoder implements Encoder {
 	
 	@Override
-	public byte[] encode(T msg) throws InvalidProtocolBufferException {
+	public <T> byte[] encode(T msg) throws InvalidProtocolBufferException {
 		
 		if (msg instanceof MessageLite) {
 	            return ((MessageLite) msg).toByteArray();
@@ -22,8 +21,18 @@ public class ProtoBufEncoder<T> extends Encoder<T> {
         throw new InvalidProtocolBufferException(msg.getClass().getName());
 	}
 	
-	public ByteBuffer encodeToByteBuffer(T msg) throws InvalidProtocolBufferException {
-		return ByteBuffer.wrap(encode(msg));
+	
+	
+	public <T> void encode(T msg, List<Object> out) throws InvalidProtocolBufferException {
+		
+		if (msg instanceof MessageLite) {
+			out.add(((MessageLite) msg).toByteArray());
+	    }
+		else if (msg instanceof MessageLite.Builder) {
+	    	out.add(((MessageLite.Builder) msg).build().toByteArray());
+	    }
+		
+		throw new InvalidProtocolBufferException(msg.getClass().getName());
 	}
 
 }

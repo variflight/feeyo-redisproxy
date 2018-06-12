@@ -6,7 +6,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
 //TODO hasParse + extensionRegistry
-public class ProtoBufDecoder {
+public class ProtoBufDecoder implements Decoder {
 	
 	private final MessageLite  prototype;
 	private final ExtensionRegistryLite extensionRegistry;

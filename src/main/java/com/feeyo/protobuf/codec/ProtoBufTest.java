@@ -13,7 +13,7 @@ public class ProtoBufTest {
 		RedisMessage fromMsg = RedisMessage.newBuilder().setId(1).setIndex(2)
 				.setContent(ByteString.copyFrom("hello protobuf!", Charset.forName("UTF-8"))).build();
 
-		ProtoBufEncoder<RedisMessage> encoder = new ProtoBufEncoder<RedisMessage>();
+		ProtoBufEncoder encoder = new ProtoBufEncoder();
 
 		byte[] protobuf;
 		
@@ -22,7 +22,6 @@ public class ProtoBufTest {
 			RedisMessage toMsg = RedisMessage.newBuilder().build();
 			ProtoBufDecoder decoder = new ProtoBufDecoder(toMsg);
 			toMsg = (RedisMessage) decoder.decode(protobuf);
-			
 		} catch (InvalidProtocolBufferException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
