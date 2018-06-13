@@ -1,7 +1,5 @@
 package com.feeyo.protobuf.http.test;
 
-import java.lang.reflect.InvocationTargetException;
-
 import com.feeyo.protobuf.codec.Eraftpb.ConfState;
 import com.feeyo.protobuf.codec.Eraftpb.Entry;
 import com.feeyo.protobuf.codec.Eraftpb.EntryType;
@@ -22,8 +20,7 @@ public class ProtoBufTest {
 		try {
 			Entry entry = Entry.newBuilder().setContext(ByteString.copyFromUtf8("Entry0"))
 					.setData(ByteString.copyFromUtf8("Entry0")).setEntryType(EntryType.EntryNormal).setEntryTypeValue(0)
-					.setIndex(0)
-					.setSyncLog(false).setTerm(20)
+					.setIndex(0).setSyncLog(false).setTerm(20)
 					.setUnknownFields(UnknownFieldSet.getDefaultInstance()).build();
 	
 			ConfState state = ConfState.newBuilder().addLearners(100).addLearners(101)
@@ -31,8 +28,7 @@ public class ProtoBufTest {
 					.setUnknownFields(UnknownFieldSet.getDefaultInstance()).build();
 	
 			SnapshotMetadata metadata = SnapshotMetadata.newBuilder().setConfState(state)
-					.setIndex(0)
-					.setTerm(20)
+					.setIndex(0) .setTerm(20)
 					.setUnknownFields(UnknownFieldSet.getDefaultInstance()).build();
 	
 			Snapshot snapshot = Snapshot.newBuilder().setData(ByteString.copyFromUtf8("snapshot"))
@@ -47,23 +43,15 @@ public class ProtoBufTest {
 	
 			byte[] protobuf;
 			protobuf = encoder.encode(fromMsg);
-	
-			PBDecoder decoder = new PBDecoder(Message.class);
+			
+			PBDecoder decoder = new PBDecoder(Message.getDefaultInstance());
 			Message toMsg = (Message) decoder.decode(protobuf);
 			System.out.println(toMsg.getIndex());
 		} catch (InvalidProtocolBufferException e) {
 			e.printStackTrace();
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
 		} catch (SecurityException e) {
 			e.printStackTrace();
 		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
 			e.printStackTrace();
 		}
 	}

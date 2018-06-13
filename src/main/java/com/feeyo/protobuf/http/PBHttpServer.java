@@ -30,4 +30,13 @@ public class PBHttpServer {
 		}  
 	}
 	
+	public void close() {
+		
+		if(httpServer != null) {
+			//delay - the maximum time in seconds to wait until exchanges have finished.
+			httpServer.stop(3);
+		}
+		
+	}
+	
 }

@@ -7,8 +7,9 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.util.List;
 
+import com.feeyo.protobuf.codec.PBDecoderV2;
 import com.feeyo.util.ByteUtil;
-import com.google.protobuf.MessageLiteOrBuilder;
+import com.google.protobuf.MessageLite;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -21,8 +22,8 @@ public class PBHttpServerHandler implements HttpHandler {
 		
 		byte[] buf = ByteUtil.inputStream2byte(in);
 		
-		MessageWrapper wrapper = new MessageWrapper();
-		List<MessageLiteOrBuilder> msgList = wrapper.wrapOut(buf);
+		PBDecoderV2 decoder = new PBDecoderV2();
+		List<MessageLite> msgList = decoder.decode(buf);
 		
 		System.out.println("receive msg number -> " + msgList.size() );
 		

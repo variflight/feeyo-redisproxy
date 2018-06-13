@@ -11,8 +11,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.protobuf.codec.PBEncoderV2;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.MessageLiteOrBuilder;
+import com.google.protobuf.MessageLite;
 
 public class PBHttpClient {
 
@@ -138,16 +139,16 @@ public class PBHttpClient {
 			return;
 		
 		
-		List<MessageLiteOrBuilder> tranMsgList = new ArrayList<MessageLiteOrBuilder>();
+		List<MessageLite> tranMsgList = new ArrayList<MessageLite>();
 		for(T msg : msgList) {
-			if(msg instanceof MessageLiteOrBuilder) {
-				tranMsgList.add( (MessageLiteOrBuilder) msg);
+			if(msg instanceof MessageLite) {
+				tranMsgList.add( (MessageLite) msg);
 			}
 		}
 		
-		MessageWrapper wrapper = new MessageWrapper();
+		PBEncoderV2 decoder = new PBEncoderV2();
 		try {
-			byte[] protoBufs = wrapper.wrapIn(tranMsgList);
+			byte[] protoBufs = decoder.encode(tranMsgList);
 			
 			PBHttpClient client = new PBHttpClient();
 			HttpResponse response = client.post(url, protoBufs);
