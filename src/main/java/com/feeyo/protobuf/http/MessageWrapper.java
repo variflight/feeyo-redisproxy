@@ -21,7 +21,7 @@ public class MessageWrapper {
 	private final Logger LOGGER = LoggerFactory.getLogger(MessageWrapper.class);
 	private final Charset charset = Charset.forName("UTF-8");
 
-	private final byte[] MAGIC_CODE = new byte[] { 0x00, 0x00, 0x01, 0x0f };
+	private final byte[] MAGIC_CODE = new byte[] { 0x01, 0x01, (byte) 0xff, (byte) 0xff };
 
 	// ==== wrap-index ===== size ===========
 	// totalSize 			4
