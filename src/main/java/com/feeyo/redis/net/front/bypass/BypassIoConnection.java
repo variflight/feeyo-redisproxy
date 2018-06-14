@@ -34,10 +34,14 @@ public class BypassIoConnection {
 			// block i/o
 			jedisConn.sendCommand(request.getArgs());
 			byte[] response = jedisConn.getBinaryReply();
-			
 			// parse
 			RedisResponseDecoder decoder = new RedisResponseDecoder();
-			return decoder.decode(response);
+			List<RedisResponse> result = decoder.decode(response);
+			while (result == null) {
+				response = jedisConn.getBinaryReply();
+				result = decoder.decode(response);
+			}
+			return result;
 			
 		} catch (Exception e) {
 			LOGGER.error("bypass err, host=" + host + ":" + port, e);
