@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.nio.util.TimeUtil;
+import com.feeyo.util.JavaUtils;
 
 /**
  * ZeroCopy
@@ -30,10 +31,8 @@ public class ZeroCopyConnection extends ClosableConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ZeroCopyConnection.class );
 	
-	private static final boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
-	
 	//
-	private static final int BUF_SIZE = 1024 * 1024 * 2;  
+	private static final int MAPPED_SIZE = 1024 * 1024 * 2;  
 	
 	protected AtomicBoolean rwLock = new AtomicBoolean(false); 
 
@@ -52,12 +51,17 @@ public class ZeroCopyConnection extends ClosableConnection {
 		super(channel);
 
 		try {
-			if ( IS_LINUX ) {
-				this.fileName = "/dev/shm/" + id + ".mapped";		// 在Linux中，用 tmpfs
-			} else {
-				this.fileName =  id + ".mapped";
-			} 
 			
+			// 支持 OPS 指定 tmpfs or ramdisk path
+			String path = System.getProperty("feeyo.zerocopy.path");
+			if ( path == null ) {
+				if ( JavaUtils.isLinux() ) 
+					path = "/dev/shm"; 	// 在Linux中，用 tmpfs
+				else
+					path = "";
+			}
+			
+			this.fileName = path +  id + ".mapped";
 			this.file = new File( this.fileName );
 			
 			// ensure
@@ -65,11 +69,11 @@ public class ZeroCopyConnection extends ClosableConnection {
 			
 			// mmap
 			this.randomAccessFile = new RandomAccessFile(file, "rw");
-			this.randomAccessFile.setLength(BUF_SIZE);
+			this.randomAccessFile.setLength(MAPPED_SIZE);
 			this.randomAccessFile.seek(0);
 
 			this.fileChannel = randomAccessFile.getChannel();
-			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, BUF_SIZE);
+			this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, MAPPED_SIZE);
 
 		} catch (IOException e) {
 			LOGGER.error("create mapped err:", e);
@@ -101,7 +105,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 			for(;;) {
 				
 				int position = mappedByteBuffer.position();
-				int count    = BUF_SIZE - position;
+				int count    = MAPPED_SIZE - position;
 				int tranfered = (int) fileChannel.transferFrom(socketChannel, position, count);
 				mappedByteBuffer.position( position + tranfered );
 				
@@ -176,7 +180,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 			buf.flip();
 			
 			int bufSize = buf.limit();
-			if ( bufSize <= BUF_SIZE ) {
+			if ( bufSize <= MAPPED_SIZE ) {
 				
 				mappedByteBuffer.clear();
 				
@@ -196,11 +200,11 @@ public class ZeroCopyConnection extends ClosableConnection {
 			} else {
 				
 				// 
-				int cnt = ( bufSize / BUF_SIZE ) + ( bufSize % BUF_SIZE > 0 ? 1 : 0);
+				int cnt = ( bufSize / MAPPED_SIZE ) + ( bufSize % MAPPED_SIZE > 0 ? 1 : 0);
 				int postion = 0;
 				for (int i = 1; i <= cnt; i++) {
 					
-					int limit = BUF_SIZE * i;
+					int limit = MAPPED_SIZE * i;
 					if ( limit > bufSize ) {
 						limit = bufSize;
 					}
