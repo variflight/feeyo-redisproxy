@@ -332,16 +332,17 @@ public class BackendConnection extends ClosableConnection {
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Backend info ");
-		sbuffer.append(", delegate=" ).append( delegateConn.toString() );
-		sbuffer.append(", borrowed=").append( borrowed );
+		sbuffer.append( delegateConn.toString() );
+		
+		sbuffer.append(" ext [" );
+		sbuffer.append(" borrowed=").append( borrowed );
+		sbuffer.append(", isZeroCopy=").append( isZeroCopy );
 		
 		if ( heartbeatTime > 0 ) {
 			sbuffer.append(", HT=").append( heartbeatTime );
 		}
-		
-		// zero copy
-		sbuffer.append(", isZeroCopy=").append( isZeroCopy );
+		sbuffer.append("]");
+
 		return  sbuffer.toString();
 	}
 	
