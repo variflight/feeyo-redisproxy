@@ -22,10 +22,18 @@ public abstract class ClosableConnection {
 		in, out
 	}
 
+	//
 	public static final int STATE_CONNECTING = 0;
 	public static final int STATE_CONNECTED = 1;
 	public static final int STATE_CLOSING = -1;
 	public static final int STATE_CLOSED = -2;
+	
+	//
+	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
+	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
+	
+	//
+	protected Direction direction = Direction.out;
 
 	protected String host;
 	protected int port;
@@ -35,17 +43,15 @@ public abstract class ClosableConnection {
 	protected Object attachement;
 	protected int state = STATE_CONNECTING;
 
-	protected Direction direction = Direction.out;
-	
-	
+	// socket
 	protected SocketChannel socketChannel;
 	protected SelectionKey processKey;
-	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
-	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
-	
+
+	//
 	protected AtomicBoolean isClosed;
 	protected boolean isSocketClosed;
 	
+	//
 	protected long startupTime;
 	protected long lastReadTime;
 	protected long lastWriteTime;
@@ -55,7 +61,6 @@ public abstract class ClosableConnection {
 																		//
 	protected long netInCounter;
 	protected long netInBytes;											
-	
 	protected long netOutCounter;
 	protected long netOutBytes;
 	
@@ -79,17 +84,6 @@ public abstract class ClosableConnection {
 		this.id = ConnectIdGenerator.getINSTNCE().getId();
 	}
 	
-	//
-	public void lazySet(SocketChannel socketChannel, AtomicBoolean isClosed, 
-			long startupTime, long lastReadTime, long lastWriteTime, long id) {
-		this.socketChannel = socketChannel;
-		this.isClosed = isClosed;
-		this.startupTime = startupTime;
-		this.lastReadTime = lastReadTime;
-		this.lastWriteTime = lastWriteTime;
-		this.id = id;
-	}
-
 	public long getIdleTimeout() {
 		return idleTimeout;
 	}
