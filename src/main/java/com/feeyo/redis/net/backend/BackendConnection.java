@@ -36,11 +36,11 @@ public class BackendConnection extends ClosableConnection {
 
 		if ( isZeroCopy ) {
 			delegateConn = new ZeroCopyConnection(socketChannel); 
-			this.isZeroCopy = true;
-			
 		} else {
 			delegateConn = new Connection(socketChannel);
 		}
+		
+		this.isZeroCopy = true;
 	}
 	
 	
@@ -348,7 +348,5 @@ public class BackendConnection extends ClosableConnection {
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}
-
-	
 	
 }
