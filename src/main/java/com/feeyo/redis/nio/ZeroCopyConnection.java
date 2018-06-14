@@ -120,7 +120,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 					mappedByteBuffer.flip();
 					mappedByteBuffer.get(data, 0, tranfered);
 					
-					System.out.println( "asynRead, tranfered="+ tranfered + ",  " + new String(data)  );
+					//System.out.println( "asynRead, tranfered="+ tranfered + ",  " + new String(data)  );
 					
 					// 负责解析报文并处理
 					if ( isNested )
@@ -163,7 +163,6 @@ public class ZeroCopyConnection extends ClosableConnection {
 	@Override
 	public void write(ByteBuffer buf) {
 		
-	
 		try {
 			
 			// 
@@ -185,6 +184,10 @@ public class ZeroCopyConnection extends ClosableConnection {
 				int count = fileChannel.write(buf, position);
 				if ( buf.hasRemaining() ) {
 					throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
+					
+				} else {
+					// recycle
+					NetSystem.getInstance().getBufferPool().recycle(buf);
 				}
 				
 				write0(position, count);
@@ -216,6 +219,9 @@ public class ZeroCopyConnection extends ClosableConnection {
 					int tranfered = write0(0, count);
 					postion += tranfered;
 				}
+				
+				// recycle
+				NetSystem.getInstance().getBufferPool().recycle(buf);
 			}
 	
 			
