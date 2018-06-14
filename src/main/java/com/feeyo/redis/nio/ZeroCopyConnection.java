@@ -36,14 +36,10 @@ public class ZeroCopyConnection extends ClosableConnection {
 	//
 	private static final int BUF_SIZE =  1024 ; // 1024 * 1024 * 2;  
 	
-	// rw lock
-	protected AtomicBoolean LOCK = new AtomicBoolean(false); 
-	
-	protected ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<ByteBuffer>();
-	protected AtomicBoolean reading = new AtomicBoolean(false);
-	protected AtomicBoolean writing = new AtomicBoolean(false);
 
-	
+	protected ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<ByteBuffer>();
+	protected AtomicBoolean rwLock = new AtomicBoolean(false); 
+
     // 映射的文件
 	private String fileName;
     private File file;
@@ -95,7 +91,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 		}
 		
 		//
-		if ( !LOCK.compareAndSet(false, true) ) {
+		if ( !rwLock.compareAndSet(false, true) ) {
 			return;
 		}
 				
@@ -152,7 +148,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 			}
 			
 		} finally {
-			LOCK.set(false);	
+			rwLock.set(false);	
 		}
 		
 	}
@@ -171,18 +167,11 @@ public class ZeroCopyConnection extends ClosableConnection {
 	}
 
 	private void write() {
-		if ( !writing.compareAndSet(false, true) ) {
-			return;
-		}
-		
-		// TODO 
-		// 1、考虑 buf size 大于 mappedByteBuffer 的情况，分块
-		// 2、 write0 slow 问题
-		// 3、 rw buffer 不能同时进行
 		
 		try {
+			
 			while (true) {
-				if ( !LOCK.compareAndSet(false, true) ) {
+				if ( !rwLock.compareAndSet(false, true) ) {
 					break;
 				}
 			}
@@ -205,8 +194,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
-			writing.set( false );
-			LOCK.set(false);
+			rwLock.set(false);
 			if (!writeQueue.isEmpty()) {
 				write();
 			}
