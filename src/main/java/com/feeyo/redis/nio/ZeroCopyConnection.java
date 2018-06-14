@@ -33,7 +33,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 	private static final boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
 	
 	//
-	private static final int BUF_SIZE =  50 ; // 1024 * 1024 * 2;  
+	private static final int BUF_SIZE = 1024 * 1024 * 2;  
 	
 	protected AtomicBoolean rwLock = new AtomicBoolean(false); 
 
