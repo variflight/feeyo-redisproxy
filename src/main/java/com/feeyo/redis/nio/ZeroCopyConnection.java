@@ -166,6 +166,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 	@Override
 	public void write(ByteBuffer buf) {
 		
+		buf.flip();
 		writeQueue.offer( buf );
 
 		try {

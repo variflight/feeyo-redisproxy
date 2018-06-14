@@ -332,7 +332,7 @@ public class BackendConnection extends ClosableConnection {
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Backend con = ");
+		sbuffer.append( "Backend info ");
 		sbuffer.append(", delegate=" ).append( delegateConn.toString() );
 		sbuffer.append(", borrowed=").append( borrowed );
 		
