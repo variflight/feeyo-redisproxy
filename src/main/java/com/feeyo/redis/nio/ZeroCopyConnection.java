@@ -11,7 +11,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -36,8 +35,6 @@ public class ZeroCopyConnection extends ClosableConnection {
 	//
 	private static final int BUF_SIZE =  1024 ; // 1024 * 1024 * 2;  
 	
-
-	protected ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<ByteBuffer>();
 	protected AtomicBoolean rwLock = new AtomicBoolean(false); 
 
     // 映射的文件
@@ -166,9 +163,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 	@Override
 	public void write(ByteBuffer buf) {
 		
-		buf.flip();
-		writeQueue.offer( buf );
-
+	
 		try {
 			
 			// 
@@ -178,20 +173,50 @@ public class ZeroCopyConnection extends ClosableConnection {
 				}
 			}
 			
-			ByteBuffer tmpBuf;
-			while ((tmpBuf = writeQueue.poll()) != null) {
+			buf.flip();
+			if ( buf.limit() <= BUF_SIZE ) {
 				
 				mappedByteBuffer.clear();
 				
 				int position = 0;
-				int count = fileChannel.write(tmpBuf, position);
-				if ( tmpBuf.hasRemaining() ) {
-					throw new IOException("can't write whole buffer ,writed " + count + " remains " + tmpBuf.remaining());
+				int count = fileChannel.write(buf, position);
+				if ( buf.hasRemaining() ) {
+					throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
 				}
 				
 				write0(position, count);
+				
+				
+			} else {
+				
+				// 
+				int bufSize = buf.limit();
+				
+				int cnt = ( bufSize / BUF_SIZE ) + ( bufSize % BUF_SIZE > 0 ? 1 : 0);
+				int postion = 0;
+				for (int i = 0; i < cnt; i++) {
+					
+					int limit = BUF_SIZE * i;
+					if ( limit > bufSize ) {
+						limit = bufSize - postion;
+					}
+					
+					buf.position( postion ); 
+					buf.limit( limit ); 
+					ByteBuffer tmpBuf = buf.slice();
+					
+					mappedByteBuffer.clear();
+					
+					int count = fileChannel.write(tmpBuf, 0);
+					if ( tmpBuf.hasRemaining() ) {
+						throw new IOException("can't write whole buffer ,writed " + count + " remains " + tmpBuf.remaining());
+					}
+					
+					int tranfered = write0(0, count);
+					postion += tranfered;
+				}
 			}
-			
+	
 			
 		} catch (IOException e) {
 			LOGGER.error("write err:", e);
