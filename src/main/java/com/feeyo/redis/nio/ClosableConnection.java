@@ -32,7 +32,7 @@ public abstract class ClosableConnection {
 	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
 	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
 	
-	// NESTED 
+	// 支持 backend conn 内嵌套 
 	//
 	protected boolean isNested = false;
 	protected ClosableConnection parent = null;

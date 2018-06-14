@@ -20,10 +20,10 @@ import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.JavaUtils;
 
 /**
- * ZeroCopy
- * 
- * @see http://osxdaily.com/2007/03/23/create-a-ram-disk-in-mac-os-x/
- * 
+ *	ZeroCopy
+ *
+ *	diskutil list 
+ *
  * @author zhuam
  */
 public class ZeroCopyConnection extends ClosableConnection {
