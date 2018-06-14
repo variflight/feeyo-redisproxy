@@ -33,7 +33,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 	private static final boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
 	
 	//
-	private static final int BUF_SIZE =  1024 ; // 1024 * 1024 * 2;  
+	private static final int BUF_SIZE =  50 ; // 1024 * 1024 * 2;  
 	
 	protected AtomicBoolean rwLock = new AtomicBoolean(false); 
 
@@ -173,8 +173,11 @@ public class ZeroCopyConnection extends ClosableConnection {
 				}
 			}
 			
+			//
 			buf.flip();
-			if ( buf.limit() <= BUF_SIZE ) {
+			
+			int bufSize = buf.limit();
+			if ( bufSize <= BUF_SIZE ) {
 				
 				mappedByteBuffer.clear();
 				
@@ -190,15 +193,13 @@ public class ZeroCopyConnection extends ClosableConnection {
 			} else {
 				
 				// 
-				int bufSize = buf.limit();
-				
 				int cnt = ( bufSize / BUF_SIZE ) + ( bufSize % BUF_SIZE > 0 ? 1 : 0);
 				int postion = 0;
-				for (int i = 0; i < cnt; i++) {
+				for (int i = 1; i <= cnt; i++) {
 					
 					int limit = BUF_SIZE * i;
 					if ( limit > bufSize ) {
-						limit = bufSize - postion;
+						limit = bufSize;
 					}
 					
 					buf.position( postion ); 
