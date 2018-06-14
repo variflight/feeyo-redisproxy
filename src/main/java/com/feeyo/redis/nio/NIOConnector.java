@@ -99,7 +99,7 @@ public final class NIOConnector extends Thread {
 		ClosableConnection c = (ClosableConnection) att;
 		try {
 			 //做原生NIO连接是否完成的判断和操作
-			if (finishConnect(c, (SocketChannel) c.socketChannel)) {
+			if (finishConnect(c, (SocketChannel) c.getSocketChannel())) {
 				clearSelectionKey(key);
 				//c.setId( ConnectIdGenerator.getINSTNCE().getId() );
 				
@@ -108,6 +108,7 @@ public final class NIOConnector extends Thread {
 				reactor.postRegister(c);
 			}
 		} catch (Throwable e) {
+			e.printStackTrace();
 			
 			String host = "";
 			int port = 0;
