@@ -86,7 +86,7 @@ public final class NIOConnector extends Thread {
 				//注册OP_CONNECT监听与后端连接是否真正建立
 				channel.register(selector, SelectionKey.OP_CONNECT, c);
 				 //主动连接
-				channel.connect(new InetSocketAddress(c.host, c.port));
+				channel.connect(new InetSocketAddress(c.getHost(), c.getPort()));
 			} catch (Exception e) {
 				LOGGER.error("error:", e);
 				c.close("connect failed:" + e.toString());
