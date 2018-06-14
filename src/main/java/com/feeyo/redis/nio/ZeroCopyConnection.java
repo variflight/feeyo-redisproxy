@@ -191,12 +191,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 				int count = fileChannel.write(buf, position);
 				if ( buf.hasRemaining() ) {
 					throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
-					
-				} else {
-					// recycle
-					NetSystem.getInstance().getBufferPool().recycle(buf);
 				}
-				
 				int tranfered = write0(position, count);
 				
 				// 
@@ -204,6 +199,8 @@ public class ZeroCopyConnection extends ClosableConnection {
 				netOutBytes += tranfered;
 				lastWriteTime = TimeUtil.currentTimeMillis();
 				
+				// recycle
+				NetSystem.getInstance().getBufferPool().recycle(buf);
 				
 			} else {
 				
