@@ -39,7 +39,7 @@ public class NetSystem {
 	
 	private final int TIMEOUT = 1000 * 60 * 5; //5分钟
 	
-	private final ConcurrentHashMap<Long, AbstractConnection> allConnections;
+	private final ConcurrentHashMap<Long, ClosableConnection> allConnections;
 	private SystemConfig netConfig;
 	private NIOConnector connector;
 
@@ -52,7 +52,7 @@ public class NetSystem {
 		this.bufferPool = bufferPool;
 		this.businessExecutor = businessExecutor;
 		this.timerExecutor = timerExecutor;
-		this.allConnections = new ConcurrentHashMap<Long, AbstractConnection>();
+		this.allConnections = new ConcurrentHashMap<Long, ClosableConnection>();
 		INSTANCE = this;
 	}
 
@@ -87,7 +87,7 @@ public class NetSystem {
 	/**
 	 * 添加一个连接到系统中被监控
 	 */
-	public void addConnection(AbstractConnection c) {
+	public void addConnection(ClosableConnection c) {
 		
 		if ( LOGGER.isDebugEnabled() ) {
 			LOGGER.debug("add:" + c);
@@ -96,7 +96,7 @@ public class NetSystem {
 		allConnections.put(c.getId(), c);
 	}
 	
-	public void removeConnection(AbstractConnection c) {
+	public void removeConnection(ClosableConnection c) {
 		
 		if ( LOGGER.isDebugEnabled() ) {
 			LOGGER.debug("remove:" + c);
@@ -105,7 +105,7 @@ public class NetSystem {
 		this.allConnections.remove( c.getId() );
 	}
 
-	public ConcurrentMap<Long, AbstractConnection> getAllConnectios() {
+	public ConcurrentMap<Long, ClosableConnection> getAllConnectios() {
 		return allConnections;
 	}
 
@@ -115,9 +115,9 @@ public class NetSystem {
 	 * 定时执行该方法，回收部分资源。
 	 */
 	public void checkConnections() {
-		Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
+		Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 		while (it.hasNext()) {
-			AbstractConnection c = it.next().getValue();
+			ClosableConnection c = it.next().getValue();
 			// 删除空连接
 			if (c == null) {
 				it.remove();
@@ -152,7 +152,7 @@ public class NetSystem {
 			} else {
 
 				// very important ,for some data maybe not sent
-				if ( c.isConnected() && !c.writeQueue.isEmpty() ) {
+				if ( c.isConnected() ) {
 					c.doNextWriteCheck();
 				}
 
@@ -161,7 +161,7 @@ public class NetSystem {
 		}
 	}
 	
-	public void setSocketParams(AbstractConnection con, boolean isFrontChannel) throws IOException {
+	public void setSocketParams(ClosableConnection con, boolean isFrontChannel) throws IOException {
 		//int sorcvbuf = 0;
 		int sosndbuf = 0;
 		

@@ -38,13 +38,13 @@ public final class NIOReactor {
 		new Thread(reactorR, name + "-RW").start();
 	}
 
-	final void postRegister(AbstractConnection c) {
+	final void postRegister(ClosableConnection c) {
 		c.setReactor( this.name );
 		reactorR.pendingQueue.offer(c);
 		reactorR.selector.wakeup();
 	}
 
-	final Queue<AbstractConnection> getRegisterQueue() {
+	final Queue<ClosableConnection> getRegisterQueue() {
 		return reactorR.pendingQueue;
 	}
 
@@ -57,12 +57,12 @@ public final class NIOReactor {
 	private final class RW implements Runnable {
 		
 		private final Selector selector;
-		private final ConcurrentLinkedQueue<AbstractConnection> pendingQueue;
+		private final ConcurrentLinkedQueue<ClosableConnection> pendingQueue;
 		private long reactCount;
         
 		private RW() throws IOException {
 			this.selector = Selector.open();
-			this.pendingQueue = new ConcurrentLinkedQueue<AbstractConnection>();  
+			this.pendingQueue = new ConcurrentLinkedQueue<ClosableConnection>();  
 		}
 
 		@Override
@@ -96,14 +96,14 @@ public final class NIOReactor {
 					ioTimes++;
 					for (final SelectionKey key : keys) {
 
-						AbstractConnection con = null;
+						ClosableConnection con = null;
 						
 						try {
 							
 							Object att = key.attachment();
 							if ( att != null ) {
 								
-								con = (AbstractConnection) att;
+								con = (ClosableConnection) att;
 								
 								int ops = key.readyOps();
 								
@@ -158,7 +158,7 @@ public final class NIOReactor {
 		
 		// 注册 IO 读写事件
 		private void processPendingQueue(Selector selector) {
-			AbstractConnection c = null;
+			ClosableConnection c = null;
 			while ((c = pendingQueue.poll()) != null) {
 				try {
 					c.register(selector);

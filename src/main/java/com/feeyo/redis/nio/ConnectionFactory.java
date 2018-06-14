@@ -8,6 +8,6 @@ import java.nio.channels.SocketChannel;
  */
 public abstract class ConnectionFactory {
 
-	public abstract AbstractConnection make(SocketChannel channel) throws IOException;
+	public abstract ClosableConnection make(SocketChannel channel) throws IOException;
 	
 }

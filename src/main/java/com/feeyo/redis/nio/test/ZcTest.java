@@ -12,7 +12,7 @@ import com.feeyo.redis.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.util.ExecutorUtil;
 import com.feeyo.util.Log4jInitializer;
 
-public class ZeroCopyTest {
+public class ZcTest {
 	
 	public static void main(String[] args) throws IOException {
 		
@@ -34,7 +34,7 @@ public class ZeroCopyTest {
 		
 		
 		
-		ConnectionFactory factory = new ZeroCopyConnectionFactory();
+		ConnectionFactory factory = new ZcConnectionFactory();
 		NIOReactorPool reactorPool = new NIOReactorPool("nio", 1);
 		
 		final NIOAcceptor acceptor = new NIOAcceptor(name, bindIp, port, factory, reactorPool);

@@ -64,12 +64,13 @@ public class KafkaPool extends AbstractPool {
 		String poolName = poolCfg.getName();
 		int minCon = poolCfg.getMinCon();
 		int maxCon = poolCfg.getMaxCon();
+		boolean isZeroCopy = poolCfg.isZeroCopy();
 
 		availableHostList.clear();
 		backupHostList.clear();
 		for (Node node : nodes) {
 			PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
-					poolType, poolName, minCon, maxCon, node.host(), node.port());
+					poolType, poolName, minCon, maxCon, node.host(), node.port(), isZeroCopy );
 			physicalNode.initConnections();
 			physicalNodes.put(node.id(), physicalNode);
 
@@ -211,10 +212,11 @@ public class KafkaPool extends AbstractPool {
 				String poolName = poolCfg.getName();
 				int minCon = poolCfg.getMinCon();
 				int maxCon = poolCfg.getMaxCon();
+				boolean isZeroCopy = poolCfg.isZeroCopy();
 
 				for (Node node : nodes) {
 					PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
-							poolType, poolName, minCon, maxCon, node.host(), node.port());
+							poolType, poolName, minCon, maxCon, node.host(), node.port(), isZeroCopy);
 					newPhysicalNodes.put(node.id(), physicalNode);
 				}
 				

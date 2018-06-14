@@ -5,7 +5,6 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.net.Connection;
 import com.feeyo.redis.nio.NetSystem;
 import com.feeyo.redis.nio.util.TimeUtil;
 
@@ -14,7 +13,7 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * @author zhuam
  *
  */
-public class RedisFrontConnection extends Connection {
+public class RedisFrontConnection extends FrontConnection {
 	
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
@@ -38,7 +37,7 @@ public class RedisFrontConnection extends Connection {
 	}
 	
 	@Override
-	protected void asynRead() throws IOException {
+	public void asynRead() throws IOException {
 		
 		// 流量超标，执行流量清洗
 		if ( netFlowMonitor != null && netFlowMonitor.isOverproof() && isFlowLimit()) {

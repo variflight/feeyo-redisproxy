@@ -1,10 +1,8 @@
 package com.feeyo.redis.nio;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -15,38 +13,13 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
- * @author wuzh
+ * new connection
+ * 
  * @author zhuam
  */
-public abstract class AbstractConnection implements ClosableConnection {
+public class Connection extends ClosableConnection {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( AbstractConnection.class );
-	
-	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
-	public enum Direction {
-		in, out
-	}
-
-	public static final int STATE_CONNECTING = 0;
-	public static final int STATE_CONNECTED = 1;
-	public static final int STATE_CLOSING = -1;
-	public static final int STATE_CLOSED = -2;
-
-	protected String host;
-	protected int port;
-	protected int localPort;
-	protected long id;
-	protected String reactor;
-	protected Object attachement;
-	protected int state = STATE_CONNECTING;
-
-	protected Direction direction = Direction.out;
-
-	protected final SocketChannel socketChannel;
-	protected SelectionKey processKey;
-	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
-	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
-	
+	private static Logger LOGGER = LoggerFactory.getLogger( Connection.class );
 	
 	protected volatile ByteBuffer readBuffer;  //读缓冲区
 	protected volatile ByteBuffer writeBuffer; //写缓冲区 及 queue
@@ -60,117 +33,10 @@ public abstract class AbstractConnection implements ClosableConnection {
 	
 	protected static final int maxCapacity = 1024 * 1024 * 16;			// 最大 16 兆
 	
-	protected final AtomicBoolean isClosed;
-	protected boolean isSocketClosed;
-	
-	protected long startupTime;
-	protected long lastReadTime;
-	protected long lastWriteTime;
-	protected long closeTime;											// debug
-	protected String closeReason = null;
-	
-																		//
-	protected long netInCounter;
-	protected long netInBytes;											
-	
-	protected long netOutCounter;
-	protected long netOutBytes;
-	
-	protected int writeAttempts;
-	
-	private long idleTimeout;
-	
-	@SuppressWarnings("rawtypes")
-	protected NIOHandler handler;
-	
-	protected NetFlowMonitor netFlowMonitor;
 
-	public AbstractConnection(SocketChannel socketChannel) {
-		this.socketChannel = socketChannel;
-		this.isClosed = new AtomicBoolean(false);
-		this.startupTime = TimeUtil.currentTimeMillis();
-		this.lastReadTime = startupTime;
-		this.lastWriteTime = startupTime;
-		this.id = ConnectIdGenerator.getINSTNCE().getId();
+	public Connection(SocketChannel socketChannel) {
+		super(socketChannel);
 	}
-
-	public long getIdleTimeout() {
-		return idleTimeout;
-	}
-
-	public void setIdleTimeout(long idleTimeout) {
-		this.idleTimeout = idleTimeout;
-	}
-	
-
-	public String getHost() {
-		return host;
-	}
-
-	public void setHost(String host) {
-		this.host = host;
-	}
-
-	public int getPort() {
-		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	public long getId() {
-		return id;
-	}
-
-	public int getLocalPort() {
-		return localPort;
-	}
-
-	public void setLocalPort(int localPort) {
-		this.localPort = localPort;
-	}
-
-	public void setId(long id) {
-		this.id = id;
-	}
-
-	public boolean isIdleTimeout() {
- 		return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + idleTimeout;
-	}
-
-	public SocketChannel getSocketChannel() {
-		return socketChannel;
-	}
-
-	public long getStartupTime() {
-		return startupTime;
-	}
-
-	public long getLastReadTime() {
-		return lastReadTime;
-	}
-
-	public long getLastWriteTime() {
-		return lastWriteTime;
-	}
-	
-	public long getNetInBytes() {
-		return netInBytes;
-	}
-	
-	public long getNetInCounter() {
-		return netInCounter;
-	}
-
-	public long getNetOutBytes() {
-		return netOutBytes;
-	}
-
-	public long getNetOutCounter() {
-		return netOutCounter;
-	}
-
 
 	// 最后扩容时间
 	public long getLastLargeMessageTime() {
@@ -182,70 +48,8 @@ public abstract class AbstractConnection implements ClosableConnection {
 		return largeCounter;
 	}
 
-	public void setHandler(NIOHandler<? extends AbstractConnection> handler) {
-		this.handler = handler;
-	}
-
-	@SuppressWarnings("rawtypes")
-	public NIOHandler getHandler() {
-		return this.handler;
-	}
-	
-	public void setNetFlowMonitor(NetFlowMonitor nfm) {
-		this.netFlowMonitor = nfm;
-	}
-
-	public boolean isConnected() {
-		boolean isConnected = (this.state != STATE_CONNECTING && state != STATE_CLOSING && state != STATE_CLOSED);
-		return isConnected;
-	}
-
-	@SuppressWarnings("unchecked")
-	public void close(String reason) {
-		//
-		if ( !isClosed.get() ) {
-			
-			closeSocket();
-			isClosed.set(true);
-			
-			this.closeTime = TimeUtil.currentTimeMillis();
-			if ( reason != null ) 
-				this.closeReason = reason;
-			
-			this.cleanup();		
-			NetSystem.getInstance().removeConnection(this);
-			
-			if ( LOGGER.isDebugEnabled() ) {
-				LOGGER.debug("close connection, reason:" + reason + " ," + this.toString());
-			}
-			
-			if (handler != null) {
-				handler.onClosed(this, reason);
-			}
-			
-			this.attachement = null; //help GC
-			
-		} else {
-		    this.cleanup();
-		}
-	}
-
-	public boolean isClosed() {
-		return isClosed.get();
-	}
-
-	public void idleCheck() {		
-		if ( isIdleTimeout() ) {			
-			if ( LOGGER.isDebugEnabled() ) {
-				LOGGER.debug(toString() + " idle timeout");
-			}
-			close("idle timeout ");
-		}
-	}
-
-	/**
-	 * 清理资源
-	 */
+	// 清理资源
+	@Override
 	protected void cleanup() {
 		
 		if (readBuffer != null) {
@@ -264,42 +68,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 		}
 	}
 	
-	private void clearSelectionKey() {
-		try {
-			SelectionKey key = this.processKey;
-			if (key != null && key.isValid()) {
-				key.attach(null);
-				key.cancel();
-			}
-		} catch (Exception e) {
-			LOGGER.warn("clear selector keys err:" + e);
-		}
-	}
-
-
-	@SuppressWarnings("unchecked")
-	public void register(Selector selector) throws IOException {
-		try {	
-			processKey = socketChannel.register(selector, SelectionKey.OP_READ, this);
-			
-			if ( LOGGER.isDebugEnabled() ) {
-				LOGGER.debug("register:" + this);
-			}
-			
-			// 已连接、默认不需要认证
-	        this.setState( AbstractConnection.STATE_CONNECTED );  
-			NetSystem.getInstance().addConnection(this);
-
-			// 往后通知
-			this.handler.onConnected(this);
-			
-		} finally {
-			if ( isClosed() ) {
-				clearSelectionKey();
-			}
-		}
-	}
-	
 	// 内部
 	private ByteBuffer allocate(int chunkSize) {
 		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( chunkSize );
@@ -310,13 +78,19 @@ public abstract class AbstractConnection implements ClosableConnection {
 		NetSystem.getInstance().getBufferPool().recycle(buffer);
 	}
 	
-	
+	@Override
 	public void doNextWriteCheck() {
 		
 		//检查是否正在写,看CAS更新writing值是否成功
 		if ( !writing.compareAndSet(false, true) ) {
 			return;
 		}
+		
+		// you need sure write queue is not empty
+		if ( writeQueue.isEmpty() ) {
+			return;
+		}
+		
 		
 		try {
 			//利用缓存队列和写缓冲记录保证写的可靠性，返回true则为全部写入成功
@@ -370,6 +144,7 @@ public abstract class AbstractConnection implements ClosableConnection {
 	}
 
 	// data ->  N 个 minChunk buffer
+	@Override
 	public void write(byte[] data) {
 		if (data == null)
 			return;
@@ -385,9 +160,10 @@ public abstract class AbstractConnection implements ClosableConnection {
 		data = null;
 	}
 
-	public void write(ByteBuffer srcBuffer) {
+	@Override
+	public void write(ByteBuffer data) {
 		
-		this.writeQueue.offer( srcBuffer );
+		this.writeQueue.offer( data );
 		
 		try {
 			this.doNextWriteCheck();
@@ -466,80 +242,13 @@ public abstract class AbstractConnection implements ClosableConnection {
 		return true;
 	}
 
-	protected void disableWrite() {
-		try {
-			SelectionKey key = this.processKey;
-			key.interestOps(key.interestOps() & OP_NOT_WRITE);
-		} catch (Exception e) {
-			LOGGER.warn("can't disable write " + this, e);
-		}
-	}
-
-	protected void enableWrite(boolean wakeup) {
-		boolean needWakeup = false;
-		try {
-			SelectionKey key = this.processKey;
-			key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-			needWakeup = true;
-		} catch (Exception e) {
-			LOGGER.warn("can't enable write: ", e);
-		}
-		
-		if (needWakeup && wakeup) {
-			processKey.selector().wakeup();
-		}
-	}
-	
-	public void setReactor(String reactorName) {
-		this.reactor = reactorName;
-	}
-
-	public String getReactor() {
-		return this.reactor;
-	}
-
-	public boolean belongsReactor(String reacotr) {
-		return reactor.equals(reacotr);
-	}
-
-	public Object getAttachement() {
-		return attachement;
-	}
-
-	public void setAttachement(Object attachement) {
-		this.attachement = attachement;
-	}
-
-	public void disableRead() {
-		SelectionKey key = this.processKey;
-		key.interestOps(key.interestOps() & OP_NOT_READ);
-	}
-
-	public void enableRead() {
-		boolean needWakeup = false;
-		try {
-			SelectionKey key = this.processKey;
-			key.interestOps(key.interestOps() | SelectionKey.OP_READ);
-			needWakeup = true;
-		} catch (Exception e) {
-			LOGGER.warn("enable read fail ", e);
-		}
-		
-		if (needWakeup) {
-			processKey.selector().wakeup();
-		}
-	}
-
-	public void setState(int newState) {
-		
-		this.state = newState;
-	}
 
 	/**
 	 * 异步读取,该方法在 reactor 中被调用
 	 */
 	@SuppressWarnings("unchecked")
-	protected void asynRead() throws IOException {
+	@Override
+	public void asynRead() throws IOException {
 		
 		if (isClosed.get()) {
 			return;
@@ -667,57 +376,6 @@ public abstract class AbstractConnection implements ClosableConnection {
 			reading.set(false);	
 		}
 
-	}
-
-	protected void closeSocket() {
-		if ( socketChannel != null ) {		
-			
-			if (socketChannel instanceof SocketChannel) {
-				Socket socket = ((SocketChannel) socketChannel).socket();
-				if (socket != null) {
-					try {
-						socket.close();
-					} catch (IOException e) {
-						LOGGER.error("closeChannelError", e);
-					}
-				}
-			}			
-			
-			boolean isSocketClosed = true;
-			try {
-				processKey.cancel();
-				socketChannel.close();
-			} catch (Throwable e) {
-			}			
-			boolean closed = isSocketClosed && (!socketChannel.isOpen());
-			if (!closed) {
-				LOGGER.warn("close socket of connnection failed " + this);
-			}
-		}
-	}
-
-	public int getState() {
-		return state;
-	}
-
-	public Direction getDirection() {
-		return direction;
-	}
-
-	public void setDirection(AbstractConnection.Direction in) {
-		this.direction = in;
-	}
-	
-	
-	@Override
-	public boolean isFlowLimit() {
-		return false;
-	}
-
-	@Override
-	public void flowClean() {
-		LOGGER.warn("Flow cleaning,  {}", this );
-		// ignore
 	}
 
 	@Override

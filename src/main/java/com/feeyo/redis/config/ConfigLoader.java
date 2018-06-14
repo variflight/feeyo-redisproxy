@@ -84,12 +84,13 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
+				boolean isZeroCopy = getBooleanAttribute(nameNodeMap, "isZeroCopy", false);
 				
 				PoolCfg poolCfg;
 				if (type == 3) {
-					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon);
+					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon, isZeroCopy);
 				} else {
-					poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
+					poolCfg = new PoolCfg(id, name, type, minCon, maxCon, isZeroCopy);
 				}
 				
 				List<Node> nodeList = getChildNodes(nodesElement, "node");

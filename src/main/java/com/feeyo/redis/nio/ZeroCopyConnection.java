@@ -11,6 +11,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -26,18 +27,22 @@ import com.feeyo.redis.nio.util.TimeUtil;
  * 
  * @author zhuam
  */
-public abstract class AbstractZeroCopyConnection extends AbstractConnection {
+public class ZeroCopyConnection extends ClosableConnection {
 	
-	private static Logger LOGGER = LoggerFactory.getLogger( AbstractZeroCopyConnection.class );
+	private static Logger LOGGER = LoggerFactory.getLogger( ZeroCopyConnection.class );
 	
 	private static final boolean IS_LINUX = System.getProperty("os.name").toUpperCase().startsWith("LINUX");
 	
 	//
 	private static final int BUF_SIZE =  1024 ; // 1024 * 1024 * 2;  
+	
 	// rw lock
 	protected AtomicBoolean LOCK = new AtomicBoolean(false); 
 	
-	//
+	protected ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<ByteBuffer>();
+	protected AtomicBoolean reading = new AtomicBoolean(false);
+	protected AtomicBoolean writing = new AtomicBoolean(false);
+
 	
     // 映射的文件
 	private String fileName;
@@ -49,7 +54,7 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 	private MappedByteBuffer mappedByteBuffer;
 
 	//
-	public AbstractZeroCopyConnection(SocketChannel channel) {
+	public ZeroCopyConnection(SocketChannel channel) {
 
 		super(channel);
 
@@ -79,12 +84,11 @@ public abstract class AbstractZeroCopyConnection extends AbstractConnection {
 		
 	}
 
-	/**
-	 * 异步读取,该方法在 reactor 中被调用
-	 */
+	// 异步读取,该方法在 reactor 中被调用
+	//
 	@SuppressWarnings("unchecked")
 	@Override
-	protected void asynRead() throws IOException {
+	public void asynRead() throws IOException {
 		
 		if (isClosed.get()) {
 			return;
