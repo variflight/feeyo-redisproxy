@@ -155,36 +155,33 @@ public class ZeroCopyConnection extends ClosableConnection {
 
 	@Override
 	public void write(byte[] buf) {
+		
 		write( ByteBuffer.wrap(buf) );
 	}
 
 	@Override
 	public void write(ByteBuffer buf) {
 		
-		writeQueue.offer(buf);
-		
-		write();
-	}
+		writeQueue.offer( buf );
 
-	private void write() {
-		
 		try {
 			
-			while (true) {
+			// 
+			for (;;) {
 				if ( !rwLock.compareAndSet(false, true) ) {
 					break;
 				}
 			}
 			
-			ByteBuffer buf;
-			
-			while ((buf = writeQueue.poll()) != null) {
+			ByteBuffer tmpBuf;
+			while ((tmpBuf = writeQueue.poll()) != null) {
+				
 				mappedByteBuffer.clear();
 				
 				int position = 0;
-				int count = fileChannel.write(buf, position);
-				if ( buf.hasRemaining() ) {
-					throw new IOException("can't write whole buffer ,writed " + count + " remains " + buf.remaining());
+				int count = fileChannel.write(tmpBuf, position);
+				if ( tmpBuf.hasRemaining() ) {
+					throw new IOException("can't write whole buffer ,writed " + count + " remains " + tmpBuf.remaining());
 				}
 				
 				write0(position, count);
@@ -192,14 +189,15 @@ public class ZeroCopyConnection extends ClosableConnection {
 			
 			
 		} catch (IOException e) {
-			e.printStackTrace();
+			LOGGER.error("write err:", e);
+			this.close("write err:" + e);
+			
 		} finally {
 			rwLock.set(false);
-			if (!writeQueue.isEmpty()) {
-				write();
-			}
 		}
 	}
+
+
 	
 	private int write0(int position, int count) throws IOException {
 
