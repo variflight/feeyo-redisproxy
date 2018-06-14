@@ -108,7 +108,6 @@ public final class NIOConnector extends Thread {
 				reactor.postRegister(c);
 			}
 		} catch (Throwable e) {
-			e.printStackTrace();
 			
 			String host = "";
 			int port = 0;
@@ -116,7 +115,7 @@ public final class NIOConnector extends Thread {
 				host = c.getHost();
 				port = c.getPort();
 			}
-			LOGGER.warn("caught err : host={}, port={}, Exception={}", new Object[] {host, port, e});
+			LOGGER.warn("caught err : host=" + host + ":" + port, e);
 			
 			//异常, 将key清空
 			clearSelectionKey(key);
