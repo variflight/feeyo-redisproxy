@@ -21,9 +21,12 @@ import com.feeyo.redis.nio.ZeroCopyConnection;
  */
 public class BackendConnection extends ClosableConnection {
 	
-	private boolean isZeroCopy = false;
+	// Delegate connection
+	//
 	private ClosableConnection delegateConn;
+	private boolean isZeroCopy = false;
 
+	//
 	protected BackendCallback callback;
     protected PhysicalNode physicalNode;
     
@@ -42,7 +45,6 @@ public class BackendConnection extends ClosableConnection {
 		
 		this.isZeroCopy = true;
 	}
-	
 	
 	// 
 	//
@@ -324,28 +326,16 @@ public class BackendConnection extends ClosableConnection {
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Con [reactor=").append( reactor );
-		sbuffer.append(", host=").append( host ).append("/").append( port );
-		sbuffer.append(", id=").append( id );
+		sbuffer.append( "Backend ").append( reactor );
+		sbuffer.append(", delegateConn=" ).append( delegateConn.toString() );
 		sbuffer.append(", borrowed=").append( borrowed );
-		sbuffer.append(", startup=").append( startupTime );
-		sbuffer.append(", lastRT=").append( lastReadTime );
-		sbuffer.append(", lastWT=").append( lastWriteTime );
-		sbuffer.append(", attempts=").append( writeAttempts );	//
-		sbuffer.append(", cc=").append( netInCounter ).append("/").append( netOutCounter );	//
+		
 		if ( heartbeatTime > 0 ) {
 			sbuffer.append(", HT=").append( heartbeatTime );
 		}
 		
-		if ( isClosed.get() ) {
-			sbuffer.append(", isClosed=").append( isClosed );
-			sbuffer.append(", closedTime=").append( closeTime );
-			sbuffer.append(", closeReason=").append( closeReason );
-		}
-		
 		// zero copy
 		sbuffer.append(", isZeroCopy=").append( isZeroCopy );
-		sbuffer.append("]");
 		return  sbuffer.toString();
 	}
 	

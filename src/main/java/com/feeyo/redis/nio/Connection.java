@@ -380,6 +380,7 @@ public class Connection extends ClosableConnection {
 
 	@Override
 	public String toString() {
+		
 		StringBuffer sbuffer = new StringBuffer(100);
 		sbuffer.append( "Connection [ " );
 		sbuffer.append(", reactor=").append( reactor );
@@ -390,7 +391,14 @@ public class Connection extends ClosableConnection {
 		sbuffer.append(", lastRT=").append( lastReadTime );
 		sbuffer.append(", lastWT=").append( lastWriteTime );
 		sbuffer.append(", attempts=").append( writeAttempts );	//
-		sbuffer.append(", isClosed=").append( isClosed );
+		sbuffer.append(", cc=").append( netInCounter ).append("/").append( netOutCounter );	
+		
+		if ( isClosed.get() ) {
+			sbuffer.append(", isClosed=").append( isClosed );
+			sbuffer.append(", closedTime=").append( closeTime );
+			sbuffer.append(", closeReason=").append( closeReason );
+		}
+		
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}
