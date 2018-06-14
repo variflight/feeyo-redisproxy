@@ -3,10 +3,10 @@ package com.feeyo.redis.net.front;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import com.feeyo.net.nio.Connection;
+import com.feeyo.net.nio.ConnectionFactory;
+import com.feeyo.net.nio.NetSystem;
 import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.nio.Connection;
-import com.feeyo.redis.nio.ConnectionFactory;
-import com.feeyo.redis.nio.NetSystem;
 
 /**
  * 

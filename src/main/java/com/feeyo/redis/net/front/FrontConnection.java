@@ -3,7 +3,7 @@ package com.feeyo.redis.net.front;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import com.feeyo.redis.nio.Connection;
+import com.feeyo.net.nio.Connection;
 
 public class FrontConnection extends Connection {
 

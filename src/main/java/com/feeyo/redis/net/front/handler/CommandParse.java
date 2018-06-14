@@ -3,7 +3,7 @@ package com.feeyo.redis.net.front.handler;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.feeyo.redis.net.codec.RedisRequestPolicy;
+import com.feeyo.net.codec.RedisRequestPolicy;
 
 /**
  * 

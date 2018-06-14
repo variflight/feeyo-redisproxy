@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.feeyo.redis.nio.util.TimeUtil;
+import com.feeyo.net.nio.util.TimeUtil;
 
 // 
 public class BigKeyCollector implements StatCollector {

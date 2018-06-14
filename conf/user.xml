@@ -8,6 +8,6 @@
 	 -->
 	  
 	 
-	<user password="pwd04" poolId="3" prefix="" selectDb="-1" isAdmin="1"/>
-	<user password="pwd05" poolId="3" prefix="" selectDb="1" flowlimit="false" />
+	<user password="pwd04" poolId="1" prefix="" selectDb="-1" isAdmin="1"/>
+	<user password="pwd05" poolId="1" prefix="" selectDb="1" flowlimit="false" />
 </redis>

@@ -21,13 +21,13 @@ import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
+import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.nio.NetSystem;
-import com.feeyo.redis.nio.util.TimeUtil;
 import com.google.common.collect.Sets;
 
 public class KafkaPool extends AbstractPool {

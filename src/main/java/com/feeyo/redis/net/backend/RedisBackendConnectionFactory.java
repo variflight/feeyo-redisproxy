@@ -3,10 +3,10 @@ package com.feeyo.redis.net.backend;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import com.feeyo.net.nio.NetSystem;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.nio.NetSystem;
 
 public class RedisBackendConnectionFactory implements BackendConnectionFactory {
 

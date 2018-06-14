@@ -5,10 +5,10 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.feeyo.net.nio.ClosableConnection;
+import com.feeyo.net.nio.NetSystem;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.nio.ClosableConnection;
-import com.feeyo.redis.nio.NetSystem;
 
 public class ConQueue {
 

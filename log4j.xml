@@ -57,7 +57,7 @@
 	</appender>
 
    	<root>
-		<level value="info"/>
+		<level value="debug"/>
 		<appender-ref ref="debug-out" />
 		<appender-ref ref="info-out" />
 		<appender-ref ref="warn-out" />

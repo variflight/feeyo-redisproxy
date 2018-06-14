@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.nio.NetSystem;
-import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
  * 
