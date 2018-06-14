@@ -21,7 +21,7 @@ public abstract class ClosableConnection {
 	public enum Direction {
 		in, out
 	}
-
+	
 	//
 	public static final int STATE_CONNECTING = 0;
 	public static final int STATE_CONNECTED = 1;
@@ -31,6 +31,11 @@ public abstract class ClosableConnection {
 	//
 	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
 	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
+	
+	// NESTED 
+	//
+	protected boolean isNested = false;
+	protected ClosableConnection parent = null;
 	
 	//
 	protected Direction direction = Direction.out;
@@ -84,6 +89,25 @@ public abstract class ClosableConnection {
 		this.id = ConnectIdGenerator.getINSTNCE().getId();
 	}
 	
+	//
+	public boolean isNested() {
+		return isNested;
+	}
+
+	public void setNested(boolean isNested) {
+		this.isNested = isNested;
+	}
+
+	public ClosableConnection getParent() {
+		return parent;
+	}
+
+	public void setParent(ClosableConnection parent) {
+		this.parent = parent;
+	}
+
+	
+	//
 	public long getIdleTimeout() {
 		return idleTimeout;
 	}
@@ -195,14 +219,19 @@ public abstract class ClosableConnection {
 				this.closeReason = reason;
 			
 			this.cleanup();		
-			NetSystem.getInstance().removeConnection(this);
+			
+			if ( isNested )  {
+				NetSystem.getInstance().removeConnection( parent );
+				if ( handler != null )
+					handler.onClosed(parent, reason);
+			} else {
+				NetSystem.getInstance().removeConnection(this);
+				if ( handler != null )
+					handler.onClosed(this, reason);
+			}
 			
 			if ( LOGGER.isDebugEnabled() ) {
 				LOGGER.debug("close connection, reason:" + reason + " ," + this.toString());
-			}
-			
-			if (handler != null) {
-				handler.onClosed(this, reason);
 			}
 			
 			this.attachement = null; //help GC
@@ -256,10 +285,15 @@ public abstract class ClosableConnection {
 			
 			// 已连接、默认不需要认证
 	        this.setState( Connection.STATE_CONNECTED );  
-			NetSystem.getInstance().addConnection(this);
-
-			// 往后通知
-			this.handler.onConnected(this);
+			
+	        // 支持代理 CON
+			if ( isNested ) {
+				NetSystem.getInstance().addConnection( parent );
+				this.handler.onConnected( parent );
+			} else {
+				NetSystem.getInstance().addConnection(this);
+				this.handler.onConnected(this);
+			}
 			
 		} finally {
 			if ( isClosed() ) {

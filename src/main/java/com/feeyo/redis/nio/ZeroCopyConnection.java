@@ -126,7 +126,11 @@ public class ZeroCopyConnection extends ClosableConnection {
 					System.out.println( "asynRead, tranfered="+ tranfered + ",  " + new String(data)  );
 					
 					// 负责解析报文并处理
-					handler.handleReadEvent(this, data);
+					if ( isNested )
+						handler.handleReadEvent(parent, data);
+					else
+						handler.handleReadEvent(this, data);
+					
 					break;
 					
 				} else if ( tranfered == 0 ) {

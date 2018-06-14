@@ -118,7 +118,7 @@ public final class NIOReactor {
 								if ( (ops & SelectionKey.OP_READ) == SelectionKey.OP_READ ) {									
 									try {
 										con.asynRead();
-									} catch (IOException  e) {
+									} catch (IOException e) {
 										con.close("program err:" + e.toString());										 
 										continue;
 										
@@ -163,7 +163,7 @@ public final class NIOReactor {
 				try {
 					c.register(selector);
 				} catch (Exception e) {
-					LOGGER.warn("register error ", e);
+					//LOGGER.warn("register error ", e);
 					c.close("register err");
 				}
 			}

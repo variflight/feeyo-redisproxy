@@ -43,6 +43,8 @@ public class BackendConnection extends ClosableConnection {
 			delegateConn = new Connection(socketChannel);
 		}
 		
+		delegateConn.setParent( this );
+		delegateConn.setNested( true );
 		this.isZeroCopy = true;
 	}
 	
@@ -196,7 +198,7 @@ public class BackendConnection extends ClosableConnection {
 	
 	@Override
 	public void setHandler(NIOHandler<? extends ClosableConnection> handler) {
-		delegateConn.setHandler(handler);
+		this.delegateConn.setHandler(handler);
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -220,6 +222,10 @@ public class BackendConnection extends ClosableConnection {
 	@Override
 	public void close(String reason) {
 		delegateConn.close(reason);
+		
+		// clear
+		delegateConn.setNested( false );
+		delegateConn.setParent( null );
 	}
 
 	@Override
@@ -326,8 +332,8 @@ public class BackendConnection extends ClosableConnection {
 	@Override
 	public String toString() {
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Backend ").append( reactor );
-		sbuffer.append(", delegateConn=" ).append( delegateConn.toString() );
+		sbuffer.append( "Backend con = ");
+		sbuffer.append(", delegate=" ).append( delegateConn.toString() );
 		sbuffer.append(", borrowed=").append( borrowed );
 		
 		if ( heartbeatTime > 0 ) {

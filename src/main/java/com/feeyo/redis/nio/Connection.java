@@ -81,16 +81,16 @@ public class Connection extends ClosableConnection {
 	@Override
 	public void doNextWriteCheck() {
 		
-		//检查是否正在写,看CAS更新writing值是否成功
-		if ( !writing.compareAndSet(false, true) ) {
-			return;
-		}
 		
 		// you need sure write queue is not empty
 		if ( writeQueue.isEmpty() ) {
 			return;
 		}
 		
+		//检查是否正在写,看CAS更新writing值是否成功
+		if ( !writing.compareAndSet(false, true) ) {
+			return;
+		}
 		
 		try {
 			//利用缓存队列和写缓冲记录保证写的可靠性，返回true则为全部写入成功
@@ -334,7 +334,10 @@ public class Connection extends ClosableConnection {
 				byte[] data = new byte[ dataLength ];
 				readBuffer.get(data, 0, dataLength);
 
-				handler.handleReadEvent(this, data);
+				if ( isNested )
+					handler.handleReadEvent(parent, data);
+				else
+					handler.handleReadEvent(this, data);
 				
 				
 				// 存在扩大后的 byte buffer

@@ -33,12 +33,5 @@ public interface NIOHandler<T extends ClosableConnection> {
 	 * @param data 数据
 	 */
 	void handleReadEvent(T con, byte[] data) throws IOException;
-	
-	/**
-	 * 数据处理过程中发生意外错误
-	 * @param con
-	 * @param e
-	 */
-	//void onHandlerError(T con,Exception e);
 
 }
