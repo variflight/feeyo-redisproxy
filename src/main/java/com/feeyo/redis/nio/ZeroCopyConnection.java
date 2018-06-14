@@ -23,7 +23,6 @@ import com.feeyo.util.JavaUtils;
  * ZeroCopy
  * 
  * @see http://osxdaily.com/2007/03/23/create-a-ram-disk-in-mac-os-x/
- * @see https://www.ibm.com/developerworks/cn/java/j-zerocopy/
  * 
  * @author zhuam
  */
@@ -119,6 +118,10 @@ public class ZeroCopyConnection extends ClosableConnection {
 				if ( tranfered > 0 ) {
 					
 					//
+					netInBytes += tranfered;
+					netInCounter++;
+					
+					//
 					byte[] data = new byte[ tranfered ];
 					
 					mappedByteBuffer.flip();
@@ -194,7 +197,12 @@ public class ZeroCopyConnection extends ClosableConnection {
 					NetSystem.getInstance().getBufferPool().recycle(buf);
 				}
 				
-				write0(position, count);
+				int tranfered = write0(position, count);
+				
+				// 
+				netOutCounter++;
+				netOutBytes += tranfered;
+				lastWriteTime = TimeUtil.currentTimeMillis();
 				
 				
 			} else {
@@ -222,6 +230,11 @@ public class ZeroCopyConnection extends ClosableConnection {
 					
 					int tranfered = write0(0, count);
 					postion += tranfered;
+					
+					// 
+					netOutCounter++;
+					netOutBytes += tranfered;
+					lastWriteTime = TimeUtil.currentTimeMillis();
 				}
 				
 				// recycle
@@ -314,10 +327,9 @@ public class ZeroCopyConnection extends ClosableConnection {
 	public String toString() {
 		
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Conn [ " );
-		sbuffer.append(", reactor=").append( reactor );
-		sbuffer.append(", host=").append( host );
-		sbuffer.append(", port=").append( port );
+		sbuffer.append( "Conn [" );
+		sbuffer.append("reactor=").append( reactor );
+		sbuffer.append(", host=").append( host ).append(":").append( port );
 		sbuffer.append(", id=").append( id );
 		sbuffer.append(", startup=").append( startupTime );
 		sbuffer.append(", lastRT=").append( lastReadTime );

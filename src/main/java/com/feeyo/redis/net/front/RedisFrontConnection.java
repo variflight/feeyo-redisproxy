@@ -81,48 +81,6 @@ public class RedisFrontConnection extends FrontConnection {
 		super.close(reason);
 	}
 	
-	public String toSampleString() {
-		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "RedisFrontConnection [ " );
-		sbuffer.append(" reactor=").append( reactor );
-		sbuffer.append(", host=").append( host );
-		sbuffer.append(", port=").append( port );
-		sbuffer.append(", id=").append( id );
-		sbuffer.append(", isClosed=").append( isClosed );
-		sbuffer.append(", state=").append( state );
-		sbuffer.append("]");
-		return  sbuffer.toString();
-	}
-	
-	@Override
-	public String toString() {
-		StringBuffer sbuffer = new StringBuffer(200);
-		sbuffer.append( "Connection [reactor=").append( reactor );
-		sbuffer.append(", host=").append( host ).append("/").append( port );
-		sbuffer.append(", password=").append( userCfg != null ? userCfg.getPassword() : "no auth!" );	
-		sbuffer.append(", id=").append( id );
-		
-		if ( session != null) {
-			sbuffer.append(", cmd=").append( session.getRequestCmd() );
-			sbuffer.append(", key=").append( session.getRequestKey() != null ? new String( session.getRequestKey() ) : "" );
-		}
-		
-		sbuffer.append(", readLock=").append(  _readLock.get() );
-		sbuffer.append(", startupTime=").append( TimeUtil.formatTimestamp( startupTime ) );
-		sbuffer.append(", lastReadTime=").append( TimeUtil.formatTimestamp( lastReadTime ) );
-		sbuffer.append(", lastWriteTime=").append( TimeUtil.formatTimestamp( lastWriteTime ) );
-		sbuffer.append(", writeAttempts=").append( writeAttempts );	//
-		
-		if ( isClosed.get() ) {
-			sbuffer.append(", closeTime=").append( TimeUtil.formatTimestamp( closeTime ) );
-			sbuffer.append(", closeReason=").append( closeReason );
-		}
-		sbuffer.append(", isClosed=").append( isClosed.get() );
-		
-		sbuffer.append("]");
-		return  sbuffer.toString();
-	}
-	
 	public void releaseLock() {
 		_readLock.set(false);
 	}
@@ -141,4 +99,36 @@ public class RedisFrontConnection extends FrontConnection {
 		this.write(RedisFrontSession.FLOW_LIMIT);
 		this.close("flow limit");
 	}
+	
+	
+	@Override
+	public String toString() {
+		StringBuffer sbuffer = new StringBuffer(200);
+		sbuffer.append( "Conn [reactor=").append( reactor );
+		sbuffer.append(", host=").append( host ).append(":").append( port );
+		sbuffer.append(", password=").append( userCfg != null ? userCfg.getPassword() : "no auth!" );	
+		sbuffer.append(", id=").append( id );
+		
+		if ( session != null) {
+			sbuffer.append(", cmd=").append( session.getRequestCmd() );
+			sbuffer.append(", key=").append( session.getRequestKey() != null ? new String( session.getRequestKey() ) : "" );
+		}
+		
+		sbuffer.append(", readLock=").append(  _readLock.get() );
+		sbuffer.append(", startup=").append( TimeUtil.formatTimestamp( startupTime ) );
+		sbuffer.append(", lastRT=").append( TimeUtil.formatTimestamp( lastReadTime ) );
+		sbuffer.append(", lastWT=").append( TimeUtil.formatTimestamp( lastWriteTime ) );
+		sbuffer.append(", attempts=").append( writeAttempts );	//
+		
+		if ( isClosed.get() ) {
+			sbuffer.append(", isClosed=").append( isClosed.get() );
+			sbuffer.append(", closeTime=").append( TimeUtil.formatTimestamp( closeTime ) );
+			sbuffer.append(", closeReason=").append( closeReason );
+		}
+		
+		sbuffer.append("]");
+		return  sbuffer.toString();
+	}
+	
+	
 }

@@ -334,8 +334,7 @@ public class BackendConnection extends ClosableConnection {
 		StringBuffer sbuffer = new StringBuffer(100);
 		sbuffer.append( delegateConn.toString() );
 		
-		sbuffer.append(" ext [" );
-		sbuffer.append(" borrowed=").append( borrowed );
+		sbuffer.append(", ext[borrowed=").append( borrowed );
 		sbuffer.append(", isZeroCopy=").append( isZeroCopy );
 		
 		if ( heartbeatTime > 0 ) {

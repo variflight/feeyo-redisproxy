@@ -295,7 +295,7 @@ public class Connection extends ClosableConnection {
 				netInCounter++;
 				
 				// 流量检测，超过max 触发限流
-				if ( isFlowLimit() && netFlowMonitor.pool(length) ) {
+				if ( isFlowLimit() && netFlowMonitor != null && netFlowMonitor.pool(length) ) {
 					flowClean();
 					return;
 				}
@@ -385,10 +385,9 @@ public class Connection extends ClosableConnection {
 	public String toString() {
 		
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Conn [ " );
-		sbuffer.append(", reactor=").append( reactor );
-		sbuffer.append(", host=").append( host );
-		sbuffer.append(", port=").append( port );
+		sbuffer.append( "Conn [" );
+		sbuffer.append("reactor=").append( reactor );
+		sbuffer.append(", host=").append( host ).append(":").append( port );
 		sbuffer.append(", id=").append( id );
 		sbuffer.append(", startup=").append( startupTime );
 		sbuffer.append(", lastRT=").append( lastReadTime );
