@@ -39,6 +39,11 @@ public class RedisServer {
 		//System.setProperty("com.sun.management.jmxremote.ssl", "false");
 		//System.setProperty("com.sun.management.jmxremote.authenticate", "false");
 		
+		// QOS setting
+		// B1_REAL_TIME_QOS 、B1_NON_REAL_TIME_QOS
+		//System.setProperty("front.network.QOS", "B1_REAL_TIME_QOS");
+		
+		
 		// 检查 FEEYO_HOME
         if ( System.getProperty("FEEYO_HOME") == null ) {
             System.setProperty("FEEYO_HOME", System.getProperty("user.dir"));  

@@ -45,7 +45,7 @@ public class BackendConnection extends ClosableConnection {
 		
 		delegateConn.setParent( this );
 		delegateConn.setNested( true );
-		this.isZeroCopy = true;
+		this.isZeroCopy = isZeroCopy;
 	}
 	
 	// 

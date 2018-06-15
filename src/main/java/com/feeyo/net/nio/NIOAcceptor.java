@@ -15,10 +15,17 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @author wuzh
+ * @author zhuam
  */
 public final class NIOAcceptor extends Thread {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOAcceptor.class );
+	
+	// QOS
+    private static String NETWORK_QOS_FLAG = null;
+    static {
+        NETWORK_QOS_FLAG = System.getProperty("front.network.QOS");
+    }
 	
 	private final int port;
 	private final Selector selector;
@@ -36,13 +43,14 @@ public final class NIOAcceptor extends Thread {
 		this.serverChannel = ServerSocketChannel.open();
 		this.serverChannel.configureBlocking(false);
 		
-		/** 设置TCP属性 */
+		// 设置 RECV buf
 		this.serverChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
 		this.serverChannel.setOption(StandardSocketOptions.SO_RCVBUF, 1024 * 32); // 32K
 		
-		// backlog=20480
+		// backlog=2048
 		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 2048);
 		this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+		
 		this.factory = factory;
 		this.reactorPool = reactorPool;
 	}
@@ -87,7 +95,22 @@ public final class NIOAcceptor extends Thread {
 		SocketChannel channel = null;
 		try {
 			channel = serverChannel.accept();
+		    channel.socket().setTcpNoDelay( true );
 			channel.configureBlocking( false );
+			
+			// 设置QOS
+			if (NETWORK_QOS_FLAG != null) {
+				try {
+					if ("B1_REAL_TIME_QOS".equals(NETWORK_QOS_FLAG)) {
+						channel.socket().setTrafficClass(144);
+						
+					} else if ("B1_NON_REAL_TIME_QOS".equals(NETWORK_QOS_FLAG)) {
+						channel.socket().setTrafficClass(24);
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
 			
 			// 构建 Connection
 			ClosableConnection c = factory.make(channel);
