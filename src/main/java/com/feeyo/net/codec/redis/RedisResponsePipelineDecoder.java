@@ -1,16 +1,18 @@
-package com.feeyo.net.codec;
+package com.feeyo.net.codec.redis;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class RedisResponsePipelineDecoder {
+import com.feeyo.net.codec.Decoder;
+
+public class RedisResponsePipelineDecoder implements Decoder<RedisResponsePipelineDecoder.PipelineResponse> {
 
 	private byte[] _buffer;
 	private int _offset;
 	private List<Integer> index = new ArrayList<Integer>();
 	
 	// 应答
-	public class PipelineResponse {
+	public static class PipelineResponse {
 		
 		public static final byte ERR = 0;	// 不全
 		public static final byte OK = 1;
@@ -41,7 +43,8 @@ public class RedisResponsePipelineDecoder {
 	/**
 	 * 解析返回 数量、内容
 	 */
-	public PipelineResponse parse(byte[] buffer) {
+	@Override
+	public PipelineResponse decode(byte[] buffer) {
 		int result = 0;
 		append(buffer);
 		try {
@@ -273,7 +276,7 @@ public class RedisResponsePipelineDecoder {
 		RedisResponsePipelineDecoder decoder = new RedisResponsePipelineDecoder();
 		// List<RedisResponseV3> resps = decoder.decode(buffer);
 
-		PipelineResponse result  = decoder.parse(buffer1);
+		PipelineResponse result  = decoder.decode(buffer1);
 		System.out.println( result );
 	}
 

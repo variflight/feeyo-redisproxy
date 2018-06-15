@@ -7,10 +7,10 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.net.codec.RedisRequest;
-import com.feeyo.net.codec.RedisRequestType;
-import com.feeyo.net.codec.RedisResponsePipelineDecoder;
-import com.feeyo.net.codec.RedisResponsePipelineDecoder.PipelineResponse;
+import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequestType;
+import com.feeyo.net.codec.redis.RedisResponsePipelineDecoder;
+import com.feeyo.net.codec.redis.RedisResponsePipelineDecoder.PipelineResponse;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
@@ -56,7 +56,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 			// 解析此次返回的数据条数
-			PipelineResponse pipelineResponse = decoder.parse( byteBuff );
+			PipelineResponse pipelineResponse = decoder.decode( byteBuff );
 			if ( !pipelineResponse.isOK() )
 				return;
 			

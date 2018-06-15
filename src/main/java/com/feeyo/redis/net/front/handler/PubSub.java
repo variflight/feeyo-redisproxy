@@ -9,8 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.redis.net.backend.TodoTask;
-import com.feeyo.net.codec.RedisRequest;
-import com.feeyo.net.codec.RedisResponse;
+import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.net.codec.redis.RedisResponse;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;

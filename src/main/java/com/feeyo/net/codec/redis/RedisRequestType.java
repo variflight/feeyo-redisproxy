@@ -1,4 +1,4 @@
-package com.feeyo.net.codec;
+package com.feeyo.net.codec.redis;
 
 public enum RedisRequestType {
 	

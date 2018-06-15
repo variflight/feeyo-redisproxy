@@ -1,9 +1,12 @@
-package com.feeyo.net.codec;
+package com.feeyo.net.codec.redis;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class RedisRequestDecoder {
+import com.feeyo.net.codec.Decoder;
+import com.feeyo.net.codec.UnknowProtocolException;
+
+public class RedisRequestDecoder implements Decoder<List<RedisRequest>> {
 	
 	private enum State {
 		READ_SKIP, 			// 跳过空格
@@ -25,7 +28,8 @@ public class RedisRequestDecoder {
 		_buffer = null;
 	}
 
-	public List<RedisRequest> decode(byte[] buffer) throws RedisRequestUnknowException {
+	@Override
+	public List<RedisRequest> decode(byte[] buffer) throws UnknowProtocolException {
 		
 		append(buffer);
 		
@@ -114,7 +118,7 @@ public class RedisRequestDecoder {
 				}
 				break;
 				default:
-					throw new RedisRequestUnknowException("Unknown state: " + state);
+					throw new UnknowProtocolException("Unknown state: " + state);
 				}
 			}
 		} catch (IndexOutOfBoundsException e) {
@@ -239,7 +243,7 @@ public class RedisRequestDecoder {
 		    		System.out.println(" decode diff=" + diff + ", req=" + reqs.toString() );
 		    	}
 				
-			} catch (RedisRequestUnknowException e) {
+			} catch (UnknowProtocolException e) {
 				e.printStackTrace();
 			}
 	    }  

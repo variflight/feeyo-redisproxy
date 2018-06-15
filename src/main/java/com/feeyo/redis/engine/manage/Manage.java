@@ -27,7 +27,7 @@ import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
-import com.feeyo.net.codec.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.nio.ClosableConnection;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.buffer.BufferPool;

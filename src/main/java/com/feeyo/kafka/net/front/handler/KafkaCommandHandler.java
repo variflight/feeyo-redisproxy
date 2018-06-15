@@ -24,7 +24,7 @@ import com.feeyo.kafka.net.front.route.KafkaRouteNode;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
-import com.feeyo.net.codec.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.net.front.RedisFrontConnection;
