@@ -2,7 +2,7 @@ package com.feeyo.redis.net.front.handler;
 
 import java.io.IOException;
 
-import com.feeyo.net.codec.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;

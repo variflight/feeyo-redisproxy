@@ -14,11 +14,11 @@ import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
-import com.feeyo.net.codec.RedisRequest;
-import com.feeyo.net.codec.RedisRequestDecoder;
-import com.feeyo.net.codec.RedisRequestPolicy;
-import com.feeyo.net.codec.RedisRequestType;
-import com.feeyo.net.codec.RedisRequestUnknowException;
+import com.feeyo.net.codec.UnknowProtocolException;
+import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequestDecoder;
+import com.feeyo.net.codec.redis.RedisRequestPolicy;
+import com.feeyo.net.codec.redis.RedisRequestType;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -275,7 +275,7 @@ public class RedisFrontSession {
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
 			}
 			
-		} catch (RedisRequestUnknowException e0) {
+		} catch (UnknowProtocolException e0) {
 			frontCon.close("unknow redis client .");
 
 		} catch (IOException e1) {

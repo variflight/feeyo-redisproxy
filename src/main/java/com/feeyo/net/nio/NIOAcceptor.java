@@ -15,10 +15,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @author wuzh
+ * @author zhuam
  */
 public final class NIOAcceptor extends Thread {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOAcceptor.class );
+	
 	
 	private final int port;
 	private final Selector selector;
@@ -36,13 +38,14 @@ public final class NIOAcceptor extends Thread {
 		this.serverChannel = ServerSocketChannel.open();
 		this.serverChannel.configureBlocking(false);
 		
-		/** 设置TCP属性 */
+		// 设置 RECV buf
 		this.serverChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
 		this.serverChannel.setOption(StandardSocketOptions.SO_RCVBUF, 1024 * 32); // 32K
 		
-		// backlog=20480
+		// backlog=2048
 		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 2048);
 		this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+		
 		this.factory = factory;
 		this.reactorPool = reactorPool;
 	}
@@ -61,7 +64,7 @@ public final class NIOAcceptor extends Thread {
 		for (;;) {
 			++acceptCount;
 			try {
-				selector.select( 1000L );
+				selector.select( 500L ); // 1000L to 500L
 				Set<SelectionKey> keys = selector.selectedKeys();
 				try {
 					for (SelectionKey key : keys) {
@@ -87,7 +90,15 @@ public final class NIOAcceptor extends Thread {
 		SocketChannel channel = null;
 		try {
 			channel = serverChannel.accept();
+		    channel.socket().setTcpNoDelay( true );					
 			channel.configureBlocking( false );
+			
+			// 设置QOS
+			// 低成本：0x02 （二进制的倒数第二位为1）
+			// 高可靠性：0x04（二进制的倒数第三位为1）
+			// 最高吞吐量：0x08（二进制的倒数第四位为1）
+			// 最小延迟：0x10（二进制的倒数第五位为1）
+			channel.socket().setTrafficClass( 0x04 | 0x08 ); 	
 			
 			// 构建 Connection
 			ClosableConnection c = factory.make(channel);

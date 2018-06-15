@@ -1,4 +1,4 @@
-package com.feeyo.net.codec;
+package com.feeyo.net.codec.redis;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
@@ -7,6 +7,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.net.codec.Encoder;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.util.ProtoUtils;
 
@@ -20,7 +21,7 @@ import com.feeyo.util.ProtoUtils;
 	<参数N的数据> CR LF
 --------------------------------------------------------
 */
-public class RedisRequestEncoder {
+public class RedisRequestEncoder implements Encoder<byte[][]> {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( RedisRequestEncoder.class );
 	
@@ -29,6 +30,7 @@ public class RedisRequestEncoder {
 	
 	private static final byte[] CRLF = "\r\n".getBytes();		
 	
+	@Override
 	public ByteBuffer encode(byte[][] args) {
 		
 		if ( args == null ) {

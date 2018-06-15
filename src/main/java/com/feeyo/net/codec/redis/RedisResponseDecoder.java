@@ -1,7 +1,9 @@
-package com.feeyo.net.codec;
+package com.feeyo.net.codec.redis;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.feeyo.net.codec.Decoder;
 
 /**
  * 返回  type+data+\r\n 字节流， 避免 encode   
@@ -9,13 +11,14 @@ import java.util.List;
  * @see https://redis.io/topics/protocol
  *
  */
-public class RedisResponseDecoder {
+public class RedisResponseDecoder implements Decoder<List<RedisResponse>> {
 	
 	private byte[] _buffer;
 	private int _offset;
 	
 	private List<RedisResponse> responses = null;
 	
+	@Override
 	public List<RedisResponse> decode(byte[] buffer) {
 
 		append(buffer);

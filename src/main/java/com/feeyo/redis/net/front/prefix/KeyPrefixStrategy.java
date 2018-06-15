@@ -1,6 +1,6 @@
 package com.feeyo.redis.net.front.prefix;
 
-import com.feeyo.net.codec.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequest;
 
 /**
  * Key 前缀策略

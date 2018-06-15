@@ -95,9 +95,14 @@ public class RedisEngineCtx {
         String timerSizeString = this.serverMap.get("timerSize"); 
         String networkFlowLimitSizeString = this.serverMap.get("networkFlowLimitSize");
         
-        int processors = Runtime.getRuntime().availableProcessors();
+       
         int port = portString == null ? 8066: Integer.parseInt( portString );
-        int reactorSize = reactorSizeString == null ? processors : Integer.parseInt( reactorSizeString );
+        
+        int processors = Runtime.getRuntime().availableProcessors();
+        int reactorSize = reactorSizeString == null ? processors + 1 : Integer.parseInt( reactorSizeString );
+        if ( reactorSize > 9 ) {
+        	reactorSize = 4 + (processors * 5 / 8);
+        }
         
         long minBufferSize = minBufferSizeString == null ? 16384 * 1000 : Long.parseLong( minBufferSizeString );
         long maxBufferSize = maxBufferSizeString == null ? 16384 * 10000 : Long.parseLong( maxBufferSizeString );

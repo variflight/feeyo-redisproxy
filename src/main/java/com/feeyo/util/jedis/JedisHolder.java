@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 public class JedisHolder {
+	
 	private static JedisHolder instance = new JedisHolder();
 	
 	private ConcurrentHashMap<String, JedisPool> pools = new ConcurrentHashMap<>();
@@ -20,11 +21,11 @@ public class JedisHolder {
 	// object进行扫描，如果validate失败，此object会被从pool中drop掉
 	// TODO: 这一项只有在timeBetweenEvictionRunsMillis大于0时才有意义
 	private boolean testWhileIdle = true;
+	
 	// 对于“空闲链接”检测线程而言，每次检测的链接资源的个数.(jedis 默认设置成-1)
 	private int numTestsPerEvictionRun = -1;
-	// 连接空闲的最小时间，达到此值后空闲连接将可能会被移除。负值(-1)表示不移除
-	private int minEvictableIdleTimeMillis = 60 * 1000;
-	// “空闲链接”检测线程，检测的周期，毫秒数。如果为负值，表示不运行“检测线程”。默认为-1
+
+	private int softMinEvictableIdleTimeMillis = 60 * 1000;
 	private int timeBetweenEvictionRunsMillis = 30 * 1000;
 	
 	private JedisHolder() {}
@@ -61,7 +62,8 @@ public class JedisHolder {
 		jedisPoolConfig.setTestWhileIdle(testWhileIdle);
 
 		jedisPoolConfig.setNumTestsPerEvictionRun(numTestsPerEvictionRun);
-		jedisPoolConfig.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis);
+		jedisPoolConfig.setMinEvictableIdleTimeMillis(-1);
+		jedisPoolConfig.setSoftMinEvictableIdleTimeMillis(softMinEvictableIdleTimeMillis);
 		jedisPoolConfig.setTimeBetweenEvictionRunsMillis(timeBetweenEvictionRunsMillis);
 
 		return new JedisPool(jedisPoolConfig, host, port, timeBetweenEvictionRunsMillis, null);

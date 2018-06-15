@@ -2,7 +2,7 @@ package com.feeyo.redis.net.front.route;
 
 import java.util.List;
 
-import com.feeyo.net.codec.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequest;
 
 /**
  * 所有请求都不需要透传

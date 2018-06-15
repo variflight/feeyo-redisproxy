@@ -1,4 +1,4 @@
-package com.feeyo.net.codec;
+package com.feeyo.net.codec.redis;
 
 import com.feeyo.redis.net.front.handler.CommandParse;
 

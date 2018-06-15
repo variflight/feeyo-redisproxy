@@ -9,8 +9,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.net.codec.RedisRequest;
-import com.feeyo.net.codec.RedisResponse;
+import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.net.codec.redis.RedisResponse;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;

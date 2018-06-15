@@ -7,8 +7,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.net.codec.RedisResponsePipelineDecoder;
-import com.feeyo.net.codec.RedisResponsePipelineDecoder.PipelineResponse;
+import com.feeyo.net.codec.redis.RedisResponsePipelineDecoder;
+import com.feeyo.net.codec.redis.RedisResponsePipelineDecoder.PipelineResponse;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
@@ -69,7 +69,7 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
         @Override
         public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 
-        	PipelineResponse pipelineResponse = decoder.parse(byteBuff);
+        	PipelineResponse pipelineResponse = decoder.decode(byteBuff);
         	if ( !pipelineResponse.isOK() )
                 return;
 
@@ -96,11 +96,6 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                         
                         int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
-						
-						if( backendWaitTimeMills > procTimeMills ) {
-							LOGGER.warn("proc time err:  requestTime={}, responseTime={}, lastReadTime={}, lastWriteTime={}",
-									new Object[]{ requestTimeMills, responseTimeMills, backendCon.getLastReadTime(), backendCon.getLastWriteTime() } );
-						}
                         
              
                         // 释放
