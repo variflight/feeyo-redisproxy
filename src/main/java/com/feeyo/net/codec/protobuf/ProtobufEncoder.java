@@ -7,12 +7,13 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
 //
-public class PBEncoder {
+public class ProtobufEncoder {
 	
 	private boolean isTcp = false;
+	
 	private final byte[] MAGIC_CODE = new byte[] { (byte) 0x7f, (byte) 0xff };
 	
-	public PBEncoder(boolean isTcp) {
+	public ProtobufEncoder(boolean isTcp) {
 		this.isTcp = isTcp;
 	}
 	

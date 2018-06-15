@@ -6,6 +6,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.net.codec.Decoder;
+import com.feeyo.net.codec.UnknowProtocolException;
 import com.feeyo.util.ByteUtil;
 import com.google.common.primitives.Bytes;
 import com.google.protobuf.ExtensionRegistry;
@@ -13,14 +15,15 @@ import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
-public class PBDecoder {
+public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 	
-	private final Logger LOGGER = LoggerFactory.getLogger(PBDecoder.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ProtobufDecoder.class);
 
-	private final byte[] MAGIC_CODE = new byte[] { (byte) 0x7f, (byte) 0xff };
+	private static final byte[] MAGIC_CODE = new byte[] { (byte) 0x7f, (byte) 0xff };
 
 	private final MessageLite prototype;
 	private final ExtensionRegistryLite extensionRegistry;
+	
 	private static boolean HAS_PARSER = false;
 
 	private boolean hasAllSize = false;
@@ -42,15 +45,15 @@ public class PBDecoder {
 		HAS_PARSER = hasParser;
 	}
 
-	public PBDecoder(MessageLite prototype, boolean isTcp) {
+	public ProtobufDecoder(MessageLite prototype, boolean isTcp) {
 		this(prototype, null, isTcp);
 	}
 
-	public PBDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry, boolean isTcp) {
+	public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry, boolean isTcp) {
 		this(prototype, (ExtensionRegistryLite) extensionRegistry, isTcp);
 	}
 
-	public PBDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry, boolean isTcp) {
+	public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry, boolean isTcp) {
 
 		if (prototype == null) {
 			throw new NullPointerException("prototype");
@@ -61,40 +64,48 @@ public class PBDecoder {
 		this.hasAllSize = isTcp;
 	}
 	
-	public List<MessageLite> decode(byte[] buf) throws InvalidProtocolBufferException {
+	@Override
+	public List<MessageLite> decode(byte[] buf) throws UnknowProtocolException  {
 		
-		if(buf == null)
+		if (buf == null )
 			return null;
 		
-		if(hasAllSize) {
+		try { 
 			
-			if(allSize == -1) {
-				msgBuffCache = ByteUtil.byteMerge(msgBuffCache, buf);
-				if(msgBuffCache.length < 4)
-					return null;
+			if(hasAllSize) {
 				
-				allSize = ByteUtil.bytesToInt(msgBuffCache[3], msgBuffCache[2], msgBuffCache[1], msgBuffCache[0]);
+				if(allSize == -1) {
+					
+					msgBuffCache = ByteUtil.byteMerge(msgBuffCache, buf);
+					if(msgBuffCache.length < 4)
+						return null;
+					
+					allSize = ByteUtil.bytesToInt(msgBuffCache[3], msgBuffCache[2], msgBuffCache[1], msgBuffCache[0]);
+					
+					msgBuffCache = new byte[allSize];
+					int read = Math.min(allSize - ptr, buf.length - 4);
+					System.arraycopy(buf, 4, msgBuffCache, ptr, read);
+					ptr += read;
+					if(ptr < allSize)		//数据不完整
+						return null;
+				}
 				
-				msgBuffCache = new byte[allSize];
-				int read = Math.min(allSize - ptr, buf.length - 4);
-				System.arraycopy(buf, 4, msgBuffCache, ptr, read);
-				ptr += read;
-				if(ptr < allSize)		//数据不完整
-					return null;
+				if( ptr < allSize ) {
+					 int read = Math.min(allSize - ptr, buf.length);
+					 System.arraycopy(buf, 0, msgBuffCache, ptr, read);
+					 ptr += read;
+					 if(ptr < allSize)		//数据不完整
+						 return null;	
+				}
+				
+				return decodeAllMsg(msgBuffCache);
 			}
 			
-			if(ptr < allSize) {
-				 int read = Math.min(allSize - ptr, buf.length);
-				 System.arraycopy(buf, 0, msgBuffCache, ptr, read);
-				 ptr += read;
-				 if(ptr < allSize)		//数据不完整
-					 return null;	
-			}
+			return decodeAllMsg(buf);
 			
-			return decodeAllMsg(msgBuffCache);
+		} catch(InvalidProtocolBufferException e) {
+			throw new UnknowProtocolException("protobuf err");
 		}
-		
-		return decodeAllMsg(buf);
 	}
 	
 	private List<MessageLite> decodeAllMsg(byte[] buf) throws InvalidProtocolBufferException{
@@ -132,7 +143,8 @@ public class PBDecoder {
 	private MessageLite decodeWrapMsg(byte[] buf) throws InvalidProtocolBufferException {
 
 		if (!isLegal(buf))
-		return null;
+			return null;
+		
 		int contentLength = buf.length - 4 - MAGIC_CODE.length;
 		byte[] content = new byte[contentLength];
 		System.arraycopy(buf, 4, content, 0, contentLength);
