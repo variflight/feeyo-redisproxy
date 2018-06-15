@@ -42,15 +42,15 @@ public class PBDecoder {
 		HAS_PARSER = hasParser;
 	}
 
-	public PBDecoder(MessageLite prototype, boolean isTcp) {
-		this(prototype, null, isTcp);
+	public PBDecoder(MessageLite prototype, boolean hasAllSize) {
+		this(prototype, null, hasAllSize);
 	}
 
-	public PBDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry, boolean isTcp) {
-		this(prototype, (ExtensionRegistryLite) extensionRegistry, isTcp);
+	public PBDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry, boolean hasAllSize) {
+		this(prototype, (ExtensionRegistryLite) extensionRegistry, hasAllSize);
 	}
 
-	public PBDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry, boolean isTcp) {
+	public PBDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry, boolean hasAllSize) {
 
 		if (prototype == null) {
 			throw new NullPointerException("prototype");
@@ -58,7 +58,7 @@ public class PBDecoder {
 
 		this.prototype = prototype.getDefaultInstanceForType();
 		this.extensionRegistry = extensionRegistry;
-		this.hasAllSize = isTcp;
+		this.hasAllSize = hasAllSize;
 	}
 	
 	public List<MessageLite> decode(byte[] buf) throws InvalidProtocolBufferException {
