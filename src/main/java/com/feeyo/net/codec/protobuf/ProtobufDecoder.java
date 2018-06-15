@@ -61,6 +61,7 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 
 		this.prototype = prototype.getDefaultInstanceForType();
 		this.extensionRegistry = extensionRegistry;
+		
 		this.hasAllSize = isTcp;
 	}
 	
@@ -72,7 +73,7 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		
 		try { 
 			
-			if(hasAllSize) {
+			if (hasAllSize) {
 				
 				if(allSize == -1) {
 					
