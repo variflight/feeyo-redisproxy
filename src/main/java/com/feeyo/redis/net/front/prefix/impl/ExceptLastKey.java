@@ -1,6 +1,6 @@
 package com.feeyo.redis.net.front.prefix.impl;
 
-import com.feeyo.redis.net.codec.RedisRequest;
+import com.feeyo.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
 
 /**

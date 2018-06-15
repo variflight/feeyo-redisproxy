@@ -3,12 +3,12 @@ package com.feeyo.kafka.net.backend;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import com.feeyo.net.nio.NetSystem;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.BackendConnectionFactory;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.nio.NetSystem;
 
 public class KafkaBackendConnectionFactory implements BackendConnectionFactory {
 
@@ -18,11 +18,12 @@ public class KafkaBackendConnectionFactory implements BackendConnectionFactory {
 
 		String host = physicalNode.getHost();
 		int port = physicalNode.getPort();
+		boolean isZeroCopy = physicalNode.isZeroCopy();
 		
 		SocketChannel channel = SocketChannel.open();
 		channel.configureBlocking(false);
 
-		KafkaBackendConnection c = new KafkaBackendConnection( channel );
+		KafkaBackendConnection c = new KafkaBackendConnection(isZeroCopy, channel );
 		NetSystem.getInstance().setSocketParams(c, false);
 
 		// 设置NIOHandlers

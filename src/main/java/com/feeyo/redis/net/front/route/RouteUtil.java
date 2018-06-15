@@ -1,7 +1,7 @@
 package com.feeyo.redis.net.front.route;
 
+import com.feeyo.net.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.backend.pool.PoolType;
-import com.feeyo.redis.net.codec.RedisRequestPolicy;
 import com.feeyo.redis.net.front.handler.CommandParse;
 
 public class RouteUtil {

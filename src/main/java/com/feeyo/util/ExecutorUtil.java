@@ -4,8 +4,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 
-import com.feeyo.redis.nio.NameableExecutor;
-import com.feeyo.redis.nio.NameableThreadFactory;
+import com.feeyo.net.nio.NameableExecutor;
+import com.feeyo.net.nio.NameableThreadFactory;
 
 /**
  * 生成一个有名字的（Nameable）Executor，容易进行跟踪和监控

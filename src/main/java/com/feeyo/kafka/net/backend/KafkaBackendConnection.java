@@ -12,8 +12,8 @@ import com.feeyo.redis.net.backend.BackendConnection;
  */
 public class KafkaBackendConnection extends BackendConnection {
 
-	public KafkaBackendConnection(SocketChannel channel) {
-		super(channel);
+	public KafkaBackendConnection(boolean isZeroCopy, SocketChannel channel) {
+		super(isZeroCopy, channel);
 	}
 
 }

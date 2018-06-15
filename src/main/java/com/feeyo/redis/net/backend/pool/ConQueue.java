@@ -5,10 +5,10 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.feeyo.net.nio.ClosableConnection;
+import com.feeyo.net.nio.NetSystem;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
-import com.feeyo.redis.nio.AbstractConnection;
-import com.feeyo.redis.nio.NetSystem;
 
 public class ConQueue {
 
@@ -46,7 +46,7 @@ public class ConQueue {
 	
 	public int getActiveCountForNode(PhysicalNode node) {
         int total = 0;
-        for (AbstractConnection conn : NetSystem.getInstance().getAllConnectios().values()) {
+        for (ClosableConnection conn : NetSystem.getInstance().getAllConnectios().values()) {
             if (conn instanceof RedisBackendConnection) {
             	RedisBackendConnection theCon = (RedisBackendConnection) conn;
                 if (theCon.getPhysicalNode() == node) {
@@ -60,10 +60,10 @@ public class ConQueue {
     }
 
     public void clearConnections(String reason, PhysicalNode node) {
-        Iterator<Entry<Long, AbstractConnection>> itor = NetSystem.getInstance().getAllConnectios().entrySet().iterator();
+        Iterator<Entry<Long, ClosableConnection>> itor = NetSystem.getInstance().getAllConnectios().entrySet().iterator();
         while ( itor.hasNext() ) {
-            Entry<Long, AbstractConnection> entry = itor.next();
-            AbstractConnection con = entry.getValue();
+            Entry<Long, ClosableConnection> entry = itor.next();
+            ClosableConnection con = entry.getValue();
             if (con instanceof RedisBackendConnection) {
                 if (((RedisBackendConnection) con).getPhysicalNode() == node) {
                     con.close(reason);
@@ -74,10 +74,10 @@ public class ConQueue {
     }
     
     public void setIdleTimeConnections(PhysicalNode node, long idleTimeout) {    	
-        Iterator<Entry<Long, AbstractConnection>> itor = NetSystem.getInstance().getAllConnectios().entrySet().iterator();
+        Iterator<Entry<Long, ClosableConnection>> itor = NetSystem.getInstance().getAllConnectios().entrySet().iterator();
         while ( itor.hasNext() ) {
-            Entry<Long, AbstractConnection> entry = itor.next();
-            AbstractConnection con = entry.getValue();
+            Entry<Long, ClosableConnection> entry = itor.next();
+            ClosableConnection con = entry.getValue();
             if (con instanceof RedisBackendConnection) {
                 if (((RedisBackendConnection) con).getPhysicalNode() == node) {
                 	con.setIdleTimeout( idleTimeout );

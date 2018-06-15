@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <redis>
 	<!-- type 0:非集群; 1:集群; 2:自定义集群; 3:kafka 集群 -->
-	<!-- 
-	<pool id="1" name="pool1" type="0" maxCon="2000" minCon="1">
+	
+	<pool id="1" name="pool1" type="0" maxCon="2000" minCon="6" isZeroCopy="true">
 	      <node ip="127.0.0.1" port="6379" />
 	</pool>	 
 	
-	
+	<!-- 
 	<pool id="2" name="pool2" type="1" maxCon="200" minCon="1">
 	      <node ip="127.0.0.1" port="7000" />
 	      <node ip="127.0.0.1" port="7001" />
@@ -14,9 +14,11 @@
 	</pool>
 	 -->
 	 
+	 <!--  
 	<pool id="3" name="pool3" type="3" maxCon="200" minCon="1">
 	      <node ip="127.0.0.1" port="9092" />
-	 </pool>
+	</pool>
+	-->
 
 	<!-- 
 		suffix_hint user add the suffix behind the key (key#A#)

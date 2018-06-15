@@ -6,9 +6,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.codec.RedisResponse;
-import com.feeyo.redis.net.codec.RedisResponseDecoder;
+import com.feeyo.net.codec.RedisRequest;
+import com.feeyo.net.codec.RedisResponse;
+import com.feeyo.net.codec.RedisResponseDecoder;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.JedisHolder;
@@ -34,10 +34,14 @@ public class BypassIoConnection {
 			// block i/o
 			jedisConn.sendCommand(request.getArgs());
 			byte[] response = jedisConn.getBinaryReply();
-			
 			// parse
 			RedisResponseDecoder decoder = new RedisResponseDecoder();
-			return decoder.decode(response);
+			List<RedisResponse> result = decoder.decode(response);
+			while (result == null) {
+				response = jedisConn.getBinaryReply();
+				result = decoder.decode(response);
+			}
+			return result;
 			
 		} catch (Exception e) {
 			LOGGER.error("bypass err, host=" + host + ":" + port, e);

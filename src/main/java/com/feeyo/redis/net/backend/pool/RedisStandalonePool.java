@@ -2,10 +2,10 @@ package com.feeyo.redis.net.backend.pool;
 
 import java.util.LinkedList;
 
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
-import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
@@ -44,10 +44,11 @@ public class RedisStandalonePool extends AbstractPool {
 		String poolName = poolCfg.getName();
 		int minCon = poolCfg.getMinCon();
 		int maxCon = poolCfg.getMaxCon();
+		boolean isZeroCopy = poolCfg.isZeroCopy();
 		
 		String[] ipAndPort = poolCfg.getNodes().get(0).split(":");	
 		this.physicalNode = new PhysicalNode(backendConFactory, 
-				poolType, poolName, minCon, maxCon, ipAndPort[0], Integer.parseInt( ipAndPort[1] ) );
+				poolType, poolName, minCon, maxCon, ipAndPort[0], Integer.parseInt( ipAndPort[1] ), isZeroCopy );
 		this.physicalNode.initConnections();		
 		return true;
 	}
