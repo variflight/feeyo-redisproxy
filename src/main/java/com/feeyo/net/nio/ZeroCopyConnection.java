@@ -1,6 +1,7 @@
 package com.feeyo.net.nio;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
@@ -31,7 +32,26 @@ public class ZeroCopyConnection extends ClosableConnection {
 	private static Logger LOGGER = LoggerFactory.getLogger( ZeroCopyConnection.class );
 	
 	//
-	private static final int MAPPED_SIZE = 1024 * 1024 * 2;  
+	private static final int MAPPED_SIZE = 1024 * 1024 * 2; 
+	private static final String MAPPED_SUFFIX = ".ftmpfs";
+	
+	//
+	private static  String MAPPED_PATH = null;
+	static {
+		// 支持 OPS 指定 tmpfs or ramdisk path
+		MAPPED_PATH = System.getProperty("feeyo.zerocopy.path");
+		if ( MAPPED_PATH == null ) {
+			if ( JavaUtils.isLinux() )  {
+				MAPPED_PATH = "/dev/shm"; 	// 在Linux中，用 tmpfs
+			} else {
+				String path = new File(".").getAbsolutePath();
+				MAPPED_PATH =  path.substring(0, path.length() - 1);
+			}
+		}
+		
+		// ensure
+		ensureDirOK( MAPPED_PATH );
+	}
 	
 	protected AtomicBoolean rwLock = new AtomicBoolean(false); 
 
@@ -50,21 +70,9 @@ public class ZeroCopyConnection extends ClosableConnection {
 		super(channel);
 
 		try {
-			
-			// 支持 OPS 指定 tmpfs or ramdisk path
-			String path = System.getProperty("feeyo.zerocopy.path");
-			if ( path == null ) {
-				if ( JavaUtils.isLinux() ) 
-					path = "/dev/shm"; 	// 在Linux中，用 tmpfs
-				else
-					path = "";
-			}
-			
-			this.fileName = path +  id + ".mapped";
+			//
+			this.fileName = MAPPED_PATH +  id + MAPPED_SUFFIX;
 			this.file = new File( this.fileName );
-			
-			// ensure
-			ensureDirOK(this.file.getParent());
 			
 			// mmap
 			this.randomAccessFile = new RandomAccessFile(file, "rw");
@@ -310,12 +318,36 @@ public class ZeroCopyConnection extends ClosableConnection {
 		});
 	}
 	
-	private void ensureDirOK(final String dirName) {
-		if (dirName != null) {
+	private static void ensureDirOK(String dirName) {
+		
+		if ( dirName != null ) {
+			
 			File f = new File(dirName);
 			if (!f.exists()) {
 				boolean result = f.mkdirs();
 				LOGGER.info(dirName + " mkdir " + (result ? "OK" : "Failed"));
+				
+			} else {
+			
+				// delete old mapped
+				String[] mfList = f.list( new FilenameFilter() {
+					@Override
+					public boolean accept(File dir, String name) {
+						return name.endsWith( MAPPED_SUFFIX );
+					}
+				});
+				
+				if (mfList != null &&  mfList.length > 0 ) {
+					for(String mf: mfList) {
+						File mff = new File( mf );
+						if ( mff != null && mff.exists() ) {
+							//
+							mff.delete();
+							//
+							LOGGER.info("delete mapped file, fileName={}", mff.getName());
+						}
+					}
+				}
 			}
 		}
 	}
