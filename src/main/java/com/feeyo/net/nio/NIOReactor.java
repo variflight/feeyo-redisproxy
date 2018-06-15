@@ -68,18 +68,21 @@ public final class NIOReactor {
 		@Override
 		public void run() {
 			
-			final Selector selector = this.selector;
+			Selector selector = this.selector;
+			Set<SelectionKey> keys = null;
 			long ioTimes = 0;
 			
 			for (;;) {
+				
 				++reactCount;
 				try {
 
 					// 查看有无连接就绪
 					selector.select( SELECTOR_TIMEOUT );
 
-					final Set<SelectionKey> keys = selector.selectedKeys();
-					if ( keys.isEmpty() ) {
+					keys = selector.selectedKeys();
+					if ( keys != null && keys.isEmpty() ) {
+						
 						if (!pendingQueue.isEmpty()) {
 							ioTimes = 0;
 							processPendingQueue(selector); 	// 处理注册队列
@@ -147,12 +150,15 @@ public final class NIOReactor {
 						}
 					}
 					
-					keys.clear();
-					
 				} catch (Throwable e) {
 					// Catch exceptions such as OOM so that the reactor can keep running!
 					LOGGER.error(name +" caught err: ", e);
-				} 
+					
+				} finally {
+					if ( keys != null ) {
+						keys.clear();
+					}
+				}
 			}
 		}
 		
