@@ -21,11 +21,6 @@ public final class NIOAcceptor extends Thread {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOAcceptor.class );
 	
-	// QOS
-    private static String NETWORK_QOS_FLAG = null;
-    static {
-        NETWORK_QOS_FLAG = System.getProperty("front.network.QOS");
-    }
 	
 	private final int port;
 	private final Selector selector;
@@ -95,22 +90,15 @@ public final class NIOAcceptor extends Thread {
 		SocketChannel channel = null;
 		try {
 			channel = serverChannel.accept();
-		    channel.socket().setTcpNoDelay( true );
+		    channel.socket().setTcpNoDelay( true );					
 			channel.configureBlocking( false );
 			
 			// 设置QOS
-			if (NETWORK_QOS_FLAG != null) {
-				try {
-					if ("B1_REAL_TIME_QOS".equals(NETWORK_QOS_FLAG)) {
-						channel.socket().setTrafficClass(144);
-						
-					} else if ("B1_NON_REAL_TIME_QOS".equals(NETWORK_QOS_FLAG)) {
-						channel.socket().setTrafficClass(24);
-					}
-				} catch (Exception ex) {
-					ex.printStackTrace();
-				}
-			}
+			// 低成本：0x02 （二进制的倒数第二位为1）
+			// 高可靠性：0x04（二进制的倒数第三位为1）
+			// 最高吞吐量：0x08（二进制的倒数第四位为1）
+			// 最小延迟：0x10（二进制的倒数第五位为1）
+			channel.socket().setTrafficClass( 0x04 | 0x08 ); 	
 			
 			// 构建 Connection
 			ClosableConnection c = factory.make(channel);
