@@ -1,23 +1,29 @@
-package com.feeyo.protobuf.http.test;
+package com.feeyo.net.codec.protobuf.test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.feeyo.protobuf.codec.Eraftpb.ConfState;
-import com.feeyo.protobuf.codec.Eraftpb.Entry;
-import com.feeyo.protobuf.codec.Eraftpb.EntryType;
-import com.feeyo.protobuf.codec.Eraftpb.Message;
-import com.feeyo.protobuf.codec.Eraftpb.MessageType;
-import com.feeyo.protobuf.codec.Eraftpb.Snapshot;
-import com.feeyo.protobuf.codec.Eraftpb.SnapshotMetadata;
-import com.feeyo.protobuf.http.PBHttpClient;
-import com.feeyo.util.Log4jInitializer;
+import com.feeyo.net.codec.protobuf.Eraftpb.ConfState;
+import com.feeyo.net.codec.protobuf.Eraftpb.Entry;
+import com.feeyo.net.codec.protobuf.Eraftpb.EntryType;
+import com.feeyo.net.codec.protobuf.Eraftpb.Message;
+import com.feeyo.net.codec.protobuf.Eraftpb.MessageType;
+import com.feeyo.net.codec.protobuf.Eraftpb.Snapshot;
+import com.feeyo.net.codec.protobuf.Eraftpb.SnapshotMetadata;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.UnknownFieldSet;
 
-public class PBHttpClientTest {
+public class TestDataUtil {
+	
+	public static List<Message> genBatchMessages(int count) {
 
-	public Message genMessage(int index) {
+		ArrayList<Message> msgList = new ArrayList<Message>();
+		for (int i = 0; i < count; i++)
+			msgList.add(genMessage(i));
+		return msgList;
+	}
+	
+	public static Message genMessage(int index) {
 		Entry entry0 = Entry.newBuilder().setContext(ByteString.copyFromUtf8("Entry" + index))
 				.setData(ByteString.copyFromUtf8("Entry " + index)).setEntryType(EntryType.EntryNormal)
 				.setEntryTypeValue(0).setIndex(index).setSyncLog(false).setTerm(20)
@@ -38,30 +44,4 @@ public class PBHttpClientTest {
 		return fromMsg;
 	}
 
-	public void post(String url, List<Message> msgList) {
-		PBHttpClient client = new PBHttpClient();
-		client.post(url, msgList);
-	}
-
-	public List<Message> genBatchMessages(int count) {
-
-		ArrayList<Message> msgList = new ArrayList<Message>();
-		for (int i = 0; i < count; i++)
-			msgList.add(genMessage(i));
-		return msgList;
-	}
-
-	public static void main(String[] args) {
-
-		if (System.getProperty("FEEYO_HOME") == null) {
-			System.setProperty("FEEYO_HOME", System.getProperty("user.dir"));
-		}
-
-		// 设置 LOG4J
-		Log4jInitializer.configureAndWatch(System.getProperty("FEEYO_HOME"), "log4j.xml", 30000L);
-
-		PBHttpClientTest test = new PBHttpClientTest();
-		List<Message> msgList = test.genBatchMessages(10);
-		test.post("http://192.168.14.158:8844", msgList);
-	}
 }

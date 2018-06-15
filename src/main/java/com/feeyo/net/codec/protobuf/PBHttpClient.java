@@ -1,4 +1,4 @@
-package com.feeyo.protobuf.http;
+package com.feeyo.net.codec.protobuf;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,7 +11,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.protobuf.codec.PBEncoderV2;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
@@ -22,6 +21,12 @@ public class PBHttpClient {
 	private static final String verbUserAgent = System.getProperty("java.home") + ";"
 			+ System.getProperty("java.vendor") + ";" + System.getProperty("java.version") + ";"
 			+ System.getProperty("user.name");
+	
+	private String messageType;
+	
+	public PBHttpClient(MessageLite proto) {
+		this.messageType = proto.getClass().getName();
+	}
 
 	public HttpResponse get(String url) {
 
@@ -95,7 +100,7 @@ public class PBHttpClient {
 			con.setRequestProperty("Connection", "close");
 			con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 			con.setRequestProperty("Content-Length", Integer.toString(data.length));
-
+			con.setRequestProperty("message-type", messageType);
 			con.getOutputStream().write(data, 0, data.length);
 			con.getOutputStream().flush();
 			con.getOutputStream().close();
@@ -146,11 +151,11 @@ public class PBHttpClient {
 			}
 		}
 		
-		PBEncoderV2 decoder = new PBEncoderV2();
+		PBEncoder decoder = new PBEncoder(false);
 		try {
 			byte[] protoBufs = decoder.encode(tranMsgList);
 			
-			PBHttpClient client = new PBHttpClient();
+			PBHttpClient client = new PBHttpClient(tranMsgList.get(0));
 			HttpResponse response = client.post(url, protoBufs);
 			if ( response != null && response.getCode() == 200) {
 				System.out.println("send success !");

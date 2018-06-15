@@ -1,6 +1,6 @@
-package com.feeyo.protobuf.http.test;
+package com.feeyo.net.codec.protobuf.test;
 
-import com.feeyo.protobuf.http.PBHttpServer;
+import com.feeyo.net.codec.protobuf.PBHttpServer;
 import com.feeyo.util.Log4jInitializer;
 
 public class PBHttpServerTest {

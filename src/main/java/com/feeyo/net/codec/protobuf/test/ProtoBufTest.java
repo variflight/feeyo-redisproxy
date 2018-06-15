@@ -1,14 +1,14 @@
-package com.feeyo.protobuf.http.test;
+package com.feeyo.net.codec.protobuf.test;
 
-import com.feeyo.protobuf.codec.Eraftpb.ConfState;
-import com.feeyo.protobuf.codec.Eraftpb.Entry;
-import com.feeyo.protobuf.codec.Eraftpb.EntryType;
-import com.feeyo.protobuf.codec.Eraftpb.Message;
-import com.feeyo.protobuf.codec.Eraftpb.MessageType;
-import com.feeyo.protobuf.codec.Eraftpb.Snapshot;
-import com.feeyo.protobuf.codec.Eraftpb.SnapshotMetadata;
-import com.feeyo.protobuf.codec.PBDecoder;
-import com.feeyo.protobuf.codec.PBEncoder;
+import com.feeyo.net.codec.protobuf.PBDecoder;
+import com.feeyo.net.codec.protobuf.PBEncoder;
+import com.feeyo.net.codec.protobuf.Eraftpb.ConfState;
+import com.feeyo.net.codec.protobuf.Eraftpb.Entry;
+import com.feeyo.net.codec.protobuf.Eraftpb.EntryType;
+import com.feeyo.net.codec.protobuf.Eraftpb.Message;
+import com.feeyo.net.codec.protobuf.Eraftpb.MessageType;
+import com.feeyo.net.codec.protobuf.Eraftpb.Snapshot;
+import com.feeyo.net.codec.protobuf.Eraftpb.SnapshotMetadata;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.UnknownFieldSet;
@@ -39,13 +39,13 @@ public class ProtoBufTest {
 					.setTerm(20).setLogTerm(30).setIndex(0).addEntries(entry).setCommit(123).setSnapshot(snapshot)
 					.setReject(true).setRejectHint(1).setContext(ByteString.copyFromUtf8("message0")).build();
 	
-			PBEncoder encoder = new PBEncoder();
+			PBEncoder encoder = new PBEncoder(true);
 	
 			byte[] protobuf;
 			protobuf = encoder.encode(fromMsg);
 			
-			PBDecoder decoder = new PBDecoder(Message.getDefaultInstance());
-			Message toMsg = (Message) decoder.decode(protobuf);
+			PBDecoder decoder = new PBDecoder(Message.getDefaultInstance(), true);
+			Message toMsg = (Message) decoder.decode(protobuf).get(0);
 			System.out.println(toMsg.getIndex());
 		} catch (InvalidProtocolBufferException e) {
 			e.printStackTrace();

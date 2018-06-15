@@ -1,4 +1,4 @@
-package com.feeyo.protobuf.http;
+package com.feeyo.net.codec.protobuf;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -21,7 +21,7 @@ public class PBHttpServer {
 		try {
 			httpServer = HttpServer.create(new InetSocketAddress(serverPort), MAX_CONN_LIMIT);
 			httpServer.createContext("/", new PBHttpServerHandler());
-			httpServer.setExecutor(null);  
+			httpServer.setExecutor(null);
 	        httpServer.start();  
 	        LOGGER.info("http server started");
 			
