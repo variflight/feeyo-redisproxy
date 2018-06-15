@@ -7,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.Decoder;
-import com.feeyo.net.codec.UnknowProtocolException;
 import com.feeyo.util.ByteUtil;
-import com.google.common.primitives.Bytes;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -18,7 +16,6 @@ import com.google.protobuf.MessageLite;
 public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProtobufDecoder.class);
-
 	private static final byte[] MAGIC_CODE = new byte[] { (byte) 0x7f, (byte) 0xff };
 
 	private final MessageLite prototype;
@@ -26,11 +23,8 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 	
 	private static boolean HAS_PARSER = false;
 
-	private boolean hasAllSize = false;
-	
-	private byte[] msgBuffCache = new byte[0];
-	private int ptr = 0;
-	private int allSize = -1;
+	private byte[] _buffer = null;
+	private int _offset = 0;
 
 	static {
 		boolean hasParser = false;
@@ -45,15 +39,15 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		HAS_PARSER = hasParser;
 	}
 
-	public ProtobufDecoder(MessageLite prototype, boolean isTcp) {
-		this(prototype, null, isTcp);
+	public ProtobufDecoder(MessageLite prototype) {
+		this(prototype, null);
 	}
 
-	public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry, boolean isTcp) {
-		this(prototype, (ExtensionRegistryLite) extensionRegistry, isTcp);
+	public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry) {
+		this(prototype, (ExtensionRegistryLite) extensionRegistry);
 	}
 
-	public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry, boolean isTcp) {
+	public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry) {
 
 		if (prototype == null) {
 			throw new NullPointerException("prototype");
@@ -61,99 +55,83 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 
 		this.prototype = prototype.getDefaultInstanceForType();
 		this.extensionRegistry = extensionRegistry;
-		
-		this.hasAllSize = isTcp;
-	}
-	
+	}	
+
 	@Override
-	public List<MessageLite> decode(byte[] buf) throws UnknowProtocolException  {
+	public List<MessageLite> decode(byte[] buf) {
 		
 		if (buf == null )
 			return null;
 		
-		try { 
-			
-			if (hasAllSize) {
-				
-				if(allSize == -1) {
-					
-					msgBuffCache = ByteUtil.byteMerge(msgBuffCache, buf);
-					if(msgBuffCache.length < 4)
-						return null;
-					
-					allSize = ByteUtil.bytesToInt(msgBuffCache[3], msgBuffCache[2], msgBuffCache[1], msgBuffCache[0]);
-					
-					msgBuffCache = new byte[allSize];
-					int read = Math.min(allSize - ptr, buf.length - 4);
-					System.arraycopy(buf, 4, msgBuffCache, ptr, read);
-					ptr += read;
-					if(ptr < allSize)		//数据不完整
-						return null;
-				}
-				
-				if( ptr < allSize ) {
-					 int read = Math.min(allSize - ptr, buf.length);
-					 System.arraycopy(buf, 0, msgBuffCache, ptr, read);
-					 ptr += read;
-					 if(ptr < allSize)		//数据不完整
-						 return null;	
-				}
-				
-				return decodeAllMsg(msgBuffCache);
-			}
-			
-			return decodeAllMsg(buf);
-			
-		} catch(InvalidProtocolBufferException e) {
-			throw new UnknowProtocolException("protobuf err");
-		}
-	}
-	
-	private List<MessageLite> decodeAllMsg(byte[] buf) throws InvalidProtocolBufferException{
+		append(buf);
 		
-		List<MessageLite> msgList = new ArrayList<MessageLite>();
-		int pos = 0;
-		while (pos < buf.length) {
-
-			int singleSize = ByteUtil.bytesToInt(buf[pos + 3], buf[pos + 1], buf[pos + 1], buf[pos + 0]);
-			byte[] protoBuf = new byte[singleSize];
-			System.arraycopy(buf, pos, protoBuf, 0, singleSize);
-
-			MessageLite msg = decodeWrapMsg(protoBuf);
-			if (msg != null) {
-				msgList.add(msg);
-			} else {
-				LOGGER.error("parse msg failed");
-			}
-
-			pos += singleSize;
-		}
-		
-		if(hasAllSize) {
-			reset();
-		}
-
-		return msgList;
-	}
-	
-	// ==== wrap-index ===== size ===========
-	// singleSize 			4
-	// content 				content.length
-	// MAGIC_CODE 			MAGIC_CODE.length
-
-	private MessageLite decodeWrapMsg(byte[] buf) throws InvalidProtocolBufferException {
-
-		if (!isLegal(buf))
+		if(_buffer.length < 4)
 			return null;
 		
-		int contentLength = buf.length - 4 - MAGIC_CODE.length;
-		byte[] content = new byte[contentLength];
-		System.arraycopy(buf, 4, content, 0, contentLength);
-
-		return decodeOriginMsg(content);
+		List<MessageLite> list = null;
+		try {
+			while( _offset != _buffer.length ) {
+				
+				int totalSize =  ByteUtil.bytesToInt(_buffer[_offset+3], _buffer[_offset+2], _buffer[_offset+1], _buffer[_offset+0]);
+				
+				if ( _buffer.length >= _offset + totalSize ) {
+					
+					int contentLen = totalSize - 4 - MAGIC_CODE.length;
+					byte[] content = new byte[contentLen];
+					
+					System.arraycopy(_buffer, _offset + 4, content, 0, contentLen);
+	
+					MessageLite msg = decodeMsg(content);
+					
+					if(list == null)
+						list = new ArrayList<MessageLite>();
+					
+					list.add(msg);
+					_offset += totalSize;
+					
+				}else {
+					// data not enough
+					throw new IndexOutOfBoundsException("No enough data.");
+				}
+				
+			}
+		
+		} catch (InvalidProtocolBufferException e) {
+			LOGGER.error(e.getMessage());
+			return null;
+		}
+		
+		reset();
+		
+		return list;
 	}
+	
+	public void reset() {
+		_buffer = null;
+		_offset = 0;
+	}
+	
+	private void append(byte[] newBuffer) {
+		if (newBuffer == null) {
+			return;
+		}
 
-	private MessageLite decodeOriginMsg(byte[] protobuf) throws InvalidProtocolBufferException {
+		if (_buffer == null) {
+			_buffer = newBuffer;
+			return;
+		}
+
+		_buffer = margeByteArray(_buffer, newBuffer);
+	}
+	
+	private byte[] margeByteArray(byte[] a, byte[] b) {
+		byte[] result = new byte[a.length + b.length];
+		System.arraycopy(a, 0, result, 0, a.length);
+		System.arraycopy(b, 0, result, a.length, b.length);
+		return result;
+	}
+	
+	private MessageLite decodeMsg(byte[] protobuf) throws InvalidProtocolBufferException {
 
 		if (extensionRegistry == null) {
 			if (HAS_PARSER) {
@@ -168,17 +146,6 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 				return prototype.newBuilderForType().mergeFrom(protobuf, extensionRegistry).build();
 			}
 		}
-	}
-
-	private void reset() {
-		msgBuffCache = new byte[0];
-		ptr = 0;
-		allSize = -1;
-	}
-	
-	private boolean isLegal(byte[] buf) {
-		return buf != null && buf.length > 4 + MAGIC_CODE.length && buf.length == ByteUtil.bytesToInt(buf[3], buf[2], buf[1], buf[0])
-				&& Bytes.indexOf(buf, MAGIC_CODE) == buf.length - MAGIC_CODE.length;
 	}
 
 }
