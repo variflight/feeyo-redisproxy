@@ -1,72 +1,42 @@
 package com.feeyo.net.codec.protobuf;
 
-import java.util.List;
+import java.nio.ByteBuffer;
 
+import com.feeyo.net.codec.Encoder;
 import com.feeyo.util.ByteUtil;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
-//
-public class ProtobufEncoder {
+public class ProtobufEncoder implements Encoder<MessageLite>{
 	
-	private boolean isTcp = false;
-	
-	private final byte[] MAGIC_CODE = new byte[] { (byte) 0x7f, (byte) 0xff };
-	
-	public ProtobufEncoder(boolean isTcp) {
-		this.isTcp = isTcp;
-	}
-	
-	
-	private <T> byte[] encodeOrigin(T msg) throws InvalidProtocolBufferException {
-		
-		if (msg instanceof MessageLite) {
-	            return ((MessageLite) msg).toByteArray();
-        }
-        if (msg instanceof MessageLite.Builder) {
-            return ((MessageLite.Builder) msg).build().toByteArray();
-        }
-        
-        throw new InvalidProtocolBufferException(msg.getClass().getName());
-	}
+	private static final byte[] MAGIC_CODE = new byte[] { (byte) 0x7f, (byte) 0xff };
 	
 	// ==== wrap-index ===== size ===========
 	// totalSize 			4
 	// content 				content.length
 	// MAGIC_CODE 			MAGIC_CODE.length
 
-	public byte[] encode(MessageLite msg) throws InvalidProtocolBufferException {
+	@Override
+	public ByteBuffer encode(MessageLite msg){
 
-		byte[] content = encodeOrigin(msg);
+		if(msg == null)
+			return null;
+		
+		byte[] content = null;
+		byte[] ret = null;
+			
+		content = msg.toByteArray();
 		int totalSize = 4 + content.length + MAGIC_CODE.length;
 
 		if (totalSize == 0 || content == null || content.length == 0)
 			return null;
 		
-		byte[] ret = new byte[totalSize];
+		ret = new byte[totalSize];
 
 		System.arraycopy(ByteUtil.intToBytes(totalSize), 0, ret, 0, 4);
 		System.arraycopy(content, 0, ret, 4 , content.length);
 		System.arraycopy(MAGIC_CODE, 0, ret, 4 + content.length, MAGIC_CODE.length);
-		return ret;
-	}
-	
-	public byte[] encode(List<MessageLite> msgList) throws InvalidProtocolBufferException {
+		return ByteBuffer.wrap(ret);
 		
-		byte[] ret = new byte[0];
-		
-		for (MessageLite msg : msgList) {
-			byte[] buf = encode(msg);
-			ret = ByteUtil.byteMerge(buf, ret);
-		}
-		
-		if(isTcp) {
-			int headLen = ret.length;
-			byte[] headBuf = ByteUtil.intToBytes(headLen);
-			ret = ByteUtil.byteMerge(headBuf, ret);
-		}
-		System.out.println("ret : "+ ret.length);
-		return ret;
 	}
 	
 }
