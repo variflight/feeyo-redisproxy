@@ -11,9 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
-import com.feeyo.redis.nio.util.TimeUtil;
 
 /**
  * check for redis connections

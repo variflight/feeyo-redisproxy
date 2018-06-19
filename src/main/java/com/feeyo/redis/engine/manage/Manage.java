@@ -27,6 +27,13 @@ import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
+import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.net.nio.ClosableConnection;
+import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.buffer.BufferPool;
+import com.feeyo.net.nio.buffer.bucket.AbstractBucket;
+import com.feeyo.net.nio.buffer.bucket.BucketBufferPool;
+import com.feeyo.net.nio.buffer.page.PageBufferPool;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
@@ -44,15 +51,8 @@ import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
-import com.feeyo.redis.net.codec.RedisRequest;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.bypass.BypassService;
-import com.feeyo.redis.nio.AbstractConnection;
-import com.feeyo.redis.nio.NetSystem;
-import com.feeyo.redis.nio.buffer.BufferPool;
-import com.feeyo.redis.nio.buffer.bucket.AbstractBucket;
-import com.feeyo.redis.nio.buffer.bucket.BucketBufferPool;
-import com.feeyo.redis.nio.buffer.page.PageBufferPool;
 import com.feeyo.util.JavaUtils;
 import com.feeyo.util.ProtoUtils;
 import com.feeyo.util.ShellUtils;
@@ -383,10 +383,10 @@ public class Manage {
 					
 					int frontSize = 0;
 					int backendSize = 0;
-					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, ClosableConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						AbstractConnection c = it.next().getValue();
+						ClosableConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							frontSize++;
 						} else {
@@ -404,11 +404,11 @@ public class Manage {
 				// SHOW USER_CONN
 				} else if ( arg2.equalsIgnoreCase("USER_CONN") ) {
 					Map<String, Integer> userMap = new HashMap<String, Integer>();
-					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, ClosableConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						AbstractConnection c = it.next().getValue();
-						if (c instanceof RedisFrontConnection) {
+						ClosableConnection c = it.next().getValue();
+						if (c instanceof ClosableConnection) {
 							userMap.put(((RedisFrontConnection) c).getPassword(),
 									1 + (userMap.get(((RedisFrontConnection) c).getPassword()) == null ? 0
 											: userMap.get(((RedisFrontConnection) c).getPassword())));
@@ -471,10 +471,10 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
-					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, ClosableConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						AbstractConnection c = it.next().getValue();
+						ClosableConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							lines.add( c.toString() );
 						}
@@ -577,10 +577,10 @@ public class Manage {
 					List<String> lines = new ArrayList<String>();
 					
 					Map<String, AtomicInteger> poolConnections = new HashMap<String, AtomicInteger>();
-					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, ClosableConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						AbstractConnection c = it.next().getValue();
+						ClosableConnection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
 							// 统计每个redis池的连接数 
 							String poolName = ((RedisBackendConnection) c).getPhysicalNode().getPoolName();
@@ -620,8 +620,6 @@ public class Manage {
 					List<String> lines = new ArrayList<String>();
 
 					long minStartupTime = -1;
-					long maxLastLargeMessageTime = -1;
-					long totalLargeCounter = 0;
 					long totalNetInCounter = 0;
 					long totalNetInBytes = 0;
 					long totalNetOutCounter = 0;
@@ -629,27 +627,25 @@ public class Manage {
 					
 					String poolName = new String( request.getArgs()[2] );
 					
-					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, ClosableConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
 						
-						AbstractConnection c = it.next().getValue();
+						ClosableConnection c = it.next().getValue();
 						if ( c instanceof RedisBackendConnection ) {
+							
+							
 							// 统计每个redis池的连接数 
 							if (((RedisBackendConnection) c).getPhysicalNode().getPoolName().equals(poolName)) {
 								StringBuffer sb = new StringBuffer();
 								sb.append("ID=").append(c.getId()).append(". ");
 								sb.append("StartupTime=").append(c.getStartupTime()).append(". ");
-								sb.append("LastLargeMessageTime=").append(c.getLastLargeMessageTime()).append(". ");
-								sb.append("LargeCount=").append(c.getLargeCounter()).append(". ");
 								sb.append("NetInCount=").append(c.getNetInCounter()).append(". ");
 								sb.append("NetInBytes=").append(c.getNetInBytes()).append(". ");
 								sb.append("NetOutBytes=").append(c.getNetOutBytes()).append(". ");
 								lines.add( sb.toString() );
 								
 								minStartupTime = minStartupTime < 0 ? c.getStartupTime() : Math.min(minStartupTime, c.getStartupTime());
-								maxLastLargeMessageTime = Math.max(maxLastLargeMessageTime, c.getLastLargeMessageTime());
-								totalLargeCounter 	+= c.getLargeCounter();
 								totalNetInCounter 	+= c.getNetInCounter();
 								totalNetInBytes 	+= c.getNetInBytes();
 								totalNetOutCounter  += c.getNetOutCounter();
@@ -660,8 +656,6 @@ public class Manage {
 					
 					StringBuffer end = new StringBuffer();
 					end.append("MinStartupTime=").append(minStartupTime).append(". ");
-					end.append("MaxLastLargeMessageTime=").append(maxLastLargeMessageTime).append(". ");
-					end.append("TotalLargeCounter=").append(totalLargeCounter).append(". ");
 					end.append("TotalNetInCounter=").append(totalNetInCounter).append(". ");
 					end.append("TotalNetInBytes=").append(totalNetInBytes).append(". ");
 					end.append("totalNetOutCounter=").append(totalNetOutCounter).append(". ");
@@ -1130,10 +1124,10 @@ public class Manage {
 				// reload front
 				} else if ( arg2.equalsIgnoreCase("FRONT") ) {
 					
-					ConcurrentMap<Long, AbstractConnection> allConnections = NetSystem.getInstance().getAllConnectios();
-					Iterator<Entry<Long, AbstractConnection>> it = allConnections.entrySet().iterator();
+					ConcurrentMap<Long, ClosableConnection> allConnections = NetSystem.getInstance().getAllConnectios();
+					Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
-						AbstractConnection c = it.next().getValue();
+						ClosableConnection c = it.next().getValue();
 						if ( c instanceof RedisFrontConnection ) {
 							LOGGER.info("close: {}", c);
 							c.close("manage close");

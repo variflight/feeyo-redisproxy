@@ -11,21 +11,21 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
+import com.feeyo.net.nio.NIOAcceptor;
+import com.feeyo.net.nio.NIOConnector;
+import com.feeyo.net.nio.NIOReactor;
+import com.feeyo.net.nio.NIOReactorPool;
+import com.feeyo.net.nio.NetFlowMonitor;
+import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.SystemConfig;
+import com.feeyo.net.nio.buffer.BufferPool;
+import com.feeyo.net.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PoolFactory;
 import com.feeyo.redis.net.front.RedisFrontendConnectionFactory;
-import com.feeyo.redis.nio.NIOAcceptor;
-import com.feeyo.redis.nio.NIOConnector;
-import com.feeyo.redis.nio.NIOReactor;
-import com.feeyo.redis.nio.NIOReactorPool;
-import com.feeyo.redis.nio.NetFlowMonitor;
-import com.feeyo.redis.nio.NetSystem;
-import com.feeyo.redis.nio.SystemConfig;
-import com.feeyo.redis.nio.buffer.BufferPool;
-import com.feeyo.redis.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.redis.virtualmemory.VirtualMemoryService;
 import com.feeyo.util.ExecutorUtil;
 import com.feeyo.util.keepalived.KeepAlived;
@@ -95,9 +95,14 @@ public class RedisEngineCtx {
         String timerSizeString = this.serverMap.get("timerSize"); 
         String networkFlowLimitSizeString = this.serverMap.get("networkFlowLimitSize");
         
-        int processors = Runtime.getRuntime().availableProcessors();
+       
         int port = portString == null ? 8066: Integer.parseInt( portString );
-        int reactorSize = reactorSizeString == null ? processors : Integer.parseInt( reactorSizeString );
+        
+        int processors = Runtime.getRuntime().availableProcessors();
+        int reactorSize = reactorSizeString == null ? processors + 1 : Integer.parseInt( reactorSizeString );
+        if ( reactorSize > 9 ) {
+        	reactorSize = 4 + (processors * 5 / 8);
+        }
         
         long minBufferSize = minBufferSizeString == null ? 16384 * 1000 : Long.parseLong( minBufferSizeString );
         long maxBufferSize = maxBufferSizeString == null ? 16384 * 10000 : Long.parseLong( maxBufferSizeString );

@@ -1,7 +1,7 @@
 package com.feeyo.redis.net.front.route;
 
-import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.codec.RedisRequestType;
+import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequestType;
 import com.feeyo.redis.net.front.handler.segment.Segment;
 
 import java.util.List;

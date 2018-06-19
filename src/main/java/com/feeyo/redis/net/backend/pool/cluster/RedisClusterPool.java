@@ -9,13 +9,13 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.nio.util.TimeUtil;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
@@ -236,10 +236,12 @@ public class RedisClusterPool extends AbstractPool {
 				String name = poolCfg.getName();
 				int minCon = poolCfg.getMinCon();
 				int maxCon = poolCfg.getMaxCon();
+				boolean isZeroCopy = poolCfg.isZeroCopy();
+				
 				String host = clusterNode.getHost();
 				int port = clusterNode.getPort();
 				
-				PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port );
+				PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port, isZeroCopy );
 				physicalNode.initConnections();
 				clusterNode.setPhysicalNode(physicalNode);				
 			}			
@@ -454,10 +456,12 @@ public class RedisClusterPool extends AbstractPool {
 						String name = poolCfg.getName();
 						int minCon = poolCfg.getMinCon();
 						int maxCon = poolCfg.getMaxCon();
+						boolean isZeroCopy = poolCfg.isZeroCopy();
+						
 						String host = clusterNode.getHost();
 						int port = clusterNode.getPort();
 							
-						PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port );
+						PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port, isZeroCopy );
 						physicalNode.initConnections();
 						clusterNode.setPhysicalNode( physicalNode );
 					}

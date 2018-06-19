@@ -3,24 +3,25 @@ package com.feeyo.redis.net.backend;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import com.feeyo.net.nio.NetSystem;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.nio.NetSystem;
 
 public class RedisBackendConnectionFactory implements BackendConnectionFactory {
 
 	@Override
-	public BackendConnection make(PhysicalNode physicalNode, 
+	public BackendConnection make(PhysicalNode physicalNode,
 			BackendCallback callback, Object attachement) throws IOException {
 		
 		String host = physicalNode.getHost();
 		int port = physicalNode.getPort();
+		boolean isZeroCopy = physicalNode.isZeroCopy();
 		
 		SocketChannel channel = SocketChannel.open();
 		channel.configureBlocking(false);
 
-		RedisBackendConnection c = new RedisBackendConnection( channel );
+		RedisBackendConnection c = new RedisBackendConnection( isZeroCopy, channel );
 		NetSystem.getInstance().setSocketParams(c, false);
 
 		// 设置NIOHandlers

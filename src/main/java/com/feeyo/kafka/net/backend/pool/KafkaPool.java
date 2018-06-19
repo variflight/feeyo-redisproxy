@@ -21,13 +21,13 @@ import com.feeyo.kafka.net.backend.callback.KafkaCmdCallback;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
+import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.redis.nio.NetSystem;
-import com.feeyo.redis.nio.util.TimeUtil;
 import com.google.common.collect.Sets;
 
 public class KafkaPool extends AbstractPool {
@@ -64,12 +64,13 @@ public class KafkaPool extends AbstractPool {
 		String poolName = poolCfg.getName();
 		int minCon = poolCfg.getMinCon();
 		int maxCon = poolCfg.getMaxCon();
+		boolean isZeroCopy = poolCfg.isZeroCopy();
 
 		availableHostList.clear();
 		backupHostList.clear();
 		for (Node node : nodes) {
 			PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
-					poolType, poolName, minCon, maxCon, node.host(), node.port());
+					poolType, poolName, minCon, maxCon, node.host(), node.port(), isZeroCopy );
 			physicalNode.initConnections();
 			physicalNodes.put(node.id(), physicalNode);
 
@@ -211,10 +212,11 @@ public class KafkaPool extends AbstractPool {
 				String poolName = poolCfg.getName();
 				int minCon = poolCfg.getMinCon();
 				int maxCon = poolCfg.getMaxCon();
+				boolean isZeroCopy = poolCfg.isZeroCopy();
 
 				for (Node node : nodes) {
 					PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
-							poolType, poolName, minCon, maxCon, node.host(), node.port());
+							poolType, poolName, minCon, maxCon, node.host(), node.port(), isZeroCopy);
 					newPhysicalNodes.put(node.id(), physicalNode);
 				}
 				

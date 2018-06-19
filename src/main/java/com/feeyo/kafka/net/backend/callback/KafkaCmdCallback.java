@@ -7,12 +7,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.codec.ResponseHeader;
+import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.nio.NetSystem;
-import com.feeyo.redis.nio.util.TimeUtil;
 
 public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 	
@@ -67,12 +67,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 				
 				int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 				int backendWaitTimeMills = (int)(conn.getLastReadTime() - conn.getLastWriteTime());
-				
-				if( backendWaitTimeMills > procTimeMills ) {
-					LOGGER.warn("proc time err:  requestTime={}, responseTime={}, lastReadTime={}, lastWriteTime={}",
-							new Object[]{ requestTimeMills, responseTimeMills, conn.getLastReadTime(), conn.getLastWriteTime() } );
-				}
-				
+
 				// 数据收集
 				StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false);
 			}

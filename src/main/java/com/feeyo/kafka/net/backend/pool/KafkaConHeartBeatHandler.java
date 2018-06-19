@@ -2,9 +2,9 @@ package com.feeyo.kafka.net.backend.pool;
 
 import java.io.IOException;
 
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
-import com.feeyo.redis.nio.util.TimeUtil;
 
 public class KafkaConHeartBeatHandler extends ConHeartBeatHandler {
 	

@@ -7,17 +7,17 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.net.codec.redis.RedisRequestType;
+import com.feeyo.net.codec.redis.RedisResponsePipelineDecoder;
+import com.feeyo.net.codec.redis.RedisResponsePipelineDecoder.PipelineResponse;
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
-import com.feeyo.redis.net.codec.RedisRequest;
-import com.feeyo.redis.net.codec.RedisRequestType;
-import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder;
-import com.feeyo.redis.net.codec.RedisResponsePipelineDecoder.PipelineResponse;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
-import com.feeyo.redis.nio.util.TimeUtil;
 
 public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	
@@ -56,7 +56,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 		public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
 
 			// 解析此次返回的数据条数
-			PipelineResponse pipelineResponse = decoder.parse( byteBuff );
+			PipelineResponse pipelineResponse = decoder.decode( byteBuff );
 			if ( !pipelineResponse.isOK() )
 				return;
 			
@@ -85,11 +85,6 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 
 						int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
-						
-						if( backendWaitTimeMills > procTimeMills ) {
-							LOGGER.warn("proc time err:  requestTime={}, responseTime={}, lastReadTime={}, lastWriteTime={}",
-									new Object[]{ requestTimeMills, responseTimeMills, backendCon.getLastReadTime(), backendCon.getLastWriteTime() } );
-						}
 						
 						// 后段链接释放
 						releaseBackendConnection(backendCon);

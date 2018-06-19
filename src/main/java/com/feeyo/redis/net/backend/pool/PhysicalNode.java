@@ -5,10 +5,10 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.BackendConnectionFactory;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
-import com.feeyo.redis.nio.util.TimeUtil;
 
 
 /**
@@ -34,11 +34,12 @@ public class PhysicalNode {
 	protected int port;
 	protected int minCon;
 	protected int maxCon;
+	protected boolean isZeroCopy;
 	
 	protected final BackendConnectionFactory factory;
 	
 	public PhysicalNode(BackendConnectionFactory factory, int poolType, String poolName, 
-			int minCon, int maxCon, String host, int port) {
+			int minCon, int maxCon, String host, int port, boolean isZeroCopy) {
 		
 		this.factory = factory;
 		this.poolType = poolType;
@@ -46,6 +47,7 @@ public class PhysicalNode {
 		
 		this.host = host;
 		this.port = port;
+		this.isZeroCopy = isZeroCopy;
 		this.minCon = minCon;
 		this.maxCon = maxCon;
 		
@@ -211,17 +213,23 @@ public class PhysicalNode {
 		this.port = port;
 	}	
 	
+	public boolean isZeroCopy() {
+		return isZeroCopy;
+	}
+
 	@Override
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
-		sb.append("name:").append(name).append(".");
-		sb.append("size:").append(size).append(".");
-		sb.append("poolType:").append(poolType).append(".");
-		sb.append("poolName:").append(poolName).append(".");
-		sb.append("host:").append(host).append(".");
-		sb.append("port:").append(port).append(".");
-		sb.append("minCon:").append(minCon).append(".");
-		sb.append("maxCon:").append(maxCon).append(".");
+		sb.append(" ( ");
+		sb.append("name=").append(name).append(", ");
+		sb.append("size=").append(size).append(", ");
+		sb.append("poolType=").append(poolType).append(", ");
+		sb.append("poolName=").append(poolName).append(", ");
+		sb.append("host=").append(host).append(", ");
+		sb.append("port=").append(port).append(", ");
+		sb.append("minCon=").append(minCon).append(", ");
+		sb.append("maxCon=").append(maxCon).append(", ");
+		sb.append("isZeroCopy=").append(isZeroCopy).append(" ) ");
 		return sb.toString();
 	}
 	
