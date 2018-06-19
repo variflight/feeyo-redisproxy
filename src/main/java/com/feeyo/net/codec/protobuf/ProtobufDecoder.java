@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.Decoder;
-import com.feeyo.util.ByteUtil;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -16,6 +15,7 @@ import com.google.protobuf.MessageLite;
 public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProtobufDecoder.class);
+	
 	private static final byte[] MAGIC_CODE = new byte[] { (byte) 0x7f, (byte) 0xff };
 
 	private final MessageLite prototype;
@@ -72,7 +72,11 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		try {
 			while( _offset != _buffer.length ) {
 				
-				int totalSize =  ByteUtil.bytesToInt(_buffer[_offset+3], _buffer[_offset+2], _buffer[_offset+1], _buffer[_offset+0]);
+				int totalSize = 
+						_buffer[_offset + 3] & 0xFF 
+						| (_buffer[_offset + 2] & 0xFF) << 8
+						| (_buffer[_offset + 1] & 0xFF) << 16 
+						| (_buffer[_offset] & 0xFF) << 24;
 				
 				if ( _buffer.length >= _offset + totalSize ) {
 					

@@ -3,40 +3,40 @@ package com.feeyo.net.codec.protobuf;
 import java.nio.ByteBuffer;
 
 import com.feeyo.net.codec.Encoder;
-import com.feeyo.util.ByteUtil;
 import com.google.protobuf.MessageLite;
 
 public class ProtobufEncoder implements Encoder<MessageLite>{
-	
-	private static final byte[] MAGIC_CODE = new byte[] { (byte) 0x7f, (byte) 0xff };
-	
-	// ==== wrap-index ===== size ===========
-	// totalSize 			4
-	// content 				content.length
-	// MAGIC_CODE 			MAGIC_CODE.length
 
 	@Override
 	public ByteBuffer encode(MessageLite msg){
 
-		if(msg == null)
+		if (msg == null)
+			return null;
+
+		byte[] msgBuffer = msg.toByteArray();
+		if (msgBuffer == null || msgBuffer.length == 0) {
+			return null;
+		}
+		
+		//
+		int totalSize = 2 + 4 + msgBuffer.length;
+		if (totalSize == 0 || msgBuffer == null || msgBuffer.length == 0)
 			return null;
 		
-		byte[] content = null;
-		byte[] ret = null;
-			
-		content = msg.toByteArray();
-		int totalSize = 4 + content.length + MAGIC_CODE.length;
-
-		if (totalSize == 0 || content == null || content.length == 0)
-			return null;
+		byte[] resultBuffer = new byte[totalSize];
 		
-		ret = new byte[totalSize];
-
-		System.arraycopy(ByteUtil.intToBytes(totalSize), 0, ret, 0, 4);
-		System.arraycopy(content, 0, ret, 4 , content.length);
-		System.arraycopy(MAGIC_CODE, 0, ret, 4 + content.length, MAGIC_CODE.length);
-		return ByteBuffer.wrap(ret);
+		// MAGIC
+		resultBuffer[0] = (byte) 0x7f;
+		resultBuffer[1] = (byte) 0xff;
 		
+		// TotalSize
+		resultBuffer[2] = (byte) ((totalSize >> 24) & 0xFF);
+		resultBuffer[3] = (byte) ((totalSize >> 16) & 0xFF);
+		resultBuffer[4] = (byte) ((totalSize >> 8) & 0xFF);
+		resultBuffer[5] = (byte) (totalSize & 0xFF);
+
+		System.arraycopy(msgBuffer, 0, resultBuffer, 4, msgBuffer.length);
+		return ByteBuffer.wrap(resultBuffer);
 	}
 	
 }
