@@ -19,17 +19,11 @@ public class ProtobufEncoder implements Encoder<MessageLite>{
 		}
 		
 		//
-		int totalSize = 2 + 4 + msgBuffer.length;
+		int totalSize = 4 + msgBuffer.length;
 		if (totalSize == 0 || msgBuffer == null || msgBuffer.length == 0)
 			return null;
 		
 		ByteBuffer buffer = ByteBuffer.allocate(totalSize);
-		
-		// MAGIC
-		buffer.put( (byte)0x7f );
-		buffer.put( (byte)0xff );
-		
-		// TOTALSIZE
 		buffer.put( (byte) ((totalSize >> 24) & 0xFF) );
 		buffer.put( (byte) ((totalSize >> 16) & 0xFF) );
 		buffer.put( (byte) ((totalSize >> 8) & 0xFF) );
