@@ -8,16 +8,23 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.Decoder;
 import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
+/**
+ * 
+ * @author xuwenfeng
+ *
+ */
 public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProtobufDecoder.class);
+	
+	//
+	private boolean isCustomPkg = false;
 
 	private final MessageLite prototype;
-	private final ExtensionRegistryLite extensionRegistry;
+	private final ExtensionRegistry extensionRegistry;
 
 	private static boolean HAS_PARSER = false;
 
@@ -38,15 +45,11 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		HAS_PARSER = hasParser;
 	}
 
-	public ProtobufDecoder(MessageLite prototype) {
-		this(prototype, null);
+	public ProtobufDecoder(MessageLite prototype, boolean isCustomPkg) {
+		this(prototype, null, isCustomPkg);
 	}
 
-	public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry) {
-		this(prototype, (ExtensionRegistryLite) extensionRegistry);
-	}
-
-	public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry) {
+	public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry, boolean isCustomPkg) {
 
 		if (prototype == null) {
 			throw new NullPointerException("prototype");
@@ -54,6 +57,9 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 
 		this.prototype = prototype.getDefaultInstanceForType();
 		this.extensionRegistry = extensionRegistry;
+		
+		//
+		this.isCustomPkg = isCustomPkg;
 	}
 
 	@Override
@@ -67,9 +73,21 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		if (_buffer.length < 4)
 			return null;
 
+		
+		
 		List<MessageLite> list = null;
 		try {
 			
+			if ( !isCustomPkg ) {
+				//
+				MessageLite msg = parse( _buffer );
+
+				list = new ArrayList<MessageLite>();
+				list.add(msg);
+				return list;
+			}
+			
+			//
 			while (_offset != _buffer.length) {
 
 				//
@@ -82,22 +100,8 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 					byte[] content = new byte[totalSize - 4];
 					System.arraycopy(_buffer, _offset + 4, content, 0, content.length);
 
-					MessageLite msg = null;
-
-					if (extensionRegistry == null) {
-						if (HAS_PARSER) {
-							msg = prototype.getParserForType().parseFrom(content);
-						} else {
-							msg = prototype.newBuilderForType().mergeFrom(content).build();
-						}
-					} else {
-						if (HAS_PARSER) {
-							msg = prototype.getParserForType().parseFrom(content, extensionRegistry);
-						} else {
-							msg = prototype.newBuilderForType().mergeFrom(content, extensionRegistry).build();
-						}
-					}
-
+					MessageLite msg = parse( content );
+					
 					if (list == null)
 						list = new ArrayList<MessageLite>();
 
@@ -122,6 +126,27 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		return list;
 	}
 
+	private MessageLite parse(byte[] buf) throws InvalidProtocolBufferException {
+		
+		MessageLite msg = null;
+
+		if (extensionRegistry == null) {
+			if (HAS_PARSER) {
+				msg = prototype.getParserForType().parseFrom(buf);
+			} else {
+				msg = prototype.newBuilderForType().mergeFrom(buf).build();
+			}
+		} else {
+			if (HAS_PARSER) {
+				msg = prototype.getParserForType().parseFrom(buf, extensionRegistry);
+			} else {
+				msg = prototype.newBuilderForType().mergeFrom(buf, extensionRegistry).build();
+			}
+		}
+		return msg;
+	}
+	
+	
 	public void reset() {
 		_buffer = null;
 		_offset = 0;

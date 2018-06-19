@@ -14,7 +14,7 @@ import com.feeyo.net.codec.protobuf.test.Eraftpb.SnapshotMetadata;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.UnknownFieldSet;
 
-public class ProtoBufTest {
+public class ProtobufTest {
 
 	public static void main(String[] args) {
 		
@@ -39,11 +39,11 @@ public class ProtoBufTest {
 				.setTerm(20).setLogTerm(30).setIndex(0).addEntries(entry).setCommit(123).setSnapshot(snapshot)
 				.setReject(true).setRejectHint(1).setContext(ByteString.copyFromUtf8("message0")).build();
 
-		ProtobufEncoder encoder = new ProtobufEncoder();
+		ProtobufEncoder encoder = new ProtobufEncoder( true );
 
 		ByteBuffer protobuf = encoder.encode(fromMsg);
 		
-		ProtobufDecoder decoder = new ProtobufDecoder(Message.getDefaultInstance());
+		ProtobufDecoder decoder = new ProtobufDecoder(Message.getDefaultInstance(), true);
 		Message toMsg = (Message) decoder.decode(protobuf.array()).get(0);
 		System.out.println(toMsg.getIndex());
 		
