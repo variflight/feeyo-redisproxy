@@ -21,8 +21,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
@@ -408,7 +408,7 @@ public class Manage {
 					Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
 						ClosableConnection c = it.next().getValue();
-						if (c instanceof ClosableConnection) {
+						if (c instanceof RedisFrontConnection) {
 							userMap.put(((RedisFrontConnection) c).getPassword(),
 									1 + (userMap.get(((RedisFrontConnection) c).getPassword()) == null ? 0
 											: userMap.get(((RedisFrontConnection) c).getPassword())));
