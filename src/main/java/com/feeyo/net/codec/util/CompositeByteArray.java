@@ -94,7 +94,7 @@ public class CompositeByteArray {
             int index = components.indexOf(c);
 
             while (remaining > 0) {
-                c = components.get(index++);
+                c = components.get(++index);
 
                 if (remaining <= c.length) {
                     System.arraycopy(c.bytes, 0, resultArr, destPos, remaining);
