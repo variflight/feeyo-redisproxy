@@ -113,29 +113,34 @@ public class ZeroCopyConnection extends ClosableConnection {
 				
 				int position = mappedByteBuffer.position();
 				int count    = MAPPED_SIZE - position;
-				int tranfered = (int) fileChannel.transferFrom(socketChannel, position, count);
-				mappedByteBuffer.position( position + tranfered );
+				int length = (int) fileChannel.transferFrom(socketChannel, position, count);
+				mappedByteBuffer.position( position + length );
 				
 				// fixbug: transferFrom() always return 0 when client closed abnormally!
 				// --------------------------------------------------------------------
 				// So decide whether the connection closed or not by read()! 
-				if( tranfered == 0 && count > 0 ){
-					tranfered = socketChannel.read(mappedByteBuffer);
+				if( length == 0 && count > 0 ){
+					length = socketChannel.read(mappedByteBuffer);
 				}
 				
-				if ( tranfered > 0 ) {
+				if ( length > 0 ) {
 					
 					//
-					netInBytes += tranfered;
+					netInBytes += length;
 					netInCounter++;
 					
+					// 流量检测，超过max 触发限流
+					if ( isFlowLimit() && netFlowMonitor != null && netFlowMonitor.pool(length) ) {
+						flowClean();
+						return;
+					}
+					
 					//
-					byte[] data = new byte[ tranfered ];
+					byte[] data = new byte[ length ];
 					
+					//
 					mappedByteBuffer.flip();
-					mappedByteBuffer.get(data, 0, tranfered);
-					
-					//System.out.println( "asynRead, tranfered="+ tranfered + ",  " + new String(data)  );
+					mappedByteBuffer.get(data, 0, length);
 					
 					// 负责解析报文并处理
 					if ( isNested )
@@ -145,9 +150,9 @@ public class ZeroCopyConnection extends ClosableConnection {
 					
 					break;
 					
-				} else if ( tranfered == 0 ) {
+				} else if ( length == 0 ) {
 					
-					LOGGER.warn("sockect read abnormal, tranfered={}", tranfered);
+					LOGGER.warn("sockect read abnormal, tranfered={}", length);
 					
 					if (!this.socketChannel.isOpen()) {
 						this.close("socket closed");

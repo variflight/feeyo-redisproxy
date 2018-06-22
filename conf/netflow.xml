@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<redis>
+
+	<!-- 流量监控、清洗 -->
+	<netflow watch="true">
+		<user password="xxx1" perSecondMaxSize="" singleRequestMaxSize="" ></user>
+		<user password="xxx2" perSecondMaxSize="" singleRequestMaxSize="" ></user>
+		<user password="xxx3" perSecondMaxSize="" singleRequestMaxSize="" ></user>
+		<user password="xxx4" perSecondMaxSize="" singleRequestMaxSize="" ></user>
+	</netflow>
+
+</redis>
