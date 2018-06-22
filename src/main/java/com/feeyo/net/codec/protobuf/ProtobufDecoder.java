@@ -62,6 +62,10 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		this.isCustomPkg = isCustomPkg;
 	}
 
+	public boolean isCustomPkg() {
+		return isCustomPkg;
+	}
+
 	@Override
 	public List<MessageLite> decode(byte[] buf) {
 
