@@ -17,6 +17,10 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaCmdCallback.class );
+	
+	protected static final int PRODUCE_RESPONSE_SIZE = 2;
+	protected static final int CONSUMER_RESPONSE_SIZE = 3;
+	protected static final int OFFSET_RESPONSE_SIZE = 2;
 
 	protected static final byte ASTERISK = '*';
 	protected static final byte DOLLAR = '$';
@@ -47,11 +51,11 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 			int responseSize = this.buffer.length;
 			this.buffer = null;
 			
-			// header
+			// parse header
 			ResponseHeader.parse(buffer);
 			
-			// parse
-			continueParsing(buffer);
+			// parse body
+			parseResponseBody(conn, buffer);
 			
 			// release
 			RedisFrontConnection frontCon = getFrontCon( conn );
@@ -85,7 +89,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 		
 	}
 
-	public abstract void continueParsing(ByteBuffer buffer);
+	public abstract void parseResponseBody(BackendConnection conn, ByteBuffer buffer);
 
 	private void append(byte[] buf) {
 		if (buffer == null) {
