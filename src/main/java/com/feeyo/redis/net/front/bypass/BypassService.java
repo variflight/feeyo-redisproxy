@@ -187,7 +187,7 @@ public class BypassService {
 		int new_queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
 		
 		// code safe
-		if ( new_requireSize < 16 * 1024) new_requireSize = 16 * 1024;
+		if ( new_requireSize < 100 * 1024) new_requireSize = 100 * 1024;
 		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
 		if ( new_maxPoolSize > 6 ) new_maxPoolSize = 6;
 		if ( new_queueSize > 100 ) new_queueSize = 100;
