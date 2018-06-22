@@ -143,9 +143,10 @@ public class BypassService {
 	public byte[] reload() {
 		
 		try {
+			
 			Map<String, String> map = ConfigLoader.loadServerMap(ConfigLoader.buidCfgAbsPathFor("server.xml"));
-			boolean isSet = updateParameter( map );
-			if ( isSet ) {
+			boolean isUpdated = updateParameter( map );
+			if ( isUpdated ) {
 				
 				// hold old threadPool
 				ThreadPoolExecutor oldThreadPoolExecutor = this.threadPoolExecutor;
@@ -160,9 +161,11 @@ public class BypassService {
 				
 				// kill old threadPool
 				oldThreadPoolExecutor.shutdown();
+				
+				StatUtil.getBigKeyCollector().setSize( requireSize );
 			}
 			
-			StatUtil.getBigKeyCollector().setSize( requireSize );
+			
 			
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();

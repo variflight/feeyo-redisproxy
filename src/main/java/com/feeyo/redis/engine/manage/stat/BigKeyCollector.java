@@ -25,7 +25,7 @@ public class BigKeyCollector implements StatCollector {
 	
 	
 	public void setSize(int size) {
-		if ( size >= 1024 * 256 && size <= 1024 * 1024 * 2 )
+		if ( size >= 1024 * 100 && size <= 1024 * 1024 * 2 )
 			REQUIRED_SIZE = size;
 	}
 	
