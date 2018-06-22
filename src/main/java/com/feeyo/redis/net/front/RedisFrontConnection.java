@@ -40,7 +40,7 @@ public class RedisFrontConnection extends FrontConnection {
 	public void asynRead() throws IOException {
 		
 		// 流量超标，执行流量清洗
-		if ( netFlowMonitor != null && netFlowMonitor.isOverproof() && isFlowLimit()) {
+		if ( netFlowMonitor != null && netFlowMonitor.isOverproof() ) {
 			flowClean();
 			return;
 		}
@@ -84,14 +84,7 @@ public class RedisFrontConnection extends FrontConnection {
 	public void releaseLock() {
 		_readLock.set(false);
 	}
-	
-	@Override
-	public boolean isFlowLimit() {
-		UserCfg uc = this.getUserCfg();
-		if ( uc != null )
-			return uc.isFlowLimit();
-		return false;
-	}
+
 	
 	@Override
 	public void flowClean() {

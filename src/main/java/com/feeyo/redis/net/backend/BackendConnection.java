@@ -317,11 +317,6 @@ public class BackendConnection extends ClosableConnection {
 	public void setDirection(Direction in) {
 		delegateConn.setDirection(in);
 	}
-	
-	@Override
-	public boolean isFlowLimit() {
-		return delegateConn.isFlowLimit();
-	}
 
 	@Override
 	public void flowClean() {

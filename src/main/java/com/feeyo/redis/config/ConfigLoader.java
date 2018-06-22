@@ -137,13 +137,12 @@ public class ConfigLoader {
 				int selectDb = getIntAttribute(nameNodeMap, "selectDb", -1);
 				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
-				boolean isFlowlimit = getBooleanAttribute(nameNodeMap, "flowlimit", false);
 					
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
 				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, 
-						isReadonly, isFlowlimit);
+						isReadonly);
 				
 				map.put(password, userCfg);
 			}

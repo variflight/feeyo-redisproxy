@@ -422,11 +422,6 @@ public abstract class ClosableConnection {
 	public void setDirection(Direction in) {
 		this.direction = in;
 	}
-	
-	
-	public boolean isFlowLimit() {
-		return false;
-	}
 
 	public void flowClean() {
 		LOGGER.warn("Flow cleaning,  {}", this );

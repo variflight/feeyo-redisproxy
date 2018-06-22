@@ -295,7 +295,7 @@ public class Connection extends ClosableConnection {
 				netInCounter++;
 				
 				// 流量检测，超过max 触发限流
-				if ( isFlowLimit() && netFlowMonitor != null && netFlowMonitor.pool(length) ) {
+				if ( netFlowMonitor != null && netFlowMonitor.pool(length) ) {
 					flowClean();
 					return;
 				}
@@ -324,8 +324,8 @@ public class Connection extends ClosableConnection {
 					largeCounter++;
 					
 					// 拿完整包
-					continue;		
-					//break;		 	
+					//continue;		
+					break;		 	
 				} 
 				
 				// 负责解析报文并处理

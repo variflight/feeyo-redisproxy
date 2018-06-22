@@ -130,7 +130,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 					netInCounter++;
 					
 					// 流量检测，超过max 触发限流
-					if ( isFlowLimit() && netFlowMonitor != null && netFlowMonitor.pool(length) ) {
+					if ( netFlowMonitor != null && netFlowMonitor.pool(length) ) {
 						flowClean();
 						return;
 					}

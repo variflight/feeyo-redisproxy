@@ -34,7 +34,7 @@ public class NetFlowMonitor {
 	
 	public boolean pool(long length) {
 		
-		if ( this.maxByteSize > 0 ) {
+		if ( this.maxByteSize > 0 && length > 0) {
 			
 			long currentTimeMillis = TimeUtil.currentTimeMillis();
 			//long currentTimeMillis = System.currentTimeMillis();
