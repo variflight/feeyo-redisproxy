@@ -29,7 +29,7 @@ public class BypassService {
 	private static BypassService _INSTANCE = null;
 	
 	//
-	private ThreadPoolExecutor threadPoolExecutor;
+	private volatile ThreadPoolExecutor threadPoolExecutor;
 	
 	private int requireSize;
 	private int corePoolSize;
