@@ -147,7 +147,8 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             if (b == '-') {
                 isNeg = true;
             } else {
-                // TODO 什么意思
+                // 对于长度大于10以上的其实是多个字节存在, 需要考虑到位数所以需要 *10 的逻辑
+                // (byte) '1' = 49 为了得到原始的数字需要减去 '0'
                 size = size * 10 + b - '0';
             }
             tempIndex++;
