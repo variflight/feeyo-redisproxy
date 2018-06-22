@@ -6,14 +6,14 @@ import java.util.List;
 /**
  * 封装n个物理意义的字节数组,提供逻辑意义上的字节数组
  *
- * @see: https://github.com/netty/netty/blob/4.1/buffer/src/main/java/io/netty/buffer/CompositeByteBuf.java
- * @see: https://skyao.gitbooks.io/learning-netty/content/buffer/class_CompositeByteBuf.html
+ * @see "https://github.com/netty/netty/blob/4.1/buffer/src/main/java/io/netty/buffer/CompositeByteBuf.java"
+ * @see "https://skyao.gitbooks.io/learning-netty/content/buffer/class_CompositeByteBuf.html"
  */
 public class CompositeByteArray {
     // private ComponentAllocator allocator;
     private List<Component> components;
-    // 用于标记读取的位置
-    private int readOffset;
+    // 用于标记读取的位置----还是放在外部维护比较简单,不然涉及到不停的read/write增加代码复杂度
+    // private int readOffset;
     // 所有Component中byte[]长度之和, 用于检查下标值越界
     private int byteCount;
 
@@ -21,7 +21,6 @@ public class CompositeByteArray {
         // this.allocator = new ComponentAllocator(3);
         this.components = new ArrayList<>();
         this.byteCount = 0;
-        this.readOffset = 0;
     }
 
     public void add(byte[] bytes) {
@@ -44,14 +43,14 @@ public class CompositeByteArray {
     }
 
     // 从offset位置开始查找
-    public int firstIndex(int offset, byte value) {
-        checkIndex(offset, 1);
+    public int firstIndex(int paramOffset, byte value) {
+        checkIndex(paramOffset, 1);
 
+        int offset = paramOffset;
         Component c;
         int indexC;
         // 解析的请求大部分都是整包, 省略一次查找的过程
         if (offset == 0) {
-            c = components.get(0);
             indexC = 0;
         } else {
             c = findComponent(offset);
@@ -59,13 +58,21 @@ public class CompositeByteArray {
         }
 
         int length = components.size();
+        byte[] tempArr;
+        int tempLength;
         for (; indexC < length; indexC++) {
 
-            for (byte b : c.bytes) {
-                if (value == b) {
-                    return offset;
+            c = components.get(indexC);
+            tempArr = c.bytes;
+            tempLength = tempArr.length;
+            for (int j = 0; j < tempLength; j ++) {
+                // 这里需要忽略掉offset之前的字节
+                if (j + c.beginIndex < paramOffset) {
+                    continue;
                 }
-                offset++;
+                if (value == tempArr[j]) {
+                    return j + c.beginIndex;
+                }
             }
         }
         return -1;
@@ -94,7 +101,7 @@ public class CompositeByteArray {
             int index = components.indexOf(c);
 
             while (remaining > 0) {
-                c = components.get(index++);
+                c = components.get(++index);
 
                 if (remaining <= c.length) {
                     System.arraycopy(c.bytes, 0, resultArr, destPos, remaining);
@@ -111,14 +118,16 @@ public class CompositeByteArray {
         return resultArr;
     }
 
+    /**
+     * 返回剩余可读字节数
+     */
+    public int remaining(int readOffset) {
+        return (byteCount - readOffset) < 0 ? 0 : (byteCount - readOffset);
+    }
 
     public int getByteCount() {
         return byteCount;
     }
-
-    public int getReadOffset() { return this.readOffset; }
-
-    public void setReadOffset(int offset) { this.readOffset = offset; }
 
     /**
      * 清空其管理的所有byte[]并重置index <br>
@@ -129,7 +138,6 @@ public class CompositeByteArray {
         // }
         components.clear();
         byteCount = 0;
-        readOffset = 0;
     }
 
     private Component findComponent(int offset) {
