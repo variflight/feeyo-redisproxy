@@ -115,8 +115,7 @@ public class BypassService {
 								frontConn.close("write err");
 							}
 
-							// 由 reactor close
-							LOGGER.error("backend write to front err:", e);
+							LOGGER.error("bypass write to front err:", e);
 						}
 					}
 				}
@@ -163,17 +162,19 @@ public class BypassService {
 				oldThreadPoolExecutor.shutdown();
 				
 				StatUtil.getBigKeyCollector().setSize( requireSize );
+				
+				return "+OK\r\n".getBytes();
+				
+			} else  {	
+				return "+ERR parameter err, pls check. \r\n".getBytes();
 			}
-			
-			
 			
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
 			return sb.toString().getBytes();
 		}
-		
-		return "+OK\r\n".getBytes();
+
 	}
 	
 	// set
