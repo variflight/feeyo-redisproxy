@@ -21,7 +21,6 @@ public final class NIOAcceptor extends Thread {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOAcceptor.class );
 	
-	
 	private final int port;
 	private final Selector selector;
 	private final ServerSocketChannel serverChannel;
@@ -33,12 +32,13 @@ public final class NIOAcceptor extends Thread {
 			ConnectionFactory factory, NIOReactorPool reactorPool) throws IOException {
 		
 		super.setName(name);
+		
 		this.port = port;
 		this.selector = Selector.open();
 		this.serverChannel = ServerSocketChannel.open();
 		this.serverChannel.configureBlocking(false);
 		
-		// 设置 RECV buf
+		// recv buf
 		this.serverChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
 		this.serverChannel.setOption(StandardSocketOptions.SO_RCVBUF, 1024 * 32); // 32K
 		

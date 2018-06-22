@@ -169,7 +169,7 @@ public final class NIOReactor {
 				try {
 					c.register(selector);
 				} catch (Exception e) {
-					//LOGGER.warn("register error ", e);
+					LOGGER.warn("register error ", e);
 					c.close("register err");
 				}
 			}

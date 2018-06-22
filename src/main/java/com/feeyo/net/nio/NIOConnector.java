@@ -88,7 +88,7 @@ public final class NIOConnector extends Thread {
 				 //主动连接
 				channel.connect(new InetSocketAddress(c.getHost(), c.getPort()));
 			} catch (Exception e) {
-				LOGGER.error("error:", e);
+				LOGGER.error("connect error:", e);
 				c.close("connect failed:" + e.toString());
 			}
 		}
