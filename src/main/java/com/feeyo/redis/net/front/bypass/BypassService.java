@@ -190,7 +190,7 @@ public class BypassService {
 		if ( new_requireSize < 16 * 1024) new_requireSize = 16 * 1024;
 		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
 		if ( new_maxPoolSize > 6 ) new_maxPoolSize = 6;
-		if ( new_queueSize > 500 ) new_queueSize = 500;
+		if ( new_queueSize > 100 ) new_queueSize = 100;
 		
 		if ( this.requireSize == new_requireSize &&
 			 this.corePoolSize == new_corePoolSize &&
