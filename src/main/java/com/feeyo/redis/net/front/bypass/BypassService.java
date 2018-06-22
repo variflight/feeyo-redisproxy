@@ -51,26 +51,16 @@ public class BypassService {
 	private BypassService () {
 	
 		Map<String, String> map = RedisEngineCtx.INSTANCE().getServerMap();
-		String requireSizeString = map.get("bypassRequireSize"); 
-		String corePoolSizeString = map.get("bypassCorePoolSize"); 
-		String maxPoolSizeString = map.get("bypassMaxPoolSize");
-		String queueSizeString = map.get("bypassQueueSize"); 
+		updateParameter( map );
 		
-		this.requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
-		if ( requireSize < 256 * 1024)
-			requireSize = 256 * 1024;
-		
-		this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
-		this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
-		this.queueSize = queueSizeString == null ? 20 : Integer.parseInt( queueSizeString);
-		
-		
+		//
 		this.threadPoolExecutor = new BypassThreadExecutor(
 				corePoolSize, maxPoolSize, queueSize, new ThreadFactoryImpl("BypassService"));
 		this.threadPoolExecutor.prestartAllCoreThreads();
 		
 		StatUtil.getBigKeyCollector().setSize( requireSize );
 	}
+
 	
 	// 检测
 	public boolean testing(String requestCmd, String requestKey, int requestSize) {
@@ -154,20 +144,8 @@ public class BypassService {
 		
 		try {
 			Map<String, String> map = ConfigLoader.loadServerMap(ConfigLoader.buidCfgAbsPathFor("server.xml"));
-			String requireSizeString = map.get("bypassRequireSize");
-			String corePoolSizeString = map.get("bypassCorePoolSize");
-			String maxPoolSizeString = map.get("bypassMaxPoolSize");
-			String queueSizeString = map.get("bypassQueueSize");
-
-			this.requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
-			if ( requireSize < 256 * 1024 )
-				requireSize = 256 * 1024;
-			
-			this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
-			this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
-			this.queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
-
-			if (corePoolSize != threadPoolExecutor.getCorePoolSize()) {
+			boolean isSet = updateParameter( map );
+			if ( isSet ) {
 				
 				// hold old threadPool
 				ThreadPoolExecutor oldThreadPoolExecutor = this.threadPoolExecutor;
@@ -193,6 +171,40 @@ public class BypassService {
 		}
 		
 		return "+OK\r\n".getBytes();
+	}
+	
+	// set
+	private boolean updateParameter(Map<String, String> map) {
+		
+		String requireSizeString = map.get("bypassRequireSize");
+		String corePoolSizeString = map.get("bypassCorePoolSize");
+		String maxPoolSizeString = map.get("bypassMaxPoolSize");
+		String queueSizeString = map.get("bypassQueueSize");
+
+		int new_requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
+		int new_corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
+		int new_maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
+		int new_queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
+		
+		// code safe
+		if ( new_requireSize < 16 * 1024) new_requireSize = 16 * 1024;
+		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
+		if ( new_maxPoolSize > 6 ) new_maxPoolSize = 6;
+		if ( new_queueSize > 500 ) new_queueSize = 500;
+		
+		if ( this.requireSize == new_requireSize &&
+			 this.corePoolSize == new_corePoolSize &&
+			 this.maxPoolSize == new_maxPoolSize &&
+			 this.queueSize == new_queueSize ) {
+			return false;
+			
+		} else {
+			this.requireSize = new_requireSize;
+			this.corePoolSize = new_corePoolSize;
+			this.maxPoolSize = new_maxPoolSize;
+			this.queueSize = new_queueSize;		
+			return true;
+		}
 	}
 
 }

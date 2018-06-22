@@ -312,9 +312,8 @@ public class Connection extends ClosableConnection {
 					int newCapacity = readBuffer.capacity() << 1;
 					newCapacity = (newCapacity > maxCapacity) ? maxCapacity : newCapacity;			
 					
-					// ByteBuffer newBuffer = ByteBuffer.allocate( newCapacity );
+					// new buffer
 					ByteBuffer newBuffer = allocate( newCapacity );
-					
 					readBuffer.position( offset );
 					newBuffer.put( readBuffer );
 					
@@ -325,7 +324,7 @@ public class Connection extends ClosableConnection {
 					
 					// 拿完整包
 					//continue;		
-					break;		 	
+					break;		// 对 大包不友好 	
 				} 
 				
 				// 负责解析报文并处理
