@@ -117,7 +117,6 @@ public class CompositeByteArray {
     }
 
     public int getReadOffset() { return this.readOffset; }
-
     public void setReadOffset(int offset) { this.readOffset = offset; }
 
     /**
@@ -149,6 +148,10 @@ public class CompositeByteArray {
         throw new Error("should not reach here");
     }
 
+    private void checkIndex(int index) {
+        checkIndex(index, 1);
+    }
+    
     private void checkIndex(int index, int length) {
         if (isOutOfBounds(index, length, byteCount)) {
             throw new IndexOutOfBoundsException(String.format("index: %d, length: %d (expected: range(0, %d))", index, length,
@@ -158,10 +161,6 @@ public class CompositeByteArray {
 
     private boolean isOutOfBounds(int index, int length, int capacity) {
         return (index | length | (index + length) | (capacity - (index + length))) < 0;
-    }
-
-    private void checkIndex(int index) {
-        checkIndex(index, 1);
     }
 
     // 包装了 byte[], 增加了 length 和 beginIndex 方便查找
