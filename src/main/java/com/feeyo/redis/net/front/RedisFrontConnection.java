@@ -39,12 +39,6 @@ public class RedisFrontConnection extends FrontConnection {
 	@Override
 	public void asynRead() throws IOException {
 		
-		// 流量超标，执行流量清洗
-		if ( netFlowMonitor != null && netFlowMonitor.isOverproof() ) {
-			flowClean();
-			return;
-		}
-		
 		if (_readLock.compareAndSet(false, true)) {
 			super.asynRead();
 		}

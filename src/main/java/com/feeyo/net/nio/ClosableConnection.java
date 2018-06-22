@@ -198,6 +198,10 @@ public abstract class ClosableConnection {
 	public void setNetFlowMonitor(NetFlowMonitor nfm) {
 		this.netFlowMonitor = nfm;
 	}
+	
+	public NetFlowMonitor getNetFlowMonitor() {
+		return netFlowMonitor;
+	}
 
 	public boolean isConnected() {
 		boolean isConnected = (this.state != STATE_CONNECTING && state != STATE_CLOSING && state != STATE_CLOSED);

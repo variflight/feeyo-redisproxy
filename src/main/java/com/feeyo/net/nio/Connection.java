@@ -295,7 +295,12 @@ public class Connection extends ClosableConnection {
 				netInCounter++;
 				
 				// 流量检测，超过max 触发限流
-				if ( netFlowMonitor != null && netFlowMonitor.pool(length) ) {
+				boolean isOverproof;
+				if ( isNested )
+					isOverproof = handler.handleNetFlow(parent, length);
+				else
+					isOverproof = handler.handleNetFlow(this, length);
+				if (isOverproof) {
 					flowClean();
 					return;
 				}

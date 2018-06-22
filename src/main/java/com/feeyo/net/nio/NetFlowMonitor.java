@@ -1,8 +1,10 @@
 package com.feeyo.net.nio;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.HashMap;
+import java.util.Map;
 
-import com.feeyo.net.nio.util.TimeUtil;
+import com.feeyo.redis.config.ConfigLoader;
+import com.feeyo.redis.config.NetFlowCfg;
 
 
 /**
@@ -11,65 +13,56 @@ import com.feeyo.net.nio.util.TimeUtil;
  */
 public class NetFlowMonitor {
 	
-	private volatile boolean overproof = false;
-	
-	private final long maxByteSize;
-	
-	private AtomicLong[] arrs;
-	private int currentIndex;
-	
-	public NetFlowMonitor(long maxByteSize) {
-		
-		this.maxByteSize = maxByteSize;
-
-		if (this.maxByteSize > 0) {
-			
-			arrs = new AtomicLong[ 60 ];
-			for (int i = 0; i < arrs.length; i++) {
-				arrs[i] = new AtomicLong( maxByteSize );
-			}
+  	private Map<String, NetFlowCfg> netFlowMap;
+	private volatile boolean isOpen;
+  	
+	public NetFlowMonitor() {
+		try {
+			this.netFlowMap = ConfigLoader.loadNetFlowMap(ConfigLoader.buidCfgAbsPathFor("netflow.xml"));
+		} catch (Exception e) {
+			this.netFlowMap = new HashMap<String, NetFlowCfg>();
 		}
-
+		if (netFlowMap == null || netFlowMap.isEmpty()) {
+			isOpen = false;
+		} else {
+			isOpen = true;
+		}
 	}
 	
-	public boolean pool(long length) {
-		
-		if ( this.maxByteSize > 0 && length > 0) {
-			
-			long currentTimeMillis = TimeUtil.currentTimeMillis();
-			//long currentTimeMillis = System.currentTimeMillis();
-			
-			int tempIndex = (int) ((currentTimeMillis / 1000) % 60);
-			if (currentIndex != tempIndex) {
-				synchronized (this) {
-					// 这一秒的第一条统计，把对应的存储位的数据置是 max
-					if (currentIndex != tempIndex) {
-						// reset
-						arrs[tempIndex].set( maxByteSize );
-						currentIndex = tempIndex;
-					}
-				}
-			}
-			
-			overproof = decrement(arrs[currentIndex] , length ) <= 0;
-			return overproof;
+	/**
+	 * @param user
+	 * @param length
+	 * @return 是否超出流量
+	 */
+	public boolean pool(String user, long length) {
+		if (!isOpen) {
+			return false;
 		}
 		
-		return true;
-	}
-	
-	public boolean isOverproof() {
-		return overproof;
+		NetFlowCfg netFlowCfg = netFlowMap.get(user);
+		
+		if (netFlowCfg != null) {
+			return netFlowCfg.pool(length);
+		}
+		
+		return false;
 	}
 
-	
-    private final long decrement(AtomicLong atomicLong, long delta) {
-        for (;;) {
-            long current = atomicLong.get();
-            long next = current - delta;
-            if (atomicLong.compareAndSet(current, next))
-                return next;
-        }
-    }
+	public byte[] reload() {
+		try {
+			this.netFlowMap = ConfigLoader.loadNetFlowMap(ConfigLoader.buidCfgAbsPathFor("netflow.xml"));
+			if (netFlowMap == null || netFlowMap.isEmpty()) {
+				isOpen = false;
+			} else {
+				isOpen = true;
+			}
+		} catch (Exception e) {
+			// TODO: handle exception
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
+		}
+		return "+OK\r\n".getBytes();
+	}
     
 }

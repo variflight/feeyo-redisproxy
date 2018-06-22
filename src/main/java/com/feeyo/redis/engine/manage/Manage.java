@@ -97,6 +97,7 @@ public class Manage {
 	 *  RELOAD PATH
 	 *  RELOAD KAFKA
 	 *  RELOAD BIGKEY
+	 *  RELOAD NETFLOW
 	 *  
 	 *  JVM 指令依赖 JAVA_HOME 
 	 *  ----------------------------------------
@@ -1167,6 +1168,11 @@ public class Manage {
 				// reload bigkey
 				} else if ( arg2.equalsIgnoreCase("BIGKEY") ) {
 					byte[] buff = BypassService.INSTANCE().reload();
+					return buff;
+					
+				// reload netflow
+				} else if ( arg2.equalsIgnoreCase("NETFLOW") ) {
+					byte[] buff = RedisEngineCtx.INSTANCE().getFlowMonitor().reload();
 					return buff;
 				}
 			}

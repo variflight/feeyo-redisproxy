@@ -33,5 +33,14 @@ public interface NIOHandler<T extends ClosableConnection> {
 	 * @param data 数据
 	 */
 	void handleReadEvent(T con, byte[] data) throws IOException;
+	
+	/**
+	 * 
+	 * @param con
+	 * @param dataLength
+	 * @return 是否超过流量设置
+	 * @throws IOException
+	 */
+	boolean handleNetFlow(T con, int dataLength) throws IOException;
 
 }

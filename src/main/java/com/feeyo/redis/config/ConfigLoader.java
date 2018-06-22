@@ -245,6 +245,33 @@ public class ConfigLoader {
 		return props;
 	}
 	
+	/*
+	 * load mail properties
+	 */
+	public static Map<String, NetFlowCfg> loadNetFlowMap(String uri) throws Exception {
+
+		Map<String, NetFlowCfg> map = new HashMap<String, NetFlowCfg>();
+		try {
+			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("user");
+			for (int i = 0; i < nodeList.getLength(); i++) {
+				Node node = nodeList.item(i);
+				NamedNodeMap nameNodeMap = node.getAttributes();				
+				String password = getAttribute(nameNodeMap, "password", null);
+				int perSecondMaxSize = getIntAttribute(nameNodeMap, "perSecondMaxSize", Integer.MAX_VALUE);
+				perSecondMaxSize = perSecondMaxSize == -1 ? Integer.MAX_VALUE : perSecondMaxSize;
+				int singleRequestMaxSize = getIntAttribute(nameNodeMap, "singleRequestMaxSize", Integer.MAX_VALUE);
+				singleRequestMaxSize = singleRequestMaxSize == -1 ? Integer.MAX_VALUE : singleRequestMaxSize;
+				NetFlowCfg nfc = new NetFlowCfg(password, perSecondMaxSize , singleRequestMaxSize);
+				
+				map.put(password, nfc);
+			}
+		} catch (Exception e) {
+			LOGGER.error("load user.xml err " + e);
+			throw e;
+		}
+		return map;
+	}
+	
 	private static Document loadXmlDoc(String uri) throws Exception {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db = dbf.newDocumentBuilder();

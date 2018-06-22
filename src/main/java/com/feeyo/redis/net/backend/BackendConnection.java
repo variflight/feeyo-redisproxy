@@ -340,4 +340,9 @@ public class BackendConnection extends ClosableConnection {
 		return  sbuffer.toString();
 	}
 	
+	@Override
+	public NetFlowMonitor getNetFlowMonitor() {
+		return delegateConn.getNetFlowMonitor();
+	}
+	
 }
