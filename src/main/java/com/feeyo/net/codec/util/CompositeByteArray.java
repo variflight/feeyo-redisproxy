@@ -10,15 +10,16 @@ import java.util.List;
  * @see: https://skyao.gitbooks.io/learning-netty/content/buffer/class_CompositeByteBuf.html
  */
 public class CompositeByteArray {
-    // private ComponentAllocator allocator;
+
     private List<Component> components;
+    
     // 用于标记读取的位置
     private int readOffset;
+    
     // 所有Component中byte[]长度之和, 用于检查下标值越界
     private int byteCount;
 
     public CompositeByteArray() {
-        // this.allocator = new ComponentAllocator(3);
         this.components = new ArrayList<>();
         this.byteCount = 0;
         this.readOffset = 0;
@@ -32,8 +33,7 @@ public class CompositeByteArray {
             Component prevComponent = components.get(size - 1);
             beginIndex = prevComponent.length + prevComponent.beginIndex;
         }
-        // Component comp = allocator.alloc();
-        // comp.config(bytes, bytes.length, beginIndex);
+ 
         Component comp = new Component(bytes, bytes.length, beginIndex);
         components.add(comp);
     }
@@ -124,9 +124,6 @@ public class CompositeByteArray {
      * 清空其管理的所有byte[]并重置index <br>
      */
     public void clear() {
-        // for (Component c : components) {
-        //     c.invalid();
-        // }
         components.clear();
         byteCount = 0;
         readOffset = 0;
@@ -172,86 +169,12 @@ public class CompositeByteArray {
         final byte[] bytes;
         final int length;
         final int beginIndex;
-        // boolean isUsed;
 
         public Component(byte[] bytes, int length, int endIndex) {
             this.bytes = bytes;
             this.length = length;
             this.beginIndex = endIndex;
-            // this.isUsed = true;
         }
-        // public Component() {
-        //     this.isUsed = false;
-        // }
-        //
-        // public void config(byte[] bytes, int length, int endIndex) {
-        //     this.bytes = bytes;
-        //     this.length = length;
-        //     this.beginIndex = endIndex;
-        //     this.isUsed = true;
-        // }
-        //
-        // public void invalid() {
-        //     // 释放字节数组
-        //     this.bytes = null;
-        //     this.length = -1;
-        //     this.beginIndex = -1;
-        //     this.isUsed = false;
-        // }
     }
 
-    // 池化分配Component
-    // private final class ComponentAllocator {
-    //     private Component[] components;
-    //     private int useIndex;
-    //
-    //     public ComponentAllocator(int poolSize) {
-    //         useIndex = 0;
-    //         components = new Component[poolSize];
-    //         for (int i = 0; i < poolSize; i++) {
-    //             components[i] = new Component();
-    //         }
-    //     }
-    //
-    //     public Component alloc() {
-    //         int length = components.length;
-    //         if (useIndex == length - 1) {
-    //             useIndex = 0;
-    //         }
-    //
-    //         Component component = components[useIndex];
-    //         if (!component.isUsed) {
-    //             useIndex++;
-    //             return component;
-    //         } else {
-    //             int searchCount = 0;
-    //
-    //             // 上面的if已经算搜过一次了
-    //             while (searchCount < length - 1) {
-    //                 // 构造环形数组
-    //                 if (useIndex == length - 1) {
-    //                     useIndex = 0;
-    //                 }
-    //                 searchCount++;
-    //                 useIndex++;
-    //                 component = components[useIndex];
-    //
-    //                 // 找到可用的就返回
-    //                 if (!component.isUsed) {
-    //                     return component;
-    //                 }
-    //             }
-    //
-    //             // 已经没有可用的重新创建
-    //             Component[] newArray = new Component[length * 2];
-    //             System.arraycopy(components, 0, newArray, 0, length);
-    //             components = newArray;
-    //             for (int i = length; i < length * 2; i++) {
-    //                 components[i] = new Component();
-    //             }
-    //
-    //             return components[length];
-    //         }
-    //     }
-    // }
 }

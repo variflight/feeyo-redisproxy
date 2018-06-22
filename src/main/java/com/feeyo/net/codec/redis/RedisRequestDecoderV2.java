@@ -13,8 +13,10 @@ import java.util.List;
  * @see: com.feeyo.net.codec.redis.RedisRequestDecoder <br>
  */
 public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
+	
     private RedisRequest request = null;
     private CompositeByteArray byteArray = null;
+    
     private State state = State.READ_SKIP;
 
     @Override
