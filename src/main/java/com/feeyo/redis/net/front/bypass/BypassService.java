@@ -78,14 +78,16 @@ public class BypassService {
 		try {
 			
 			threadPoolExecutor.execute(new Runnable() {
+				
 				@Override
 				public void run() {
-
 					//
-					BypassIoConnection conn = new BypassIoConnection(physicalNode.getHost(), physicalNode.getPort());
-					List<RedisResponse> resps = conn.writeToBackend(request);
-					if (resps != null) {
-						try {
+					try {
+						
+						BypassIoConnection backConn = new BypassIoConnection(physicalNode.getHost(), physicalNode.getPort());
+						List<RedisResponse> resps = backConn.writeToBackend(request);
+						if (resps != null) {
+						
 							String password = frontConn.getPassword();
 							String cmd = frontConn.getSession().getRequestCmd();
 							String key = frontConn.getSession().getRequestKey();
@@ -95,7 +97,7 @@ public class BypassService {
 							int responseSize = 0;
 							
 							for (RedisResponse resp : resps)
-								responseSize += conn.writeToFront(frontConn, resp, 0);
+								responseSize += backConn.writeToFront(frontConn, resp, 0);
 							
 							resps.clear(); // help GC
 							resps = null;
@@ -108,15 +110,15 @@ public class BypassService {
 							// 数据收集
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
 							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false);
-							
-						} catch(IOException e) {
-							
-							if ( frontConn != null) {
-								frontConn.close("write err");
-							}
-
-							LOGGER.error("bypass write to front err:", e);
 						}
+						
+					} catch(IOException e) {
+						
+						if ( frontConn != null) {
+							frontConn.close("bypass write err");
+						}
+	
+						LOGGER.error("bypass write to front err:", e);
 					}
 				}
 			});
@@ -135,8 +137,6 @@ public class BypassService {
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
 							threadPoolExecutor.getMaximumPoolSize(),threadPoolExecutor.getTaskCount()} );						
 		}	
-		
-		
 	}
 	
 	public byte[] reload() {
