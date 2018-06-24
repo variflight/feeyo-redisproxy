@@ -199,22 +199,21 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
      */
     private int readCRLFOffset() throws IndexOutOfBoundsException {
         long t1 = System.currentTimeMillis();
-        int offset = readOffset;
         int length = byteArray.getByteCount();
 
-        if (offset + 1 >= length) {
+        if (readOffset + 1 >= length) {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        while (byteArray.get(offset) != '\r' && byteArray.get(offset + 1) != '\n') {
-            offset++;
-            if (offset + 1 == length) {
-                throw new IndexOutOfBoundsException("didn't see LF after NL reading multi bulk count (" + offset + " => " + length +
-                        ", " + offset + ")");
-            }
+        int offset = byteArray.indexAdjacentTwoByte(readOffset, (byte) '\r', (byte) '\n');
+        if (offset != -1) {
+            // indexAdjacentTwoByte返回的是\n的offset,这里减一即可
+            offset = offset + 1;
+        } else {
+            throw new IndexOutOfBoundsException("didn't see LF after NL reading multi bulk count (" + length +
+                    ", " + readOffset + ")");
         }
-        offset++;
-        offset++;
+
         findCost += (System.currentTimeMillis() - t1);
         return offset;
     }
@@ -244,7 +243,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         RedisResponseDecoderV2 decoder = new RedisResponseDecoderV2();
         long t = System.currentTimeMillis();
 
-        for (int i = 0; i < 1000000; i++) {
+        for (int i = 0; i < 10000000; i++) {
             // 整包数据
             // byte[] buffer1 = "+PONG \r\n".getBytes();
             // byte[] buffer2 = "-ERR Not implemented\r\n".getBytes();
