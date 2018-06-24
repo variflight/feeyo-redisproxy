@@ -160,22 +160,21 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
     }
 
     private int readCRLFOffset() throws IndexOutOfBoundsException {
-        int offset = readOffset;
         int length = byteArray.getByteCount();
 
-        if (offset + 1 >= length) {
+        if (readOffset + 1 >= length) {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        while (byteArray.get(offset) != '\r' && byteArray.get(offset + 1) != '\n') {
-            offset++;
-            if (offset + 1 == length) {
-                throw new IndexOutOfBoundsException("didn't see LF after NL reading multi bulk count (" + offset + " => " + length +
-                        ", " + offset + ")");
-            }
+        int offset = byteArray.indexAdjacentTwoByte(readOffset, (byte) '\r', (byte) '\n');
+        if (offset != -1) {
+            // indexAdjacentTwoByte返回的是\n的offset,这里减一即可
+            offset = offset + 1;
+        } else {
+            throw new IndexOutOfBoundsException("didn't see LF after NL reading multi bulk count (" + length +
+                    ", " + readOffset + ")");
         }
-        offset++;
-        offset++;
+
         return offset;
     }
 
@@ -266,7 +265,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
             resp = decoder.decode(buffer);
             long t2 = System.currentTimeMillis();
             int diff = (int) (t2 - t1);
-            if (diff > 1) {
+            if (diff > 2) {
                 System.out.println(" decode diff=" + diff + ", response=" + resp);
             }
         }

@@ -18,8 +18,6 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     // 用于标记读取的位置
     private int readOffset;
     private List<RedisResponse> responses = null;
-    private long findCost = 0;
-    private long readCost = 0;
 
     @Override
     public List<RedisResponse> decode(byte[] buffer) {
@@ -57,6 +55,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                     throw new IndexOutOfBoundsException("Not enough data.");
                 } else if (length == readOffset) {
                     byteArray.clear();
+                    readOffset = 0;
                     return responses;
                 }
             }
@@ -151,7 +150,6 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     }
 
     private int readInt() throws IndexOutOfBoundsException {
-        long t1 = System.currentTimeMillis();
         int length = byteArray.getByteCount();
         long size = 0;
         boolean isNeg = false;
@@ -187,7 +185,6 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             throw new RuntimeException("Cannot allocate less than " + Integer.MIN_VALUE + " bytes");
         }
 
-        readCost += (System.currentTimeMillis() - t1);
         return (int) size;
     }
 
@@ -198,7 +195,6 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
      * @throws IndexOutOfBoundsException
      */
     private int readCRLFOffset() throws IndexOutOfBoundsException {
-        long t1 = System.currentTimeMillis();
         int length = byteArray.getByteCount();
 
         if (readOffset + 1 >= length) {
@@ -214,7 +210,6 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                     ", " + readOffset + ")");
         }
 
-        findCost += (System.currentTimeMillis() - t1);
         return offset;
     }
 
@@ -275,14 +270,17 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
             System.arraycopy(buffer, buffer1.length + buffer2.length, buffer3, 0, buffer3.length);
 
+            long t1 = System.currentTimeMillis();
             List<RedisResponse> resp;
             decoder.decode(buffer1);
             decoder.decode(buffer2);
             resp = decoder.decode(buffer3);
-            // System.out.println(resp);
+            long t2 = System.currentTimeMillis();
+            int diff = (int) (t2 - t1);
+            if (diff > 2) {
+                System.out.println(" decode diff=" + diff + ", request=" + resp);
+            }
         }
         System.out.println("Decode costs " + (System.currentTimeMillis() - t) + " ms");
-        System.out.println("Find costs " + decoder.findCost + " ms");
-        System.out.println("read costs " + decoder.readCost + " ms");
     }
 }
