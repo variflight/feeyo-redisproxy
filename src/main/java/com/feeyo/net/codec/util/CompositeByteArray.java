@@ -42,18 +42,55 @@ public class CompositeByteArray {
         return c.bytes[index - c.beginIndex];
     }
 
+    // 同时查找2个字节
+    public int indexAdjacentTwoByte(int beginOffset, byte first, byte next) {
+        Component c = findComponent(beginOffset);
+        int indexC = components.indexOf(c);
+        int length = components.size();
+        byte[] tempArr;
+        int tempLength;
+        int firstIndex = -1;
+
+        for (; indexC < length; indexC++) {
+
+            c = components.get(indexC);
+            tempArr = c.bytes;
+            tempLength = tempArr.length;
+            for (int j = 0; j < tempLength; j ++) {
+                // 这里需要忽略掉offset之前的字节
+                if (j + c.beginIndex < beginOffset) {
+                    continue;
+                }
+
+                // 如果下一个字节不是next的话清除first的值
+                if (firstIndex != -1) {
+                    if (next == tempArr[j]) {
+                        return j + c.beginIndex;
+                    }
+                    else {
+                        firstIndex = -1;
+                    }
+                }
+
+                if (first == tempArr[j]) {
+                    firstIndex = j + c.beginIndex;
+                }
+            }
+        }
+        return -1;
+    }
+
     // 从offset位置开始查找
     public int firstIndex(int paramOffset, byte value) {
         checkIndex(paramOffset, 1);
 
-        int offset = paramOffset;
         Component c;
         int indexC;
         // 解析的请求大部分都是整包, 省略一次查找的过程
-        if (offset == 0) {
+        if (paramOffset == 0) {
             indexC = 0;
         } else {
-            c = findComponent(offset);
+            c = findComponent(paramOffset);
             indexC = components.indexOf(c);
         }
 

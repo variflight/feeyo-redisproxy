@@ -242,45 +242,50 @@ public class RedisResponseDecoder implements Decoder<List<RedisResponse>> {
 		System.arraycopy(_buffer, offset, arr, 0, length);
 		return arr;
 	}
-	
+
 	public static void main(String[] args) {
-		
-		byte[] buffer = "+PONG \r\n".getBytes();
-		buffer = "-ERR Not implemented\r\n".getBytes();
-		//buffer = "*-1\r\n".getBytes();
-		//buffer = "$12\r\n1cccccccccc9\r\n".getBytes();
-		//buffer = "$-1\r\n".getBytes();
-		buffer = "*2\r\n$7\r\npre1_bb\r\n$7\r\npre1_aa\r\n".getBytes();
-		
-//		buffer = "*3\r\n$9\r\nsubscribe\r\n$7\r\npre1_aa\r\n:1\r\n*3\r\n$9\r\nsubscribe\r\n$7\r\npre1_zz\r\n:2\r\n".getBytes();
-		
-		buffer = ("*3\r\n*4\r\n:5461\r\n:10922\r\n*3\r\n$15\r\n192.168.219.131\r\n:7003\r\n$40\r\n1fd8af2aa246c5adf00a25d1b6a0c1f4743bae5c\r\n"
-				+ "*3\r\n$15\r\n192.168.219.132\r\n:7002\r\n$40\r\ne0b1c5791694fdc2ede655023e80f0e57b3d86b4\r\n*4\r\n:0\r\n:5460\r\n"
-				+ "*3\r\n$15\r\n192.168.219.132\r\n:7000\r\n$40\r\nbee6866a13093c4411dea443ca8d901ea5d1e2f3\r\n"
-				+ "*3\r\n$15\r\n192.168.219.131\r\n:7004\r\n$40\r\nb3ba9c1af0fa7296fe1e32f2a955879bcf79108b\r\n*4\r\n:10923\r\n:16383\r\n"
-				+ "*3\r\n$15\r\n192.168.219.132\r\n:7001\r\n$40\r\n9c86ec8088050f837c490aeda15aca5a2c85d7ef\r\n"
-				+ "*3\r\n$15\r\n192.168.219.131\r\n:7005\r\n$40\r\nb0e22eccf79ced356e54a92ecbaa8d22757765d4\r\n").getBytes();
-		
-		byte[] buff = new byte[ buffer.length * 2 ];
-		System.arraycopy(buffer, 0, buff, 0, buffer.length);
-		System.arraycopy(buffer, 0, buff, buffer.length, buffer.length);
-		buffer = buff;
-		System.out.println(buffer.length);
-		System.out.println(buff.length);
-		byte[] buffer1 = new byte[ buffer.length / 3 ];
-		byte[] buffer2 = new byte[ buffer.length - buffer1.length ];
-		
-		System.arraycopy(buffer, 0, buffer1, 0, buffer1.length);
-		System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
-		System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
-		
-		RedisResponseDecoder decoder = new RedisResponseDecoder();
-		//List<RedisResponseV3> resps = decoder.decode(buffer);
-		
-		List<RedisResponse> resps = decoder.decode(buffer);
-		System.out.println( resps );
-		resps = decoder.decode(buffer2);
-//		System.out.println( resps );
+		RedisResponseDecoderV2 decoder = new RedisResponseDecoderV2();
+		long t = System.currentTimeMillis();
+
+		for (int i = 0; i < 10000000; i++) {
+			// 整包数据
+			// byte[] buffer1 = "+PONG \r\n".getBytes();
+			// byte[] buffer2 = "-ERR Not implemented\r\n".getBytes();
+			// byte[] buffer3 = ":2899\r\n".getBytes();
+			// byte[] buffer4 = "$-1\r\n".getBytes();
+			// byte[] buffer5 = "*2\r\n$7\r\npre1_bb\r\n$7\r\npre1_aa\r\n".getBytes();
+			// byte[] buffer6 = "*3\r\n$9\r\nsubscribe\r\n$7\r\npre1_aa\r\n:1\r\n*3\r\n$9\r\nsubscribe\r\n$7\r\npre1_zz\r\n:2\r\n".getBytes();
+			// System.out.println(decoder.decode(buffer1));
+			// System.out.println(decoder.decode(buffer2));
+			// System.out.println(decoder.decode(buffer3));
+			// System.out.println(decoder.decode(buffer4));
+			// System.out.println(decoder.decode(buffer5));
+			// System.out.println(decoder.decode(buffer6));
+
+			// 半包数据
+			byte[] buffer = ("*3\r\n*4\r\n:5461\r\n:10922\r\n*3\r\n$15\r\n192.168.219.131\r\n:7003\r\n$40\r" +
+					"\n1fd8af2aa246c5adf00a25d1b6a0c1f4743bae5c\r\n" +
+					"*3\r\n$15\r\n192.168.219.132\r\n:7002\r\n$40\r\ne0b1c5791694fdc2ede655023e80f0e57b3d86b4\r\n*4\r\n:0\r\n:5460\r\n"
+					+ "*3\r\n$15\r\n192.168.219.132\r\n:7000\r\n$40\r\nbee6866a13093c4411dea443ca8d901ea5d1e2f3\r\n" +
+					"*3\r\n$15\r\n192.168.219.131\r\n:7004\r\n$40\r\nb3ba9c1af0fa7296fe1e32f2a955879bcf79108b\r\n*4\r\n:10923\r\n:16383"
+					+ "\r\n" + "*3\r\n$15\r\n192.168.219.132\r\n:7001\r\n$40\r\n9c86ec8088050f837c490aeda15aca5a2c85d7ef\r\n" +
+					"*3\r\n$15\r\n192.168.219.131\r\n:7005\r\n$40\r\nb0e22eccf79ced356e54a92ecbaa8d22757765d4\r\n").getBytes();
+
+			byte[] buffer1 = new byte[buffer.length / 3];
+			byte[] buffer2 = new byte[buffer.length / 3];
+			byte[] buffer3 = new byte[buffer.length - buffer1.length - buffer2.length];
+
+			System.arraycopy(buffer, 0, buffer1, 0, buffer1.length);
+			System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
+			System.arraycopy(buffer, buffer1.length + buffer2.length, buffer3, 0, buffer3.length);
+
+			List<RedisResponse> resp;
+			decoder.decode(buffer1);
+			decoder.decode(buffer2);
+			resp = decoder.decode(buffer3);
+			// System.out.println(resp);
+		}
+		System.out.println("Decode costs " + (System.currentTimeMillis() - t) + " ms");
 	}
 	
 }
