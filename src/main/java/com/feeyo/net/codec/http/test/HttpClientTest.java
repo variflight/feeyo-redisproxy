@@ -1,4 +1,4 @@
-package com.feeyo.net.codec.protobuf.test;
+package com.feeyo.net.codec.http.test;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.protobuf.ProtobufEncoder;
+import com.feeyo.net.codec.protobuf.test.Eraftpb;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.ConfState;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.Entry;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.EntryType;
@@ -23,9 +24,9 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.UnknownFieldSet;
 
-public class ProtobufHttpClientTest {
+public class HttpClientTest {
 
-	private final Logger LOGGER = LoggerFactory.getLogger(ProtobufHttpClientTest.class);
+	private final Logger LOGGER = LoggerFactory.getLogger(HttpClientTest.class);
 
 	private static final String verbUserAgent = System.getProperty("java.home") + ";"
 			+ System.getProperty("java.vendor") + ";" + System.getProperty("java.version") + ";"
@@ -129,7 +130,7 @@ public class ProtobufHttpClientTest {
 		ProtobufEncoder encoder = new ProtobufEncoder(isCustomPkg);
 		ByteBuffer protoBufs = encoder.encode(msg);
 		
-		ProtobufHttpClientTest client = new ProtobufHttpClientTest();
+		HttpClientTest client = new HttpClientTest();
 		client.post(url, protoBufs.array());
 		
 	}
@@ -162,7 +163,7 @@ public class ProtobufHttpClientTest {
 				.setRejectHint(1).setContext(ByteString.copyFromUtf8("message" + 1)).build();
 		
 		
-		ProtobufHttpClientTest test = new ProtobufHttpClientTest();
+		HttpClientTest test = new HttpClientTest();
 		test.post("http://127.0.0.1:8066/proto/eraftpb/message?isCustomPkg=true", fromMsg, true);
 	}
 	

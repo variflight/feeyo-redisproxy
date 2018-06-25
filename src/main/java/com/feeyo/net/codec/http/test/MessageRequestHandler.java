@@ -1,4 +1,4 @@
-package com.feeyo.net.codec.http.handler;
+package com.feeyo.net.codec.http.test;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -8,7 +8,6 @@ import java.util.Map;
 
 import com.feeyo.net.codec.protobuf.ProtobufDecoder;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.Message;
-import com.feeyo.net.nio.ClosableConnection;
 import com.google.protobuf.MessageLite;
 
 public class MessageRequestHandler implements RequestHandler{
@@ -16,7 +15,7 @@ public class MessageRequestHandler implements RequestHandler{
 	private ProtobufDecoder decoder = null;
 
 	@Override
-	public void handle(ClosableConnection conn, String uri, byte[] data) {
+	public void handle(HttpConnection conn, String uri, byte[] data) {
 		
 		Map<String,String> paramMap = parseParamters(uri);
 		

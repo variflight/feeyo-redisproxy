@@ -6,13 +6,12 @@ import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.net.codec.http.handler.HttpRequestHandlerMagr;
-import com.feeyo.net.codec.http.handler.RequestHandler;
-import com.feeyo.net.nio.ClosableConnection;
+import com.feeyo.net.codec.Decoder;
+import com.feeyo.net.codec.UnknowProtocolException;
 
-public class HttpParser {
+public class HttpDecoder implements Decoder<HttpRequest> {
 
-	private static Logger LOGGER = LoggerFactory.getLogger(HttpParser.class);
+	private static Logger LOGGER = LoggerFactory.getLogger(HttpDecoder.class);
 
 	private static final int CR = 13; // <US-ASCII CR, carriage return (13)>
     private static final int LF = 10; // <US-ASCII LF, linefeed (10)>	
@@ -24,21 +23,28 @@ public class HttpParser {
     private String method;
     private String uri;
 	
-	private RequestHandler handler = null;
-	
 	private byte[] _buffer = null;
 	private int _offset = 0;
 	
 	private int state;
+	
+	//
+    //
+	private HttpRequest httpRequest = null;
+	
 
-	public HttpParser() {
+	public HttpDecoder() {
 		this.state = HTTP_REQ_HEADLINE;
 	}
 
-	public void parse(ClosableConnection conn, byte[] data) {
+	
+	// parse POST & GET 
+	//
+	//
+	public HttpRequest decode(byte[] data) throws UnknowProtocolException {
 
 		if (data == null || data.length == 0)
-			return;
+			return null;
 
 		append(data);
 		
@@ -50,21 +56,21 @@ public class HttpParser {
 				if (uri == null || method == null) {
 		            throw new IllegalArgumentException("Http uri or method may not be null");
 		        }
-				handler = HttpRequestHandlerMagr.INSTANCE().lookup(method, uri);
 				
+				this.httpRequest = new HttpRequest(uri, method);
 				this.state = HTTP_REQ_HEADERS;
+				
 			case HTTP_REQ_HEADERS:
 				
-				if (handler == null) {
-		            throw new IllegalArgumentException("Http request handler may not be null");
+				if (this.httpRequest == null) {
+		            throw new IllegalArgumentException("Http request may not be null");
 		        }
 				
 				parseHeaders();
 				switch (method.toUpperCase()) {
 				case "GET":
-					handler.handle(conn, uri, null);	 //handle get req
 					clear();
-					break;
+					return httpRequest;
 				case "POST":							
 					this.state = HTTP_REQ_BODY;
 					break;
@@ -74,19 +80,21 @@ public class HttpParser {
 				}
 
 			case HTTP_REQ_BODY:
-				if (handler == null) {
-		            throw new IllegalArgumentException("Http request handler may not be null");
+				if (httpRequest == null) {
+		            throw new IllegalArgumentException("Http request may not be null");
 		        }
 				
 				int len = _buffer.length - _offset;
 				if(_buffer == null || len == 0)
-					return;
+					return null;
+				
 				//request body
 				data = new byte[len];
 				System.arraycopy(_buffer, _offset, data, 0, len);
-				
-				handler.handle(conn, uri, data);		// handle post req
 				clear();
+				
+				this.httpRequest.setData(data);	// handle post req
+				return httpRequest;
 			default:
 				break;
 			}
@@ -95,6 +103,8 @@ public class HttpParser {
 			LOGGER.error(e.getMessage());
 			clear();
 		}
+		
+		return null;
 
 	}
 	
@@ -182,4 +192,5 @@ public class HttpParser {
 		_offset = 0;
 	}
 	
+
 }

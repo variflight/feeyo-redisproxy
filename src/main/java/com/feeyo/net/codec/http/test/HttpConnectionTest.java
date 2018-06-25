@@ -1,4 +1,4 @@
-package com.feeyo.net.codec.protobuf.test;
+package com.feeyo.net.codec.http.test;
 
 import java.io.IOException;
 
@@ -12,7 +12,7 @@ import com.feeyo.net.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.util.ExecutorUtil;
 import com.feeyo.util.Log4jInitializer;
 
-public class ProtobufFrontConnectionTest {
+public class HttpConnectionTest {
 	
 	public static void main(String[] args) throws IOException {
 		
@@ -34,7 +34,7 @@ public class ProtobufFrontConnectionTest {
 		
 		
 		
-		ConnectionFactory factory = new ProtobufFrontConnectionFactory();
+		ConnectionFactory factory = new HttpConnectionFactory();
 		NIOReactorPool reactorPool = new NIOReactorPool("nio", 1);
 		
 		final NIOAcceptor acceptor = new NIOAcceptor(name, bindIp, port, factory, reactorPool);

@@ -1,4 +1,4 @@
-package com.feeyo.net.codec.http.handler;
+package com.feeyo.net.codec.http.test;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -9,7 +9,9 @@ public class HttpRequestHandlerMagr {
 
 	private static final String HTTP_METHOD_GET = "GET";
 	private static final String HTTP_METHOD_POST = "POST";
+	
 	private static HttpRequestHandlerMagr _INSTANCE = null;
+	
 	// REST
 	private final PathTrie<RequestHandler> getHandlers = new PathTrie<RequestHandler>();
 	private final PathTrie<RequestHandler> postHandlers = new PathTrie<RequestHandler>();
