@@ -13,7 +13,13 @@ public class HttpConnectionFactory extends ConnectionFactory {
 	public ClosableConnection make(SocketChannel channel) throws IOException {
 		HttpConnection c = new HttpConnection(channel);
 		NetSystem.getInstance().setSocketParams(c, true);	// 设置连接的参数
-		c.setHandler( new HttpConnectionHandler() );	// 设置NIOHandler
+		
+		//
+		HttpConnectionHandler connectionHandler = new HttpConnectionHandler();
+		connectionHandler.registerHandler(HttpConnectionHandler.HTTP_METHOD_POST, 
+				"/proto/eraftpb/message", new ProtobufRequestHandler());
+		
+		c.setHandler( connectionHandler );	// 设置NIOHandler
 		return c;
 	}
 

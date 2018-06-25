@@ -10,7 +10,7 @@ import com.feeyo.net.codec.protobuf.ProtobufDecoder;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.Message;
 import com.google.protobuf.MessageLite;
 
-public class MessageRequestHandler implements RequestHandler{
+public class ProtobufRequestHandler implements RequestHandler{
 
 	private ProtobufDecoder decoder = null;
 
