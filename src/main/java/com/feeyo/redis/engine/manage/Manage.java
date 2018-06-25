@@ -29,6 +29,8 @@ import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.nio.ClosableConnection;
+import com.feeyo.net.nio.NetFlowController;
+import com.feeyo.net.nio.NetFlowController.Ctrl;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.buffer.BufferPool;
 import com.feeyo.net.nio.buffer.bucket.AbstractBucket;
@@ -1070,6 +1072,46 @@ public class Manage {
 										lines.add(line.toString());
 									}
 								}
+							}
+						}
+					}
+					
+					return encode(lines);
+				} else if (arg2.equalsIgnoreCase("USER_NETFLOW") && (numArgs == 3 || numArgs == 2) ) {
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("USER").append(",  ");
+					titleLine.append("SECOND_MAX_SIZE").append(",  ");
+					titleLine.append("REQUEST_MAX_SIZE").append(",  ");
+					titleLine.append("USED_SIZE");
+					lines.add(titleLine.toString());
+					
+					NetFlowController nfc = RedisEngineCtx.INSTANCE().getNetflowController();
+					Map<String, Ctrl> map = nfc.getCtrlMap();
+					
+					for (Entry<String, Ctrl> entry : map.entrySet()) {
+						
+						// 查看所有用户流量
+						if (numArgs == 2) {
+							Ctrl ctrl = entry.getValue();
+							StringBuffer line = new StringBuffer();
+							line.append(entry.getKey()).append(", ");
+							line.append(ctrl.getPerSecondMaxSize()).append(", ");
+							line.append(ctrl.getRequestMaxSize()).append(", ");
+							line.append(ctrl.getCurrentUsedSize());
+							lines.add(line.toString());
+							
+						// 查看指定用户的流量
+						} else {
+							String user = new String(request.getArgs()[2]);
+							if (user.equals(entry.getKey())) {
+								Ctrl ctrl = entry.getValue();
+								StringBuffer line = new StringBuffer();
+								line.append(entry.getKey()).append(", ");
+								line.append(ctrl.getPerSecondMaxSize()).append(", ");
+								line.append(ctrl.getRequestMaxSize()).append(", ");
+								line.append(ctrl.getCurrentUsedSize());
+								lines.add(line.toString());
 							}
 						}
 					}

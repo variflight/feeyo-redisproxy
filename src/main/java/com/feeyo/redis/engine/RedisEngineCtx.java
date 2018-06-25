@@ -114,6 +114,7 @@ public class RedisEngineCtx {
         //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
         
         this.netflowController = new NetFlowController();
+        netflowController.setCfgs(netflowMap);
         
 		int[] increments = null;
 		if ( incrementString == null ) {

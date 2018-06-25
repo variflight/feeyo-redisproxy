@@ -54,9 +54,13 @@ public class NetFlowController {
 		return false;
 	}
 	
-	
+	public Map<String, Ctrl> getCtrlMap() {
+		return ctrlMap;
+	}
+
+
 	//
-	class Ctrl {
+	public class Ctrl {
 		
 		private int perSecondMaxSize;
 		private int requestMaxSize;
@@ -115,6 +119,18 @@ public class NetFlowController {
 				if (atomicLong.compareAndSet(current, next))
 					return next;
 			}
+		}
+
+		public int getPerSecondMaxSize() {
+			return perSecondMaxSize;
+		}
+
+		public int getRequestMaxSize() {
+			return requestMaxSize;
+		}
+		
+		public long getCurrentUsedSize() {
+			return perSecondMaxSize - sizes[currentIndex].get();
 		}
 		
 	}
