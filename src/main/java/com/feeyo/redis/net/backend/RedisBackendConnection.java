@@ -5,6 +5,7 @@ import java.nio.channels.SocketChannel;
 
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
+import com.feeyo.redis.net.front.RedisFrontSession;
 
 /**
  * REDIS 后端连接
@@ -129,5 +130,22 @@ public class RedisBackendConnection extends BackendConnection {
 	public void setHeartbeatTime(long heartbeatTime) {
 		this.heartbeatTime = heartbeatTime;
 	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public void flowClean() {
+		super.flowClean();
+			try {
+				if ( isNested )
+					handler.handleReadEvent(parent, RedisFrontSession.FLOW_LIMIT);
+				else
+					handler.handleReadEvent(this, RedisFrontSession.FLOW_LIMIT);
+			} catch (IOException e) {
+				
+			} finally {
+				this.close("flow limit");
+			}
+	}
+	
 	
 }
