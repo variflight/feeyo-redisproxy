@@ -42,6 +42,50 @@ public class CompositeByteArray {
         return c.bytes[index - c.beginIndex];
     }
 
+    // 需要同时返回size和readOffset
+    public long[] readInt(int beginOffset) {
+        long[] result = new long[2];
+
+        Component c = findComponent(beginOffset);
+        int indexC = components.indexOf(c);
+        int length = components.size();
+        byte tempByte;
+        long size = 0;
+        boolean isNeg = false;
+        int offset = beginOffset;
+
+        outer: for (; indexC < length; indexC++) {
+            c = components.get(indexC);
+            byte[] tempArr = c.bytes;
+            int tempLength = tempArr.length;
+
+            for (int j = 0; j < tempLength; j ++) {
+                // 这里需要忽略掉offset之前的字节
+                if (j + c.beginIndex < beginOffset) {
+                    continue;
+                }
+
+                tempByte = tempArr[j];
+                // 如果遇到\r表示读完了
+                if ('\r' == tempByte) {
+                    break outer;
+                }
+
+                if ('-' == tempByte) {
+                    isNeg = true;
+                } else {
+                    size = size * 10 + tempByte - '0';
+                }
+                offset++;
+            }
+        }
+
+        result[0] = isNeg ? -size : size;
+        result[1] = offset;
+
+        return result;
+    }
+
     // 同时查找2个字节
     public int indexAdjacentTwoByte(int beginOffset, byte first, byte next) {
         Component c = findComponent(beginOffset);

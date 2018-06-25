@@ -14,10 +14,11 @@ import java.util.List;
  * @see "https://redis.io/topics/protocol"
  */
 public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
+    private List<RedisResponse> responses = null;
     private CompositeByteArray byteArray;
     // 用于标记读取的位置
     private int readOffset;
-    private List<RedisResponse> responses = null;
+    private int byteArrayLength = -1;
 
     @Override
     public List<RedisResponse> decode(byte[] buffer) {
@@ -31,7 +32,6 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 responses = new ArrayList<>(2);
             }
 
-            int length = byteArray.getByteCount();
             for (; ; ) {
                 // 至少4字节  :1\r\n
                 if (byteArray.remaining(readOffset) < 4) {
@@ -51,11 +51,12 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                         }
                 }
 
-                if (length < readOffset) {
+                if (byteArrayLength < readOffset) {
                     throw new IndexOutOfBoundsException("Not enough data.");
-                } else if (length == readOffset) {
+                } else if (byteArrayLength == readOffset) {
                     byteArray.clear();
                     readOffset = 0;
+                    byteArrayLength = -1;
                     return responses;
                 }
             }
@@ -69,7 +70,6 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
 
     private RedisResponse parseResponse(byte type) {
         int start, end, len, offset;
-        int length = byteArray.getByteCount();
 
         if (type == '+' || type == '-' || type == ':') {
             offset = readOffset;
@@ -77,7 +77,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             end = readCRLFOffset();    // 分隔符 \r\n
             readOffset = end;   // 调整偏移值
 
-            if (end > length) {
+            if (end > byteArrayLength) {
                 readOffset = offset;
                 throw new IndexOutOfBoundsException("Wait for more data.");
             }
@@ -100,7 +100,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             end = readOffset + packetSize + 2;    // offset + data + \r\n
             readOffset = end;   // 调整偏移值
 
-            if (end > length) {
+            if (end > byteArrayLength) {
                 readOffset = offset - 1;
                 throw new IndexOutOfBoundsException("Wait for more data.");
             }
@@ -135,7 +135,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             byte nType;
             RedisResponse res;
             for (int i = 1; i <= packetSize; i++) {
-                if (readOffset + 1 >= length) {
+                if (readOffset + 1 >= byteArrayLength) {
                     throw new IndexOutOfBoundsException("Wait for more data.");
                 }
 
@@ -150,34 +150,15 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     }
 
     private int readInt() throws IndexOutOfBoundsException {
-        int length = byteArray.getByteCount();
-        long size = 0;
-        boolean isNeg = false;
-
-        if (readOffset >= length) {
+        long[] result = byteArray.readInt(readOffset);
+        long size = result[0];
+        long offset = result[1];
+        // 表示是不完整的包需要等下次再读
+        if (offset >= byteArrayLength) {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        byte b = byteArray.get(readOffset);
-        while (b != '\r') {
-            if (b == '-') {
-                isNeg = true;
-            } else {
-                size = size * 10 + b - '0';
-            }
-            readOffset++;
-
-            if (readOffset >= length) {
-                throw new IndexOutOfBoundsException("Not enough data.");
-            }
-            b = byteArray.get(readOffset);
-        }
-
-        // skip \r\n
-        readOffset++;
-        readOffset++;
-
-        size = (isNeg ? -size : size);
+        readOffset = (int) offset + 2;
         if (size > Integer.MAX_VALUE) {
             throw new RuntimeException("Cannot allocate more than " + Integer.MAX_VALUE + " bytes");
         }
@@ -195,9 +176,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
      * @throws IndexOutOfBoundsException
      */
     private int readCRLFOffset() throws IndexOutOfBoundsException {
-        int length = byteArray.getByteCount();
-
-        if (readOffset + 1 >= length) {
+        if (readOffset + 1 >= byteArrayLength) {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
@@ -206,7 +185,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             // indexAdjacentTwoByte返回的是\n的offset,这里减一即可
             offset = offset + 1;
         } else {
-            throw new IndexOutOfBoundsException("didn't see LF after NL reading multi bulk count (" + length +
+            throw new IndexOutOfBoundsException("didn't see LF after NL reading multi bulk count (" + byteArrayLength +
                     ", " + readOffset + ")");
         }
 
@@ -225,6 +204,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         // large packet
         byteArray.add(newBuffer);
         readOffset = 0;
+        byteArrayLength = byteArray.getByteCount();
     }
 
     /**
@@ -277,7 +257,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             resp = decoder.decode(buffer3);
             long t2 = System.currentTimeMillis();
             int diff = (int) (t2 - t1);
-            if (diff > 2) {
+            if (diff > 3) {
                 System.out.println(" decode diff=" + diff + ", request=" + resp);
             }
         }
