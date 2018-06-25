@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.naming.ConfigurationException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -21,7 +20,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
-
 
 
 public class ConfigLoader {
@@ -101,7 +99,7 @@ public class ConfigLoader {
 					int port = getIntAttribute(attrs, "port", 6379);
 					String suffix = getAttribute(attrs, "suffix", null);
 					if (type == 2 && suffix == null) {
-						throw new ConfigurationException(
+						throw new Exception(
 								"Customer Cluster nodes need to set unique suffix property");
 					} else {
 						poolCfg.addNode(ip + ":" + port + ":" + suffix);
@@ -154,80 +152,41 @@ public class ConfigLoader {
 	}
 	
 
-	
-	//
-	public static ZkCfg loadZkCfg(String uri) {
-		ZkCfg zkCfg = new ZkCfg();
+	/*
+	 * load netflow.xml
+	 */
+	public static Map<String, NetFlowCfg> loadNetFlowMap(String uri) throws Exception {
+
+		Map<String, NetFlowCfg> map = new HashMap<String, NetFlowCfg>();
 		try {
-			NodeList zks = loadXmlDoc( uri ).getElementsByTagName("zookeeper");
-			if (zks.getLength() == 1) {
-				NodeList zk = zks.item(0).getChildNodes();
-
-				for (int i = 0; i < zk.getLength(); i++) {
-					Node node = zk.item(i);
-					if (node instanceof Element) {
-						Element e = (Element) node;
-						switch (e.getNodeName()) {
-							case "usingZk":
-								String usingZk = e.getAttribute("value");
-								if (usingZk.equalsIgnoreCase("true")) {
-									zkCfg.setUsingZk(true);
-								} else if (usingZk.equalsIgnoreCase("false")) {
-									zkCfg.setUsingZk(false);
-								} else {
-									throw new Exception("parse usingZk error," + usingZk);
-								}
-								break;
-							case "autoActivation":
-								String autoActivation = e.getAttribute("value");
-
-								if (autoActivation.equalsIgnoreCase("true")) {
-									zkCfg.setAutoAct(true);
-								} else if (autoActivation.equalsIgnoreCase("false")) {
-									zkCfg.setAutoAct(false);
-								} else {
-									throw new Exception("parse autoActivation error," + autoActivation);
-								}
-								break;
-							case "zkHome":
-								String zkHome = e.getAttribute("value");
-								if (zkHome.matches("^\\/([\\w-]+\\/){1,}$")) {
-									zkCfg.setZkHome(e.getAttribute("value"));
-								} else {
-									throw new Exception("parse zkHome error," + zkHome);
-								}
-								break;
-							case "node":
-								String ipAndPort = e.getAttribute("ipAndPort");
-								if (ipAndPort.matches("^((?:(?:25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))\\.){3}(?:25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))):\\d+$")) {
-									zkCfg.getZkServers().add(ipAndPort);
-								} else {
-									throw new Exception("parse zk node error," + ipAndPort);
-								}
-								break;
-							case "conf":
-								String cfgName = e.getAttribute("name");
-								if (cfgName.matches("^[\\w_\\s-]+\\.[A-Za-z]{1,}$")) {
-									zkCfg.getLocCfgNames().add(cfgName);
-								} else {
-									throw new Exception("parse configure file name error," + cfgName);
-								}
-
-								break;
-							default:
-								LOGGER.error("load zookeeper configure error", e);
-								return null;
-						}
-					}
+			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("user");
+			for (int i = 0; i < nodeList.getLength(); i++) {
+				Node node = nodeList.item(i);
+				NamedNodeMap nameNodeMap = node.getAttributes();			
+				
+				String password = getAttribute(nameNodeMap, "password", null);
+				
+				int perSecondMaxSize = getIntAttribute(nameNodeMap, "perSecondMaxSize", Integer.MAX_VALUE);
+				perSecondMaxSize = perSecondMaxSize == -1 ? 1024 * 1024 * 5 : perSecondMaxSize;
+				
+				int requestMaxSize = getIntAttribute(nameNodeMap, "requestMaxSize", Integer.MAX_VALUE);
+				requestMaxSize = requestMaxSize == -1 ? 1024 * 256 : requestMaxSize;
+				
+				boolean isControl = getBooleanAttribute(nameNodeMap, "control", true);
+				
+				if(perSecondMaxSize < 1024 || requestMaxSize == 1024) {
+					throw new Exception(" These parameters perSecondMaxSize or requestMaxSize have errors !!");
 				}
+				
+				NetFlowCfg nfc = new NetFlowCfg(password, perSecondMaxSize , requestMaxSize, isControl);
+				map.put(password, nfc);
 			}
 		} catch (Exception e) {
-			zkCfg = null;
-			LOGGER.error("load zookeeper configure error", e);
+			LOGGER.error("load netflow.xml err " + e);
+			throw e;
 		}
-		return zkCfg;
+		return map;
 	}
-	
 	
 	
 	/*
@@ -245,33 +204,7 @@ public class ConfigLoader {
 		return props;
 	}
 	
-	/*
-	 * load mail properties
-	 */
-	public static Map<String, NetFlowCfg> loadNetFlowMap(String uri) throws Exception {
 
-		Map<String, NetFlowCfg> map = new HashMap<String, NetFlowCfg>();
-		try {
-			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("user");
-			for (int i = 0; i < nodeList.getLength(); i++) {
-				Node node = nodeList.item(i);
-				NamedNodeMap nameNodeMap = node.getAttributes();				
-				String password = getAttribute(nameNodeMap, "password", null);
-				int perSecondMaxSize = getIntAttribute(nameNodeMap, "perSecondMaxSize", Integer.MAX_VALUE);
-				perSecondMaxSize = perSecondMaxSize == -1 ? Integer.MAX_VALUE : perSecondMaxSize;
-				int singleRequestMaxSize = getIntAttribute(nameNodeMap, "singleRequestMaxSize", Integer.MAX_VALUE);
-				singleRequestMaxSize = singleRequestMaxSize == -1 ? Integer.MAX_VALUE : singleRequestMaxSize;
-				NetFlowCfg nfc = new NetFlowCfg(password, perSecondMaxSize , singleRequestMaxSize);
-				
-				map.put(password, nfc);
-			}
-		} catch (Exception e) {
-			LOGGER.error("load user.xml err " + e);
-			throw e;
-		}
-		return map;
-	}
-	
 	private static Document loadXmlDoc(String uri) throws Exception {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db = dbf.newDocumentBuilder();

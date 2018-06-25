@@ -8,21 +8,24 @@ public class NetFlowCfg {
 
 	private final String password;
 	private final int perSecondMaxSize;
-	private final int singleRequestMaxSize;
+	private final int requestMaxSize;
+	private boolean isControl;
+	
+	//
 	private int currentIndex;
+	private AtomicLong[] sencondSizes;
 
-	private AtomicLong[] arrs;
-
-	public NetFlowCfg(String password, int perSecondMaxSize, int singleRequestMaxSize) {
+	public NetFlowCfg(String password, int perSecondMaxSize, int requestMaxSize, boolean isControl) {
 		this.password = password;
 		this.perSecondMaxSize = perSecondMaxSize;
-		this.singleRequestMaxSize = singleRequestMaxSize;
+		this.requestMaxSize = requestMaxSize;
+		this.isControl = isControl;
 
 		if (this.perSecondMaxSize > 0) {
 
-			arrs = new AtomicLong[60];
-			for (int i = 0; i < arrs.length; i++) {
-				arrs[i] = new AtomicLong(perSecondMaxSize);
+			sencondSizes = new AtomicLong[60];
+			for (int i = 0; i < sencondSizes.length; i++) {
+				sencondSizes[i] = new AtomicLong( perSecondMaxSize );
 			}
 		}
 	}
@@ -33,7 +36,7 @@ public class NetFlowCfg {
 	 */
 	public boolean pool(long length) {
 		
-		if (length > singleRequestMaxSize) {
+		if ( length > requestMaxSize) {
 			return true;
 		}
 
@@ -47,14 +50,15 @@ public class NetFlowCfg {
 				synchronized (this) {
 					// 这一秒的第一条统计，把对应的存储位的数据置是 max
 					if (currentIndex != tempIndex) {
+						
 						// reset
-						arrs[tempIndex].set(perSecondMaxSize);
+						sencondSizes[tempIndex].set(perSecondMaxSize);
 						currentIndex = tempIndex;
 					}
 				}
 			}
 
-			return decrement(arrs[currentIndex], length) <= 0;
+			return decrement(sencondSizes[currentIndex], length) <= 0;
 		}
 
 		return true;
@@ -68,9 +72,14 @@ public class NetFlowCfg {
 		return perSecondMaxSize;
 	}
 
-	public int getSingleRequestMaxSize() {
-		return singleRequestMaxSize;
+	public int getRequestMaxSize() {
+		return requestMaxSize;
 	}
+	
+	public boolean isControl() {
+		return isControl;
+	}
+	
 
 	private final long decrement(AtomicLong atomicLong, long delta) {
 		for (;;) {

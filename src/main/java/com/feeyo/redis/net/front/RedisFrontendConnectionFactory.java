@@ -20,7 +20,7 @@ public class RedisFrontendConnectionFactory extends ConnectionFactory {
 		RedisFrontConnection c = new RedisFrontConnection(channel);
 		NetSystem.getInstance().setSocketParams(c, true);	// 设置连接的参数
 		c.setHandler( new RedisFrontConnectionHandler() );	// 设置NIOHandler
-		c.setNetFlowMonitor( RedisEngineCtx.INSTANCE().getFlowMonitor() );
+		c.setNetFlowMonitor( RedisEngineCtx.INSTANCE().getNetflowMonitor() );
 		return c;
 	}
 

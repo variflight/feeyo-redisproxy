@@ -1121,7 +1121,12 @@ public class Manage {
 				} else if ( arg2.equalsIgnoreCase("USER") ) {
 					byte[] buff = RedisEngineCtx.INSTANCE().reloadUser();
 					return buff;
-				
+					
+				// reload netflow
+				} else if ( arg2.equalsIgnoreCase("NETFLOW") ) {
+					byte[] buff = RedisEngineCtx.INSTANCE().reloadNetflow();
+					return buff;
+
 				// reload front
 				} else if ( arg2.equalsIgnoreCase("FRONT") ) {
 					
@@ -1170,11 +1175,7 @@ public class Manage {
 					byte[] buff = BypassService.INSTANCE().reload();
 					return buff;
 					
-				// reload netflow
-				} else if ( arg2.equalsIgnoreCase("NETFLOW") ) {
-					byte[] buff = RedisEngineCtx.INSTANCE().getFlowMonitor().reload();
-					return buff;
-				}
+				} 
 			}
 			
 		// cluster 

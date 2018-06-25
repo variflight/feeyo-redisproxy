@@ -2,11 +2,11 @@
 <redis>
 
 	<!-- 流量监控、清洗 -->
-	<netflow watch="true">
-		<user password="xxx1" perSecondMaxSize="" singleRequestMaxSize="" ></user>
-		<user password="xxx2" perSecondMaxSize="" singleRequestMaxSize="" ></user>
-		<user password="xxx3" perSecondMaxSize="" singleRequestMaxSize="" ></user>
-		<user password="xxx4" perSecondMaxSize="" singleRequestMaxSize="" ></user>
+	<netflow>
+		<user password="xxx1" perSecondMaxSize="" requestMaxSize="" control="true"/>
+		<user password="xxx2" perSecondMaxSize="" requestMaxSize="" control="true"/>
+		<user password="xxx3" perSecondMaxSize="" requestMaxSize="" control="true"/>
+		<user password="xxx4" perSecondMaxSize="" requestMaxSize="" control="true"/>
 	</netflow>
 
 </redis>

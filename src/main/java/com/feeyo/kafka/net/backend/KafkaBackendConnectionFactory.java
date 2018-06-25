@@ -28,7 +28,7 @@ public class KafkaBackendConnectionFactory implements BackendConnectionFactory {
 
 		// 设置NIOHandlers
 		c.setHandler( new KafkaBackendConnectionHandler() );
-		c.setNetFlowMonitor( RedisEngineCtx.INSTANCE().getFlowMonitor() );
+		c.setNetFlowMonitor( RedisEngineCtx.INSTANCE().getNetflowMonitor() );
 		
 		c.setHost( host );
 		c.setPort( port );
