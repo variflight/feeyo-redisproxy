@@ -15,7 +15,7 @@ import com.feeyo.net.nio.NIOAcceptor;
 import com.feeyo.net.nio.NIOConnector;
 import com.feeyo.net.nio.NIOReactor;
 import com.feeyo.net.nio.NIOReactorPool;
-import com.feeyo.net.nio.NetFlowMonitor;
+import com.feeyo.net.nio.NetFlowController;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.SystemConfig;
 import com.feeyo.net.nio.buffer.BufferPool;
@@ -44,7 +44,7 @@ public class RedisEngineCtx {
 	private VirtualMemoryService virtualMemoryService;
 	private BufferPool bufferPool;	
 	
-	private volatile NetFlowMonitor netflowMonitor;
+	private volatile NetFlowController netflowController;
 	
 	// 
 	private volatile Map<String, NIOReactor> reactorMap = new HashMap<String, NIOReactor>();
@@ -113,7 +113,7 @@ public class RedisEngineCtx {
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
         
-        this.netflowMonitor = new NetFlowMonitor();
+        this.netflowController = new NetFlowController();
         
 		int[] increments = null;
 		if ( incrementString == null ) {
@@ -352,8 +352,8 @@ public class RedisEngineCtx {
 			this.netflowMap = newNetflowMap;	
 			
 			// 更新 netflow
-			if ( this.netflowMonitor != null ) {
-				this.netflowMonitor.setCfgs( this.netflowMap );
+			if ( this.netflowController != null ) {
+				this.netflowController.setCfgs( this.netflowMap );
 			}
 			
 		} catch (Exception e) {
@@ -558,8 +558,8 @@ public class RedisEngineCtx {
 		return virtualMemoryService;
 	}
 
-	public NetFlowMonitor getNetflowMonitor() {
-		return netflowMonitor;
+	public NetFlowController getNetflowController() {
+		return netflowController;
 	}
 
 }

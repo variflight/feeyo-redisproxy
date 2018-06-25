@@ -8,7 +8,7 @@ import java.nio.channels.SocketChannel;
 import com.feeyo.net.nio.ClosableConnection;
 import com.feeyo.net.nio.Connection;
 import com.feeyo.net.nio.NIOHandler;
-import com.feeyo.net.nio.NetFlowMonitor;
+import com.feeyo.net.nio.NetFlowController;
 import com.feeyo.net.nio.ZeroCopyConnection;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
@@ -208,8 +208,8 @@ public class BackendConnection extends ClosableConnection {
 	}
 	
 	@Override
-	public void setNetFlowMonitor(NetFlowMonitor nfm) {
-		delegateConn.setNetFlowMonitor(nfm);
+	public void setNetflowController(NetFlowController nfm) {
+		delegateConn.setNetflowController(nfm);
 	}
 
 	@Override
@@ -341,8 +341,8 @@ public class BackendConnection extends ClosableConnection {
 	}
 	
 	@Override
-	public NetFlowMonitor getNetFlowMonitor() {
-		return delegateConn.getNetFlowMonitor();
+	public NetFlowController getNetflowController() {
+		return delegateConn.getNetflowController();
 	}
 	
 }

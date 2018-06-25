@@ -9,25 +9,26 @@ import com.feeyo.redis.config.NetFlowCfg;
 
 
 /**
- * 流量监控
+ * 流量监控, bandwidth limitation
  *
  */
-public class NetFlowMonitor {
+public class NetFlowController {
 	
-  	private volatile Map<String, NetFlowControl> ctrlMap = null;
+  	private volatile Map<String, Ctrl> ctrlMap = null;
   	
+  	//
 	public synchronized void setCfgs(Map<String, NetFlowCfg> cfgMap) {
 		
 		if ( cfgMap != null ) {
 			
-			Map<String, NetFlowControl> tmpCtrlMap = new HashMap<String, NetFlowControl>();
+			Map<String, Ctrl> tmpCtrlMap = new HashMap<String, Ctrl>();
 			
 			for(Map.Entry<String, NetFlowCfg>  entry : cfgMap.entrySet() ) {
 				String pwd = entry.getKey();
 				NetFlowCfg cfg = entry.getValue();
 				
 				if ( cfg != null && cfg.isControl() ) {
-					NetFlowControl  ctrl = new NetFlowControl( cfg );
+					Ctrl  ctrl = new Ctrl( cfg.getPerSecondMaxSize(), cfg.getRequestMaxSize() );
 					tmpCtrlMap.put(pwd, ctrl);
 				}
 				
@@ -38,16 +39,16 @@ public class NetFlowMonitor {
 	}
 	
 	//
-	public boolean pool(String user, long length) {
+	public boolean consumeBytes(String user, long numBytes) {
 		
 		if ( ctrlMap == null || ctrlMap.isEmpty() ) {
 			return false;
 		}
 		
 		//
-		NetFlowControl control = ctrlMap.get(user);
-		if ( control != null ) {
-			return control.pool( length );
+		Ctrl ctrl = ctrlMap.get(user);
+		if ( ctrl != null ) {
+			return ctrl.consumeBytes( numBytes );
 		}
 		
 		return false;
@@ -55,37 +56,35 @@ public class NetFlowMonitor {
 	
 	
 	//
-	class NetFlowControl {
+	class Ctrl {
 		
 		private int perSecondMaxSize;
 		private int requestMaxSize;
-		//
-		private int currentIndex;
-		private AtomicLong[] sencondSizes;
 		
-		public NetFlowControl(NetFlowCfg cfg) {
+		//
+		private AtomicLong[] sizes;
+		private int currentIndex;
+		
+		public Ctrl(int perSecondMaxSize, int  requestMaxSize) {
 			
-			this.perSecondMaxSize = cfg.getPerSecondMaxSize();
-			this.requestMaxSize = cfg.getRequestMaxSize();
+			this.perSecondMaxSize = perSecondMaxSize;
+			this.requestMaxSize = requestMaxSize;
 			
 			//
-			this.sencondSizes = new AtomicLong[60];
-			for (int i = 0; i < sencondSizes.length; i++) {
-				this.sencondSizes[i] = new AtomicLong( perSecondMaxSize );
+			this.sizes = new AtomicLong[60];
+			for (int i = 0; i < sizes.length; i++) {
+				this.sizes[i] = new AtomicLong( perSecondMaxSize );
 			}
 		}
 		
-		/**
-		 * @param length
-		 * @return 是否超出流量
-		 */
-		public boolean pool(long length) {
+		// 检测是否超出流量
+		public boolean consumeBytes(long numBytes) {
 			
-			if ( length > requestMaxSize) {
+			if ( numBytes > requestMaxSize) {
 				return true;
 			}
 
-			if (this.perSecondMaxSize > 0 && length > 0) {
+			if (this.perSecondMaxSize > 0 && numBytes > 0) {
 
 				long currentTimeMillis = TimeUtil.currentTimeMillis();
 				// long currentTimeMillis = System.currentTimeMillis();
@@ -97,13 +96,13 @@ public class NetFlowMonitor {
 						if (currentIndex != tempIndex) {
 							
 							// reset
-							sencondSizes[tempIndex].set(perSecondMaxSize);
+							sizes[tempIndex].set(perSecondMaxSize);
 							currentIndex = tempIndex;
 						}
 					}
 				}
 
-				return decrement(sencondSizes[currentIndex], length) <= 0;
+				return decrement(sizes[currentIndex], numBytes) <= 0;
 			}
 
 			return true;

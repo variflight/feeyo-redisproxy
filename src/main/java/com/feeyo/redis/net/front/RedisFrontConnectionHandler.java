@@ -58,7 +58,7 @@ public class RedisFrontConnectionHandler implements NIOHandler<RedisFrontConnect
 
 	@Override
 	public boolean handleNetFlow(RedisFrontConnection con, int dataLength) throws IOException {
-		return con.getNetFlowMonitor().pool(con.getPassword(), dataLength);
+		return con.getNetflowController().consumeBytes(con.getPassword(), dataLength);
 	}
 	
 }
