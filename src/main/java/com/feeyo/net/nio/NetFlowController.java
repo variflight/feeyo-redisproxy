@@ -90,7 +90,7 @@ public class NetFlowController {
 
 			if (this.perSecondMaxSize > 0 && numBytes > 0) {
 
-				int tempIndex = TimeUtil.currentSecond();
+				int tempIndex = TimeUtil.currentTimeSecondIndex();
 				if (currentIndex != tempIndex) {
 					synchronized (this) {
 						// 这一秒的第一条统计，把对应的存储位的数据置是 max
@@ -126,8 +126,20 @@ public class NetFlowController {
 			return requestMaxSize;
 		}
 		
-		public long getCurrentUsedSize() {
-			return perSecondMaxSize - sizes[currentIndex].get();
+		public String getHistogram() {
+			if ( sizes != null && sizes.length == 60 ) {
+			    StringBuilder buf = new StringBuilder();
+		        buf.append('[');
+		        for (int i = 0; i < sizes.length; i++) {
+		            if (i != 0) {
+		                buf.append(", ");
+		            }
+		            buf.append( perSecondMaxSize - sizes[i].get() );
+		        }
+		        buf.append(']');
+		        return buf.toString();
+			}
+			return "";
 		}
 		
 	}

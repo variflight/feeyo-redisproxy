@@ -42,7 +42,7 @@ import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
-import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
@@ -763,10 +763,10 @@ public class Manage {
 					
 					long totalNetIn = 0;
 					long totalNetOut = 0;
-					for (Map.Entry<String, UserNetFlow> entry : StatUtil.getUserFlowMap().entrySet()) { 
+					for (Map.Entry<String, UserFlow> entry : StatUtil.getUserFlowMap().entrySet()) { 
 						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
 							StringBuffer sb = new StringBuffer();
-							UserNetFlow userNetIo = entry.getValue();
+							UserFlow userNetIo = entry.getValue();
 							sb.append(userNetIo.password).append("  ");
 							sb.append( JavaUtils.bytesToString2( userNetIo.netIn.get() ) ).append("  ");
 							sb.append( JavaUtils.bytesToString2( userNetIo.netOut.get() ) );
@@ -1077,72 +1077,35 @@ public class Manage {
 					}
 					
 					return encode(lines);
-				} else if (arg2.equalsIgnoreCase("USER_NETFLOW") && (numArgs == 3 || numArgs == 2) ) {
+				
+				// SHOW NetFlowCtrl
+				} else if (arg2.equalsIgnoreCase("NETFLOWCTRL") && numArgs == 2 ) {
+					
 					List<String> lines = new ArrayList<String>();
 					StringBuffer titleLine = new StringBuffer();
 					titleLine.append("USER").append(",  ");
-					titleLine.append("SECOND_MAX_SIZE").append(",  ");
+					titleLine.append("PRE_SECOND_MAX_SIZE").append(",  ");
 					titleLine.append("REQUEST_MAX_SIZE").append(",  ");
-					titleLine.append("USED_SIZE");
+					titleLine.append("HISTOGRAM");
 					lines.add(titleLine.toString());
 					
 					NetFlowController nfc = RedisEngineCtx.INSTANCE().getNetflowController();
 					Map<String, Ctrl> map = nfc.getCtrlMap();
-					
 					for (Entry<String, Ctrl> entry : map.entrySet()) {
 						
-						// 查看所有用户流量
-						if (numArgs == 2) {
-							Ctrl ctrl = entry.getValue();
-							StringBuffer line = new StringBuffer();
-							line.append(entry.getKey()).append(", ");
-							line.append(ctrl.getPerSecondMaxSize()).append(", ");
-							line.append(ctrl.getRequestMaxSize()).append(", ");
-							line.append(ctrl.getCurrentUsedSize());
-							lines.add(line.toString());
-							
-						// 查看指定用户的流量
-						} else {
-							String user = new String(request.getArgs()[2]);
-							if (user.equals(entry.getKey())) {
-								Ctrl ctrl = entry.getValue();
-								StringBuffer line = new StringBuffer();
-								line.append(entry.getKey()).append(", ");
-								line.append(ctrl.getPerSecondMaxSize()).append(", ");
-								line.append(ctrl.getRequestMaxSize()).append(", ");
-								line.append(ctrl.getCurrentUsedSize());
-								lines.add(line.toString());
-							}
-						}
+						Ctrl ctrl = entry.getValue();
+						StringBuffer line = new StringBuffer();
+						line.append(entry.getKey()).append(", ");
+						line.append(ctrl.getPerSecondMaxSize()).append(", ");
+						line.append(ctrl.getRequestMaxSize()).append(", ");
+						line.append(ctrl.getHistogram());
+						
+						lines.add(line.toString());
 					}
 					
 					return encode(lines);
 				}
-				
-			// NODE
-			} else if (  (arg1[0] == 'N' || arg1[0] == 'n' ) && 
-						 (arg1[1] == 'O' || arg1[1] == 'o' ) && 
-						 (arg1[2] == 'D' || arg1[2] == 'd' ) && 
-						 (arg1[3] == 'E' || arg1[3] == 'e' ) ) {
-				
-				// TODO 此处有一些乱, 暂时屏蔽
-				// 接口应该这样设计， XX 服务， XX 方法， 输入-异步回调  或 输入-输出， 内部逻辑的过程 交由 XX服务来实现
-				/*
-				NodeManageService nodeManageService = new NodeManageService(frontCon);
-				try {
-					NodeManageRequest nodeManageRequest = nodeManageService.requestIntegration(request);
-					return nodeManageService.excute(nodeManageRequest);
-				} catch (NodeManageParamException e) {
-					StringBuffer sb = new StringBuffer();
-					sb.append("-ERR ");
-					sb.append(e.getMessage());
-					sb.append("\r\n");
-					return sb.toString().getBytes();
-				}
-				*/
-				return "-ERR not support \r\n".getBytes();
-				
-			}
+			} 
 
 		// RELOAD
 		} else if ( arg1.length == 6 ) {

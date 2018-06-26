@@ -8,7 +8,8 @@ import java.util.Calendar;
 public class TimeUtil {
 
 	private static volatile long CURRENT_TIME = System.currentTimeMillis();
-	private static volatile int CURRENT_SECOND = (int) ((CURRENT_TIME / 1000) % 60);
+	private static volatile int CURRENT_TIME_SECOND_INDEX = (int) ((CURRENT_TIME / 1000) % 60);
+	
 	private static volatile int OFFSET = 0;
 
 	static {
@@ -26,8 +27,8 @@ public class TimeUtil {
 		return CURRENT_TIME;
 	}
 	
-	public static final int currentSecond() {
-		return CURRENT_SECOND;
+	public static final int currentTimeSecondIndex() {
+		return CURRENT_TIME_SECOND_INDEX;
 	}
 
 	public static final long currentTimeNanos() {
@@ -36,7 +37,7 @@ public class TimeUtil {
 
 	public static final void update() {
 		CURRENT_TIME = System.currentTimeMillis();
-		CURRENT_SECOND = (int) ((CURRENT_TIME / 1000) % 60);
+		CURRENT_TIME_SECOND_INDEX = (int) ((CURRENT_TIME / 1000) % 60);
 	}
 
 	
