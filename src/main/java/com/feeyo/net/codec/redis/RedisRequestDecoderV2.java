@@ -10,13 +10,14 @@ import java.util.List;
 /**
  * 在RedisRequestDecoder实现上使用CompositeByteArray代替byte[]
  *
- * @see: com.feeyo.net.codec.redis.RedisRequestDecoder <br>
+ * @see RedisRequestDecoder
  */
 public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
-	
     private RedisRequest request = null;
     private CompositeByteArray byteArray = null;
-    
+    // 用于标记读取的位置
+    private int readOffset;
+    private int byteArrayLength = -1;
     private State state = State.READ_SKIP;
 
     @Override
@@ -45,19 +46,18 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                         break;
                     }
                     case READ_INIT: {
-                        int readIndex = byteArray.getReadOffset();
-                        if (readIndex >= byteArray.getByteCount() || (argCount != 0 && argCount == argIndex + 1)) {
+                        if (readOffset >= byteArrayLength || (argCount != 0 && argCount == argIndex + 1)) {
                             state = State.READ_END;
                             break;
                         }
                         // 开始读，根据*/$判断是参数的数量还是参数命令/内容的长度
-                        byte commandBeginByte = byteArray.get(readIndex);
+                        byte commandBeginByte = byteArray.get(readOffset);
                         if (commandBeginByte == '*') {
-                            byteArray.setReadOffset(++readIndex);
+                            readOffset++;
                             state = State.READ_ARG_COUNT;
 
                         } else if (commandBeginByte == '$') {
-                            byteArray.setReadOffset(++readIndex);
+                            readOffset++;
                             state = State.READ_ARG_LENGTH;
                         }
                         break;
@@ -78,20 +78,18 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     }
                     case READ_ARG: {
                         // 根据READ_ARG_LENGTH中读到的参数长度获得参数内容
-                        int readIndex = byteArray.getReadOffset();
-                        request.getArgs()[argIndex] = byteArray.subArray(readIndex, argLength);
+                        request.getArgs()[argIndex] = byteArray.subArray(readOffset, argLength);
                         // argLength + 2(\r\n)
-                        byteArray.setReadOffset(readIndex + 2 + argLength);
+                        readOffset = readOffset + 2 + argLength;
 
                         this.state = State.READ_INIT;
                         break;
                     }
                     case READ_END: {
                         // 处理粘包
-                        int readIndex = byteArray.getReadOffset();
-                        if (byteArray.getByteCount() < readIndex) {
+                        if (byteArrayLength < readOffset) {
                             throw new IndexOutOfBoundsException("Not enough data.");
-                        } else if (byteArray.getByteCount() == readIndex) {
+                        } else if (byteArrayLength == readOffset) {
                             if (argCount == argIndex + 1) {
                                 pipeline.add(request);
                                 reset();
@@ -100,7 +98,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                                 // 断包（目前异步读取到的都是整包数据）
                             } else {
                                 state = State.READ_SKIP;
-                                byteArray.setReadOffset(0);
+                                readOffset = 0;
                                 return null;
                             }
                         } else {
@@ -118,7 +116,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             }
         } catch (IndexOutOfBoundsException e) {
             state = State.READ_SKIP;
-            byteArray.setReadOffset(0);
+            readOffset = 0;
             return null;
         }
 
@@ -129,35 +127,34 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
      * 如果第一个字符不是*则skip直到遇到*
      */
     private void skipBytes() {
-        int readIndex = byteArray.getReadOffset();
-        int index = byteArray.firstIndex(readIndex, (byte) '*');
+        int index = byteArray.firstIndex(readOffset, (byte) '*');
         if (index == -1) {
             throw new IndexOutOfBoundsException("Not enough data.");
         } else {
-            byteArray.setReadOffset(index);
+            readOffset = index;
         }
     }
 
     private int readInt() throws IndexOutOfBoundsException {
-        int readIndex = byteArray.getReadOffset();
         long size = 0;
         boolean isNeg = false;
 
-        int tempIndex = readIndex;
-        byte b = byteArray.get(tempIndex);
+        byte b = byteArray.get(readOffset);
         while (b != '\r') {
             if (b == '-') {
                 isNeg = true;
             } else {
-                // TODO 什么意思
+                // 对于长度大于10以上的其实是多个字节存在, 需要考虑到位数所以需要 *10 的逻辑
+                // (byte) '1' = 49 为了得到原始的数字需要减去 '0'
                 size = size * 10 + b - '0';
             }
-            tempIndex++;
-            b = byteArray.get(tempIndex);
+            readOffset++;
+            b = byteArray.get(readOffset);
         }
 
         // skip \r\n
-        byteArray.setReadOffset(tempIndex + 2);
+        readOffset++;
+        readOffset++;
 
         size = (isNeg ? -size : size);
         if (size > Integer.MAX_VALUE) {
@@ -183,11 +180,14 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
         }
 
         byteArray.add(newBuffer);
+        readOffset = 0;
+        byteArrayLength = byteArray.getByteCount();
     }
 
     public void reset() {
         state = State.READ_SKIP;
         byteArray.clear();
+        readOffset = 0;
     }
 
     private enum State {
@@ -200,8 +200,14 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     }
 
     /**
-     * 性能测试结果：当没有半包数据时性能与之前没有太多变化甚至略差
-     * 当全是半包数据时性能会好很多. 循环1kw次耗时31s, 约等于之前耗时的一半
+     * 性能测试结果： <br>
+     * 包长度为61(普通的请求: 一次鉴权+一次hashtable长度查询) <br>
+     * 循环1kw次解析半包耗时31s, V1版本约为72s <br>
+     * 循环1kw次解析整包耗时5s, V1版本约为3s <br>
+     *
+     * 包长度为565(批量请求) <br>
+     * 循环1kw次解析半包耗时137s, V1版本约为207s <br>
+     * 循环1kw次解析整包耗时约36s, V1版本约为27s <br>
      */
     public static void main(String[] args) {
         RedisRequestDecoderV2 decoder = new RedisRequestDecoderV2();
@@ -210,26 +216,33 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
         for (int j = 0; j < 10000000; j++) {
             try {
                 // 没有半包数据
-                // String msg = "*2\r\n$4\r\nAUTH\r\n$5\r\npwd01\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHER\r\n*1\r\n$4\r\nKEYS\r\n";
-                // 半包数据
-                byte[] buff = "*2\r\n$3\r\nGET\r\n$2\r\naa\r\n".getBytes();
-                byte[] buff1 = new byte[ 4 ];
-                byte[] buff2 = new byte[ 4 ];
-                byte[] buff3 = new byte[ buff.length - 8 ];
-                System.arraycopy(buff, 0, buff1, 0, 4);
-                System.arraycopy(buff, 4, buff2, 0, 4);
-                System.arraycopy(buff, 8, buff3, 0, buff3.length);
+                byte[] buff = "*2\r\n$4\r\nAUTH\r\n$5\r\npwd01\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHER\r\n".getBytes();
+
+                // byte[] buff = ("*2\r\n$4\r\nAUTH\r\n$5\r\npwd01\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHER\r\n" +
+                //         "*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE0\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE1\r\n" +
+                //         "*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE2\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE3\r\n" +
+                //         "*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE4\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE5\r\n" +
+                //         "*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE6\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE7\r\n" +
+                //         "*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE8\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATHE9\r\n" +
+                //         "*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATH10\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATH11\r\n" +
+                //         "*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATH12\r\n*2\r\n$4\r\nhlen\r\n$15\r\nSPECIAL_WEATH13\r\n").getBytes();
+                // byte[] buff1 = new byte[ 213 ];
+                // byte[] buff2 = new byte[ 155 ];
+                // byte[] buff3 = new byte[ buff.length - buff1.length - buff2.length ];
+                // System.arraycopy(buff, 0, buff1, 0, buff1.length);
+                // System.arraycopy(buff, buff1.length, buff2, 0, buff2.length);
+                // System.arraycopy(buff, buff1.length + buff2.length, buff3, 0, buff3.length);
 
                 long t1 = System.currentTimeMillis();
-                decoder.decode(buff1);
-                decoder.decode( buff2 );
-                List<RedisRequest> reqList = decoder.decode( buff3 );
+                // decoder.decode(buff1);
+                // decoder.decode( buff2 );
+                // List<RedisRequest> reqList = decoder.decode( buff3 );
+                List<RedisRequest> reqList = decoder.decode( buff );
                 long t2 = System.currentTimeMillis();
                 int diff = (int) (t2 - t1);
-                if (diff > 1) {
+                if (diff > 2) {
                     System.out.println(" decode diff=" + diff + ", request=" + reqList.toString());
                 }
-
             } catch (UnknowProtocolException e) {
                 e.printStackTrace();
             }
