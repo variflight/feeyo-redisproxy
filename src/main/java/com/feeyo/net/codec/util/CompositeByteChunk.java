@@ -69,33 +69,37 @@ public class CompositeByteChunk {
     public byte[] getData(ByteChunk chunk, int beginIndex, int length) {
     	
         assert chunk != null;
-
-        byte[] resultArr = new byte[length];
+        
+        byte[] destData = new byte[length];
+        
         ByteChunk c = chunk;
         int remaining = length;
         int destPos = 0;
-        int subBeginIndex = beginIndex - c.beginIndex;
-        int subLength;
+        
+        int srcPos = beginIndex - c.beginIndex;
+        int srcLength;
 
         while (c != null && remaining > 0) {
 
-            // 表示已经不是第一个Chunk, 总是从0开始copy
+            // 是否第一次
             if (remaining < length) {
-                subBeginIndex = 0;
-                // copy长度为Min(remaining, c.length)
-                subLength = Math.min(remaining, c.length);
+            	
+            	// 否
+                srcPos = 0;
+                srcLength = Math.min(remaining, c.length);         		
+                
             } else {
-                // 第一个Chunk时, c.length - subBeginIndex 为Chunk中剩余有效字节数
-                subLength = Math.min(remaining, c.length - subBeginIndex);
+            	
+                srcLength = Math.min(remaining, c.length - srcPos);  
             }
 
-            System.arraycopy(c.data, subBeginIndex, resultArr, destPos, subLength);
-            remaining = remaining - subLength;
-            destPos = destPos + subLength;
+            System.arraycopy(c.data, srcPos, destData, destPos, srcLength);
+            remaining = remaining - srcLength;
+            destPos = destPos + srcLength;
             c = c.next;
         }
 
-        return resultArr;
+        return destData;
     }
 
 
