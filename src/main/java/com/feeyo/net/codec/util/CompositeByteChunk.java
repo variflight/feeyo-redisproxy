@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 封装n个物理意义的字节数组,提供逻辑意义上的字节数组
+ * 封装n个物理意义的字节数组, 对外提供一个逻辑意义上的字节数组
  *
  * @see "https://github.com/netty/netty/blob/4.1/buffer/src/main/java/io/netty/buffer/CompositeByteBuf.java"
  * @see "https://skyao.gitbooks.io/learning-netty/content/buffer/class_CompositeByteBuf.html"
@@ -27,17 +27,17 @@ public class CompositeByteChunk {
         int beginIndex = 0;
         int size = chunks.size();
         
-        ByteChunk prevByteChunk = null;
+        ByteChunk prevChunk = null;
         if (size != 0) {
-            prevByteChunk = chunks.get(size - 1);
-            beginIndex = prevByteChunk.length + prevByteChunk.beginIndex;
+            prevChunk = chunks.get(size - 1);
+            beginIndex = prevChunk.length + prevChunk.beginIndex;
         }
 
         ByteChunk chunk = new ByteChunk(bytes, bytes.length, beginIndex);
         chunks.add( chunk );
         
-        if (prevByteChunk != null) {
-            prevByteChunk.setNext(chunk);
+        if (prevChunk != null) {
+            prevChunk.setNext(chunk);
         }
     }
 
