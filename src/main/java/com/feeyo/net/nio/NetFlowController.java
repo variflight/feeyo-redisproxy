@@ -90,10 +90,7 @@ public class NetFlowController {
 
 			if (this.perSecondMaxSize > 0 && numBytes > 0) {
 
-				long currentTimeMillis = TimeUtil.currentTimeMillis();
-				// long currentTimeMillis = System.currentTimeMillis();
-
-				int tempIndex = (int) ((currentTimeMillis / 1000) % 60);
+				int tempIndex = TimeUtil.currentSecond();
 				if (currentIndex != tempIndex) {
 					synchronized (this) {
 						// 这一秒的第一条统计，把对应的存储位的数据置是 max
