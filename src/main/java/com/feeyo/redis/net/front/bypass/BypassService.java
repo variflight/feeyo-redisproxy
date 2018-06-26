@@ -11,12 +11,14 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisResponse;
+
 import com.feeyo.net.nio.util.TimeUtil;
+
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+
 import com.feeyo.util.ThreadFactoryImpl;
 
 /*
@@ -72,8 +74,9 @@ public class BypassService {
 		return false;
 	}
 
-	// 排队执行
-	public void queuing(final RedisRequest request, final RedisFrontConnection frontConn, final PhysicalNode physicalNode) {
+	// 进入排队
+	public void queueUp(final RedisRequest request, 
+			final RedisFrontConnection frontConn, final String host, final int port) {
 		
 		try {
 			
@@ -84,7 +87,7 @@ public class BypassService {
 					//
 					try {
 						
-						BypassIoConnection backConn = new BypassIoConnection(physicalNode.getHost(), physicalNode.getPort());
+						BypassIoConnection backConn = new BypassIoConnection(host, port);
 						List<RedisResponse> resps = backConn.writeToBackend(request);
 						if (resps != null) {
 						

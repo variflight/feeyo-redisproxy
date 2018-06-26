@@ -37,7 +37,11 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		
 		// 旁路排队服务
 		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) ) {
-			BypassService.INSTANCE().queuing(firstRequest, frontCon, node.getPhysicalNode());
+			
+			String host = node.getPhysicalNode().getHost();
+			int port = node.getPhysicalNode().getPort();
+			
+			BypassService.INSTANCE().queueUp( firstRequest, frontCon, host, port );
 			
 		}  else {
 			//
