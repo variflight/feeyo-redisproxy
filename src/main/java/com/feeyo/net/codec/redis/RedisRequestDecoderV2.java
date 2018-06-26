@@ -2,7 +2,7 @@ package com.feeyo.net.codec.redis;
 
 import com.feeyo.net.codec.Decoder;
 import com.feeyo.net.codec.UnknowProtocolException;
-import com.feeyo.net.codec.util.CompositeByteArray;
+import com.feeyo.net.codec.util.CompositeByteChunk;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,11 +13,15 @@ import java.util.List;
  * @see RedisRequestDecoder
  */
 public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
-    private RedisRequest request = null;
-    private CompositeByteArray byteArray = null;
+    
+	private RedisRequest request = null;
+    
+	private CompositeByteChunk byteChunkArray = null;
+    
     // 用于标记读取的位置
     private int readOffset;
     private int byteArrayLength = -1;
+    
     private State state = State.READ_SKIP;
 
     @Override
@@ -51,7 +55,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                             break;
                         }
                         // 开始读，根据*/$判断是参数的数量还是参数命令/内容的长度
-                        byte commandBeginByte = byteArray.get(readOffset);
+                        byte commandBeginByte = byteChunkArray.get(readOffset);
                         if (commandBeginByte == '*') {
                             readOffset++;
                             state = State.READ_ARG_COUNT;
@@ -78,7 +82,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     }
                     case READ_ARG: {
                         // 根据READ_ARG_LENGTH中读到的参数长度获得参数内容
-                        request.getArgs()[argIndex] = byteArray.subArray(readOffset, argLength);
+                        request.getArgs()[argIndex] = byteChunkArray.subArray(readOffset, argLength);
                         // argLength + 2(\r\n)
                         readOffset = readOffset + 2 + argLength;
 
@@ -127,7 +131,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
      * 如果第一个字符不是*则skip直到遇到*
      */
     private void skipBytes() {
-        int index = byteArray.firstIndex(readOffset, (byte) '*');
+        int index = byteChunkArray.firstIndex(readOffset, (byte) '*');
         if (index == -1) {
             throw new IndexOutOfBoundsException("Not enough data.");
         } else {
@@ -139,7 +143,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
         long size = 0;
         boolean isNeg = false;
 
-        byte b = byteArray.get(readOffset);
+        byte b = byteChunkArray.get(readOffset);
         while (b != '\r') {
             if (b == '-') {
                 isNeg = true;
@@ -149,7 +153,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                 size = size * 10 + b - '0';
             }
             readOffset++;
-            b = byteArray.get(readOffset);
+            b = byteChunkArray.get(readOffset);
         }
 
         // skip \r\n
@@ -175,18 +179,18 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             return;
         }
 
-        if (byteArray == null) {
-            byteArray = new CompositeByteArray();
+        if (byteChunkArray == null) {
+            byteChunkArray = new CompositeByteChunk();
         }
 
-        byteArray.add(newBuffer);
+        byteChunkArray.add(newBuffer);
         readOffset = 0;
-        byteArrayLength = byteArray.getByteCount();
+        byteArrayLength = byteChunkArray.getByteCount();
     }
 
     public void reset() {
         state = State.READ_SKIP;
-        byteArray.clear();
+        byteChunkArray.clear();
         readOffset = 0;
     }
 
