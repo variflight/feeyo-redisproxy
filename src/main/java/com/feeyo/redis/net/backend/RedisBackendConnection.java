@@ -138,7 +138,7 @@ public class RedisBackendConnection extends BackendConnection {
 	@Override
 	public void flowClean() {
 		LOGGER.warn("flow clean, backend: {} ", this);
-		this.close(" flow limit ");
+		this.close(" netflow problem, the response is cleaned up. ");
 	}
 	
 	

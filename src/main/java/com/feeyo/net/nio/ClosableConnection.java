@@ -18,7 +18,7 @@ public abstract class ClosableConnection {
 	private static Logger LOGGER = LoggerFactory.getLogger( ClosableConnection.class );
 	
 	//
-	public static final byte[] ERR_FLOW_LIMIT = "-ERR flow limit.\r\n".getBytes();
+	public static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, the request is cleaned up. \r\n".getBytes();
 	
 	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
 	public enum Direction {
@@ -231,7 +231,9 @@ public abstract class ClosableConnection {
 				NetSystem.getInstance().removeConnection( parent );
 				if ( handler != null )
 					handler.onClosed(parent, reason);
+				
 			} else {
+				
 				NetSystem.getInstance().removeConnection(this);
 				if ( handler != null )
 					handler.onClosed(this, reason);
@@ -297,9 +299,10 @@ public abstract class ClosableConnection {
 			if ( isNested ) {
 				NetSystem.getInstance().addConnection( parent );
 				this.handler.onConnected( parent );
+				
 			} else {
 				NetSystem.getInstance().addConnection(this);
-				this.handler.onConnected(this);
+				this.handler.onConnected( this );
 			}
 			
 		} finally {
