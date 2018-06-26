@@ -303,31 +303,31 @@ public class Connection extends ClosableConnection {
 				}
 				
 				// 空间不足
-//				if ( !readBuffer.hasRemaining() ) {
-//					
-//					if (readBuffer.capacity() >= maxCapacity) {
-//						LOGGER.warn("con:{},  packet size over the limit.", this);
-//						throw new IllegalArgumentException( "packet size over the limit.");
-//					}
-//					
-//					// 每次2倍扩充，至 maxCapacity 上限，抛出异常
-//					int newCapacity = readBuffer.capacity() << 1;
-//					newCapacity = (newCapacity > maxCapacity) ? maxCapacity : newCapacity;			
-//					
-//					// new buffer
-//					ByteBuffer newBuffer = allocate( newCapacity );
-//					readBuffer.position( offset );
-//					newBuffer.put( readBuffer );
-//					
-//					recycle(readBuffer);
-//					readBuffer = newBuffer;
-//					lastLargeMessageTime = TimeUtil.currentTimeMillis();
-//					largeCounter++;
-//					
-//					// 拿完整包
-//					//continue;		
+				if ( !readBuffer.hasRemaining() ) {
+					
+					if (readBuffer.capacity() >= maxCapacity) {
+						LOGGER.warn("con:{},  packet size over the limit.", this);
+						throw new IllegalArgumentException( "packet size over the limit.");
+					}
+					
+					// 每次2倍扩充，至 maxCapacity 上限，抛出异常
+					int newCapacity = readBuffer.capacity() << 1;
+					newCapacity = (newCapacity > maxCapacity) ? maxCapacity : newCapacity;			
+					
+					// new buffer
+					ByteBuffer newBuffer = allocate( newCapacity );
+					readBuffer.position( offset );
+					newBuffer.put( readBuffer );
+					
+					recycle(readBuffer);
+					readBuffer = newBuffer;
+					lastLargeMessageTime = TimeUtil.currentTimeMillis();
+					largeCounter++;
+					
+					// 拿完整包
+					//continue;		
 //					break;		// 对 大包不友好 	
-//				} 
+				} 
 				
 				// 负责解析报文并处理
 				int dataLength = readBuffer.position();
@@ -348,27 +348,27 @@ public class Connection extends ClosableConnection {
 				// if (readBuffer != null && !readBuffer.isDirect() && lastLargeMessageTime != 0
 				//		&& lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  
 					
-//				if (readBuffer != null && lastLargeMessageTime != 0 && lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  
-//
-//					if (LOGGER.isDebugEnabled()) {
-//						LOGGER.debug("change to direct con read buffer, cur temp buf size :" + readBuffer.capacity());
-//					}
-//					
-//					ByteBuffer oldBuffer = readBuffer;
-//					ByteBuffer newBuffer = allocate( 1024 * 16 );  // ByteBuffer.allocate( 1024 * 16 );
-//					readBuffer = newBuffer;
-//					
-//					//
-//					if ( oldBuffer.isDirect() )
-//						recycle( oldBuffer );
-//					
-//					lastLargeMessageTime = 0;
-//					
-//				} else {
+				if (readBuffer != null && lastLargeMessageTime != 0 && lastLargeMessageTime < (lastReadTime - 30 * 1000L) ) {  
+
+					if (LOGGER.isDebugEnabled()) {
+						LOGGER.debug("change to direct con read buffer, cur temp buf size :" + readBuffer.capacity());
+					}
+					
+					ByteBuffer oldBuffer = readBuffer;
+					ByteBuffer newBuffer = allocate( 1024 * 16 );  // ByteBuffer.allocate( 1024 * 16 );
+					readBuffer = newBuffer;
+					
+					//
+					if ( oldBuffer.isDirect() )
+						recycle( oldBuffer );
+					
+					lastLargeMessageTime = 0;
+					
+				} else {
 					if (readBuffer != null) {
 						readBuffer.clear();
 					}
-//				}
+				}
 				
 				// no more data ,break
 				break;
