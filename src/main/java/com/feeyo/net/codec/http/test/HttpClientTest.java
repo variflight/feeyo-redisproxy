@@ -1,17 +1,18 @@
 package com.feeyo.net.codec.http.test;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.feeyo.net.codec.http.HttpRequest;
+import com.feeyo.net.codec.http.HttpRequestEncoder;
+import com.feeyo.net.codec.http.HttpResponse;
+import com.feeyo.net.codec.http.HttpResponseDecoder;
 import com.feeyo.net.codec.protobuf.ProtobufEncoder;
-import com.feeyo.net.codec.protobuf.test.Eraftpb;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.ConfState;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.Entry;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.EntryType;
@@ -19,123 +20,68 @@ import com.feeyo.net.codec.protobuf.test.Eraftpb.Message;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.MessageType;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.Snapshot;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.SnapshotMetadata;
+import com.feeyo.net.codec.util.CompositeByteArray;
 import com.feeyo.util.Log4jInitializer;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.MessageLite;
 import com.google.protobuf.UnknownFieldSet;
 
 public class HttpClientTest {
-
-	private final Logger LOGGER = LoggerFactory.getLogger(HttpClientTest.class);
 
 	private static final String verbUserAgent = System.getProperty("java.home") + ";"
 			+ System.getProperty("java.vendor") + ";" + System.getProperty("java.version") + ";"
 			+ System.getProperty("user.name");
 
-	public void get(String url) {
+	private String serverIp;
+	private int port;
 
-		HttpURLConnection con = null;
-		BufferedReader br = null;
+	public HttpClientTest(String serverIp, int port) {
+		this.serverIp = serverIp;
+		this.port = port;
+	}
+
+	public HttpResponse write(HttpRequest request) throws UnknownHostException, IOException {
+
+		Socket socket = null;
+		OutputStream out = null;
+		InputStream in = null;
 		try {
+			socket = new Socket(serverIp, port);
+			socket.setSoTimeout(10000);
 
-			URL urlObj = new URL(url);
-			con = (HttpURLConnection) urlObj.openConnection();
-			con.setUseCaches(false);
-			con.setDoOutput(true);
-			con.setDoInput(true);
-			con.setInstanceFollowRedirects(false);
-			con.setRequestMethod("GET");
-			con.setConnectTimeout(2 * 1000);
-			con.setReadTimeout(5 * 1000);
-			con.setRequestProperty("User-Agent", verbUserAgent);
-			con.setRequestProperty("Connection", "close");
-			con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=UTF8");
-			con.connect();
+			HttpRequestEncoder encoder = new HttpRequestEncoder();
+			byte[] reqbuf = encoder.encode(request);
 
-			int responseCode = con.getResponseCode();
-			StringBuffer responseTxtBuffer = new StringBuffer();
-			br = new BufferedReader(new InputStreamReader(con.getInputStream()));
-			String inputLine;
-			while ((inputLine = br.readLine()) != null) {
-				responseTxtBuffer.append(inputLine);
+			out = socket.getOutputStream();
+			out.write(reqbuf);
+			out.flush();
+
+			in = socket.getInputStream();
+			CompositeByteArray buf = new CompositeByteArray();
+			byte[] buff = new byte[1024];
+			int len = -1;
+			while ((len = in.read(buff)) != -1) {
+				buf.add(Arrays.copyOfRange(buff, 0, len));
 			}
-			System.out.println("status: "+ responseCode + "response: " + responseTxtBuffer.toString());
-
-
-		} catch (IOException e) {
-			LOGGER.error(e.getMessage());
+			HttpResponseDecoder decoder = new HttpResponseDecoder();
+			HttpResponse response = decoder.decode(buf.getData(0, buf.getByteCount()));
+			return response;
 		} finally {
-			if (br != null) {
-				try {
-					br.close();
-				} catch (IOException e) {
-				}
+
+			if (in != null) {
+				in.close();
 			}
-			if (con != null) {
-				con.disconnect();
-				con = null;
+
+			if (out != null) {
+				out.close();
+			}
+
+			if (socket != null) {
+				socket.close();
 			}
 		}
-
 	}
-	
-	public void post(String url, byte[] data) {
 
-		HttpURLConnection con = null;
-		BufferedReader br = null;
-		try {
-
-			URL urlObj = new URL(url);
-			con = (HttpURLConnection) urlObj.openConnection();
-			con.setUseCaches(false);
-			con.setDoOutput(true);
-			con.setDoInput(true);
-			con.setInstanceFollowRedirects(false);
-			con.setConnectTimeout(2000);
-			con.setReadTimeout(5000);
-			con.setRequestMethod("POST");
-			con.setRequestProperty("User-Agent", verbUserAgent);
-			con.setRequestProperty("Connection", "close");
-			con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-			con.setRequestProperty("Content-Length", Integer.toString(data.length));
-			con.getOutputStream().write(data, 0, data.length);
-			con.getOutputStream().flush();
-			con.getResponseCode();
-
-			con.getOutputStream().close();
-
-		} catch (IOException e) {
-			LOGGER.error(e.getMessage());
-
-		} finally {
-			if (br != null) {
-				try {
-					br.close();
-				} catch (IOException e) {
-				}
-			}
-
-			if (con != null) {
-				con.disconnect();
-			}
-		}
-
-	}
-	
-	public void post(String url, MessageLite msg, boolean isCustomPkg) {
-		
-		if(msg == null)
-			return;
-		
-		ProtobufEncoder encoder = new ProtobufEncoder(isCustomPkg);
-		ByteBuffer protoBufs = encoder.encode(msg);
-		
-		HttpClientTest client = new HttpClientTest();
-		client.post(url, protoBufs.array());
-		
-	}
-	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 
 		if (System.getProperty("FEEYO_HOME") == null) {
 			System.setProperty("FEEYO_HOME", System.getProperty("user.dir"));
@@ -145,9 +91,9 @@ public class HttpClientTest {
 		Log4jInitializer.configureAndWatch(System.getProperty("FEEYO_HOME"), "log4j.xml", 30000L);
 
 		Entry entry0 = Entry.newBuilder().setContext(ByteString.copyFromUtf8("Entry" + 1))
-				.setData(ByteString.copyFromUtf8("Entry " + 1)).setEntryType(EntryType.EntryNormal)
-				.setEntryTypeValue(0).setIndex(1).setSyncLog(false).setTerm(20)
-				.setUnknownFields(UnknownFieldSet.getDefaultInstance()).build();
+				.setData(ByteString.copyFromUtf8("Entry " + 1)).setEntryType(EntryType.EntryNormal).setEntryTypeValue(0)
+				.setIndex(1).setSyncLog(false).setTerm(20).setUnknownFields(UnknownFieldSet.getDefaultInstance())
+				.build();
 
 		ConfState state = ConfState.newBuilder().addLearners(100).addLearners(101).addNodes(102).addNodes(103)
 				.setUnknownFields(UnknownFieldSet.getDefaultInstance()).build();
@@ -155,16 +101,27 @@ public class HttpClientTest {
 		SnapshotMetadata metadata = SnapshotMetadata.newBuilder().setConfState(state).setIndex(1).setTerm(20)
 				.setUnknownFields(UnknownFieldSet.getDefaultInstance()).build();
 
-		Snapshot snapshot = Snapshot.newBuilder().setData(ByteString.copyFromUtf8("snapshot" + 1))
-				.setMetadata(metadata).setUnknownFields(UnknownFieldSet.getDefaultInstance()).build();
+		Snapshot snapshot = Snapshot.newBuilder().setData(ByteString.copyFromUtf8("snapshot" + 1)).setMetadata(metadata)
+				.setUnknownFields(UnknownFieldSet.getDefaultInstance()).build();
 
-		Message fromMsg = Message.newBuilder().setMsgType(MessageType.MsgAppend).setTo(9000).setFrom(1000).setTerm(20)
+		Message msg = Message.newBuilder().setMsgType(MessageType.MsgAppend).setTo(9000).setFrom(1000).setTerm(20)
 				.setLogTerm(30).setIndex(1).addEntries(entry0).setCommit(123).setSnapshot(snapshot).setReject(true)
 				.setRejectHint(1).setContext(ByteString.copyFromUtf8("message" + 1)).build();
-		
-		
-		HttpClientTest test = new HttpClientTest();
-		test.post("http://127.0.0.1:8066/proto/eraftpb/message?isCustomPkg=true", fromMsg, true);
+
+		HttpClientTest client = new HttpClientTest("192.168.14.158", 8066);
+		HttpRequest request = new HttpRequest("POST", "http://192.168.14.158:8066/proto/eraftpb/message");
+		ProtobufEncoder encoder = new ProtobufEncoder(false);
+		ByteBuffer protobuf = encoder.encode(msg);
+		if (protobuf != null) {
+			byte[] data = protobuf.array();
+			request.setContent(data);
+			request.addHeader("User-Agent", verbUserAgent);
+			request.addHeader("Connection", "close");
+			request.addHeader("Content-Type", "application/x-www-form-urlencoded");
+			request.addHeader("Content-Length", Integer.toString(data.length));
+			HttpResponse res = client.write(request);
+			System.out.println(res.toString());
+		}
 	}
-	
+
 }
