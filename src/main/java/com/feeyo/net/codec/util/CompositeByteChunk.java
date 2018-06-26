@@ -55,20 +55,23 @@ public class CompositeByteChunk {
         return c.find(paramOffset, value);
     }
 
-    /**
-     * 取出指定区间的byte[], 可能跨多个Chunk
-     *
-     * @param beginComp  beginIndex所在的 Chunk
-     * @param beginIndex 截取的开始位置
-     * @param length     需要截取的长度
-     * @return byte[]
-     */
-    public byte[] subArray(ByteChunk beginComp, int beginIndex, int length) {
-        // checkIndex(beginIndex, length);
-        assert beginComp != null;
+    
+    public byte[] getData(int beginIndex, int length) {
+        ByteChunk c = findChunk(beginIndex);
+        return getData(c, beginIndex, length);
+    }
+    
+
+    /* 
+     	取出指定区间的byte[], 可能跨多个Chunk
+     	beginIndex 截取的开始位置, length 需要截取的长度
+    */
+    public byte[] getData(ByteChunk chunk, int beginIndex, int length) {
+    	
+        assert chunk != null;
 
         byte[] resultArr = new byte[length];
-        ByteChunk c = beginComp;
+        ByteChunk c = chunk;
         int remaining = length;
         int destPos = 0;
         int subBeginIndex = beginIndex - c.beginIndex;
@@ -95,10 +98,6 @@ public class CompositeByteChunk {
         return resultArr;
     }
 
-    public byte[] subArray(int beginIndex, int length) {
-        ByteChunk c = findChunk(beginIndex);
-        return subArray(c, beginIndex, length);
-    }
 
     /**
      * 返回剩余可读字节数
@@ -149,8 +148,9 @@ public class CompositeByteChunk {
 
     
     
-    // 包装了 byte[], 增加了 length 和 beginIndex 方便查找
-    //
+    /*
+      	包装了 byte[], 增加了 length 和 beginIndex 方便查找
+     */
     public final class ByteChunk {
     	
         final byte[] data;

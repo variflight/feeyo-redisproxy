@@ -19,7 +19,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     private List<RedisResponse> responses = null;
     
     //
-    private CompositeByteChunk byteChunkArray;
+    private CompositeByteChunk chunkArray;
     
     // 用于标记读取的位置
     private int readOffset;
@@ -27,8 +27,8 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     // 所有字节的总长度
     private int byteArrayLength = -1;
 
-    private ByteChunk startByteChunk;			// 当需要返回response时此时的readOffset可能会高于offset
-    private ByteChunk readByteChunk;			// 标记当前操作的Component, 一般是readOffset对应的 ByteChunk
+    private ByteChunk startChunk;			// 当需要返回response时此时的readOffset可能会高于offset
+    private ByteChunk readChunk;			// 标记当前操作的Component, 一般是readOffset对应的 ByteChunk
     
 
     @Override
@@ -44,13 +44,13 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
 
             for (;;) {
                 // 至少4字节  :1\r\n
-                if (byteChunkArray.remaining(readOffset) < 4) {
+                if (chunkArray.remaining(readOffset) < 4) {
                     return null;
                 }
 
                 // 减少findChunk 的调用次数
-                startByteChunk = readByteChunk = byteChunkArray.findChunk(readOffset);
-                byte type = readByteChunk.get(readOffset++);
+                startChunk = readChunk = chunkArray.findChunk(readOffset);
+                byte type = readChunk.get(readOffset++);
                 switch (type) {
                     case '*':   // 多条批量回复(multi bulk reply)的第一个字节是 "*", 后面紧跟着的长度表示多条回复的数量
                     case '+':   // 状态回复(status reply)的第一个字节是 "+"
@@ -67,7 +67,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                     throw new IndexOutOfBoundsException("Not enough data.");
                     
                 } else if (byteArrayLength == readOffset) {
-                    byteChunkArray.clear();
+                    chunkArray.clear();
                     // 已经return了下次再调用时append方法会初始化
                     // readOffset = 0;
                     // byteArrayLength = -1;
@@ -99,7 +99,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             // 长度
             len = end - start;
             updateStartByteChunk(start);
-            return new RedisResponse(type, byteChunkArray.subArray(startByteChunk, start, len));
+            return new RedisResponse(type, chunkArray.getData(startChunk, start, len));
         } else if (type == '$') {
             offset = readOffset;
 
@@ -110,7 +110,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 end = readOffset;
                 len = end - start;
                 updateStartByteChunk(start);
-                return new RedisResponse(type, byteChunkArray.subArray(startByteChunk, start, len));  // 此处不减
+                return new RedisResponse(type, chunkArray.getData(startChunk, start, len));  // 此处不减
             }
 
             end = readOffset + packetSize + 2;    // offset + data + \r\n
@@ -124,7 +124,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             start = offset - 1;
             len = end - start;
             updateStartByteChunk(start);
-            return new RedisResponse(type, byteChunkArray.subArray(startByteChunk, start, len));
+            return new RedisResponse(type, chunkArray.getData(startChunk, start, len));
         } else if (type == '*') {
             offset = readOffset;
 
@@ -135,10 +135,10 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 end = readOffset;
                 len = end - start;
                 updateStartByteChunk(start);
-                return new RedisResponse(type, byteChunkArray.subArray(startByteChunk, start, len));  // 此处不减
+                return new RedisResponse(type, chunkArray.getData(startChunk, start, len));  // 此处不减
             }
 
-            if (packetSize > byteChunkArray.remaining(readOffset)) {
+            if (packetSize > chunkArray.remaining(readOffset)) {
                 readOffset = offset - 1;
                 throw new IndexOutOfBoundsException("Wait for more data.");
             }
@@ -149,7 +149,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             end = readOffset;
             len = end - start;
             updateStartByteChunk(start);
-            response.set(0, new RedisResponse(type, byteChunkArray.subArray(startByteChunk, start, len)));
+            response.set(0, new RedisResponse(type, chunkArray.getData(startChunk, start, len)));
 
             byte nType;
             RedisResponse res;
@@ -158,7 +158,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                     throw new IndexOutOfBoundsException("Wait for more data.");
                 }
 
-                nType = readByteChunk.get(readOffset++);
+                nType = readChunk.get(readOffset++);
                 updateReadOffsetAndReadByteChunk(readOffset);
                 res = parseResponse(nType);
                 response.set(i, res);
@@ -177,7 +177,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        ByteChunk c = readByteChunk;
+        ByteChunk c = readChunk;
         byte b = c.get(readOffset);
         outer: while (c != null) {
 
@@ -228,7 +228,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        ByteChunk c = readByteChunk;
+        ByteChunk c = readChunk;
         outer: while (c != null) {
 
             while (c.isInBoundary(offset)) {
@@ -257,24 +257,24 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         
     	readOffset = newReadOffset;
 
-        while (readByteChunk != null) {
+        while (readChunk != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (readByteChunk.isInBoundary(readOffset) || readOffset == byteArrayLength) {
+            if (readChunk.isInBoundary(readOffset) || readOffset == byteArrayLength) {
                 return;
             }
-            readByteChunk = readByteChunk.getNext();
+            readChunk = readChunk.getNext();
         }
     }
 
     // 当需要截取子数组时需要确定起始位置的 ByteChunk, 减少 findChunk 的调用次数
     private void updateStartByteChunk(int reachOffset) {
     	
-        while (startByteChunk != null) {
+        while (startChunk != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (startByteChunk.isInBoundary(reachOffset) || reachOffset == byteArrayLength) {
+            if (startChunk.isInBoundary(reachOffset) || reachOffset == byteArrayLength) {
                 return;
             }
-            startByteChunk = startByteChunk.getNext();
+            startChunk = startChunk.getNext();
         }
     }
 
@@ -283,14 +283,14 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             return;
         }
 
-        if (byteChunkArray == null) {
-            byteChunkArray = new CompositeByteChunk();
+        if (chunkArray == null) {
+            chunkArray = new CompositeByteChunk();
         }
 
         // large packet
-        byteChunkArray.add(newBuffer);
+        chunkArray.add(newBuffer);
         readOffset = 0;
-        byteArrayLength = byteChunkArray.getByteCount();
+        byteArrayLength = chunkArray.getByteCount();
     }
 
     /**

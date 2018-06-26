@@ -16,7 +16,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     
 	private RedisRequest request = null;
     
-	private CompositeByteChunk byteChunkArray = null;
+	private CompositeByteChunk chunkArray = null;
     
     // 用于标记读取的位置
     private int readOffset;
@@ -55,7 +55,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                             break;
                         }
                         // 开始读，根据*/$判断是参数的数量还是参数命令/内容的长度
-                        byte commandBeginByte = byteChunkArray.get(readOffset);
+                        byte commandBeginByte = chunkArray.get(readOffset);
                         if (commandBeginByte == '*') {
                             readOffset++;
                             state = State.READ_ARG_COUNT;
@@ -82,7 +82,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     }
                     case READ_ARG: {
                         // 根据READ_ARG_LENGTH中读到的参数长度获得参数内容
-                        request.getArgs()[argIndex] = byteChunkArray.subArray(readOffset, argLength);
+                        request.getArgs()[argIndex] = chunkArray.getData(readOffset, argLength);
                         // argLength + 2(\r\n)
                         readOffset = readOffset + 2 + argLength;
 
@@ -131,7 +131,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
      * 如果第一个字符不是*则skip直到遇到*
      */
     private void skipBytes() {
-        int index = byteChunkArray.firstIndex(readOffset, (byte) '*');
+        int index = chunkArray.firstIndex(readOffset, (byte) '*');
         if (index == -1) {
             throw new IndexOutOfBoundsException("Not enough data.");
         } else {
@@ -143,7 +143,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
         long size = 0;
         boolean isNeg = false;
 
-        byte b = byteChunkArray.get(readOffset);
+        byte b = chunkArray.get(readOffset);
         while (b != '\r') {
             if (b == '-') {
                 isNeg = true;
@@ -153,7 +153,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                 size = size * 10 + b - '0';
             }
             readOffset++;
-            b = byteChunkArray.get(readOffset);
+            b = chunkArray.get(readOffset);
         }
 
         // skip \r\n
@@ -179,18 +179,18 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             return;
         }
 
-        if (byteChunkArray == null) {
-            byteChunkArray = new CompositeByteChunk();
+        if (chunkArray == null) {
+            chunkArray = new CompositeByteChunk();
         }
 
-        byteChunkArray.add(newBuffer);
+        chunkArray.add(newBuffer);
         readOffset = 0;
-        byteArrayLength = byteChunkArray.getByteCount();
+        byteArrayLength = chunkArray.getByteCount();
     }
 
     public void reset() {
         state = State.READ_SKIP;
-        byteChunkArray.clear();
+        chunkArray.clear();
         readOffset = 0;
     }
 
