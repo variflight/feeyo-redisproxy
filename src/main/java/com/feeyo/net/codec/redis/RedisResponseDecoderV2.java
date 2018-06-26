@@ -1,17 +1,16 @@
 package com.feeyo.net.codec.redis;
 
 import com.feeyo.net.codec.Decoder;
-import com.feeyo.net.codec.util.CompositeByteChunk;
-import com.feeyo.net.codec.util.CompositeByteChunk.ByteChunk;
+import com.feeyo.net.codec.util.CompositeByteChunkArray;
+import com.feeyo.net.codec.util.CompositeByteChunkArray.ByteChunk;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 返回  type+data+\r\n 字节流， 避免 encode <br>
- * 在 RedisResponseDecoder 实现上使用 CompositeByteArray 代替 byte[]
+ * 在 RedisResponseDecoder 实现上使用 CompositeByteChunkArray 代替 byte[]
  *
- * @see RedisResponseDecoder
  * @see "https://redis.io/topics/protocol"
  */
 public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
@@ -19,13 +18,10 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     private List<RedisResponse> responses = null;
     
     //
-    private CompositeByteChunk chunkArray;
+    private CompositeByteChunkArray chunkArray;
     
     // 用于标记读取的位置
     private int readOffset;
-    
-    // 所有字节的总长度
-    private int byteArrayLength = -1;
 
     private ByteChunk startChunk;			// 当需要返回response时此时的readOffset可能会高于offset
     private ByteChunk readChunk;			// 标记当前操作的Component, 一般是readOffset对应的 ByteChunk
@@ -33,6 +29,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
 
     @Override
     public List<RedisResponse> decode(byte[] buffer) {
+    	
         append(buffer);
 
         try {
@@ -63,10 +60,10 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                         }
                 }
 
-                if (byteArrayLength < readOffset) {
+                if ( chunkArray.getByteCount() < readOffset) {
                     throw new IndexOutOfBoundsException("Not enough data.");
                     
-                } else if (byteArrayLength == readOffset) {
+                } else if ( chunkArray.getByteCount() == readOffset) {
                     chunkArray.clear();
                     // 已经return了下次再调用时append方法会初始化
                     // readOffset = 0;
@@ -91,7 +88,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             end = readCRLFOffset();    // 分隔符 \r\n
             updateReadOffsetAndReadByteChunk(end);     // 调整偏移值
 
-            if (end > byteArrayLength) {
+            if (end > chunkArray.getByteCount() ) {
                 readOffset = offset;
                 throw new IndexOutOfBoundsException("Wait for more data.");
             }
@@ -116,7 +113,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             end = readOffset + packetSize + 2;    // offset + data + \r\n
             updateReadOffsetAndReadByteChunk(end);   // 调整偏移值
 
-            if (end > byteArrayLength) {
+            if (end > chunkArray.getByteCount() ) {
                 readOffset = offset - 1;
                 throw new IndexOutOfBoundsException("Wait for more data.");
             }
@@ -154,7 +151,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             byte nType;
             RedisResponse res;
             for (int i = 1; i <= packetSize; i++) {
-                if (readOffset + 1 >= byteArrayLength) {
+                if (readOffset + 1 >= chunkArray.getByteCount() ) {
                     throw new IndexOutOfBoundsException("Wait for more data.");
                 }
 
@@ -173,7 +170,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         long size = 0;
         boolean isNeg = false;
 
-        if (readOffset >= byteArrayLength) {
+        if (readOffset >= chunkArray.getByteCount()) {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
@@ -194,7 +191,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 }
                 readOffset++;
 
-                if (readOffset >= byteArrayLength) {
+                if (readOffset >= chunkArray.getByteCount() ) {
                     throw new IndexOutOfBoundsException("Not enough data.");
                 }
                 b = c.get(readOffset);
@@ -224,7 +221,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
      */
     private int readCRLFOffset() throws IndexOutOfBoundsException {
         int offset = readOffset;
-        if (offset + 1 >= byteArrayLength) {
+        if (offset + 1 >= chunkArray.getByteCount()) {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
@@ -238,9 +235,9 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 }
                 offset++;
 
-                if (offset + 1 == byteArrayLength) {
+                if (offset + 1 == chunkArray.getByteCount()) {
                     throw new IndexOutOfBoundsException("didn't see LF after NL reading multi bulk count (" + offset + " => " +
-                            byteArrayLength + ", " + readOffset + ")");
+                    		chunkArray.getByteCount() + ", " + readOffset + ")");
                 }
             }
             c = c.getNext();
@@ -259,7 +256,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
 
         while (readChunk != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (readChunk.isInBoundary(readOffset) || readOffset == byteArrayLength) {
+            if (readChunk.isInBoundary(readOffset) || readOffset == chunkArray.getByteCount()) {
                 return;
             }
             readChunk = readChunk.getNext();
@@ -271,7 +268,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     	
         while (startChunk != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (startChunk.isInBoundary(reachOffset) || reachOffset == byteArrayLength) {
+            if (startChunk.isInBoundary(reachOffset) || reachOffset == chunkArray.getByteCount()) {
                 return;
             }
             startChunk = startChunk.getNext();
@@ -284,13 +281,12 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         }
 
         if (chunkArray == null) {
-            chunkArray = new CompositeByteChunk();
+            chunkArray = new CompositeByteChunkArray();
         }
 
         // large packet
         chunkArray.add(newBuffer);
         readOffset = 0;
-        byteArrayLength = chunkArray.getByteCount();
     }
 
     /**

@@ -7,15 +7,14 @@ import java.util.List;
  * 封装n个物理意义的字节数组, 对外提供一个逻辑意义上的字节数组
  *
  * @see "https://github.com/netty/netty/blob/4.1/buffer/src/main/java/io/netty/buffer/CompositeByteBuf.java"
- * @see "https://skyao.gitbooks.io/learning-netty/content/buffer/class_CompositeByteBuf.html"
  */
-public class CompositeByteChunk {
+public class CompositeByteChunkArray {
 	
     private List<ByteChunk> chunks;
     
     private int byteCount;
 
-    public CompositeByteChunk() {
+    public CompositeByteChunkArray() {
         this.chunks = new ArrayList<>();
         this.byteCount = 0;
     }

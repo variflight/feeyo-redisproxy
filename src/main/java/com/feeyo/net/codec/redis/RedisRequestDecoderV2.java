@@ -2,25 +2,21 @@ package com.feeyo.net.codec.redis;
 
 import com.feeyo.net.codec.Decoder;
 import com.feeyo.net.codec.UnknowProtocolException;
-import com.feeyo.net.codec.util.CompositeByteChunk;
+import com.feeyo.net.codec.util.CompositeByteChunkArray;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 在RedisRequestDecoder实现上使用CompositeByteArray代替byte[]
- *
- * @see RedisRequestDecoder
- */
+// use CompositeByteChunkArray
+//
 public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     
 	private RedisRequest request = null;
     
-	private CompositeByteChunk chunkArray = null;
+	private CompositeByteChunkArray chunkArray = null;
     
     // 用于标记读取的位置
     private int readOffset;
-    private int byteArrayLength = -1;
     
     private State state = State.READ_SKIP;
 
@@ -50,7 +46,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                         break;
                     }
                     case READ_INIT: {
-                        if (readOffset >= byteArrayLength || (argCount != 0 && argCount == argIndex + 1)) {
+                        if (readOffset >= chunkArray.getByteCount() || (argCount != 0 && argCount == argIndex + 1)) {
                             state = State.READ_END;
                             break;
                         }
@@ -91,9 +87,10 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     }
                     case READ_END: {
                         // 处理粘包
-                        if (byteArrayLength < readOffset) {
+                        if (chunkArray.getByteCount() < readOffset) {
                             throw new IndexOutOfBoundsException("Not enough data.");
-                        } else if (byteArrayLength == readOffset) {
+                            
+                        } else if (chunkArray.getByteCount() == readOffset) {
                             if (argCount == argIndex + 1) {
                                 pipeline.add(request);
                                 reset();
@@ -180,12 +177,11 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
         }
 
         if (chunkArray == null) {
-            chunkArray = new CompositeByteChunk();
+            chunkArray = new CompositeByteChunkArray();
         }
 
         chunkArray.add(newBuffer);
         readOffset = 0;
-        byteArrayLength = chunkArray.getByteCount();
     }
 
     public void reset() {
