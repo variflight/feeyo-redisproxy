@@ -135,6 +135,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 						isOverproof = handler.handleNetFlow(parent, length);
 					else
 						isOverproof = handler.handleNetFlow(this, length);
+					
 					if (isOverproof) {
 						flowClean();
 						return;

@@ -3,8 +3,7 @@
 
 	<!-- 流量监控、清洗 -->
 	<netflow>
-		<user password="pwd04" perSecondMaxSize="1024" requestMaxSize="2048" control="true"/>
-		<user password="xxx2" perSecondMaxSize="1024" requestMaxSize="2048" control="true"/>
+		<user password="pwd04" perSecondMaxSize="100" requestMaxSize="100" control="true"/>
 	</netflow>
 
 </redis>

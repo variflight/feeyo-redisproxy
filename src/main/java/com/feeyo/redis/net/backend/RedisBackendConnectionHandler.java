@@ -56,12 +56,21 @@ public class RedisBackendConnectionHandler implements NIOHandler<RedisBackendCon
 
 	@Override
 	public boolean handleNetFlow(RedisBackendConnection con, int dataLength) throws IOException {
-		if (con.getAttachement() instanceof RedisFrontConnection) {
-			RedisFrontConnection rfc = (RedisFrontConnection) con.getAttachement();
-			NetFlowController nfm = con.getNetflowController();
-			if (nfm != null)
-				return nfm.consumeBytes(rfc.getPassword(), dataLength);
+		
+		if ( con.getAttachement() == null ) {
+			return false;
 		}
+		
+		//
+		if (con.getAttachement() instanceof RedisFrontConnection) {
+			
+			RedisFrontConnection frontCon = (RedisFrontConnection) con.getAttachement();
+			NetFlowController netflowCtrl = con.getNetflowController();
+			if ( netflowCtrl != null) {
+				return netflowCtrl.consumeBytes( frontCon.getPassword(), dataLength );
+			}
+		}
+		
 		return false;
 	}
 

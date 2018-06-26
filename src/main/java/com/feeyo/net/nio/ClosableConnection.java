@@ -17,6 +17,9 @@ public abstract class ClosableConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ClosableConnection.class );
 	
+	//
+	public static final byte[] ERR_FLOW_LIMIT = "-ERR flow limit.\r\n".getBytes();
+	
 	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
 	public enum Direction {
 		in, out

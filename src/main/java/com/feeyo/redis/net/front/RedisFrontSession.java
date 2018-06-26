@@ -57,7 +57,7 @@ public class RedisFrontSession {
 	public static final String NOT_ADMIN_USER = "Not supported:manage cmd but not admin user.";
 	public static final String UNKNOW_COMMAND = "Unknow command.";
 	public static final String NOT_READ_COMMAND = "Not read command.";
-	public static final byte[] FLOW_LIMIT = "-ERR flow limit.\r\n".getBytes();
+
 	public static final byte[] NULL =  "$-1\r\n".getBytes();
 	
 	// PUBSUB

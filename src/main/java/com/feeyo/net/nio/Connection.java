@@ -294,12 +294,23 @@ public class Connection extends ClosableConnection {
 				netInBytes += length;
 				netInCounter++;
 				
-				// 流量检测，超过max 触发限流
-				if ( isNested && handler.handleNetFlow(parent, length) ) {
-					parent.flowClean();
-				} else if (!isNested && handler.handleNetFlow(this, length)) {
-					this.flowClean();
-					return;
+				
+				// 流量控制
+				//
+				if ( isNested ) {
+					
+					if ( parent.getHandler().handleNetFlow(parent, length)  ) {
+						parent.flowClean();
+						return;
+					}	
+					
+				} else {
+					
+					//
+					if ( handler.handleNetFlow(this, length) ) {
+						this.flowClean();
+						return;
+					}
 				}
 				
 				// 空间不足
@@ -381,6 +392,7 @@ public class Connection extends ClosableConnection {
 		}
 
 	}
+	
 
 	@Override
 	public String toString() {

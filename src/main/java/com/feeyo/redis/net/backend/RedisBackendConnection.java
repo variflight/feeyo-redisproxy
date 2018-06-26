@@ -3,9 +3,11 @@ package com.feeyo.redis.net.backend;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
-import com.feeyo.redis.net.front.RedisFrontSession;
 
 /**
  * REDIS 后端连接
@@ -14,6 +16,8 @@ import com.feeyo.redis.net.front.RedisFrontSession;
  *
  */
 public class RedisBackendConnection extends BackendConnection {
+	
+	private static Logger LOGGER = LoggerFactory.getLogger( RedisBackendConnection.class );
 
 	private volatile int db = 0;				//REDIS select database, default 0
     
@@ -131,20 +135,10 @@ public class RedisBackendConnection extends BackendConnection {
 		this.heartbeatTime = heartbeatTime;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public void flowClean() {
-		super.flowClean();
-			try {
-				if ( isNested )
-					handler.handleReadEvent(parent, RedisFrontSession.FLOW_LIMIT);
-				else
-					handler.handleReadEvent(this, RedisFrontSession.FLOW_LIMIT);
-			} catch (IOException e) {
-				
-			} finally {
-				this.close("flow limit");
-			}
+		LOGGER.warn("flow clean, backend: {} ", this);
+		this.close(" flow limit ");
 	}
 	
 	
