@@ -23,7 +23,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
     // 标记当前操作的Component, 一般是readOffset对应的Component
     private Component curReadComponent;
     // 当需要返回response时此时的readOffset可能会高于offset
-    private Component curSubComponent;
+    private Component curStartComponent;
     private List<Integer> index = new ArrayList<>();
 
     /**
@@ -42,7 +42,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
                 }
 
                 // 减少findComponent的调用次数
-                curSubComponent = curReadComponent = byteArray.findComponent(readOffset);
+                curStartComponent = curReadComponent = byteArray.findComponent(readOffset);
                 byte type = curReadComponent.get(readOffset++);
                 switch (type) {
                     case '*': // 数组(Array), 以 "*" 开头,表示消息体总共有多少行（不包括当前行）, "*" 是具体行数
@@ -140,7 +140,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
         byte b = c.get(readOffset);
         outer: while (c != null) {
 
-            while (c.isInComponent(readOffset)) {
+            while (c.isInRange(readOffset)) {
 
                 if (b == '\r') {
                     break outer;
@@ -182,7 +182,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
         while (curReadComponent != null) {
 
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (curReadComponent.isInComponent(readOffset) || readOffset == byteArrayLength) {
+            if (curReadComponent.isInRange(readOffset) || readOffset == byteArrayLength) {
                 return;
             }
             curReadComponent = curReadComponent.getNext();
@@ -191,13 +191,13 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
 
     // 当需要截取子数组时需要确定起始位置的Component, 为了减少findComponent的调用次数
     private void setCurSubComponent(int reachOffset) {
-        while (curSubComponent != null) {
+        while (curStartComponent != null) {
 
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (curSubComponent.isInComponent(reachOffset) || reachOffset == byteArrayLength) {
+            if (curStartComponent.isInRange(reachOffset) || reachOffset == byteArrayLength) {
                 return;
             }
-            curSubComponent = curSubComponent.getNext();
+            curStartComponent = curStartComponent.getNext();
         }
     }
 
@@ -232,9 +232,9 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
         Component c = curReadComponent;
         outer: while (c != null) {
 
-            while (c.isInComponent(offset)) {
+            while (c.isInRange(offset)) {
 
-                if (c.get(offset) == '\r' && c.getNextByte(offset) == '\n') {
+                if (c.get(offset) == '\r' && c.get(offset + 1) == '\n') {
                     break outer;
                 }
                 offset++;
@@ -267,7 +267,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
             int end = index.get(i);
 
             setCurSubComponent(start);
-            result[i] = byteArray.subArray(curSubComponent, start, end - start);
+            result[i] = byteArray.subArray(curStartComponent, start, end - start);
         }
 
         index.clear();

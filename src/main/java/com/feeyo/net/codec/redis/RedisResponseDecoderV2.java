@@ -24,7 +24,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     // 标记当前操作的Component, 一般是readOffset对应的Component
     private Component curReadComponent;
     // 当需要返回response时此时的readOffset可能会高于offset
-    private Component curSubComponent;
+    private Component curStartComponent;
 
     @Override
     public List<RedisResponse> decode(byte[] buffer) {
@@ -44,7 +44,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 }
 
                 // 减少findComponent的调用次数
-                curSubComponent = curReadComponent = byteArray.findComponent(readOffset);
+                curStartComponent = curReadComponent = byteArray.findComponent(readOffset);
                 byte type = curReadComponent.get(readOffset++);
                 switch (type) {
                     case '*':   // 多条批量回复(multi bulk reply)的第一个字节是 "*", 后面紧跟着的长度表示多条回复的数量
@@ -93,7 +93,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             // 长度
             len = end - start;
             setCurSubComponent(start);
-            return new RedisResponse(type, byteArray.subArray(curSubComponent, start, len));
+            return new RedisResponse(type, byteArray.subArray(curStartComponent, start, len));
         } else if (type == '$') {
             offset = readOffset;
 
@@ -104,7 +104,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 end = readOffset;
                 len = end - start;
                 setCurSubComponent(start);
-                return new RedisResponse(type, byteArray.subArray(curSubComponent, start, len));  // 此处不减
+                return new RedisResponse(type, byteArray.subArray(curStartComponent, start, len));  // 此处不减
             }
 
             end = readOffset + packetSize + 2;    // offset + data + \r\n
@@ -118,7 +118,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             start = offset - 1;
             len = end - start;
             setCurSubComponent(start);
-            return new RedisResponse(type, byteArray.subArray(curSubComponent, start, len));
+            return new RedisResponse(type, byteArray.subArray(curStartComponent, start, len));
         } else if (type == '*') {
             offset = readOffset;
 
@@ -129,7 +129,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 end = readOffset;
                 len = end - start;
                 setCurSubComponent(start);
-                return new RedisResponse(type, byteArray.subArray(curSubComponent, start, len));  // 此处不减
+                return new RedisResponse(type, byteArray.subArray(curStartComponent, start, len));  // 此处不减
             }
 
             if (packetSize > byteArray.remaining(readOffset)) {
@@ -143,7 +143,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             end = readOffset;
             len = end - start;
             setCurSubComponent(start);
-            response.set(0, new RedisResponse(type, byteArray.subArray(curSubComponent, start, len)));
+            response.set(0, new RedisResponse(type, byteArray.subArray(curStartComponent, start, len)));
 
             byte nType;
             RedisResponse res;
@@ -175,7 +175,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         byte b = c.get(readOffset);
         outer: while (c != null) {
 
-            while (c.isInComponent(readOffset)) {
+            while (c.isInRange(readOffset)) {
 
                 if (b == '\r') {
                     break outer;
@@ -225,9 +225,9 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         Component c = curReadComponent;
         outer: while (c != null) {
 
-            while (c.isInComponent(offset)) {
+            while (c.isInRange(offset)) {
 
-                if (c.get(offset) == '\r' && c.getNextByte(offset) == '\n') {
+                if (c.get(offset) == '\r' && c.get(offset + 1) == '\n') {
                     break outer;
                 }
                 offset++;
@@ -253,7 +253,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         while (curReadComponent != null) {
 
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (curReadComponent.isInComponent(readOffset) || readOffset == byteArrayLength) {
+            if (curReadComponent.isInRange(readOffset) || readOffset == byteArrayLength) {
                 return;
             }
             curReadComponent = curReadComponent.getNext();
@@ -262,13 +262,13 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
 
     // 当需要截取子数组时需要确定起始位置的Component, 为了减少findComponent的调用次数
     private void setCurSubComponent(int reachOffset) {
-        while (curSubComponent != null) {
+        while (curStartComponent != null) {
 
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (curSubComponent.isInComponent(reachOffset) || reachOffset == byteArrayLength) {
+            if (curStartComponent.isInRange(reachOffset) || reachOffset == byteArrayLength) {
                 return;
             }
-            curSubComponent = curSubComponent.getNext();
+            curStartComponent = curStartComponent.getNext();
         }
     }
 

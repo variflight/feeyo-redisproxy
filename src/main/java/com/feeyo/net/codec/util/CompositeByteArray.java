@@ -51,9 +51,10 @@ public class CompositeByteArray {
 
     /**
      * 取出指定区间的byte[], 可能跨多个Component
-     * @param beginComp beginIndex所在的Component
+     *
+     * @param beginComp  beginIndex所在的Component
      * @param beginIndex 截取的开始位置
-     * @param length 需要截取的长度
+     * @param length     需要截取的长度
      * @return byte[]
      */
     public byte[] subArray(Component beginComp, int beginIndex, int length) {
@@ -162,23 +163,18 @@ public class CompositeByteArray {
             this.next = next;
         }
 
-        public boolean isInComponent(int index) {
+        // 检查是否在本Component范围
+        public boolean isInRange(int index) {
             return index < beginIndex + length && index >= beginIndex;
         }
 
+        // 向下冗余一个Component
         public byte get(int index) {
-            return bytes[index - beginIndex];
-        }
-
-        // 获取index下一个字节
-        public byte getNextByte(int index) {
-            int actualIndex = index + 1;
-            if (actualIndex - beginIndex < length) {
-                return bytes[actualIndex - beginIndex];
+            // next为空则保持抛出ArrayIndexOutOfBoundsException
+            if (index - beginIndex < length || next == null) {
+                return bytes[index - beginIndex];
             }
-            else {
-                return next.get(actualIndex);
-            }
+            return next.get(index);
         }
 
         // Component内部实现查找方法
