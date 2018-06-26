@@ -38,14 +38,15 @@ import com.feeyo.net.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.net.nio.buffer.page.PageBufferPool;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
-import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
+import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -120,6 +121,7 @@ public class Manage {
 	 *  SHOW BUFFER
 	 *  
 	 *  SHOW BIGKEY
+	 *  SHOW BIGKEY_COUNT
 	 *  SHOW BIGLENGTH
 	 *  SHOW SLOWKEY
 	 *  
@@ -573,6 +575,21 @@ public class Manage {
 						lines.add( sBuffer.toString()  );
 					}			
 					return encode( lines );
+				
+				// SHOW BIGKEY_COUNT
+				} else if ( arg2.equalsIgnoreCase("BIGKEY_COUNT") ) {
+					List<String> lines = new ArrayList<String>();	
+					StringBuffer title = new StringBuffer();
+					title.append("BIGKEY_COUNT").append("    ").append("BYPASS_BIGKEY_COUNT");
+					lines.add(title.toString());
+					
+					BigKeyCollector bkc = StatUtil.getBigKeyCollector();
+					StringBuffer body = new StringBuffer();
+					body.append(bkc.getBigKeyCount()).append("      ").append(bkc.getBypassBigKeyCount());
+					lines.add(body.toString());
+					
+					return encode( lines );
+					
 					
 				// SHOW BACKEND
 				} else if ( arg2.equalsIgnoreCase("BACKEND") ) {

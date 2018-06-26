@@ -92,13 +92,13 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						// 数据收集
 						StatUtil.collect(password, RedisRequestType.PIPELINE.getCmd(), 
 								RedisRequestType.PIPELINE.getCmd(), requestSize, responseSize,
-								procTimeMills, backendWaitTimeMills, false);
+								procTimeMills, backendWaitTimeMills, false, false);
 
 						// child 收集
 						for (RedisRequest req : rrs.getRequests()) {
 							String childCmd = new String( req.getArgs()[0] );
 							String requestKey = req.getNumArgs() > 1 ? new String(req.getArgs()[1]) : null;
-							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize, procTimeMills,  backendWaitTimeMills, true);
+							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize, procTimeMills,  backendWaitTimeMills, true, false);
 						}
 						
 					} catch (IOException e2) {

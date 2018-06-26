@@ -112,7 +112,7 @@ public class BypassService {
 							
 							// 数据收集
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
-							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false);
+							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false, true);
 						}
 						
 					} catch(IOException e) {

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.feeyo.net.nio.util.TimeUtil;
 
@@ -22,7 +23,8 @@ public class BigKeyCollector implements StatCollector {
 	private ConcurrentHashMap<String, BigKey> bkHashMap = new ConcurrentHashMap<String, BigKey>();	// use search
 	private List<BigKey> bkList = new ArrayList<BigKey>(); 											// use sort, 降序
 	private AtomicBoolean locking = new AtomicBoolean(false);
-	
+	private AtomicLong totalCount = new AtomicLong(0);
+	private AtomicLong bypassCount = new AtomicLong(0);
 	
 	public void setSize(int size) {
 		if ( size >= 1024 * 100 && size <= 1024 * 1024 * 2 )
@@ -51,7 +53,7 @@ public class BigKeyCollector implements StatCollector {
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
-			int procTimeMills, int waitTimeMills, boolean isCommandOnly) {
+			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass) {
 		
 		if ( isCommandOnly) 
 			return;
@@ -59,6 +61,11 @@ public class BigKeyCollector implements StatCollector {
 		//  check size
 		if ( requestSize < REQUIRED_SIZE && responseSize < REQUIRED_SIZE  ) {	
 			return;
+		}
+		
+		totalCount.incrementAndGet();
+		if (isBypass) {
+			bypassCount.incrementAndGet();
 		}
 		
 		//
@@ -125,6 +132,8 @@ public class BigKeyCollector implements StatCollector {
 			
 			bkList.clear();
 			bkHashMap.clear();
+			totalCount.set(0);
+			bypassCount.set(0);
 			
 		} finally {
 			locking.set(false);
@@ -162,6 +171,14 @@ public class BigKeyCollector implements StatCollector {
 //		} else {
 //			bkHashMap.remove(key);
 //		}
+	}
+	
+	public long getBigKeyCount() {
+		return totalCount.get();
+	}
+	
+	public long getBypassBigKeyCount() {
+		return bypassCount.get();
 	}
 	
 	//
