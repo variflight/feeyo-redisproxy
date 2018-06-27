@@ -88,7 +88,7 @@ public class RedisFrontConnection extends FrontConnection {
 	@Override
 	public void flowClean() {
 		
-		LOGGER.warn("flow clean, front: {} ", this);
+		LOGGER.warn("##flow clean##, front: {} ", this);
 		//
 		this.write( ERR_FLOW_LIMIT );
 		this.close("flow limit");

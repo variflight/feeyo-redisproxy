@@ -398,7 +398,7 @@ public class Connection extends ClosableConnection {
 	public String toString() {
 		
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Conn [" );
+		sbuffer.append( "Conn[" );
 		sbuffer.append("reactor=").append( reactor );
 		sbuffer.append(", host=").append( host ).append(":").append( port );
 		sbuffer.append(", id=").append( id );
