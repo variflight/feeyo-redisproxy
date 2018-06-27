@@ -119,11 +119,11 @@ public class RedisServer {
 			
 			// CONSOLE 
 			StringBuffer strBuffer = new StringBuffer();
+			strBuffer.append(" ================================================== ").append("\n");
 			strBuffer.append(" Feeyo-RedisProxy & Feeyo-KafkaProxy ").append("\n");
 			strBuffer.append(" path=").append( System.getProperty("FEEYO_HOME")  ).append("\n");
 			strBuffer.append(" startup=").append( System.currentTimeMillis() ).append("\n");
 			System.out.println( strBuffer.toString() );
-			
 			
 		} catch (Throwable e) {
 			
