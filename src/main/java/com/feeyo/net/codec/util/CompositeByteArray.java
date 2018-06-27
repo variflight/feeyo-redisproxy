@@ -8,9 +8,9 @@ import java.util.List;
  *
  * @see "https://github.com/netty/netty/blob/4.1/buffer/src/main/java/io/netty/buffer/CompositeByteBuf.java"
  */
-public class CompositeByteChunkArray {
+public class CompositeByteArray {
 	
-    private List<ByteChunk> chunks = new ArrayList<>();
+    private List<ByteArray> byteArrays = new ArrayList<>();
     private int byteCount = 0;
 
     //
@@ -19,24 +19,24 @@ public class CompositeByteChunkArray {
         this.byteCount += data.length;
         
         int beginIndex = 0;
-        int size = chunks.size();
+        int size = byteArrays.size();
         
-        ByteChunk prevChunk = null;
+        ByteArray prevArray = null;
         if (size != 0) {
-            prevChunk = chunks.get(size - 1);
-            beginIndex = prevChunk.length + prevChunk.beginIndex;
+            prevArray = byteArrays.get(size - 1);
+            beginIndex = prevArray.length + prevArray.beginIndex;
         }
 
-        ByteChunk chunk = new ByteChunk(data, data.length, beginIndex);
-        chunks.add( chunk );
+        ByteArray c = new ByteArray(data, data.length, beginIndex);
+        byteArrays.add( c );
         
-        if (prevChunk != null) {
-            prevChunk.setNext(chunk);
+        if (prevArray != null) {
+            prevArray.setNext( c );
         }
     }
 
     public byte get(int index) {
-        ByteChunk c = findChunk(index);
+        ByteArray c = findByteArray(index);
         return c.get(index);
     }
 
@@ -44,7 +44,7 @@ public class CompositeByteChunkArray {
     public int firstIndex(int paramOffset, byte value) {
         checkIndex(paramOffset, 1);
 
-        ByteChunk c = findChunk(paramOffset);
+        ByteArray c = findByteArray(paramOffset);
         return c.find(paramOffset, value);
     }
 
@@ -54,17 +54,17 @@ public class CompositeByteChunkArray {
 	*/
     public byte[] getData(int beginIndex, int length) {
     	// 
-        ByteChunk c = findChunk(beginIndex);
+        ByteArray c = findByteArray(beginIndex);
         return getData(c, beginIndex, length);
     }
     
-    public byte[] getData(ByteChunk chunk, int beginIndex, int length) {
+    public byte[] getData(ByteArray chunk, int beginIndex, int length) {
     	
         assert chunk != null;
         
         byte[] destData = new byte[length];
         
-        ByteChunk c = chunk;
+        ByteArray c = chunk;
         int remaining = length;
         int destPos = 0;
         
@@ -110,18 +110,18 @@ public class CompositeByteChunkArray {
      * 清空其管理的所有byte[]并重置index <br>
      */
     public void clear() {
-        chunks.clear();
+        byteArrays.clear();
         byteCount = 0;
     }
 
-    public ByteChunk findChunk(int offset) {
+    public ByteArray findByteArray(int offset) {
         // 依赖外部调用检查
         // checkIndex(offset, 1);
 
         // 二分查找
-        for (int low = 0, high = chunks.size(); low <= high; ) {
+        for (int low = 0, high = byteArrays.size(); low <= high; ) {
             int mid = low + high >>> 1;
-            ByteChunk c = chunks.get(mid);
+            ByteArray c = byteArrays.get(mid);
             if (offset >= c.beginIndex + c.length) {
                 low = mid + 1;
             } else if (offset < c.beginIndex) {
@@ -147,7 +147,7 @@ public class CompositeByteChunkArray {
     /*
       	包装了 byte[], 增加了 length 和 beginIndex 方便查找
      */
-    public final class ByteChunk {
+    public final class ByteArray {
     	
         final byte[] data;
         
@@ -155,19 +155,19 @@ public class CompositeByteChunkArray {
         final int length;
       
         // 优化遍历, 维护单向链表
-        private ByteChunk next;
+        private ByteArray next;
 
-        public ByteChunk(byte[] data, int length, int beginIndex) {
+        public ByteArray(byte[] data, int length, int beginIndex) {
             this.data = data;
             this.length = length;
             this.beginIndex = beginIndex;
         }
 
-        public ByteChunk getNext() {
+        public ByteArray getNext() {
             return next;
         }
 
-        public void setNext(ByteChunk next) {
+        public void setNext(ByteArray next) {
             this.next = next;
         }
 
@@ -176,9 +176,8 @@ public class CompositeByteChunkArray {
             return  index >= beginIndex && index < (beginIndex + length);
         }
 
-        // next为空则保持抛出ArrayIndexOutOfBoundsException
         public byte get(int index) {
-        	
+        	// TODO: next为空则保持抛出ArrayIndexOutOfBoundsException
             if ( (index - beginIndex) < length || next == null) {
                 return data[index - beginIndex];
             }
@@ -189,7 +188,7 @@ public class CompositeByteChunkArray {
         public int find(int index, byte value) {
             
         	// check index 有效性
-            ByteChunk c = this;
+            ByteArray c = this;
 
             // 利用链表和数组快速查找
             while (c != null) {

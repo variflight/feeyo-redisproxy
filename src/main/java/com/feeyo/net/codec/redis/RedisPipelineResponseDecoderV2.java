@@ -2,8 +2,8 @@ package com.feeyo.net.codec.redis;
 
 
 import com.feeyo.net.codec.Decoder;
-import com.feeyo.net.codec.util.CompositeByteChunkArray;
-import com.feeyo.net.codec.util.CompositeByteChunkArray.ByteChunk;
+import com.feeyo.net.codec.util.CompositeByteArray;
+import com.feeyo.net.codec.util.CompositeByteArray.ByteArray;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,13 +12,14 @@ import java.util.List;
 //
 public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResponse> {
     
-	private CompositeByteChunkArray chunkArray;
+	private CompositeByteArray compositeArray;
     
     // 用于标记读取的位置
     private int readOffset;
     
-    private ByteChunk readChunk;
-    private ByteChunk startChunk;
+    private ByteArray startByteArray;
+    private ByteArray readByteArray;
+   
     
     private List<Integer> index = new ArrayList<>();
 
@@ -34,13 +35,13 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
 
             for (; ; ) {
                 // 至少4字节 :1\r\n
-                if (chunkArray.remaining(readOffset) < 4) {
+                if (compositeArray.remaining(readOffset) < 4) {
                     return new RedisPipelineResponse(RedisPipelineResponse.ERR, 0, null);
                 }
 
                 // 减少 findChunk 的调用次数
-                startChunk = readChunk = chunkArray.findChunk(readOffset);
-                byte type = readChunk.get(readOffset++);
+                startByteArray = readByteArray = compositeArray.findByteArray(readOffset);
+                byte type = readByteArray.get(readOffset++);
                 switch (type) {
                     case '*': // 数组(Array), 以 "*" 开头,表示消息体总共有多少行（不包括当前行）, "*" 是具体行数
                     case '+': // 正确, 表示正确的状态信息, "+" 后就是具体信息
@@ -53,10 +54,10 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
                         index.add(readOffset);
                 }
 
-                if ( chunkArray.getByteCount() < readOffset) {
+                if ( compositeArray.getByteCount() < readOffset) {
                     throw new IndexOutOfBoundsException("Not enough data.");
                     
-                } else if ( chunkArray.getByteCount() == readOffset) {
+                } else if ( compositeArray.getByteCount() == readOffset) {
                     readOffset = 0;
                     return new RedisPipelineResponse(RedisPipelineResponse.OK, result, getResponses());
                 }
@@ -77,7 +78,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
             end = readCRLFOffset();     // 分隔符 \r\n
             updateReadOffsetAndReadByteChunk(end);     // 调整偏移值
 
-            if (end > chunkArray.getByteCount()) {
+            if (end > compositeArray.getByteCount()) {
                 readOffset = offset;
                 throw new IndexOutOfBoundsException("Wait for more data.");
             }
@@ -93,7 +94,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
             end = readOffset + packetSize + 2;      // offset + data + \r\n
             updateReadOffsetAndReadByteChunk(end);   // 调整偏移值
 
-            if (end > chunkArray.getByteCount() ) {
+            if (end > compositeArray.getByteCount() ) {
                 readOffset = offset - 1;
                 throw new IndexOutOfBoundsException("Wait for more data.");
             }
@@ -106,7 +107,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
                 return; // 此处不减
             }
 
-            if (packetSize > chunkArray.remaining(readOffset)) {
+            if (packetSize > compositeArray.remaining(readOffset)) {
                 readOffset = offset - 1;
                 throw new IndexOutOfBoundsException("Wait for more data.");
             }
@@ -114,11 +115,11 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
             // 此处多增加一长度，用于存储 *packetSize\r\n
             byte nType;
             for (int i = 1; i <= packetSize; i++) {
-                if (offset + 1 >= chunkArray.getByteCount() ) {
+                if (offset + 1 >= compositeArray.getByteCount() ) {
                     throw new IndexOutOfBoundsException("Wait for more data.");
                 }
 
-                nType = readChunk.get(readOffset++);
+                nType = readByteArray.get(readOffset++);
                 updateReadOffsetAndReadByteChunk(readOffset);
                 // nType = byteArray.get(offset++);
                 parseResponse(nType);
@@ -130,11 +131,11 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
         long size = 0;
         boolean isNeg = false;
 
-        if (readOffset >= chunkArray.getByteCount() ) {
+        if (readOffset >= compositeArray.getByteCount() ) {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        ByteChunk c = readChunk;
+        ByteArray c = readByteArray;
         byte b = c.get(readOffset);
         outer: while (c != null) {
 
@@ -151,7 +152,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
                 }
                 readOffset++;
 
-                if (readOffset >= chunkArray.getByteCount() ) {
+                if (readOffset >= compositeArray.getByteCount() ) {
                     throw new IndexOutOfBoundsException("Not enough data.");
                 }
                 b = c.get(readOffset);
@@ -178,22 +179,22 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
     	
         readOffset = newReadOffset;
         
-        while (readChunk != null) {
+        while (readByteArray != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (readChunk.isInBoundary(readOffset) || readOffset == chunkArray.getByteCount() ) {
+            if (readByteArray.isInBoundary(readOffset) || readOffset == compositeArray.getByteCount() ) {
                 return;
             }
-            readChunk = readChunk.getNext();
+            readByteArray = readByteArray.getNext();
         }
     }
 
     private void updateStartByteChunk(int reachOffset) {
-        while (startChunk != null) {
+        while (startByteArray != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (startChunk.isInBoundary(reachOffset) || reachOffset == chunkArray.getByteCount() ) {
+            if (startByteArray.isInBoundary(reachOffset) || reachOffset == compositeArray.getByteCount() ) {
                 return;
             }
-            startChunk = startChunk.getNext();
+            startByteArray = startByteArray.getNext();
         }
     }
 
@@ -202,12 +203,12 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
             return;
         }
 
-        if (chunkArray == null) {
-            chunkArray = new CompositeByteChunkArray();
+        if (compositeArray == null) {
+            compositeArray = new CompositeByteArray();
         }
 
         // large packet
-        chunkArray.add(newBuffer);
+        compositeArray.add(newBuffer);
         index.clear();
         readOffset = 0;
     }
@@ -220,11 +221,11 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
      */
     private int readCRLFOffset() throws IndexOutOfBoundsException {
         int offset = readOffset;
-        if (offset + 1 >= chunkArray.getByteCount()) {
+        if (offset + 1 >= compositeArray.getByteCount()) {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        ByteChunk c = readChunk;
+        ByteArray c = readByteArray;
         outer: while (c != null) {
 
             while (c.isInBoundary(offset)) {
@@ -234,9 +235,9 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
                 }
                 offset++;
 
-                if (offset + 1 == chunkArray.getByteCount()) {
+                if (offset + 1 == compositeArray.getByteCount()) {
                     throw new IndexOutOfBoundsException("didn't see LF after NL reading multi bulk count (" + offset + " => " +
-                    		chunkArray.getByteCount() + ", " + readOffset + ")");
+                    		compositeArray.getByteCount() + ", " + readOffset + ")");
                 }
             }
             c = c.getNext();
@@ -262,11 +263,11 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
             int end = index.get(i);
 
             updateStartByteChunk(start);
-            result[i] = chunkArray.getData(startChunk, start, end - start);
+            result[i] = compositeArray.getData(startByteArray, start, end - start);
         }
 
         index.clear();
-        chunkArray.clear();
+        compositeArray.clear();
         return result;
     }
 
