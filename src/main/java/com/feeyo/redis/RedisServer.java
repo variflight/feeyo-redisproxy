@@ -11,7 +11,6 @@ import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.util.Log4jInitializer;
-import com.feeyo.util.About;
 
 /**
  * redis-benchmark -p 8066 -c 100 -t set,get,lpush,LPOP,sAdd,spop,incr -n 500000
@@ -52,14 +51,13 @@ public class RedisServer {
 			// 引擎初始化
 			RedisEngineCtx.INSTANCE().init();
 			
-			
 			// 弱精度的计时器
 			heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
 				@Override
 				public void run() {		
 					TimeUtil.update();
 				}			
-			}, 0, 3L, TimeUnit.MILLISECONDS);
+			}, 0, 2L, TimeUnit.MILLISECONDS);
 			
 			
 			// IDLE 连接检查, 关闭
@@ -119,16 +117,18 @@ public class RedisServer {
 			}, 30L, 30L, TimeUnit.SECONDS);
 			
 			// CONSOLE 
-			System.out.println( About.help( System.getProperty("FEEYO_HOME") ) );
-			
+			StringBuffer strBuffer = new StringBuffer();
+			strBuffer.append(" ================================================== ").append("\n");
+			strBuffer.append(" Feeyo-RedisProxy & Feeyo-KafkaProxy ").append("\n");
+			strBuffer.append(" path=").append( System.getProperty("FEEYO_HOME")  ).append("\n");
+			strBuffer.append(" startup=").append( System.currentTimeMillis() ).append("\n");
+			System.out.println( strBuffer.toString() );
 			
 		} catch (Throwable e) {
 			
 			// exit
 			System.exit( 0 );
 		}
-		
-		
 	
 	}
 }

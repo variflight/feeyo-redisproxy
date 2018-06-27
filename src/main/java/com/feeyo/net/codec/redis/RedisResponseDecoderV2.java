@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * 返回  type+data+\r\n 字节流， 避免 encode <br>
- * 在 RedisResponseDecoder 实现上使用 CompositeByteChunkArray 代替 byte[]
  *
  * @see "https://redis.io/topics/protocol"
  */
