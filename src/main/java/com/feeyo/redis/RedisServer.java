@@ -130,8 +130,6 @@ public class RedisServer {
 			// exit
 			System.exit( 0 );
 		}
-		
-		
 	
 	}
 }
