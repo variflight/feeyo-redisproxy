@@ -30,6 +30,11 @@ public abstract class AbstractBackendCallback implements BackendCallback {
 	
 	// 获取前端连接
 	protected RedisFrontConnection getFrontCon(BackendConnection backendCon) {
+		
+		if ( backendCon.getAttachement() == null ) {
+			return null;
+		}
+		
 		if (backendCon.getAttachement() instanceof RedisFrontConnection)
 			return (RedisFrontConnection) backendCon.getAttachement();
 		else 

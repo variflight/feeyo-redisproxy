@@ -42,7 +42,7 @@ public class ProtobufEncoder implements Encoder<MessageLite>{
 		buffer.put( (byte) (totalSize & 0xFF) );
 		//
 		buffer.put( msgBuffer );
-
+		buffer.flip();
 		return buffer;
 	}
 	

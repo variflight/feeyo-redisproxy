@@ -23,7 +23,7 @@ import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
-import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
+import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.util.MailUtil;
 import com.feeyo.util.NetworkUtil;
@@ -57,7 +57,7 @@ public class StatUtil {
 	// 收集器
 	private static List<StatCollector> collectors = new CopyOnWriteArrayList<>();
 	
-	private static NetFlowCollector netflowCollector = new NetFlowCollector();
+	private static UserFlowCollector userflowCollector = new UserFlowCollector();
 	private static CmdAccessCollector cmdAccessCollector = new CmdAccessCollector();
 	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
 	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
@@ -65,7 +65,7 @@ public class StatUtil {
 	
 	static {
 		
-		addCollector( netflowCollector );
+		addCollector( userflowCollector );
 		addCollector( cmdAccessCollector );
 		addCollector( bigKeyCollector );
 		addCollector( bigLengthCollector );
@@ -226,7 +226,8 @@ public class StatUtil {
 	 * @param isCommandOnly 用于判断此次收集是否只用于command（pipeline指令的子指令）收集。
 	 */
 	public static void collect(final String password, final String cmd, final String key, 
-			final int requestSize, final int responseSize, final int procTimeMills, final int waitTimeMills, final boolean isCommandOnly) {
+			final int requestSize, final int responseSize, final int procTimeMills, 
+			final int waitTimeMills, final boolean isCommandOnly, final boolean isBypass) {
 		
 		if ( cmd == null ) {
 			return;
@@ -240,7 +241,7 @@ public class StatUtil {
 				
 				for(StatCollector listener: collectors) {
 					try {
-						listener.onCollect(password, cmd, key, requestSize, responseSize, procTimeMills, waitTimeMills, isCommandOnly);
+						listener.onCollect(password, cmd, key, requestSize, responseSize, procTimeMills, waitTimeMills, isCommandOnly, isBypass);
 					} catch(Exception e) {
 						LOGGER.error("error:",e);
 					}
@@ -311,8 +312,8 @@ public class StatUtil {
     	return cmdAccessCollector.getUserCommandCountMap();
     }
     
-    public static ConcurrentHashMap<String, UserNetFlow> getUserFlowMap() {
-    	return netflowCollector.getUserFlowMap();
+    public static ConcurrentHashMap<String, UserFlow> getUserFlowMap() {
+    	return userflowCollector.getUserFlowMap();
     }
     
     public static List<SlowKey> getSlowKey() {

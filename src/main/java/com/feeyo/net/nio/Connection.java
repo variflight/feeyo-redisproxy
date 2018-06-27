@@ -294,10 +294,23 @@ public class Connection extends ClosableConnection {
 				netInBytes += length;
 				netInCounter++;
 				
-				// 流量检测，超过max 触发限流
-				if ( isFlowLimit() && netFlowMonitor != null && netFlowMonitor.pool(length) ) {
-					flowClean();
-					return;
+				
+				// 流量控制
+				//
+				if ( isNested ) {
+					
+					if ( parent.getHandler().handleNetFlow(parent, length)  ) {
+						parent.flowClean();
+						return;
+					}	
+					
+				} else {
+					
+					//
+					if ( handler.handleNetFlow(this, length) ) {
+						this.flowClean();
+						return;
+					}
 				}
 				
 				// 空间不足
@@ -312,9 +325,8 @@ public class Connection extends ClosableConnection {
 					int newCapacity = readBuffer.capacity() << 1;
 					newCapacity = (newCapacity > maxCapacity) ? maxCapacity : newCapacity;			
 					
-					// ByteBuffer newBuffer = ByteBuffer.allocate( newCapacity );
+					// new buffer
 					ByteBuffer newBuffer = allocate( newCapacity );
-					
 					readBuffer.position( offset );
 					newBuffer.put( readBuffer );
 					
@@ -324,8 +336,8 @@ public class Connection extends ClosableConnection {
 					largeCounter++;
 					
 					// 拿完整包
-					continue;		
-					//break;		 	
+					//continue;		
+//					break;		// 对 大包不友好 	
 				} 
 				
 				// 负责解析报文并处理
@@ -380,12 +392,13 @@ public class Connection extends ClosableConnection {
 		}
 
 	}
+	
 
 	@Override
 	public String toString() {
 		
 		StringBuffer sbuffer = new StringBuffer(100);
-		sbuffer.append( "Conn [" );
+		sbuffer.append( "Conn[" );
 		sbuffer.append("reactor=").append( reactor );
 		sbuffer.append(", host=").append( host ).append(":").append( port );
 		sbuffer.append(", id=").append( id );

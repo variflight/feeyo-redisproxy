@@ -16,7 +16,7 @@ import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.net.codec.UnknowProtocolException;
 import com.feeyo.net.codec.redis.RedisRequest;
-import com.feeyo.net.codec.redis.RedisRequestDecoder;
+import com.feeyo.net.codec.redis.RedisRequestDecoderV2;
 import com.feeyo.net.codec.redis.RedisRequestPolicy;
 import com.feeyo.net.codec.redis.RedisRequestType;
 import com.feeyo.net.nio.NetSystem;
@@ -57,7 +57,7 @@ public class RedisFrontSession {
 	public static final String NOT_ADMIN_USER = "Not supported:manage cmd but not admin user.";
 	public static final String UNKNOW_COMMAND = "Unknow command.";
 	public static final String NOT_READ_COMMAND = "Not read command.";
-	public static final byte[] FLOW_LIMIT = "-ERR flow limit.\r\n".getBytes();
+
 	public static final byte[] NULL =  "$-1\r\n".getBytes();
 	
 	// PUBSUB
@@ -70,7 +70,7 @@ public class RedisFrontSession {
 	private long requestTimeMills; 
 	
     // 解析器 
-	private RedisRequestDecoder requestDecoder = new RedisRequestDecoder();
+	private RedisRequestDecoderV2 requestDecoder = new RedisRequestDecoderV2();
 	
 	private AbstractCommandHandler defaultCommandHandler;
 	private AbstractCommandHandler segmentCommandHandler;

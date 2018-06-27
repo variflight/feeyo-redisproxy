@@ -16,7 +16,7 @@ public class SlowKeyColletor implements StatCollector {
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
-			int waitTimeMills, boolean isCommandOnly) {
+			int waitTimeMills, boolean isCommandOnly, boolean isBypass) {
 		
 		if (isCommandOnly) {
 			return;

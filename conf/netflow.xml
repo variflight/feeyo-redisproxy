@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<redis>
+
+	<!-- 流量监控、清洗 -->
+	<netflow>
+		<user password="pwd04" perSecondMaxSize="100" requestMaxSize="100" control="true"/>
+	</netflow>
+
+</redis>

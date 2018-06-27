@@ -11,12 +11,14 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisResponse;
+
 import com.feeyo.net.nio.util.TimeUtil;
+
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+
 import com.feeyo.util.ThreadFactoryImpl;
 
 /*
@@ -29,7 +31,7 @@ public class BypassService {
 	private static BypassService _INSTANCE = null;
 	
 	//
-	private ThreadPoolExecutor threadPoolExecutor;
+	private volatile ThreadPoolExecutor threadPoolExecutor;
 	
 	private int requireSize;
 	private int corePoolSize;
@@ -51,26 +53,16 @@ public class BypassService {
 	private BypassService () {
 	
 		Map<String, String> map = RedisEngineCtx.INSTANCE().getServerMap();
-		String requireSizeString = map.get("bypassRequireSize"); 
-		String corePoolSizeString = map.get("bypassCorePoolSize"); 
-		String maxPoolSizeString = map.get("bypassMaxPoolSize");
-		String queueSizeString = map.get("bypassQueueSize"); 
+		updateParameter( map );
 		
-		this.requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
-		if ( requireSize < 256 * 1024)
-			requireSize = 256 * 1024;
-		
-		this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
-		this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
-		this.queueSize = queueSizeString == null ? 20 : Integer.parseInt( queueSizeString);
-		
-		
+		//
 		this.threadPoolExecutor = new BypassThreadExecutor(
 				corePoolSize, maxPoolSize, queueSize, new ThreadFactoryImpl("BypassService"));
 		this.threadPoolExecutor.prestartAllCoreThreads();
 		
 		StatUtil.getBigKeyCollector().setSize( requireSize );
 	}
+
 	
 	// 检测
 	public boolean testing(String requestCmd, String requestKey, int requestSize) {
@@ -82,20 +74,23 @@ public class BypassService {
 		return false;
 	}
 
-	// 排队执行
-	public void queuing(final RedisRequest request, final RedisFrontConnection frontConn, final PhysicalNode physicalNode) {
+	// 进入排队
+	public void queueUp(final RedisRequest request, 
+			final RedisFrontConnection frontConn, final String host, final int port) {
 		
 		try {
 			
 			threadPoolExecutor.execute(new Runnable() {
+				
 				@Override
 				public void run() {
-
 					//
-					BypassIoConnection conn = new BypassIoConnection(physicalNode.getHost(), physicalNode.getPort());
-					List<RedisResponse> resps = conn.writeToBackend(request);
-					if (resps != null) {
-						try {
+					try {
+						
+						BypassIoConnection backConn = new BypassIoConnection(host, port);
+						List<RedisResponse> resps = backConn.writeToBackend(request);
+						if (resps != null) {
+						
 							String password = frontConn.getPassword();
 							String cmd = frontConn.getSession().getRequestCmd();
 							String key = frontConn.getSession().getRequestKey();
@@ -105,7 +100,7 @@ public class BypassService {
 							int responseSize = 0;
 							
 							for (RedisResponse resp : resps)
-								responseSize += conn.writeToFront(frontConn, resp, 0);
+								responseSize += backConn.writeToFront(frontConn, resp, 0);
 							
 							resps.clear(); // help GC
 							resps = null;
@@ -117,17 +112,16 @@ public class BypassService {
 							
 							// 数据收集
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
-							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false);
-							
-						} catch(IOException e) {
-							
-							if ( frontConn != null) {
-								frontConn.close("write err");
-							}
-
-							// 由 reactor close
-							LOGGER.error("backend write to front err:", e);
+							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false, true);
 						}
+						
+					} catch(IOException e) {
+						
+						if ( frontConn != null) {
+							frontConn.close("bypass write err");
+						}
+	
+						LOGGER.error("bypass write to front err:", e);
 					}
 				}
 			});
@@ -146,28 +140,15 @@ public class BypassService {
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
 							threadPoolExecutor.getMaximumPoolSize(),threadPoolExecutor.getTaskCount()} );						
 		}	
-		
-		
 	}
 	
 	public byte[] reload() {
 		
 		try {
-			Map<String, String> map = ConfigLoader.loadServerMap(ConfigLoader.buidCfgAbsPathFor("server.xml"));
-			String requireSizeString = map.get("bypassRequireSize");
-			String corePoolSizeString = map.get("bypassCorePoolSize");
-			String maxPoolSizeString = map.get("bypassMaxPoolSize");
-			String queueSizeString = map.get("bypassQueueSize");
-
-			this.requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
-			if ( requireSize < 256 * 1024 )
-				requireSize = 256 * 1024;
 			
-			this.corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
-			this.maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
-			this.queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
-
-			if (corePoolSize != threadPoolExecutor.getCorePoolSize()) {
+			Map<String, String> map = ConfigLoader.loadServerMap(ConfigLoader.buidCfgAbsPathFor("server.xml"));
+			boolean isUpdated = updateParameter( map );
+			if ( isUpdated ) {
 				
 				// hold old threadPool
 				ThreadPoolExecutor oldThreadPoolExecutor = this.threadPoolExecutor;
@@ -182,17 +163,55 @@ public class BypassService {
 				
 				// kill old threadPool
 				oldThreadPoolExecutor.shutdown();
+				
+				StatUtil.getBigKeyCollector().setSize( requireSize );
+				
+				return "+OK\r\n".getBytes();
+				
+			} else  {	
+				return "+ERR parameter err, pls check. \r\n".getBytes();
 			}
-			
-			StatUtil.getBigKeyCollector().setSize( requireSize );
 			
 		} catch (Exception e) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
 			return sb.toString().getBytes();
 		}
+
+	}
+	
+	// set
+	private boolean updateParameter(Map<String, String> map) {
 		
-		return "+OK\r\n".getBytes();
+		String requireSizeString = map.get("bypassRequireSize");
+		String corePoolSizeString = map.get("bypassCorePoolSize");
+		String maxPoolSizeString = map.get("bypassMaxPoolSize");
+		String queueSizeString = map.get("bypassQueueSize");
+
+		int new_requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
+		int new_corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
+		int new_maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
+		int new_queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
+		
+		// code safe
+		if ( new_requireSize < 100 * 1024) new_requireSize = 100 * 1024;
+		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
+		if ( new_maxPoolSize > 6 ) new_maxPoolSize = 6;
+		if ( new_queueSize > 100 ) new_queueSize = 100;
+		
+		if ( this.requireSize == new_requireSize &&
+			 this.corePoolSize == new_corePoolSize &&
+			 this.maxPoolSize == new_maxPoolSize &&
+			 this.queueSize == new_queueSize ) {
+			return false;
+			
+		} else {
+			this.requireSize = new_requireSize;
+			this.corePoolSize = new_corePoolSize;
+			this.maxPoolSize = new_maxPoolSize;
+			this.queueSize = new_queueSize;		
+			return true;
+		}
 	}
 
 }

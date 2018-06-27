@@ -17,6 +17,9 @@ public abstract class ClosableConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ClosableConnection.class );
 	
+	//
+	public static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, the request is cleaned up. \r\n".getBytes();
+	
 	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
 	public enum Direction {
 		in, out
@@ -76,7 +79,7 @@ public abstract class ClosableConnection {
 	@SuppressWarnings("rawtypes")
 	protected NIOHandler handler;
 	
-	protected NetFlowMonitor netFlowMonitor;
+	protected NetFlowController netflowController;
 
 	public ClosableConnection() {}
 	
@@ -195,8 +198,12 @@ public abstract class ClosableConnection {
 		return this.handler;
 	}
 	
-	public void setNetFlowMonitor(NetFlowMonitor nfm) {
-		this.netFlowMonitor = nfm;
+	public void setNetflowController(NetFlowController nfc) {
+		this.netflowController = nfc;
+	}
+	
+	public NetFlowController getNetflowController() {
+		return netflowController;
 	}
 
 	public boolean isConnected() {
@@ -224,7 +231,9 @@ public abstract class ClosableConnection {
 				NetSystem.getInstance().removeConnection( parent );
 				if ( handler != null )
 					handler.onClosed(parent, reason);
+				
 			} else {
+				
 				NetSystem.getInstance().removeConnection(this);
 				if ( handler != null )
 					handler.onClosed(this, reason);
@@ -290,9 +299,10 @@ public abstract class ClosableConnection {
 			if ( isNested ) {
 				NetSystem.getInstance().addConnection( parent );
 				this.handler.onConnected( parent );
+				
 			} else {
 				NetSystem.getInstance().addConnection(this);
-				this.handler.onConnected(this);
+				this.handler.onConnected( this );
 			}
 			
 		} finally {
@@ -421,11 +431,6 @@ public abstract class ClosableConnection {
 
 	public void setDirection(Direction in) {
 		this.direction = in;
-	}
-	
-	
-	public boolean isFlowLimit() {
-		return false;
 	}
 
 	public void flowClean() {

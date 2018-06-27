@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.UserCfg;
@@ -14,6 +17,8 @@ import com.feeyo.redis.config.UserCfg;
  *
  */
 public class RedisFrontConnection extends FrontConnection {
+	
+	private static Logger LOGGER = LoggerFactory.getLogger( RedisFrontConnection.class );
 	
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
@@ -38,12 +43,6 @@ public class RedisFrontConnection extends FrontConnection {
 	
 	@Override
 	public void asynRead() throws IOException {
-		
-		// 流量超标，执行流量清洗
-		if ( netFlowMonitor != null && netFlowMonitor.isOverproof() && isFlowLimit()) {
-			flowClean();
-			return;
-		}
 		
 		if (_readLock.compareAndSet(false, true)) {
 			super.asynRead();
@@ -84,19 +83,14 @@ public class RedisFrontConnection extends FrontConnection {
 	public void releaseLock() {
 		_readLock.set(false);
 	}
-	
-	@Override
-	public boolean isFlowLimit() {
-		UserCfg uc = this.getUserCfg();
-		if ( uc != null )
-			return uc.isFlowLimit();
-		return false;
-	}
+
 	
 	@Override
 	public void flowClean() {
-		super.flowClean();
-		this.write(RedisFrontSession.FLOW_LIMIT);
+		
+		LOGGER.warn("##flow clean##, front: {} ", this);
+		//
+		this.write( ERR_FLOW_LIMIT );
 		this.close("flow limit");
 	}
 	

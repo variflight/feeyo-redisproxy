@@ -106,7 +106,7 @@ public class KafkaPool extends AbstractPool {
 				// ApiVersionCallback
 				KafkaCmdCallback apiVersionCallback = new KafkaCmdCallback() {
 					@Override
-					public void continueParsing(ByteBuffer buffer) {
+					public void parseResponseBody(BackendConnection conn, ByteBuffer buffer) {
 						Struct response = ApiKeys.API_VERSIONS.parseResponse((short) 1, buffer);
 						ApiVersionsResponse ar = new ApiVersionsResponse(response);
 						if (ar.isCorrect()) {

@@ -15,12 +15,13 @@ import com.feeyo.net.nio.NIOAcceptor;
 import com.feeyo.net.nio.NIOConnector;
 import com.feeyo.net.nio.NIOReactor;
 import com.feeyo.net.nio.NIOReactorPool;
-import com.feeyo.net.nio.NetFlowMonitor;
+import com.feeyo.net.nio.NetFlowController;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.SystemConfig;
 import com.feeyo.net.nio.buffer.BufferPool;
 import com.feeyo.net.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.redis.config.ConfigLoader;
+import com.feeyo.redis.config.NetFlowCfg;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -43,7 +44,7 @@ public class RedisEngineCtx {
 	private VirtualMemoryService virtualMemoryService;
 	private BufferPool bufferPool;	
 	
-	private volatile NetFlowMonitor flowMonitor;
+	private volatile NetFlowController netflowController;
 	
 	// 
 	private volatile Map<String, NIOReactor> reactorMap = new HashMap<String, NIOReactor>();
@@ -52,6 +53,7 @@ public class RedisEngineCtx {
 	private volatile Map<String, UserCfg> userMap = null;
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
+	private volatile Map<String, NetFlowCfg> netflowMap = null;
 	
 	private volatile Properties mailProperty = null;
 
@@ -59,6 +61,7 @@ public class RedisEngineCtx {
 	private volatile  Map<Integer, AbstractPool> _poolMap = null;
 	private volatile  Map<String, UserCfg> _userMap = null;
 	private volatile  Map<String, String> _serverMap = null;
+	private volatile Map<String, NetFlowCfg> _netflowMap = null;
 	private volatile  Properties _mailProperty = null;
 	
 	private ReentrantLock lock;
@@ -73,6 +76,7 @@ public class RedisEngineCtx {
 			this.serverMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
 			this.poolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 			this.userMap = ConfigLoader.loadUserMap(poolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
+			this.netflowMap = ConfigLoader.loadNetFlowMap(ConfigLoader.buidCfgAbsPathFor("netflow.xml"));
 			this.mailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 		} catch (Exception e) {
 			throw e;
@@ -93,8 +97,6 @@ public class RedisEngineCtx {
         
         String bossSizeString = this.serverMap.get("bossSize");
         String timerSizeString = this.serverMap.get("timerSize"); 
-        String networkFlowLimitSizeString = this.serverMap.get("networkFlowLimitSize");
-        
        
         int port = portString == null ? 8066: Integer.parseInt( portString );
         
@@ -111,8 +113,8 @@ public class RedisEngineCtx {
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
         
-        long networkFlowLimitSize = networkFlowLimitSizeString == null ? -1 : Long.parseLong(networkFlowLimitSizeString);
-        this.flowMonitor = new NetFlowMonitor(networkFlowLimitSize);
+        this.netflowController = new NetFlowController();
+        netflowController.setCfgs(netflowMap);
         
 		int[] increments = null;
 		if ( incrementString == null ) {
@@ -220,6 +222,7 @@ public class RedisEngineCtx {
         KeepAlived.check(port, authString);
 	}
 	
+	
 	public byte[] reloadAll() {
 		
 		final ReentrantLock lock = this.lock;
@@ -238,6 +241,7 @@ public class RedisEngineCtx {
 			Map<String, String> newServerMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
 			Map<Integer, PoolCfg> newPoolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 			Map<String, UserCfg> newUserMap = ConfigLoader.loadUserMap(newPoolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
+			Map<String, NetFlowCfg> newNetflowMap = this.netflowMap = ConfigLoader.loadNetFlowMap(ConfigLoader.buidCfgAbsPathFor("netflow.xml"));
 			Properties newMailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 			
 			// 2、用户自检
@@ -284,6 +288,7 @@ public class RedisEngineCtx {
 				this._userMap = userMap;
 				this._poolMap = poolMap;
 				this._serverMap = serverMap;
+				this._netflowMap = netflowMap;
 				this._mailProperty = mailProperty;
 				
 				
@@ -291,6 +296,7 @@ public class RedisEngineCtx {
 				this.poolMap = newPoolMap;
 				this.userMap = newUserMap;
 				this.serverMap = newServerMap;
+				this.netflowMap = newNetflowMap;
 				this.mailProperty = newMailProperty;
 				
 				// server.xml 部分设置生效
@@ -324,6 +330,42 @@ public class RedisEngineCtx {
 		}		
 	}
 	
+	// reload netflow
+	public byte[] reloadNetflow() {		
+		
+		final ReentrantLock lock = this.lock;
+		lock.lock();
+		try {
+			Map<String, NetFlowCfg> newNetflowMap = ConfigLoader.loadNetFlowMap( ConfigLoader.buidCfgAbsPathFor("netflow.xml") );
+			
+			// 自检
+			for( NetFlowCfg netflowCfg: newNetflowMap.values() ) {
+				String pwd = netflowCfg.getPassword();
+				if ( userMap.get( pwd ) == null ) {
+					LOGGER.error("##self check err: {} user does not exist ", pwd);
+					return ("-ERR reload failed \r\n").getBytes();
+				} 
+			}
+			// 备份 old
+			this._netflowMap = netflowMap;
+			
+			// 切换 new
+			this.netflowMap = newNetflowMap;	
+			
+			// 更新 netflow
+			if ( this.netflowController != null ) {
+				this.netflowController.setCfgs( this.netflowMap );
+			}
+			
+		} catch (Exception e) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("-ERR ").append(e.getMessage()).append("\r\n");
+			return sb.toString().getBytes();
+		} finally {
+			lock.unlock();
+		}		
+		return "+OK\r\n".getBytes();
+	}
 	
 	public byte[] reloadUser() {		
 		final ReentrantLock lock = this.lock;
@@ -501,6 +543,10 @@ public class RedisEngineCtx {
 		return this._serverMap;
 	}
 	
+	public Map<String, NetFlowCfg> getBackupNetflowMap() {
+		return this._netflowMap;
+	}
+
 	public Properties getBackupMailProperties() {
 		return this._mailProperty;
 	}
@@ -513,8 +559,8 @@ public class RedisEngineCtx {
 		return virtualMemoryService;
 	}
 
-	public NetFlowMonitor getFlowMonitor() {
-		return flowMonitor;
+	public NetFlowController getNetflowController() {
+		return netflowController;
 	}
 
 }

@@ -61,6 +61,10 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		//
 		this.isCustomPkg = isCustomPkg;
 	}
+	
+	public boolean isCustomPkg() {
+		return isCustomPkg;
+	}
 
 	@Override
 	public List<MessageLite> decode(byte[] buf) {
@@ -84,45 +88,46 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 
 				list = new ArrayList<MessageLite>();
 				list.add(msg);
-				return list;
-			}
+				
+			}  else  {
 			
-			//
-			while (_offset != _buffer.length) {
-
 				//
-				int totalSize = _buffer[_offset + 3] & 0xFF | (_buffer[_offset + 2] & 0xFF) << 8
-						| (_buffer[_offset + 1] & 0xFF) << 16 | (_buffer[_offset] & 0xFF) << 24;
-
-				if (_buffer.length >= _offset + totalSize) {
-
+				while (_offset != _buffer.length) {
+	
 					//
-					byte[] content = new byte[totalSize - 4];
-					System.arraycopy(_buffer, _offset + 4, content, 0, content.length);
-
-					MessageLite msg = parse( content );
-					
-					if (list == null)
-						list = new ArrayList<MessageLite>();
-
-					list.add(msg);
-					
-					_offset += totalSize;
-
-				} else {
-					// data not enough
-					throw new IndexOutOfBoundsException("No enough data.");
+					int totalSize = _buffer[_offset + 3] & 0xFF | (_buffer[_offset + 2] & 0xFF) << 8
+							| (_buffer[_offset + 1] & 0xFF) << 16 | (_buffer[_offset] & 0xFF) << 24;
+	
+					if (_buffer.length >= _offset + totalSize) {
+	
+						//
+						byte[] cb = new byte[totalSize - 4];
+						System.arraycopy(_buffer, _offset + 4, cb, 0, cb.length);
+	
+						MessageLite msg = parse( cb );
+						
+						if (list == null)
+							list = new ArrayList<MessageLite>();
+						
+						list.add(msg);
+						
+						_offset += totalSize;
+	
+					} else {
+						// data not enough
+						throw new IndexOutOfBoundsException("No enough data.");
+					}
+	
 				}
-
 			}
 
 		} catch (InvalidProtocolBufferException e) {
-			LOGGER.error(e.getMessage());
-			return null;
+			LOGGER.error("protobuf decode err:", e);
 		}
 
-		reset();
-
+		_buffer = null;
+		_offset = 0;
+		
 		return list;
 	}
 
@@ -147,10 +152,6 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 	}
 	
 	
-	public void reset() {
-		_buffer = null;
-		_offset = 0;
-	}
 
 	private void append(byte[] newBuffer) {
 		if (newBuffer == null) {

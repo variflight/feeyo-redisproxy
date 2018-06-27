@@ -3,6 +3,9 @@ package com.feeyo.redis.net.backend;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
 
@@ -13,6 +16,8 @@ import com.feeyo.redis.net.backend.callback.SelectDbCallback;
  *
  */
 public class RedisBackendConnection extends BackendConnection {
+	
+	private static Logger LOGGER = LoggerFactory.getLogger( RedisBackendConnection.class );
 
 	private volatile int db = 0;				//REDIS select database, default 0
     
@@ -129,5 +134,12 @@ public class RedisBackendConnection extends BackendConnection {
 	public void setHeartbeatTime(long heartbeatTime) {
 		this.heartbeatTime = heartbeatTime;
 	}
+	
+	@Override
+	public void flowClean() {
+		LOGGER.warn("##flow clean##, backend: {} ", this);
+		this.close(" netflow problem, the response is cleaned up. ");
+	}
+	
 	
 }

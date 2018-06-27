@@ -102,7 +102,7 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                         releaseBackendConnection(backendCon);
                         
                         // 数据收集
-                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false);
+                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false);
                         
                     } catch (IOException e2) {
                         if (frontCon != null) {

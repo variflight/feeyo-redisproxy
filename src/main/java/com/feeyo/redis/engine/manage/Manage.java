@@ -21,14 +21,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.nio.ClosableConnection;
+import com.feeyo.net.nio.NetFlowController;
+import com.feeyo.net.nio.NetFlowController.Ctrl;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.buffer.BufferPool;
 import com.feeyo.net.nio.buffer.bucket.AbstractBucket;
@@ -36,14 +38,15 @@ import com.feeyo.net.nio.buffer.bucket.BucketBufferPool;
 import com.feeyo.net.nio.buffer.page.PageBufferPool;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
+import com.feeyo.redis.engine.manage.stat.BigKeyCollector;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
-import com.feeyo.redis.engine.manage.stat.NetFlowCollector.UserNetFlow;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
+import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
 import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -97,6 +100,7 @@ public class Manage {
 	 *  RELOAD PATH
 	 *  RELOAD KAFKA
 	 *  RELOAD BIGKEY
+	 *  RELOAD NETFLOW
 	 *  
 	 *  JVM 指令依赖 JAVA_HOME 
 	 *  ----------------------------------------
@@ -117,6 +121,7 @@ public class Manage {
 	 *  SHOW BUFFER
 	 *  
 	 *  SHOW BIGKEY
+	 *  SHOW BIGKEY_COUNT
 	 *  SHOW BIGLENGTH
 	 *  SHOW SLOWKEY
 	 *  
@@ -408,7 +413,7 @@ public class Manage {
 					Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 					while (it.hasNext()) {
 						ClosableConnection c = it.next().getValue();
-						if (c instanceof ClosableConnection) {
+						if (c instanceof RedisFrontConnection) {
 							userMap.put(((RedisFrontConnection) c).getPassword(),
 									1 + (userMap.get(((RedisFrontConnection) c).getPassword()) == null ? 0
 											: userMap.get(((RedisFrontConnection) c).getPassword())));
@@ -570,6 +575,21 @@ public class Manage {
 						lines.add( sBuffer.toString()  );
 					}			
 					return encode( lines );
+				
+				// SHOW BIGKEY_COUNT
+				} else if ( arg2.equalsIgnoreCase("BIGKEY_COUNT") ) {
+					List<String> lines = new ArrayList<String>();	
+					StringBuffer title = new StringBuffer();
+					title.append("BIGKEY_COUNT").append("    ").append("BYPASS_BIGKEY_COUNT");
+					lines.add(title.toString());
+					
+					BigKeyCollector bkc = StatUtil.getBigKeyCollector();
+					StringBuffer body = new StringBuffer();
+					body.append(bkc.getBigKeyCount()).append("      ").append(bkc.getBypassBigKeyCount());
+					lines.add(body.toString());
+					
+					return encode( lines );
+					
 					
 				// SHOW BACKEND
 				} else if ( arg2.equalsIgnoreCase("BACKEND") ) {
@@ -760,10 +780,10 @@ public class Manage {
 					
 					long totalNetIn = 0;
 					long totalNetOut = 0;
-					for (Map.Entry<String, UserNetFlow> entry : StatUtil.getUserFlowMap().entrySet()) { 
+					for (Map.Entry<String, UserFlow> entry : StatUtil.getUserFlowMap().entrySet()) { 
 						if (!StatUtil.STAT_KEY.equals(entry.getKey())) {
 							StringBuffer sb = new StringBuffer();
-							UserNetFlow userNetIo = entry.getValue();
+							UserFlow userNetIo = entry.getValue();
 							sb.append(userNetIo.password).append("  ");
 							sb.append( JavaUtils.bytesToString2( userNetIo.netIn.get() ) ).append("  ");
 							sb.append( JavaUtils.bytesToString2( userNetIo.netOut.get() ) );
@@ -1074,32 +1094,35 @@ public class Manage {
 					}
 					
 					return encode(lines);
+				
+				// SHOW NetFlowCtrl
+				} else if (arg2.equalsIgnoreCase("NETFLOWCTRL") && numArgs == 2 ) {
+					
+					List<String> lines = new ArrayList<String>();
+					StringBuffer titleLine = new StringBuffer();
+					titleLine.append("USER").append(",  ");
+					titleLine.append("PRE_SECOND_MAX_SIZE").append(",  ");
+					titleLine.append("REQUEST_MAX_SIZE").append(",  ");
+					titleLine.append("HISTOGRAM");
+					lines.add(titleLine.toString());
+					
+					NetFlowController nfc = RedisEngineCtx.INSTANCE().getNetflowController();
+					Map<String, Ctrl> map = nfc.getCtrlMap();
+					for (Entry<String, Ctrl> entry : map.entrySet()) {
+						
+						Ctrl ctrl = entry.getValue();
+						StringBuffer line = new StringBuffer();
+						line.append(entry.getKey()).append(", ");
+						line.append(ctrl.getPerSecondMaxSize()).append(", ");
+						line.append(ctrl.getRequestMaxSize()).append(", ");
+						line.append(ctrl.getHistogram());
+						
+						lines.add(line.toString());
+					}
+					
+					return encode(lines);
 				}
-				
-			// NODE
-			} else if (  (arg1[0] == 'N' || arg1[0] == 'n' ) && 
-						 (arg1[1] == 'O' || arg1[1] == 'o' ) && 
-						 (arg1[2] == 'D' || arg1[2] == 'd' ) && 
-						 (arg1[3] == 'E' || arg1[3] == 'e' ) ) {
-				
-				// TODO 此处有一些乱, 暂时屏蔽
-				// 接口应该这样设计， XX 服务， XX 方法， 输入-异步回调  或 输入-输出， 内部逻辑的过程 交由 XX服务来实现
-				/*
-				NodeManageService nodeManageService = new NodeManageService(frontCon);
-				try {
-					NodeManageRequest nodeManageRequest = nodeManageService.requestIntegration(request);
-					return nodeManageService.excute(nodeManageRequest);
-				} catch (NodeManageParamException e) {
-					StringBuffer sb = new StringBuffer();
-					sb.append("-ERR ");
-					sb.append(e.getMessage());
-					sb.append("\r\n");
-					return sb.toString().getBytes();
-				}
-				*/
-				return "-ERR not support \r\n".getBytes();
-				
-			}
+			} 
 
 		// RELOAD
 		} else if ( arg1.length == 6 ) {
@@ -1120,7 +1143,12 @@ public class Manage {
 				} else if ( arg2.equalsIgnoreCase("USER") ) {
 					byte[] buff = RedisEngineCtx.INSTANCE().reloadUser();
 					return buff;
-				
+					
+				// reload netflow
+				} else if ( arg2.equalsIgnoreCase("NETFLOW") ) {
+					byte[] buff = RedisEngineCtx.INSTANCE().reloadNetflow();
+					return buff;
+
 				// reload front
 				} else if ( arg2.equalsIgnoreCase("FRONT") ) {
 					
@@ -1168,7 +1196,8 @@ public class Manage {
 				} else if ( arg2.equalsIgnoreCase("BIGKEY") ) {
 					byte[] buff = BypassService.INSTANCE().reload();
 					return buff;
-				}
+					
+				} 
 			}
 			
 		// cluster 
