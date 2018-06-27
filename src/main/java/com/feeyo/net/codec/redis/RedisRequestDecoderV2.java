@@ -155,6 +155,9 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             boolean isInBoundary = c.isInBoundary(readOffset);
             if ( !isInBoundary ) {
             	c = c.getNext();
+            	if ( c == null ) {
+            		throw new IndexOutOfBoundsException("Not enough data.");
+            	}
             }
             
             b = c.get(readOffset);

@@ -164,10 +164,6 @@ public class CompositeByteChunkArray {
         }
 
         public ByteChunk getNext() {
-        	if ( next == null ) {
-        		throw new IndexOutOfBoundsException("next chunk is null ");
-        	}
-        	
             return next;
         }
 
@@ -182,10 +178,11 @@ public class CompositeByteChunkArray {
 
         // next为空则保持抛出ArrayIndexOutOfBoundsException
         public byte get(int index) {
-
-            if (index - beginIndex < length || next == null) {
+        	
+            if ( (index - beginIndex) < length || next == null) {
                 return data[index - beginIndex];
             }
+            
             return next.get(index);
         }
 
