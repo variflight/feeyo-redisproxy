@@ -8,9 +8,8 @@ import com.feeyo.net.codec.util.CompositeByteChunkArray.ByteChunk;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 在 RedisResponsePipelineDecoder 实现上使用 CompositeByteChunkArray 代替 byte[]
- */
+//
+//
 public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResponse> {
     
 	private CompositeByteChunkArray chunkArray;
