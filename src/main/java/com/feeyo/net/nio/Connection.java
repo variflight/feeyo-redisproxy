@@ -297,7 +297,7 @@ public class Connection extends ClosableConnection {
 				
 				// 流量控制
 				//
-				if ( isNested ) {
+				if ( isChild ) {
 					if ( parent.getHandler().handleNetFlow(parent, length)  ) {
 						parent.flowClean();
 						return;
@@ -343,7 +343,7 @@ public class Connection extends ClosableConnection {
 				byte[] data = new byte[ dataLength ];
 				readBuffer.get(data, 0, dataLength);
 
-				if ( isNested )
+				if ( isChild )
 					handler.handleReadEvent(parent, data);
 				else
 					handler.handleReadEvent(this, data);

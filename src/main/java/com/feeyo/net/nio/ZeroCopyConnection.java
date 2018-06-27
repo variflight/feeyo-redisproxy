@@ -132,7 +132,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 
 					// 流量控制
 					//
-					if ( isNested ) {
+					if ( isChild ) {
 						if ( parent.getHandler().handleNetFlow(parent, length)  ) {
 							parent.flowClean();
 							return;
@@ -153,7 +153,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 					mappedByteBuffer.get(data, 0, length);
 					
 					// 负责解析报文并处理
-					if ( isNested )
+					if ( isChild )
 						handler.handleReadEvent(parent, data);
 					else
 						handler.handleReadEvent(this, data);
