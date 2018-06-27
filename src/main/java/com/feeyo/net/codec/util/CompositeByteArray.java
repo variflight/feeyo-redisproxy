@@ -11,9 +11,9 @@ import java.util.List;
 public class CompositeByteArray {
 	
     private List<ByteArray> chunks = new ArrayList<>();
-    private int byteCount = 0;
-    
     private ByteArray lastChunk = null;
+    
+    private int byteCount = 0;
 
     //
     public void add(byte[] data) {
@@ -136,7 +136,7 @@ public class CompositeByteArray {
     
     
     /*
-      	包装了 byte[], 增加了 length 和 beginIndex 方便查找
+      包装了 byte[], 增加了 length 和 beginIndex 方便查找
      */
     public final class ByteArray {
     	
