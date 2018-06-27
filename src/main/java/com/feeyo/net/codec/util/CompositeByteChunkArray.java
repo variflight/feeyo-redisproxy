@@ -10,18 +10,13 @@ import java.util.List;
  */
 public class CompositeByteChunkArray {
 	
-    private List<ByteChunk> chunks;
-    
-    private int byteCount;
+    private List<ByteChunk> chunks = new ArrayList<>();
+    private int byteCount = 0;
 
-    public CompositeByteChunkArray() {
-        this.chunks = new ArrayList<>();
-        this.byteCount = 0;
-    }
-
-    public void add(byte[] bytes) {
+    //
+    public void add(byte[] data) {
     	
-        byteCount += bytes.length;
+        this.byteCount += data.length;
         
         int beginIndex = 0;
         int size = chunks.size();
@@ -32,7 +27,7 @@ public class CompositeByteChunkArray {
             beginIndex = prevChunk.length + prevChunk.beginIndex;
         }
 
-        ByteChunk chunk = new ByteChunk(bytes, bytes.length, beginIndex);
+        ByteChunk chunk = new ByteChunk(data, data.length, beginIndex);
         chunks.add( chunk );
         
         if (prevChunk != null) {
@@ -45,26 +40,24 @@ public class CompositeByteChunkArray {
         return c.get(index);
     }
 
-    // 从offset位置开始查找
+    // 从offset位置开始查找 指定 byte 
     public int firstIndex(int paramOffset, byte value) {
-    	
         checkIndex(paramOffset, 1);
 
         ByteChunk c = findChunk(paramOffset);
         return c.find(paramOffset, value);
     }
 
-    
+    /* 
+	 	取出指定区间的byte[], 可能跨多个Chunk
+	 	beginIndex 截取的开始位置, length 需要截取的长度
+	*/
     public byte[] getData(int beginIndex, int length) {
+    	// 
         ByteChunk c = findChunk(beginIndex);
         return getData(c, beginIndex, length);
     }
     
-
-    /* 
-     	取出指定区间的byte[], 可能跨多个Chunk
-     	beginIndex 截取的开始位置, length 需要截取的长度
-    */
     public byte[] getData(ByteChunk chunk, int beginIndex, int length) {
     	
         assert chunk != null;
@@ -171,6 +164,10 @@ public class CompositeByteChunkArray {
         }
 
         public ByteChunk getNext() {
+        	if ( next == null ) {
+        		throw new IndexOutOfBoundsException("next chunk is null ");
+        	}
+        	
             return next;
         }
 

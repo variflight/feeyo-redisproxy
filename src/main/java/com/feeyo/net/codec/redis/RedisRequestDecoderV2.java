@@ -3,6 +3,7 @@ package com.feeyo.net.codec.redis;
 import com.feeyo.net.codec.Decoder;
 import com.feeyo.net.codec.UnknowProtocolException;
 import com.feeyo.net.codec.util.CompositeByteChunkArray;
+import com.feeyo.net.codec.util.CompositeByteChunkArray.ByteChunk;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +40,15 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             for (; ; ) {
                 switch (state) {
                     case READ_SKIP: {
-                        // 找到请求开始的位置，redis协议中以*开始；找不到报错。可以解析多个请求
-                        skipBytes();
+                    	
+						// 找到请求开始的位置，redis协议中以*开始；找不到报错。可以解析多个请求
+						int index = chunkArray.firstIndex(readOffset, (byte) '*');
+						if (index == -1) {
+							throw new IndexOutOfBoundsException("Not enough data.");
+						} else {
+							readOffset = index;
+						}
+                         
                         request = new RedisRequest();
                         state = State.READ_INIT;
                         break;
@@ -124,25 +132,17 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
         return pipeline;
     }
 
-    /**
-     * 如果第一个字符不是*则skip直到遇到*
-     */
-    private void skipBytes() {
-        int index = chunkArray.firstIndex(readOffset, (byte) '*');
-        if (index == -1) {
-            throw new IndexOutOfBoundsException("Not enough data.");
-        } else {
-            readOffset = index;
-        }
-    }
 
     private int readInt() throws IndexOutOfBoundsException {
+    	
         long size = 0;
         boolean isNeg = false;
 
-        byte b = chunkArray.get(readOffset);
+        ByteChunk c = chunkArray.findChunk( readOffset );
+        byte b = c.get(readOffset);
         while (b != '\r') {
-            if (b == '-') {
+            
+        	if (b == '-') {
                 isNeg = true;
             } else {
                 // 对于长度大于10以上的其实是多个字节存在, 需要考虑到位数所以需要 *10 的逻辑
@@ -150,7 +150,14 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                 size = size * 10 + b - '0';
             }
             readOffset++;
-            b = chunkArray.get(readOffset);
+            
+            // bound 检查
+            boolean isInBoundary = c.isInBoundary(readOffset);
+            if ( !isInBoundary ) {
+            	c = c.getNext();
+            }
+            
+            b = c.get(readOffset);
         }
 
         // skip \r\n
