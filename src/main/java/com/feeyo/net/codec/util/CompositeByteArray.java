@@ -33,17 +33,40 @@ public class CompositeByteArray {
         lastChunk = c;
     }
 
+    public ByteArray findByteArray(int index) {
+    	
+        // 二分查找
+        for (int low = 0, high = chunks.size(); low <= high; ) {
+            int mid = low + high >>> 1;
+            ByteArray c = chunks.get(mid);
+            if (index >= c.beginIndex + c.length) {
+                low = mid + 1;
+            } else if (index < c.beginIndex) {
+                high = mid - 1;
+            } else {
+                assert c.length != 0;
+                return c;
+            }
+        }
+
+        throw new IndexOutOfBoundsException("Not enough data.");
+    }
+
+
     public byte get(int index) {
         ByteArray c = findByteArray(index);
         return c.get(index);
     }
 
-    // 从offset位置开始查找 指定 byte 
-    public int firstIndex(int paramOffset, byte value) {
-        checkIndex(paramOffset, 1);
+    // 从 index 位置开始查找 指定 byte 
+    public int firstIndex(int index, byte value) {
+    	
+    	if ( index + 1 > byteCount ) {
+    		throw new IndexOutOfBoundsException( String.format("index: %d, (expected: range(0, %d))", index, byteCount) );
+    	}
 
-        ByteArray c = findByteArray(paramOffset);
-        return c.find(paramOffset, value);
+        ByteArray c = findByteArray(index);
+        return c.find(index, value);
     }
 
     /* 
@@ -96,51 +119,20 @@ public class CompositeByteArray {
     /**
      * 返回剩余可读字节数
      */
-    public int remaining(int readOffset) {
-        return Math.max(byteCount - readOffset, 0);
+    public int remaining(int readIndex) {
+        return Math.max(byteCount - readIndex, 0);
     }
 
     public int getByteCount() {
         return byteCount;
     }
 
-    /**
-     * 清空其管理的所有byte[]并重置index <br>
-     */
+   
     public void clear() {
         chunks.clear();
         lastChunk = null;
         byteCount = 0;
     }
-
-    public ByteArray findByteArray(int offset) {
-        // 依赖外部调用检查
-        // checkIndex(offset, 1);
-
-        // 二分查找
-        for (int low = 0, high = chunks.size(); low <= high; ) {
-            int mid = low + high >>> 1;
-            ByteArray c = chunks.get(mid);
-            if (offset >= c.beginIndex + c.length) {
-                low = mid + 1;
-            } else if (offset < c.beginIndex) {
-                high = mid - 1;
-            } else {
-                assert c.length != 0;
-                return c;
-            }
-        }
-
-        throw new IndexOutOfBoundsException("Not enough data.");
-    }
-
-    private void checkIndex(int index, int length) {
-        if ((index | length | (index + length) | (byteCount - (index + length))) < 0) {
-            throw new IndexOutOfBoundsException(
-            		String.format("index: %d, length: %d (expected: range(0, %d))", index, length, byteCount));
-        }
-    }
-
     
     
     /*
