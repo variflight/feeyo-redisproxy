@@ -8,12 +8,10 @@ import com.feeyo.net.codec.util.CompositeByteChunkArray.ByteChunk;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.feeyo.net.codec.redis.RedisResponsePipelineDecoder.PipelineResponse;
-
 /**
  * 在 RedisResponsePipelineDecoder 实现上使用 CompositeByteChunkArray 代替 byte[]
  */
-public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse> {
+public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResponse> {
     
 	private CompositeByteChunkArray chunkArray;
     
@@ -29,7 +27,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
      * 解析返回 数量、内容
      */
     @Override
-    public PipelineResponse decode(byte[] buffer) {
+    public RedisPipelineResponse decode(byte[] buffer) {
         int result = 0;
         append(buffer);
         
@@ -38,7 +36,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
             for (; ; ) {
                 // 至少4字节 :1\r\n
                 if (chunkArray.remaining(readOffset) < 4) {
-                    return new PipelineResponse(PipelineResponse.ERR, 0, null);
+                    return new RedisPipelineResponse(RedisPipelineResponse.ERR, 0, null);
                 }
 
                 // 减少 findChunk 的调用次数
@@ -61,14 +59,14 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
                     
                 } else if ( chunkArray.getByteCount() == readOffset) {
                     readOffset = 0;
-                    return new PipelineResponse(PipelineResponse.OK, result, getResponses());
+                    return new RedisPipelineResponse(RedisPipelineResponse.OK, result, getResponses());
                 }
             }
         } catch (IndexOutOfBoundsException e1) {
             // 捕获这个错误（没有足够的数据），等待下一个数据包
             readOffset = 0;
             index.clear();
-            return new PipelineResponse(PipelineResponse.ERR, 0, null);
+            return new RedisPipelineResponse(RedisPipelineResponse.ERR, 0, null);
         }
     }
 
@@ -281,7 +279,7 @@ public class RedisResponsePipelineDecoderV2 implements Decoder<PipelineResponse>
      * 循环1kw次解析整包耗时约12s, V1版本约为10s <br>
      */
     public static void main(String[] args) {
-        RedisResponsePipelineDecoderV2 decoder = new RedisResponsePipelineDecoderV2();
+        RedisPipelineResponseDecoderV2 decoder = new RedisPipelineResponseDecoderV2();
         long t = System.currentTimeMillis();
        // PipelineResponse resp;
 

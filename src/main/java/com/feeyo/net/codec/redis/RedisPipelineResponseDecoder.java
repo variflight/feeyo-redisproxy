@@ -5,46 +5,18 @@ import java.util.List;
 
 import com.feeyo.net.codec.Decoder;
 
-public class RedisResponsePipelineDecoder implements Decoder<RedisResponsePipelineDecoder.PipelineResponse> {
+public class RedisPipelineResponseDecoder implements Decoder<RedisPipelineResponse> {
 
 	private byte[] _buffer;
 	private int _offset;
 	private List<Integer> index = new ArrayList<Integer>();
 	
-	// 应答
-	public static class PipelineResponse {
-		
-		public static final byte ERR = 0;	// 不全
-		public static final byte OK = 1;
-		
-		private byte status;
-		private int count;
-		private byte[][] resps;
-		
-		public PipelineResponse (byte status, int count, byte[][] resps) {
-			this.status = status;
-			this.count = count;
-			this.resps = resps;
-		}
-		
-		public int getCount() {
-			return count;
-		}
-		
-		public byte[][] getResps() {
-			return resps;
-		}
-		
-		public boolean isOK () {
-			return status == OK;
-		}
-	}
-
+	
 	/**
 	 * 解析返回 数量、内容
 	 */
 	@Override
-	public PipelineResponse decode(byte[] buffer) {
+	public RedisPipelineResponse decode(byte[] buffer) {
 		int result = 0;
 		append(buffer);
 		try {
@@ -53,7 +25,7 @@ public class RedisResponsePipelineDecoder implements Decoder<RedisResponsePipeli
 
 				// 至少4字节 :1\r\n
 				if (bytesRemaining() < 4) {
-					return new PipelineResponse(PipelineResponse.ERR, 0, null);
+					return new RedisPipelineResponse(RedisPipelineResponse.ERR, 0, null);
 				}
 
 				byte type = _buffer[_offset++];
@@ -74,7 +46,7 @@ public class RedisResponsePipelineDecoder implements Decoder<RedisResponsePipeli
 
 				} else if (_buffer.length == _offset) {
 					_offset = 0;
-					return new PipelineResponse(PipelineResponse.OK, result, getResponses());
+					return new RedisPipelineResponse(RedisPipelineResponse.OK, result, getResponses());
 				}
 			}
 
@@ -82,7 +54,7 @@ public class RedisResponsePipelineDecoder implements Decoder<RedisResponsePipeli
 			// 捕获这个错误（没有足够的数据），等待下一个数据包
 			_offset = 0;
 			index.clear();
-			return new PipelineResponse(PipelineResponse.ERR, 0, null);
+			return new RedisPipelineResponse(RedisPipelineResponse.ERR, 0, null);
 		}
 	}
 
@@ -273,10 +245,10 @@ public class RedisResponsePipelineDecoder implements Decoder<RedisResponsePipeli
 		System.arraycopy(buffer, 0, buffer1, 0, buffer1.length);
 		System.arraycopy(buffer, buffer1.length, buffer2, 0, buffer2.length);
 
-		RedisResponsePipelineDecoder decoder = new RedisResponsePipelineDecoder();
+		RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
 		// List<RedisResponseV3> resps = decoder.decode(buffer);
 
-		PipelineResponse result  = decoder.decode(buffer1);
+		RedisPipelineResponse result  = decoder.decode(buffer1);
 		System.out.println( result );
 	}
 

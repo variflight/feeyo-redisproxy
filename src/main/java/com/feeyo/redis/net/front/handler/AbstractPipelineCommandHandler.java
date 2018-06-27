@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisRequestEncoder;
 import com.feeyo.net.codec.redis.RedisResponse;
-import com.feeyo.net.codec.redis.RedisResponseDecoder;
+import com.feeyo.net.codec.redis.RedisResponseDecoderV2;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -296,11 +296,11 @@ public abstract class AbstractPipelineCommandHandler extends AbstractCommandHand
 			break;
 		case MDEL:
 		case MEXISTS:
-			RedisResponseDecoder responseDecoder = new RedisResponseDecoder();
+			RedisResponseDecoderV2 decoder = new RedisResponseDecoderV2();
 			int okCount = 0;
 			for (DataOffset offset : offsets) {
 				byte[] data = offset.getData();
-				RedisResponse response = responseDecoder.decode( data ).get(0);
+				RedisResponse response = decoder.decode( data ).get(0);
 				if ( response.is( (byte)':') ) {
 					byte[] _buf1 = (byte[])response.data();
 					byte[] buf2 = new byte[ _buf1.length - 1 ];
