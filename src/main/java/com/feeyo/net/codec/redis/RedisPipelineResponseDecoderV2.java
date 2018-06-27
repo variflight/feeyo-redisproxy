@@ -33,6 +33,8 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
         
         try {
 
+			// 批量回复时会更新startChunk,导致最后从0开始的取数据异常
+			startByteArray = readByteArray = compositeArray.findByteArray(readOffset);
             for (; ; ) {
                 // 至少4字节 :1\r\n
                 if (compositeArray.remaining(readOffset) < 4) {
@@ -40,8 +42,8 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
                 }
 
                 // 减少 findChunk 的调用次数
-                startByteArray = readByteArray = compositeArray.findByteArray(readOffset);
                 byte type = readByteArray.get(readOffset++);
+                updateReadOffsetAndReadByteChunk(readOffset);
                 switch (type) {
                     case '*': // 数组(Array), 以 "*" 开头,表示消息体总共有多少行（不包括当前行）, "*" 是具体行数
                     case '+': // 正确, 表示正确的状态信息, "+" 后就是具体信息
