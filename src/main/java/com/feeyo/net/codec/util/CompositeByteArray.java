@@ -10,29 +10,27 @@ import java.util.List;
  */
 public class CompositeByteArray {
 	
-    private List<ByteArray> byteArrays = new ArrayList<>();
+    private List<ByteArray> chunks = new ArrayList<>();
     private int byteCount = 0;
+    
+    private ByteArray lastChunk = null;
 
     //
     public void add(byte[] data) {
     	
         this.byteCount += data.length;
         
-        int beginIndex = 0;
-        int size = byteArrays.size();
-        
-        ByteArray prevArray = null;
-        if (size != 0) {
-            prevArray = byteArrays.get(size - 1);
-            beginIndex = prevArray.length + prevArray.beginIndex;
+        ByteArray c = null;
+        if ( lastChunk != null ) {
+            c = new ByteArray(data, data.length, (lastChunk.length + lastChunk.beginIndex));
+            lastChunk.setNext( c );
+            
+        } else {
+        	c = new ByteArray(data, data.length, 0);
         }
-
-        ByteArray c = new ByteArray(data, data.length, beginIndex);
-        byteArrays.add( c );
         
-        if (prevArray != null) {
-            prevArray.setNext( c );
-        }
+        chunks.add( c );
+        lastChunk = c;
     }
 
     public byte get(int index) {
@@ -110,7 +108,8 @@ public class CompositeByteArray {
      * 清空其管理的所有byte[]并重置index <br>
      */
     public void clear() {
-        byteArrays.clear();
+        chunks.clear();
+        lastChunk = null;
         byteCount = 0;
     }
 
@@ -119,9 +118,9 @@ public class CompositeByteArray {
         // checkIndex(offset, 1);
 
         // 二分查找
-        for (int low = 0, high = byteArrays.size(); low <= high; ) {
+        for (int low = 0, high = chunks.size(); low <= high; ) {
             int mid = low + high >>> 1;
-            ByteArray c = byteArrays.get(mid);
+            ByteArray c = chunks.get(mid);
             if (offset >= c.beginIndex + c.length) {
                 low = mid + 1;
             } else if (offset < c.beginIndex) {
