@@ -2,18 +2,19 @@ package com.feeyo.net.codec.redis;
 
 import com.feeyo.net.codec.Decoder;
 import com.feeyo.net.codec.UnknowProtocolException;
-import com.feeyo.net.codec.util.CompositeByteChunkArray;
+import com.feeyo.net.codec.util.CompositeByteArray;
+import com.feeyo.net.codec.util.CompositeByteArray.ByteArray;
 
 import java.util.ArrayList;
 import java.util.List;
 
-// use CompositeByteChunkArray
+//
 //
 public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     
 	private RedisRequest request = null;
     
-	private CompositeByteChunkArray chunkArray = null;
+	private CompositeByteArray compositeArray = null;
     
     // 用于标记读取的位置
     private int readOffset;
@@ -39,19 +40,26 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             for (; ; ) {
                 switch (state) {
                     case READ_SKIP: {
-                        // 找到请求开始的位置，redis协议中以*开始；找不到报错。可以解析多个请求
-                        skipBytes();
+                    	
+						// 找到请求开始的位置，redis协议中以*开始；找不到报错。可以解析多个请求
+						int index = compositeArray.firstIndex(readOffset, (byte) '*');
+						if (index == -1) {
+							throw new IndexOutOfBoundsException("Not enough data.");
+						} else {
+							readOffset = index;
+						}
+                         
                         request = new RedisRequest();
                         state = State.READ_INIT;
                         break;
                     }
                     case READ_INIT: {
-                        if (readOffset >= chunkArray.getByteCount() || (argCount != 0 && argCount == argIndex + 1)) {
+                        if (readOffset >= compositeArray.getByteCount() || (argCount != 0 && argCount == argIndex + 1)) {
                             state = State.READ_END;
                             break;
                         }
                         // 开始读，根据*/$判断是参数的数量还是参数命令/内容的长度
-                        byte commandBeginByte = chunkArray.get(readOffset);
+                        byte commandBeginByte = compositeArray.get(readOffset);
                         if (commandBeginByte == '*') {
                             readOffset++;
                             state = State.READ_ARG_COUNT;
@@ -78,7 +86,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     }
                     case READ_ARG: {
                         // 根据READ_ARG_LENGTH中读到的参数长度获得参数内容
-                        request.getArgs()[argIndex] = chunkArray.getData(readOffset, argLength);
+                        request.getArgs()[argIndex] = compositeArray.getData(readOffset, argLength);
                         // argLength + 2(\r\n)
                         readOffset = readOffset + 2 + argLength;
 
@@ -87,10 +95,10 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     }
                     case READ_END: {
                         // 处理粘包
-                        if (chunkArray.getByteCount() < readOffset) {
+                        if (compositeArray.getByteCount() < readOffset) {
                             throw new IndexOutOfBoundsException("Not enough data.");
                             
-                        } else if (chunkArray.getByteCount() == readOffset) {
+                        } else if (compositeArray.getByteCount() == readOffset) {
                             if (argCount == argIndex + 1) {
                                 pipeline.add(request);
                                 reset();
@@ -124,25 +132,17 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
         return pipeline;
     }
 
-    /**
-     * 如果第一个字符不是*则skip直到遇到*
-     */
-    private void skipBytes() {
-        int index = chunkArray.firstIndex(readOffset, (byte) '*');
-        if (index == -1) {
-            throw new IndexOutOfBoundsException("Not enough data.");
-        } else {
-            readOffset = index;
-        }
-    }
 
     private int readInt() throws IndexOutOfBoundsException {
+    	
         long size = 0;
         boolean isNeg = false;
 
-        byte b = chunkArray.get(readOffset);
+        ByteArray c = compositeArray.findByteArray( readOffset );
+        byte b = c.get(readOffset);
         while (b != '\r') {
-            if (b == '-') {
+            
+        	if (b == '-') {
                 isNeg = true;
             } else {
                 // 对于长度大于10以上的其实是多个字节存在, 需要考虑到位数所以需要 *10 的逻辑
@@ -150,7 +150,17 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                 size = size * 10 + b - '0';
             }
             readOffset++;
-            b = chunkArray.get(readOffset);
+            
+            // bound 检查
+            boolean isInBoundary = c.isInBoundary(readOffset);
+            if ( !isInBoundary ) {
+            	c = c.getNext();
+            	if ( c == null ) {
+            		throw new IndexOutOfBoundsException("Not enough data.");
+            	}
+            }
+            
+            b = c.get(readOffset);
         }
 
         // skip \r\n
@@ -176,17 +186,17 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             return;
         }
 
-        if (chunkArray == null) {
-            chunkArray = new CompositeByteChunkArray();
+        if (compositeArray == null) {
+            compositeArray = new CompositeByteArray();
         }
 
-        chunkArray.add(newBuffer);
+        compositeArray.add(newBuffer);
         readOffset = 0;
     }
 
     public void reset() {
         state = State.READ_SKIP;
-        chunkArray.clear();
+        compositeArray.clear();
         readOffset = 0;
     }
 

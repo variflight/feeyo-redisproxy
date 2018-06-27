@@ -37,7 +37,7 @@ public abstract class ClosableConnection {
 	
 	// 支持 backend conn 内嵌套 
 	//
-	protected boolean isNested = false;
+	protected boolean isChild = false;
 	protected ClosableConnection parent = null;
 	
 	//
@@ -93,12 +93,12 @@ public abstract class ClosableConnection {
 	}
 	
 	//
-	public boolean isNested() {
-		return isNested;
+	public boolean isChild() {
+		return isChild;
 	}
 
-	public void setNested(boolean isNested) {
-		this.isNested = isNested;
+	public void setChild(boolean isChild) {
+		this.isChild = isChild;
 	}
 
 	public ClosableConnection getParent() {
@@ -227,16 +227,15 @@ public abstract class ClosableConnection {
 			
 			this.cleanup();		
 			
-			if ( isNested )  {
+			if ( isChild )  {
 				NetSystem.getInstance().removeConnection( parent );
-				if ( handler != null )
-					handler.onClosed(parent, reason);
+				if ( parent.getHandler() != null )
+					parent.getHandler().onClosed(parent, reason);
 				
 			} else {
-				
 				NetSystem.getInstance().removeConnection(this);
-				if ( handler != null )
-					handler.onClosed(this, reason);
+				if ( this.handler != null )
+					this.handler.onClosed(this, reason);
 			}
 			
 			if ( LOGGER.isDebugEnabled() ) {
@@ -296,13 +295,15 @@ public abstract class ClosableConnection {
 	        this.setState( Connection.STATE_CONNECTED );  
 			
 	        // 支持代理 CON
-			if ( isNested ) {
+			if ( isChild ) {
 				NetSystem.getInstance().addConnection( parent );
-				this.handler.onConnected( parent );
+				if ( parent.getHandler() != null )
+					parent.getHandler().onConnected( parent );
 				
 			} else {
 				NetSystem.getInstance().addConnection(this);
-				this.handler.onConnected( this );
+				if ( this.handler != null )
+					this.handler.onConnected( this );
 			}
 			
 		} finally {
