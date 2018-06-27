@@ -51,14 +51,13 @@ public class RedisServer {
 			// 引擎初始化
 			RedisEngineCtx.INSTANCE().init();
 			
-			
 			// 弱精度的计时器
 			heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
 				@Override
 				public void run() {		
 					TimeUtil.update();
 				}			
-			}, 0, 3L, TimeUnit.MILLISECONDS);
+			}, 0, 2L, TimeUnit.MILLISECONDS);
 			
 			
 			// IDLE 连接检查, 关闭
