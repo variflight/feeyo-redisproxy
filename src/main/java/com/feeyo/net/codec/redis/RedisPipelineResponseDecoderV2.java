@@ -3,7 +3,7 @@ package com.feeyo.net.codec.redis;
 
 import com.feeyo.net.codec.Decoder;
 import com.feeyo.net.codec.util.CompositeByteArray;
-import com.feeyo.net.codec.util.CompositeByteArray.ByteArray;
+import com.feeyo.net.codec.util.CompositeByteArray.ByteArrayChunk;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,8 +17,8 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
     // 用于标记读取的位置
     private int readOffset;
     
-    private ByteArray startByteArray;
-    private ByteArray readByteArray;
+    private ByteArrayChunk startChunk;
+    private ByteArrayChunk readChunk;
    
     
     private List<Integer> index = new ArrayList<>();
@@ -34,7 +34,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
         try {
 
 			// 批量回复时会更新startChunk,导致最后从0开始的取数据异常
-			startByteArray = readByteArray = compositeArray.findByteArray(readOffset);
+			startChunk = readChunk = compositeArray.findChunk(readOffset);
             for (; ; ) {
                 // 至少4字节 :1\r\n
                 if (compositeArray.remaining(readOffset) < 4) {
@@ -42,7 +42,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
                 }
 
                 // 减少 findChunk 的调用次数
-                byte type = readByteArray.get(readOffset++);
+                byte type = readChunk.get(readOffset++);
                 updateReadOffsetAndReadByteChunk(readOffset);
                 switch (type) {
                     case '*': // 数组(Array), 以 "*" 开头,表示消息体总共有多少行（不包括当前行）, "*" 是具体行数
@@ -121,7 +121,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
                     throw new IndexOutOfBoundsException("Wait for more data.");
                 }
 
-                nType = readByteArray.get(readOffset++);
+                nType = readChunk.get(readOffset++);
                 updateReadOffsetAndReadByteChunk(readOffset);
                 // nType = byteArray.get(offset++);
                 parseResponse(nType);
@@ -137,7 +137,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        ByteArray c = readByteArray;
+        ByteArrayChunk c = readChunk;
         byte b = c.get(readOffset);
         outer: while (c != null) {
 
@@ -181,22 +181,22 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
     	
         readOffset = newReadOffset;
         
-        while (readByteArray != null) {
+        while (readChunk != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (readByteArray.isInBoundary(readOffset) || readOffset == compositeArray.getByteCount() ) {
+            if (readChunk.isInBoundary(readOffset) || readOffset == compositeArray.getByteCount() ) {
                 return;
             }
-            readByteArray = readByteArray.getNext();
+            readChunk = readChunk.getNext();
         }
     }
 
     private void updateStartByteChunk(int reachOffset) {
-        while (startByteArray != null) {
+        while (startChunk != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (startByteArray.isInBoundary(reachOffset) || reachOffset == compositeArray.getByteCount() ) {
+            if (startChunk.isInBoundary(reachOffset) || reachOffset == compositeArray.getByteCount() ) {
                 return;
             }
-            startByteArray = startByteArray.getNext();
+            startChunk = startChunk.getNext();
         }
     }
 
@@ -227,7 +227,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        ByteArray c = readByteArray;
+        ByteArrayChunk c = readChunk;
         outer: while (c != null) {
 
             while (c.isInBoundary(offset)) {
@@ -265,7 +265,7 @@ public class RedisPipelineResponseDecoderV2 implements Decoder<RedisPipelineResp
             int end = index.get(i);
 
             updateStartByteChunk(start);
-            result[i] = compositeArray.getData(startByteArray, start, end - start);
+            result[i] = compositeArray.getData(startChunk, start, end - start);
         }
 
         index.clear();

@@ -10,8 +10,8 @@ import java.util.List;
  */
 public class CompositeByteArray {
 	
-    private List<ByteArray> chunks = new ArrayList<>();
-    private ByteArray lastChunk = null;
+    private List<ByteArrayChunk> chunks = new ArrayList<>();
+    private ByteArrayChunk lastChunk = null;
     
     private int byteCount = 0;
 
@@ -20,25 +20,25 @@ public class CompositeByteArray {
     	
         this.byteCount += data.length;
         
-        ByteArray c = null;
+        ByteArrayChunk c = null;
         if ( lastChunk != null ) {
-            c = new ByteArray(data, data.length, (lastChunk.length + lastChunk.beginIndex));
+            c = new ByteArrayChunk(data, data.length, (lastChunk.length + lastChunk.beginIndex));
             lastChunk.setNext( c );
             
         } else {
-        	c = new ByteArray(data, data.length, 0);
+        	c = new ByteArrayChunk(data, data.length, 0);
         }
         
         chunks.add( c );
         lastChunk = c;
     }
 
-    public ByteArray findByteArray(int index) {
+    public ByteArrayChunk findChunk(int index) {
     	
         // 二分查找
         for (int low = 0, high = chunks.size(); low <= high; ) {
             int mid = low + high >>> 1;
-            ByteArray c = chunks.get(mid);
+            ByteArrayChunk c = chunks.get(mid);
             if (index >= c.beginIndex + c.length) {
                 low = mid + 1;
             } else if (index < c.beginIndex) {
@@ -54,7 +54,7 @@ public class CompositeByteArray {
 
 
     public byte get(int index) {
-        ByteArray c = findByteArray(index);
+        ByteArrayChunk c = findChunk(index);
         return c.get(index);
     }
 
@@ -65,7 +65,7 @@ public class CompositeByteArray {
     		throw new IndexOutOfBoundsException( String.format("index: %d, (expected: range(0, %d))", index, byteCount) );
     	}
 
-        ByteArray c = findByteArray(index);
+        ByteArrayChunk c = findChunk(index);
         return c.find(index, value);
     }
 
@@ -75,17 +75,17 @@ public class CompositeByteArray {
 	*/
     public byte[] getData(int beginIndex, int length) {
     	// 
-        ByteArray c = findByteArray(beginIndex);
+        ByteArrayChunk c = findChunk(beginIndex);
         return getData(c, beginIndex, length);
     }
     
-    public byte[] getData(ByteArray chunk, int beginIndex, int length) {
+    public byte[] getData(ByteArrayChunk chunk, int beginIndex, int length) {
     	
         assert chunk != null;
         
         byte[] destData = new byte[length];
         
-        ByteArray c = chunk;
+        ByteArrayChunk c = chunk;
         int remaining = length;
         int destPos = 0;
         
@@ -138,7 +138,7 @@ public class CompositeByteArray {
     /*
       包装了 byte[], 增加了 length 和 beginIndex 方便查找
      */
-    public final class ByteArray {
+    public final class ByteArrayChunk {
     	
         final byte[] data;
         
@@ -146,19 +146,19 @@ public class CompositeByteArray {
         final int length;
       
         // 优化遍历, 维护单向链表
-        private ByteArray next;
+        private ByteArrayChunk next;
 
-        public ByteArray(byte[] data, int length, int beginIndex) {
+        public ByteArrayChunk(byte[] data, int length, int beginIndex) {
             this.data = data;
             this.length = length;
             this.beginIndex = beginIndex;
         }
 
-        public ByteArray getNext() {
+        public ByteArrayChunk getNext() {
             return next;
         }
 
-        public void setNext(ByteArray next) {
+        public void setNext(ByteArrayChunk next) {
             this.next = next;
         }
 
@@ -179,7 +179,7 @@ public class CompositeByteArray {
         public int find(int index, byte value) {
             
         	// check index 有效性
-            ByteArray c = this;
+            ByteArrayChunk c = this;
 
             // 利用链表和数组快速查找
             while (c != null) {
