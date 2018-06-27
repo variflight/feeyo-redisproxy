@@ -133,13 +133,13 @@ public class ZeroCopyConnection extends ClosableConnection {
 					// 流量控制
 					//
 					if ( isChild ) {
-						if ( parent.getHandler().handleNetFlow(parent, length)  ) {
+						if ( parent.getHandler() != null && parent.getHandler().handleNetFlow(parent, length)  ) {
 							parent.flowClean();
 							return;
 						}	
 						
 					} else {
-						if ( handler.handleNetFlow(this, length) ) {
+						if ( handler != null && handler.handleNetFlow(this, length) ) {
 							this.flowClean();
 							return;
 						}

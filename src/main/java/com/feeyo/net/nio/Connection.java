@@ -298,13 +298,13 @@ public class Connection extends ClosableConnection {
 				// 流量控制
 				//
 				if ( isChild ) {
-					if ( parent.getHandler().handleNetFlow(parent, length)  ) {
+					if ( parent.getHandler() != null && parent.getHandler().handleNetFlow(parent, length)  ) {
 						parent.flowClean();
 						return;
 					}	
 					
 				} else {
-					if ( handler.handleNetFlow(this, length) ) {
+					if ( this.handler != null && this.handler.handleNetFlow(this, length) ) {
 						this.flowClean();
 						return;
 					}
@@ -344,9 +344,9 @@ public class Connection extends ClosableConnection {
 				readBuffer.get(data, 0, dataLength);
 
 				if ( isChild )
-					handler.handleReadEvent(parent, data);
+					parent.getHandler().handleReadEvent(parent, data);
 				else
-					handler.handleReadEvent(this, data);
+					this.handler.handleReadEvent(this, data);
 				
 				
 				// 存在扩大后的 byte buffer

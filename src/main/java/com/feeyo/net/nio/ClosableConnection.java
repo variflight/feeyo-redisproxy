@@ -229,14 +229,13 @@ public abstract class ClosableConnection {
 			
 			if ( isChild )  {
 				NetSystem.getInstance().removeConnection( parent );
-				if ( handler != null )
-					handler.onClosed(parent, reason);
+				if ( parent.getHandler() != null )
+					parent.getHandler().onClosed(parent, reason);
 				
 			} else {
-				
 				NetSystem.getInstance().removeConnection(this);
-				if ( handler != null )
-					handler.onClosed(this, reason);
+				if ( this.handler != null )
+					this.handler.onClosed(this, reason);
 			}
 			
 			if ( LOGGER.isDebugEnabled() ) {
@@ -298,11 +297,13 @@ public abstract class ClosableConnection {
 	        // 支持代理 CON
 			if ( isChild ) {
 				NetSystem.getInstance().addConnection( parent );
-				this.handler.onConnected( parent );
+				if ( parent.getHandler() != null )
+					parent.getHandler().onConnected( parent );
 				
 			} else {
 				NetSystem.getInstance().addConnection(this);
-				this.handler.onConnected( this );
+				if ( this.handler != null )
+					this.handler.onConnected( this );
 			}
 			
 		} finally {
