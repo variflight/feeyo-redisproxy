@@ -298,15 +298,12 @@ public class Connection extends ClosableConnection {
 				// 流量控制
 				//
 				if ( isNested ) {
-					
 					if ( parent.getHandler().handleNetFlow(parent, length)  ) {
 						parent.flowClean();
 						return;
 					}	
 					
 				} else {
-					
-					//
 					if ( handler.handleNetFlow(this, length) ) {
 						this.flowClean();
 						return;

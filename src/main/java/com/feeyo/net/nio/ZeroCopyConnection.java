@@ -129,16 +129,20 @@ public class ZeroCopyConnection extends ClosableConnection {
 					netInBytes += length;
 					netInCounter++;
 					
-					// 流量检测，超过max 触发限流
-					boolean isOverproof;
-					if ( isNested )
-						isOverproof = handler.handleNetFlow(parent, length);
-					else
-						isOverproof = handler.handleNetFlow(this, length);
-					
-					if (isOverproof) {
-						flowClean();
-						return;
+
+					// 流量控制
+					//
+					if ( isNested ) {
+						if ( parent.getHandler().handleNetFlow(parent, length)  ) {
+							parent.flowClean();
+							return;
+						}	
+						
+					} else {
+						if ( handler.handleNetFlow(this, length) ) {
+							this.flowClean();
+							return;
+						}
 					}
 					
 					//
