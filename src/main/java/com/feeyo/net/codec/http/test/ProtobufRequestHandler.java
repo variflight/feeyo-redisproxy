@@ -18,8 +18,8 @@ public class ProtobufRequestHandler implements RequestHandler{
 		
 		List<MessageLite> msg = decoder.decode(data);
 		HttpResponse response = msg == null ? new HttpResponse(400, "PARSE MSG ERROR") : new HttpResponse(200, "OK");
-		HttpResponseEncoder encdoer = new HttpResponseEncoder();
-		conn.write(encdoer.encode(response));
+		HttpResponseEncoder encoder = new HttpResponseEncoder();
+		conn.write(encoder.encode(response));
 		conn.close("finish");
 	}
 

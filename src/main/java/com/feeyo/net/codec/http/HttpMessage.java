@@ -1,12 +1,11 @@
 package com.feeyo.net.codec.http;
 
 import java.util.HashMap;
-import java.util.Iterator;
 
 public abstract class HttpMessage {
 	
-	public static final String HTTP_1_1 = "http/1.1";
-	public static final String HTTP_1_0 = "http/1.0";
+	private static final String HTTP_1_1 = "HTTP/1.1";
+	private static final String HTTP_1_0 = "HTTP/1.0";
 	
 	private HashMap<String, String> headers;
 	private String httpVersion;
@@ -46,23 +45,12 @@ public abstract class HttpMessage {
 		return headers.containsKey(header);
 	}
 	
-    public boolean containsHeader(String header, String value, boolean ignoreCase) {
+    public boolean containsHeader(String headName, String headValue, boolean ignoreCase) {
     	
-        Iterator<String> valueIterator = headers.values().iterator();
-        if (ignoreCase) {
-            while (valueIterator.hasNext()) {
-                if (valueIterator.next().equalsIgnoreCase(value)) {
-                    return true;
-                }
-            }
-        } else {
-            while (valueIterator.hasNext()) {
-                if (valueIterator.next().equals(value)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+    	if(headName == null || headValue == null)
+    		return false;
+    	
+    	return ignoreCase ? headValue.equalsIgnoreCase(headers.get(headName)): headValue.equals(headers.get(headName));
     }
 
 	public String getHttpVersion() {

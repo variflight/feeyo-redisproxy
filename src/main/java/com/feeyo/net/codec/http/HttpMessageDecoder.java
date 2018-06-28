@@ -2,6 +2,9 @@ package com.feeyo.net.codec.http;
 
 import java.nio.charset.Charset;
 
+import com.feeyo.net.codec.util.CompositeByteArray;
+import com.feeyo.net.codec.util.CompositeByteArray.ByteArrayChunk;
+
 
 public abstract class HttpMessageDecoder<T extends HttpMessage> {
 
@@ -22,7 +25,8 @@ public abstract class HttpMessageDecoder<T extends HttpMessage> {
 	private final boolean chunkedSupported;
 	private int contentSize = 0;
 	
-	private byte[] _buffer = null;
+	private CompositeByteArray compositeArray = null;
+	private ByteArrayChunk readChunk = null;
 	private int _offset = 0;
 
 	private State state;
@@ -43,7 +47,10 @@ public abstract class HttpMessageDecoder<T extends HttpMessage> {
 
 		append(data);
 
+		readChunk = compositeArray.findChunk(_offset);
+		
 		for(;;) {
+			
 			switch (state) {
 
 			case SKIP_CONTROL_CHARS:
@@ -100,10 +107,9 @@ public abstract class HttpMessageDecoder<T extends HttpMessage> {
 					throw new IllegalArgumentException("Http content may be not null");
 				}
 
-				int len = _buffer.length - _offset;
+				int len = compositeArray.getByteCount() - _offset;
 				if(contentSize <= len) {
-					data = new byte[contentSize];
-					System.arraycopy(_buffer, _offset, data, 0, contentSize);
+					data = compositeArray.getData(_offset, contentSize);
 					message.setContent(data);
 					clear();
 					return message;
@@ -116,10 +122,9 @@ public abstract class HttpMessageDecoder<T extends HttpMessage> {
 				if (message == null) {
 					throw new IllegalArgumentException("Http message may be not null");
 				}
-				len = _buffer.length - _offset;
+				len = compositeArray.getByteCount() - _offset;
 				if(len > 0) {
-					data = new byte[len];
-					System.arraycopy(_buffer, _offset, data, 0, len);
+					data = compositeArray.getData(_offset, len);
 					message.setContent(data);
 				}
 				clear();
@@ -132,37 +137,50 @@ public abstract class HttpMessageDecoder<T extends HttpMessage> {
 	}
 
 	private void skipControlCharacters() {
-        while (_buffer.length > _offset) {
-            int c = _buffer[_offset++] & 0xFF;
+		
+        while (compositeArray.getByteCount() > _offset) {
+        	
+            int c = readChunk.get(_offset++) & 0xFF;
             if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
             	_offset --;
                 break;
             }
+            updateReadOffsetAndReadByteChunk(_offset);
         }
 	}
+	
+	// 在遍历中改变readOffset可能需要更新 readByteChunk
+    private void updateReadOffsetAndReadByteChunk(int newReadOffset) {
+    	
+        while (readChunk != null) {
+            // 当offset达到最大长度时也不继续,防止空指针异常
+            if (readChunk.isInBoundary(newReadOffset) || newReadOffset == compositeArray.getByteCount() ) {
+                return;
+            }
+            readChunk = readChunk.getNext();
+        }
+    }
 
-	private void append(byte[] b) {
+	private void append(byte[] newBuffer) {
 
-		if (b == null)
-			return;
+		if (newBuffer == null) {
+            return;
+        }
 
-		if (_buffer == null) {
-			_buffer = b;
-			return;
-		}
+        if (compositeArray == null) {
+            compositeArray = new CompositeByteArray();
+        }
 
-		byte[] largeBuffer = new byte[_buffer.length + b.length];
-		System.arraycopy(_buffer, 0, largeBuffer, 0, _buffer.length);
-		System.arraycopy(b, 0, largeBuffer, _buffer.length, b.length);
-
-		_buffer = largeBuffer;
+        // large packet
+        compositeArray.add(newBuffer);
 	}
 
 	private byte[] readLine() {
 		int pos = -1;
 		byte[] _linebuf = null;
-		for (int i = _offset; i < _buffer.length; i++) {
-			if (_buffer[i] == LF) {
+		for (int i = _offset; i < compositeArray.getByteCount(); i++) {
+			updateReadOffsetAndReadByteChunk(i);
+			if (readChunk.get(i) == LF) {
 				pos = i;
 				break;
 			}
@@ -171,14 +189,11 @@ public abstract class HttpMessageDecoder<T extends HttpMessage> {
 		if (pos != -1) {
 			// end of line found
 			final int len = pos + 1 - _offset;
-			_linebuf = new byte[len];
-			System.arraycopy(_buffer, _offset, _linebuf, 0, len);
+			_linebuf = compositeArray.getData(_offset, len);
 			_offset = pos + 1;
-			return _linebuf;
-		} else {
-			// end of line not found, data not enough
-			return null;
 		}
+		updateReadOffsetAndReadByteChunk(_offset);
+		return _linebuf;
 	}
 
 	private String[] parseHeadLine() {
@@ -218,6 +233,7 @@ public abstract class HttpMessageDecoder<T extends HttpMessage> {
 			}
 		}
 
+		//https://tools.ietf.org/html/rfc7230#section-3.3.3
 		State nextState = null;
 		if (isContentAlwaysEmpty(message)) {
             nextState = State.SKIP_CONTROL_CHARS;
@@ -289,7 +305,7 @@ public abstract class HttpMessageDecoder<T extends HttpMessage> {
 	}
 
 	private void clear() {
-		_buffer = null;
+		compositeArray.clear();
 		_offset = 0;
 	}
 
