@@ -56,7 +56,7 @@ public class PerformanceTest {
 						conn.sendCommand(RedisCommand.SET, "key1", valueBuffer.toString()  );
 						try {
 							Object obj = conn.getOne();
-							System.out.println( (String)obj );
+							System.out.println( new String((byte[])obj) );
 						} catch (JedisMovedDataException e1) {
 						}
 

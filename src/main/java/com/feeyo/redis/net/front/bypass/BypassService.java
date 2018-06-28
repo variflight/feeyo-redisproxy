@@ -128,13 +128,8 @@ public class BypassService {
 			
 		} catch (RejectedExecutionException re) {	
 			
-			// write err
-			StringBuffer errorSb = new StringBuffer();
-			errorSb.append("-ERR bypass err: ");
-			errorSb.append(re.getMessage() );
-			errorSb.append("\r\n");
-				
-			frontConn.write( errorSb.toString().getBytes() );
+			// front rejected 
+			frontConn.write( "-ERR bypass is full, rejected execution \r\n".getBytes() );
 			
 			LOGGER.warn("process thread pool is full, reject, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
