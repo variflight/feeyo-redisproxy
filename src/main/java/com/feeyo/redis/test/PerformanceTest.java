@@ -33,21 +33,60 @@ public class PerformanceTest {
 					JedisConnection conn = null;
 					try {
 						conn = new JedisConnection("127.0.0.1", 8066, 2000, 0); // 2000
-						conn.sendCommand(RedisCommand.AUTH, "pwd01"); // pwd01
+						conn.sendCommand(RedisCommand.AUTH, "pwd04"); // pwd01
 																		// aspAuth
 																		// tod_am_28192c1708028508
 						conn.getBulkReply();
+						
+						//
+						StringBuffer valueBuffer = new StringBuffer( 1024 * 320 );
+						for(int v1=0; v1<1024; v1++) {
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+							valueBuffer.append("X11111111111111111111111111111111");
+						}
+						
+						conn.sendCommand(RedisCommand.SET, "key1", valueBuffer.toString()  );
+						try {
+							Object obj = conn.getOne();
+							System.out.println( (String)obj );
+						} catch (JedisMovedDataException e1) {
+						}
 
 						for (int j = 0; j < requestSize; j++) {
 							
 							sCC.incrementAndGet();
 
-							StringBuffer keyBuffer = new StringBuffer();
-							keyBuffer.append(this.getName()).append("_kkkkkkkkkkkkkkkkkkk");
-							keyBuffer.append("_").append(j);
-
+//							StringBuffer keyBuffer = new StringBuffer();
+//							keyBuffer.append(this.getName());
+//							keyBuffer.append("_kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
+//							
+//							for(int x1 = 0; x1< 100; x1++) {  // 500
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//								keyBuffer.append("_000000000000000000000000000000000000000000000000000");
+//							}
+//							keyBuffer.append("_").append(j);
+//
+//							long t1 = System.currentTimeMillis();
+//							conn.sendCommand(RedisCommand.GET, keyBuffer.toString());
+							
 							long t1 = System.currentTimeMillis();
-							conn.sendCommand(RedisCommand.GET, keyBuffer.toString());
+							conn.sendCommand(RedisCommand.GET, "key1");
 
 							try {
 								Object obj = conn.getOne();
