@@ -16,12 +16,11 @@ public class RedisBackendConnectionFactory implements BackendConnectionFactory {
 		
 		String host = physicalNode.getHost();
 		int port = physicalNode.getPort();
-		boolean isZeroCopy = physicalNode.isZeroCopy();
 		
 		SocketChannel channel = SocketChannel.open();
 		channel.configureBlocking(false);
 
-		RedisBackendConnection c = new RedisBackendConnection( isZeroCopy, channel );
+		RedisBackendConnection c = new RedisBackendConnection( channel );
 		NetSystem.getInstance().setSocketParams(c, false);
 
 		// 设置NIOHandlers

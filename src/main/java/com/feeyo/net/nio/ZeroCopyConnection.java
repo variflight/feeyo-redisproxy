@@ -132,17 +132,9 @@ public class ZeroCopyConnection extends ClosableConnection {
 
 					// 流量控制
 					//
-					if ( isChild ) {
-						if ( parent.getHandler() != null && parent.getHandler().handleNetFlow(parent, length)  ) {
-							parent.flowClean();
-							return;
-						}	
-						
-					} else {
-						if ( handler != null && handler.handleNetFlow(this, length) ) {
-							this.flowClean();
-							return;
-						}
+					if ( handler != null && handler.handleNetFlow(this, length) ) {
+						this.flowClean();
+						return;
 					}
 					
 					//
@@ -153,10 +145,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 					mappedByteBuffer.get(data, 0, length);
 					
 					// 负责解析报文并处理
-					if ( isChild )
-						handler.handleReadEvent(parent, data);
-					else
-						handler.handleReadEvent(this, data);
+					handler.handleReadEvent(this, data);
 					
 					break;
 					

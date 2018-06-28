@@ -81,12 +81,6 @@ public class Connection extends ClosableConnection {
 	@Override
 	public void doNextWriteCheck() {
 		
-		
-		// you need sure write queue is not empty
-		if ( writeQueue.isEmpty() ) {
-			return;
-		}
-		
 		//检查是否正在写,看CAS更新writing值是否成功
 		if ( !writing.compareAndSet(false, true) ) {
 			return;
@@ -264,8 +258,6 @@ public class Connection extends ClosableConnection {
 		
 			//如果buffer为空，证明被回收或者是第一次读，新分配一个buffer给 Connection作为readBuffer
 			if ( readBuffer == null) {
-				// readBuffer = ByteBuffer.allocate( 1024 * 16 );
-				
 				if ( direction == Direction.in )
 					readBuffer = allocate( 1024 * 16 );
 				else
@@ -297,17 +289,9 @@ public class Connection extends ClosableConnection {
 				
 				// 流量控制
 				//
-				if ( isChild ) {
-					if ( parent.getHandler() != null && parent.getHandler().handleNetFlow(parent, length)  ) {
-						parent.flowClean();
-						return;
-					}	
-					
-				} else {
-					if ( this.handler != null && this.handler.handleNetFlow(this, length) ) {
-						this.flowClean();
-						return;
-					}
+				if ( this.handler != null && this.handler.handleNetFlow(this, length) ) {
+					this.flowClean();
+					return;
 				}
 				
 				// 空间不足
@@ -345,10 +329,8 @@ public class Connection extends ClosableConnection {
 				byte[] data = new byte[ dataLength ];
 				readBuffer.get(data, 0, dataLength);
 
-				if ( isChild )
-					parent.getHandler().handleReadEvent(parent, data);
-				else
-					this.handler.handleReadEvent(this, data);
+				this.handler.handleReadEvent(this, data);
+				
 				
 				
 				// 存在扩大后的 byte buffer

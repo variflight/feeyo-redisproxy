@@ -35,11 +35,6 @@ public abstract class ClosableConnection {
 	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
 	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
 	
-	// 支持 backend conn 内嵌套 
-	//
-	protected boolean isChild = false;
-	protected ClosableConnection parent = null;
-	
 	//
 	protected Direction direction = Direction.out;
 
@@ -90,23 +85,6 @@ public abstract class ClosableConnection {
 		this.lastReadTime = startupTime;
 		this.lastWriteTime = startupTime;
 		this.id = ConnectIdGenerator.getINSTNCE().getId();
-	}
-	
-	//
-	public boolean isChild() {
-		return isChild;
-	}
-
-	public void setChild(boolean isChild) {
-		this.isChild = isChild;
-	}
-
-	public ClosableConnection getParent() {
-		return parent;
-	}
-
-	public void setParent(ClosableConnection parent) {
-		this.parent = parent;
 	}
 
 	
@@ -227,16 +205,10 @@ public abstract class ClosableConnection {
 			
 			this.cleanup();		
 			
-			if ( isChild )  {
-				NetSystem.getInstance().removeConnection( parent );
-				if ( parent.getHandler() != null )
-					parent.getHandler().onClosed(parent, reason);
-				
-			} else {
-				NetSystem.getInstance().removeConnection(this);
-				if ( this.handler != null )
-					this.handler.onClosed(this, reason);
-			}
+			//
+			NetSystem.getInstance().removeConnection(this);
+			if ( this.handler != null )
+				this.handler.onClosed(this, reason);
 			
 			if ( LOGGER.isDebugEnabled() ) {
 				LOGGER.debug("close connection, reason:" + reason + " ," + this.toString());
@@ -294,17 +266,9 @@ public abstract class ClosableConnection {
 			// 已连接、默认不需要认证
 	        this.setState( Connection.STATE_CONNECTED );  
 			
-	        // 支持代理 CON
-			if ( isChild ) {
-				NetSystem.getInstance().addConnection( parent );
-				if ( parent.getHandler() != null )
-					parent.getHandler().onConnected( parent );
-				
-			} else {
-				NetSystem.getInstance().addConnection(this);
-				if ( this.handler != null )
-					this.handler.onConnected( this );
-			}
+	        NetSystem.getInstance().addConnection(this);
+			if ( this.handler != null )
+				this.handler.onConnected( this );
 			
 		} finally {
 			if ( isClosed() ) {

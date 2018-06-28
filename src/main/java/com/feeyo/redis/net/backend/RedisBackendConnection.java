@@ -21,8 +21,8 @@ public class RedisBackendConnection extends BackendConnection {
 
 	private volatile int db = 0;				//REDIS select database, default 0
     
-    public RedisBackendConnection(boolean isZeroCopy, SocketChannel channel) {
-		super(isZeroCopy, channel);
+    public RedisBackendConnection(SocketChannel channel) {
+		super(channel);
 	}
 
 	public void setDb(int db) {
