@@ -95,13 +95,9 @@ public final class NIOReactor {
 								
 								int ops = key.readyOps();
 								
-								// see ACE, first write,  Accept > Write > Read
-								
-								// 处理写
-								if ( (ops & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE ) {
-									con.doNextWriteCheck();
-								}
-								
+								// 1、first write,  Accept > Write > Read  ， ACE
+								// 2、first read, Accept > Read > Write	 ， NETTY 
+								// 
 								// 处理读
 								if ( (ops & SelectionKey.OP_READ) == SelectionKey.OP_READ ) {									
 									try {
@@ -115,7 +111,12 @@ public final class NIOReactor {
 										con.close("program err:" + e.toString());
 										continue;
 									}
-								}								
+								}	
+								
+								// 处理写
+								if ( (ops & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE ) {
+									con.doNextWriteCheck();
+								}
 								
 							} else {
 								key.cancel();
