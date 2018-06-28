@@ -6,8 +6,10 @@ import java.nio.channels.SocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.net.nio.NetFlowController;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.callback.SelectDbCallback;
+import com.feeyo.redis.net.front.RedisFrontConnection;
 
 /**
  * REDIS 后端连接
@@ -136,9 +138,22 @@ public class RedisBackendConnection extends BackendConnection {
 	}
 	
 	@Override
-	public void flowClean() {
-		LOGGER.warn("##flow clean##, backend: {} ", this);
-		this.close(" netflow problem, the response is cleaned up. ");
+	protected boolean flowGuard(long length) {
+
+		if (attachement != null && (attachement instanceof RedisFrontConnection)) {
+
+			RedisFrontConnection frontCon = (RedisFrontConnection) attachement;
+			NetFlowController controller = frontCon.getNetflowController();
+			if (controller != null && controller.consumeBytes(frontCon.getPassword(), length)) {
+				LOGGER.warn("##flow clean##, backend: {} ", this);
+				this.close(" netflow problem, the response is cleaned up. ");
+
+				return true;
+			}
+
+		}
+
+		return false;
 	}
 	
 	

@@ -84,14 +84,21 @@ public class RedisFrontConnection extends FrontConnection {
 		_readLock.set(false);
 	}
 
-	
+	// 流量
 	@Override
-	public void flowClean() {
+	protected boolean flowGuard(long length) {
 		
-		LOGGER.warn("##flow clean##, front: {} ", this);
-		//
-		this.write( ERR_FLOW_LIMIT );
-		this.close("flow limit");
+		if ( netflowController != null && netflowController.consumeBytes(this.getPassword(), length) ) {
+			
+			LOGGER.warn("##flow clean##, front: {} ", this);
+			
+			//
+			this.write( ERR_FLOW_LIMIT );
+			this.close("flow limit");
+			return true;
+		}
+		
+		return false;
 	}
 	
 	

@@ -398,8 +398,9 @@ public abstract class ClosableConnection {
 		this.direction = in;
 	}
 
-	public void flowClean() {
-		LOGGER.warn("Flow cleaning,  {}", this );
+	// Control Flow Guard (CFG) 
+	protected boolean flowGuard(long length) {
+		return false;
 		// ignore
 	}
 	

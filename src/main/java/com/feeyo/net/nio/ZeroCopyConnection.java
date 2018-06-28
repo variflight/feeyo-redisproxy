@@ -132,8 +132,7 @@ public class ZeroCopyConnection extends ClosableConnection {
 
 					// 流量控制
 					//
-					if ( handler != null && handler.handleNetFlow(this, length) ) {
-						this.flowClean();
+					if ( flowGuard( length ) ) {
 						return;
 					}
 					

@@ -286,11 +286,10 @@ public class Connection extends ClosableConnection {
 				netInBytes += length;
 				netInCounter++;
 				
-				
+				// flowGuard
 				// 流量控制
 				//
-				if ( this.handler != null && this.handler.handleNetFlow(this, length) ) {
-					this.flowClean();
+				if ( flowGuard( length ) ) {
 					return;
 				}
 				
