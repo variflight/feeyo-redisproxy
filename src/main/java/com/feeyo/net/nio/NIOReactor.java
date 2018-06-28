@@ -54,7 +54,7 @@ public final class NIOReactor {
 	// IO/RW 线程
 	private final class RW implements Runnable {
 		
-		private final Selector selector;
+		private volatile Selector selector;
 		private final ConcurrentLinkedQueue<ClosableConnection> pendingQueue;
 		private long reactCount;
         
@@ -66,7 +66,6 @@ public final class NIOReactor {
 		@Override
 		public void run() {
 			
-			Selector selector = this.selector;
 			Set<SelectionKey> keys = null;
 			
 			for (;;) {
@@ -74,6 +73,8 @@ public final class NIOReactor {
 				++reactCount;
 				try {
 
+					Selector selector = this.selector;
+					
 					// 查看有无连接就绪
 					selector.select(400L); // 500L
 					
