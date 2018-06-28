@@ -20,8 +20,6 @@ public final class NIOReactor {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOReactor.class );
 	
-	private final static long SELECTOR_TIMEOUT = 40L; // 500L
-	
 	private final String name;
 	private final RW reactorR;
 
@@ -70,7 +68,6 @@ public final class NIOReactor {
 			
 			Selector selector = this.selector;
 			Set<SelectionKey> keys = null;
-			long ioTimes = 0;
 			
 			for (;;) {
 				
@@ -78,25 +75,12 @@ public final class NIOReactor {
 				try {
 
 					// 查看有无连接就绪
-					selector.select( SELECTOR_TIMEOUT );
-
-					keys = selector.selectedKeys();
-					if ( keys != null && keys.isEmpty() ) {
-						
-						if (!pendingQueue.isEmpty()) {
-							ioTimes = 0;
-							processPendingQueue(selector); 	// 处理注册队列
-						}
-						continue;
-						
-					} else if ((ioTimes > 5) & !pendingQueue.isEmpty()) {
-						
-						ioTimes = 0;
-						processPendingQueue(selector); 		// 处理注册队列
-					}
+					selector.select(400L); // 500L
 					
-
-					ioTimes++;
+					// 处理注册队列
+					processPendingQueue( selector );
+					
+					keys = selector.selectedKeys();
 					for (final SelectionKey key : keys) {
 
 						ClosableConnection con = null;
@@ -164,6 +148,11 @@ public final class NIOReactor {
 		
 		// 注册 IO 读写事件
 		private void processPendingQueue(Selector selector) {
+			
+			if (pendingQueue.isEmpty()) {
+				return;
+			}
+			
 			ClosableConnection c = null;
 			while ((c = pendingQueue.poll()) != null) {
 				try {

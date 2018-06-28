@@ -333,8 +333,10 @@ public class Connection extends ClosableConnection {
 					largeCounter++;
 					
 					// 拿完整包
-					//continue;		
-//					break;		// 对 大包不友好 	
+					// continue;		
+					
+					//
+					//no break;  Be careful, read the lock 		
 				} 
 				
 				// 负责解析报文并处理
