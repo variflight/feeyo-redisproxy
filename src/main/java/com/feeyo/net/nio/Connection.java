@@ -296,7 +296,7 @@ public class Connection extends ClosableConnection {
 					largeCounter++;
 					
 					// 拿完整包
-					// continue;		
+					continue;		
 					
 					//
 					//no break;  Be careful, read the lock 		
