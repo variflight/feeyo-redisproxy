@@ -73,8 +73,6 @@ public abstract class ClosableConnection {
 	
 	@SuppressWarnings("rawtypes")
 	protected NIOHandler handler;
-
-	public ClosableConnection() {}
 	
 	public ClosableConnection(SocketChannel socketChannel) {
 		this.socketChannel = socketChannel;
