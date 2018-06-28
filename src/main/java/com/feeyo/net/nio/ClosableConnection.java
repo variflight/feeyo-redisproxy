@@ -73,8 +73,6 @@ public abstract class ClosableConnection {
 	
 	@SuppressWarnings("rawtypes")
 	protected NIOHandler handler;
-	
-	protected NetFlowController netflowController;
 
 	public ClosableConnection() {}
 	
@@ -174,14 +172,6 @@ public abstract class ClosableConnection {
 	@SuppressWarnings("rawtypes")
 	public NIOHandler getHandler() {
 		return this.handler;
-	}
-	
-	public void setNetflowController(NetFlowController nfc) {
-		this.netflowController = nfc;
-	}
-	
-	public NetFlowController getNetflowController() {
-		return netflowController;
 	}
 
 	public boolean isConnected() {

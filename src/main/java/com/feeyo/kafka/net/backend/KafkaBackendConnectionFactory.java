@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 import com.feeyo.net.nio.NetSystem;
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.BackendConnectionFactory;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
@@ -27,8 +26,6 @@ public class KafkaBackendConnectionFactory implements BackendConnectionFactory {
 
 		// 设置NIOHandlers
 		c.setHandler( new KafkaBackendConnectionHandler() );
-		c.setNetflowController( RedisEngineCtx.INSTANCE().getNetflowController() );
-		
 		c.setHost( host );
 		c.setPort( port );
 		c.setPhysicalNode( physicalNode );
