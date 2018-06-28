@@ -174,7 +174,7 @@ public class ConfigLoader {
 				
 				boolean isControl = getBooleanAttribute(nameNodeMap, "control", true);
 				
-				if(perSecondMaxSize < 10 || requestMaxSize < 10 ) {
+				if(perSecondMaxSize < 1048576 || requestMaxSize < 262144 ) {
 					throw new Exception(" These parameters perSecondMaxSize or requestMaxSize have errors !!");
 				}
 				
