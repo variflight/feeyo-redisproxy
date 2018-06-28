@@ -1,8 +1,10 @@
 package com.feeyo.net.nio;
 
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,25 +50,6 @@ public class Connection extends ClosableConnection {
 		return largeCounter;
 	}
 
-	// 清理资源
-	@Override
-	protected void cleanup() {
-		
-		if (readBuffer != null) {
-			recycle(readBuffer);
-			this.readBuffer = null;
-		}
-		
-		if (writeBuffer != null) {
-			recycle(writeBuffer);
-			this.writeBuffer = null;
-		}
-		
-		ByteBuffer buffer = null;
-		while ((buffer = writeQueue.poll()) != null) {
-			recycle(buffer);
-		}
-	}
 	
 	// 内部
 	private ByteBuffer allocate(int chunkSize) {
@@ -179,7 +162,6 @@ public class Connection extends ClosableConnection {
 			while (buffer.hasRemaining()) {
 				written = socketChannel.write(buffer);
 				if (written > 0) {
-					netOutCounter++;
 					netOutBytes += written;
 					lastWriteTime = TimeUtil.currentTimeMillis();
 				} else {
@@ -212,7 +194,6 @@ public class Connection extends ClosableConnection {
 													   // Connection reset by peer
 					if (written > 0) {
 						lastWriteTime = TimeUtil.currentTimeMillis();
-						netOutCounter++;
 						netOutBytes += written;
 						lastWriteTime = TimeUtil.currentTimeMillis();
 					} else {
@@ -284,7 +265,6 @@ public class Connection extends ClosableConnection {
 					return;
 				}
 				netInBytes += length;
-				netInCounter++;
 				
 				// flowGuard
 				// 流量控制
@@ -373,6 +353,117 @@ public class Connection extends ClosableConnection {
 
 	}
 	
+	
+	private void clearSelectionKey() {
+		try {
+			SelectionKey key = this.processKey;
+			if (key != null && key.isValid()) {
+				key.attach(null);
+				key.cancel();
+			}
+		} catch (Exception e) {
+			LOGGER.warn("clear selector keys err:" + e);
+		}
+	}
+
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void register(Selector selector) throws IOException {
+		try {	
+			processKey = socketChannel.register(selector, SelectionKey.OP_READ, this);
+			
+			if ( LOGGER.isDebugEnabled() ) {
+				LOGGER.debug("register:" + this);
+			}
+			
+			// 已连接、默认不需要认证
+	        this.setState( Connection.STATE_CONNECTED );  
+			
+	        NetSystem.getInstance().addConnection(this);
+			if ( this.handler != null )
+				this.handler.onConnected( this );
+			
+		} finally {
+			if ( isClosed() ) {
+				clearSelectionKey();
+			}
+		}
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public void close(String reason) {
+		//
+		if ( !isClosed.get() ) {
+			
+			closeSocket();
+			isClosed.set(true);
+
+			this.cleanup();		
+			
+			//
+			NetSystem.getInstance().removeConnection(this);
+			if ( this.handler != null )
+				this.handler.onClosed(this, reason);
+			
+			if ( LOGGER.isDebugEnabled() ) {
+				LOGGER.debug("close connection, reason:" + reason + " ," + this.toString());
+			}
+			
+			this.attachement = null; //help GC
+			
+		} else {
+		    this.cleanup();
+		}
+	}
+	
+	// 清理资源
+	private void cleanup() {
+		
+		if (readBuffer != null) {
+			recycle(readBuffer);
+			this.readBuffer = null;
+		}
+		
+		if (writeBuffer != null) {
+			recycle(writeBuffer);
+			this.writeBuffer = null;
+		}
+		
+		ByteBuffer buffer = null;
+		while ((buffer = writeQueue.poll()) != null) {
+			recycle(buffer);
+		}
+	}
+	
+	private void closeSocket() {
+		if ( socketChannel != null ) {		
+			
+			if (socketChannel instanceof SocketChannel) {
+				Socket socket = ((SocketChannel) socketChannel).socket();
+				if (socket != null) {
+					try {
+						socket.close();
+					} catch (IOException e) {
+						LOGGER.error("closeChannelError", e);
+					}
+				}
+			}			
+			
+			boolean isSocketClosed = true;
+			try {
+				processKey.cancel();
+				socketChannel.close();
+			} catch (Throwable e) {
+			}			
+			boolean closed = isSocketClosed && (!socketChannel.isOpen());
+			if (!closed) {
+				LOGGER.warn("close socket of connnection failed " + this);
+			}
+		}
+	}
 
 	@Override
 	public String toString() {
@@ -385,15 +476,8 @@ public class Connection extends ClosableConnection {
 		sbuffer.append(", startup=").append( startupTime );
 		sbuffer.append(", lastRT=").append( lastReadTime );
 		sbuffer.append(", lastWT=").append( lastWriteTime );
-		sbuffer.append(", attempts=").append( writeAttempts );	//
-		sbuffer.append(", cc=").append( netInCounter ).append("/").append( netOutCounter );	
-		
-		if ( isClosed.get() ) {
-			sbuffer.append(", isClosed=").append( isClosed );
-			sbuffer.append(", closedTime=").append( closeTime );
-			sbuffer.append(", closeReason=").append( closeReason );
-		}
-		
+		sbuffer.append(", attempts=").append( writeAttempts );	
+		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}

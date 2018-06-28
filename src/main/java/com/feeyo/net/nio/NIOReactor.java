@@ -76,7 +76,7 @@ public final class NIOReactor {
 					Selector selector = this.selector;
 					
 					// 查看有无连接就绪
-					selector.select(400L); // 500L
+					selector.select(500L); // 500L
 					
 					// 处理注册队列
 					processPendingQueue( selector );

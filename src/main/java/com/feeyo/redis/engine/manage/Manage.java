@@ -640,9 +640,7 @@ public class Manage {
 					List<String> lines = new ArrayList<String>();
 
 					long minStartupTime = -1;
-					long totalNetInCounter = 0;
 					long totalNetInBytes = 0;
-					long totalNetOutCounter = 0;
 					long totalNetOutBytes = 0;
 					
 					String poolName = new String( request.getArgs()[2] );
@@ -660,15 +658,12 @@ public class Manage {
 								StringBuffer sb = new StringBuffer();
 								sb.append("ID=").append(c.getId()).append(". ");
 								sb.append("StartupTime=").append(c.getStartupTime()).append(". ");
-								sb.append("NetInCount=").append(c.getNetInCounter()).append(". ");
 								sb.append("NetInBytes=").append(c.getNetInBytes()).append(". ");
 								sb.append("NetOutBytes=").append(c.getNetOutBytes()).append(". ");
 								lines.add( sb.toString() );
 								
 								minStartupTime = minStartupTime < 0 ? c.getStartupTime() : Math.min(minStartupTime, c.getStartupTime());
-								totalNetInCounter 	+= c.getNetInCounter();
 								totalNetInBytes 	+= c.getNetInBytes();
-								totalNetOutCounter  += c.getNetOutCounter();
 								totalNetOutBytes 	+= c.getNetOutBytes();
 							}
 						}
@@ -676,9 +671,7 @@ public class Manage {
 					
 					StringBuffer end = new StringBuffer();
 					end.append("MinStartupTime=").append(minStartupTime).append(". ");
-					end.append("TotalNetInCounter=").append(totalNetInCounter).append(". ");
 					end.append("TotalNetInBytes=").append(totalNetInBytes).append(". ");
-					end.append("totalNetOutCounter=").append(totalNetOutCounter).append(". ");
 					end.append("TotalNetOutBytes=").append(totalNetOutBytes).append(". ");
 					lines.add(end.toString());
 					

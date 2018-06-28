@@ -5,10 +5,12 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -88,6 +90,30 @@ public class ZeroCopyConnection extends ClosableConnection {
 		
 	}
 
+	@SuppressWarnings("unchecked")
+	@Override
+	public void register(Selector selector) throws IOException {
+		try {	
+			processKey = socketChannel.register(selector, SelectionKey.OP_READ, this);
+			
+			if ( LOGGER.isDebugEnabled() ) {
+				LOGGER.debug("register:" + this);
+			}
+			
+			// 已连接、默认不需要认证
+	        this.setState( Connection.STATE_CONNECTED );  
+			
+	        NetSystem.getInstance().addConnection(this);
+			if ( this.handler != null )
+				this.handler.onConnected( this );
+			
+		} finally {
+			if ( isClosed() ) {
+				clearSelectionKey();
+			}
+		}
+	}
+
 	// 异步读取,该方法在 reactor 中被调用
 	//
 	@SuppressWarnings("unchecked")
@@ -127,7 +153,6 @@ public class ZeroCopyConnection extends ClosableConnection {
 					
 					//
 					netInBytes += length;
-					netInCounter++;
 					
 
 					// 流量控制
@@ -206,7 +231,6 @@ public class ZeroCopyConnection extends ClosableConnection {
 				int tranfered = write0(position, count);
 				
 				// 
-				netOutCounter++;
 				netOutBytes += tranfered;
 				lastWriteTime = TimeUtil.currentTimeMillis();
 				
@@ -240,7 +264,6 @@ public class ZeroCopyConnection extends ClosableConnection {
 					postion += tranfered;
 					
 					// 
-					netOutCounter++;
 					netOutBytes += tranfered;
 					lastWriteTime = TimeUtil.currentTimeMillis();
 				}
@@ -286,8 +309,75 @@ public class ZeroCopyConnection extends ClosableConnection {
 		// ignore
 	}
 	
+	
+	private void clearSelectionKey() {
+		try {
+			SelectionKey key = this.processKey;
+			if (key != null && key.isValid()) {
+				key.attach(null);
+				key.cancel();
+			}
+		} catch (Exception e) {
+			LOGGER.warn("clear selector keys err:" + e);
+		}
+	}
+	
+	private void closeSocket() {
+		if ( socketChannel != null ) {		
+			
+			if (socketChannel instanceof SocketChannel) {
+				Socket socket = ((SocketChannel) socketChannel).socket();
+				if (socket != null) {
+					try {
+						socket.close();
+					} catch (IOException e) {
+						LOGGER.error("closeChannelError", e);
+					}
+				}
+			}			
+			
+			boolean isSocketClosed = true;
+			try {
+				processKey.cancel();
+				socketChannel.close();
+			} catch (Throwable e) {
+			}			
+			boolean closed = isSocketClosed && (!socketChannel.isOpen());
+			if (!closed) {
+				LOGGER.warn("close socket of connnection failed " + this);
+			}
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
 	@Override
-	protected void cleanup() {
+	public void close(String reason) {
+		//
+		if ( !isClosed.get() ) {
+			
+			closeSocket();
+			isClosed.set(true);
+		
+			//
+			this.cleanup();		
+			
+			//
+			NetSystem.getInstance().removeConnection(this);
+			if ( this.handler != null )
+				this.handler.onClosed(this, reason);
+			
+			if ( LOGGER.isDebugEnabled() ) {
+				LOGGER.debug("close connection, reason:" + reason + " ," + this.toString());
+			}
+			
+			this.attachement = null; //help GC
+			
+		} else {
+		    this.cleanup();
+		}
+	}
+	
+	private void cleanup() {
 		try {
 			unmap(mappedByteBuffer);			
 			randomAccessFile.close();
@@ -366,15 +456,8 @@ public class ZeroCopyConnection extends ClosableConnection {
 		sbuffer.append(", startup=").append( startupTime );
 		sbuffer.append(", lastRT=").append( lastReadTime );
 		sbuffer.append(", lastWT=").append( lastWriteTime );
-		sbuffer.append(", attempts=").append( writeAttempts );	//
-		sbuffer.append(", cc=").append( netInCounter ).append("/").append( netOutCounter );	
-		
-		if ( isClosed.get() ) {
-			sbuffer.append(", isClosed=").append( isClosed );
-			sbuffer.append(", closedTime=").append( closeTime );
-			sbuffer.append(", closeReason=").append( closeReason );
-		}
-		
+		sbuffer.append(", attempts=").append( writeAttempts );	
+		sbuffer.append(", isClosed=").append( isClosed );
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}

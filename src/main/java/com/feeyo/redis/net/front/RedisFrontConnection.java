@@ -23,6 +23,9 @@ public class RedisFrontConnection extends FrontConnection {
 	
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
+	//
+	private static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, the request is cleaned up. \r\n".getBytes();
+	
 	// 用户配置
 	private UserCfg userCfg;
 	
@@ -133,14 +136,9 @@ public class RedisFrontConnection extends FrontConnection {
 		sbuffer.append(", startup=").append( startupTime );
 		sbuffer.append(", lastRT=").append(  lastReadTime );
 		sbuffer.append(", lastWT=").append( lastWriteTime );
-		sbuffer.append(", attempts=").append( writeAttempts );	//
-		
-		if ( isClosed.get() ) {
-			sbuffer.append(", isClosed=").append( isClosed.get() );
-			sbuffer.append(", closeTime=").append(  closeTime );
-			sbuffer.append(", closeReason=").append( closeReason );
-		}
-		
+		sbuffer.append(", attempts=").append( writeAttempts );	
+		sbuffer.append(", isClosed=").append( isClosed.get() );
+
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}
