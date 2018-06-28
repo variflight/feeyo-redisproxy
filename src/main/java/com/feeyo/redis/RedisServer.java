@@ -6,6 +6,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -48,6 +51,8 @@ public class RedisServer {
 
 		try {
 			
+			final Logger LOGGER = LoggerFactory.getLogger( "RedisServer" );
+			
 			// 引擎初始化
 			RedisEngineCtx.INSTANCE().init();
 			
@@ -81,10 +86,14 @@ public class RedisServer {
 					NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
 						@Override
 						public void run() {
-							
+
 							Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
-							for(AbstractPool pool : pools.values() ) {
-								pool.availableCheck();
+							for (AbstractPool pool : pools.values()) {
+								try {
+									pool.availableCheck();
+								} catch (Throwable e) {
+									LOGGER.error("availableCheck err, poolId=" + pool.getId(), e);
+								}
 							}
 
 						}
@@ -96,7 +105,7 @@ public class RedisServer {
 			/*
 			 * 连接池心跳 检测
 			 * 1、IDLE 连接的有效性检测，无效 close
-			 * 2、连接池过大、过小的动态调整
+			 * 2、连接池过大、过小的动态调整f
 			 */
 			heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
 				static final long TIMEOUT = 2 * 60 * 1000L;
