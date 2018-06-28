@@ -297,17 +297,14 @@ public class Connection extends ClosableConnection {
 				
 				// 流量控制
 				//
-				if ( isNested ) {
-					
-					if ( parent.getHandler().handleNetFlow(parent, length)  ) {
+				if ( isChild ) {
+					if ( parent.getHandler() != null && parent.getHandler().handleNetFlow(parent, length)  ) {
 						parent.flowClean();
 						return;
 					}	
 					
 				} else {
-					
-					//
-					if ( handler.handleNetFlow(this, length) ) {
+					if ( this.handler != null && this.handler.handleNetFlow(this, length) ) {
 						this.flowClean();
 						return;
 					}
@@ -346,10 +343,10 @@ public class Connection extends ClosableConnection {
 				byte[] data = new byte[ dataLength ];
 				readBuffer.get(data, 0, dataLength);
 
-				if ( isNested )
-					handler.handleReadEvent(parent, data);
+				if ( isChild )
+					parent.getHandler().handleReadEvent(parent, data);
 				else
-					handler.handleReadEvent(this, data);
+					this.handler.handleReadEvent(this, data);
 				
 				
 				// 存在扩大后的 byte buffer

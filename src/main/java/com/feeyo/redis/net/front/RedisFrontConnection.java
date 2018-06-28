@@ -109,14 +109,14 @@ public class RedisFrontConnection extends FrontConnection {
 		}
 		
 		sbuffer.append(", readLock=").append(  _readLock.get() );
-		sbuffer.append(", startup=").append( TimeUtil.formatTimestamp( startupTime ) );
-		sbuffer.append(", lastRT=").append( TimeUtil.formatTimestamp( lastReadTime ) );
-		sbuffer.append(", lastWT=").append( TimeUtil.formatTimestamp( lastWriteTime ) );
+		sbuffer.append(", startup=").append( startupTime );
+		sbuffer.append(", lastRT=").append(  lastReadTime );
+		sbuffer.append(", lastWT=").append( lastWriteTime );
 		sbuffer.append(", attempts=").append( writeAttempts );	//
 		
 		if ( isClosed.get() ) {
 			sbuffer.append(", isClosed=").append( isClosed.get() );
-			sbuffer.append(", closeTime=").append( TimeUtil.formatTimestamp( closeTime ) );
+			sbuffer.append(", closeTime=").append(  closeTime );
 			sbuffer.append(", closeReason=").append( closeReason );
 		}
 		

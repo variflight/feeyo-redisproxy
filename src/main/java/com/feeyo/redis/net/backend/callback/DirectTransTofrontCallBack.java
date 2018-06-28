@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.redis.RedisResponse;
-import com.feeyo.net.codec.redis.RedisResponseDecoder;
+import com.feeyo.net.codec.redis.RedisResponseDecoderV2;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
@@ -24,7 +24,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 
 	private static Logger LOGGER = LoggerFactory.getLogger( DirectTransTofrontCallBack.class );
 	
-	protected RedisResponseDecoder decoder = new RedisResponseDecoder();
+	protected RedisResponseDecoderV2 decoder = new RedisResponseDecoderV2();
 	
 	// 写入到前端
 	protected int writeToFront(RedisFrontConnection frontCon, RedisResponse response, int size) throws IOException {	

@@ -39,32 +39,5 @@ public class TimeUtil {
 		CURRENT_TIME = System.currentTimeMillis();
 		CURRENT_TIME_SECOND_INDEX = (int) ((CURRENT_TIME / 1000) % 60);
 	}
-
-	
-	public static String formatTimestamp(long mills) {
-		Calendar cal = Calendar.getInstance();
-		cal.setTimeInMillis( mills );
-
-		int hour = cal.get( Calendar.HOUR_OF_DAY );
-		int minute = cal.get( Calendar.MINUTE );
-		int second = cal.get( Calendar.SECOND );
-		int millsecond = cal.get( Calendar.MILLISECOND );
-		
-		StringBuffer sb = new StringBuffer();
-		sb.append( hour ).append(":");
-		
-		if ( minute >= 10)	
-			sb.append( minute).append(":");
-		else 
-			sb.append("0").append( minute).append(":");
-		
-		if ( second >= 10 ) 
-			sb.append( second );
-		else
-			sb.append("0").append( second );
-		sb.append(".").append( millsecond );
-		
-		return sb.toString();
-	}
 	
 }
