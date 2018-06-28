@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.redis.RedisPipelineResponse;
+import com.feeyo.net.codec.redis.RedisPipelineResponseDecoder;
 import com.feeyo.net.codec.redis.RedisPipelineResponseDecoderV2;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
@@ -64,7 +65,7 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
     
     private class SegmentCallBack extends DirectTransTofrontCallBack {
 
-        private RedisPipelineResponseDecoderV2 decoder = new RedisPipelineResponseDecoderV2();
+        private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
 
         @Override
         public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {
