@@ -3,7 +3,7 @@ package com.feeyo.net.codec.redis;
 import com.feeyo.net.codec.Decoder;
 import com.feeyo.net.codec.UnknowProtocolException;
 import com.feeyo.net.codec.util.CompositeByteArray;
-import com.feeyo.net.codec.util.CompositeByteArray.ByteArray;
+import com.feeyo.net.codec.util.CompositeByteArray.ByteArrayChunk;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -138,7 +138,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
         long size = 0;
         boolean isNeg = false;
 
-        ByteArray c = compositeArray.findByteArray( readOffset );
+        ByteArrayChunk c = compositeArray.findChunk( readOffset );
         byte b = c.get(readOffset);
         while (b != '\r') {
             

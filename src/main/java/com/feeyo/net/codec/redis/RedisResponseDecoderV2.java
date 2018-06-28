@@ -2,7 +2,7 @@ package com.feeyo.net.codec.redis;
 
 import com.feeyo.net.codec.Decoder;
 import com.feeyo.net.codec.util.CompositeByteArray;
-import com.feeyo.net.codec.util.CompositeByteArray.ByteArray;
+import com.feeyo.net.codec.util.CompositeByteArray.ByteArrayChunk;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +22,8 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
     // 用于标记读取的位置
     private int readOffset;
 
-    private ByteArray startByteArray;			// 当需要返回 response 时此时的 readOffset 可能会高于offset
-    private ByteArray readByteArray;			// 标记当前操作的 ByteArray, 一般是readOffset对应的 ByteArray
+    private ByteArrayChunk startChunk;			// 当需要返回 response 时此时的 readOffset 可能会高于offset
+    private ByteArrayChunk readChunk;			// 标记当前操作的 ByteArrayChunk, 一般是readOffset对应的 ByteArrayChunk
     
 
     @Override
@@ -45,8 +45,8 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 }
 
                 // 减少findChunk 的调用次数
-                startByteArray = readByteArray = compositeArray.findByteArray(readOffset);
-                byte type = readByteArray.get(readOffset++);
+                startChunk = readChunk = compositeArray.findChunk(readOffset);
+                byte type = readChunk.get(readOffset++);
                 switch (type) {
                     case '*':   // 多条批量回复(multi bulk reply)的第一个字节是 "*", 后面紧跟着的长度表示多条回复的数量
                     case '+':   // 状态回复(status reply)的第一个字节是 "+"
@@ -95,7 +95,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             // 长度
             len = end - start;
             updateStartByteChunk(start);
-            return new RedisResponse(type, compositeArray.getData(startByteArray, start, len));
+            return new RedisResponse(type, compositeArray.getData(startChunk, start, len));
         } else if (type == '$') {
             offset = readOffset;
 
@@ -106,7 +106,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 end = readOffset;
                 len = end - start;
                 updateStartByteChunk(start);
-                return new RedisResponse(type, compositeArray.getData(startByteArray, start, len));  // 此处不减
+                return new RedisResponse(type, compositeArray.getData(startChunk, start, len));  // 此处不减
             }
 
             end = readOffset + packetSize + 2;    // offset + data + \r\n
@@ -120,7 +120,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             start = offset - 1;
             len = end - start;
             updateStartByteChunk(start);
-            return new RedisResponse(type, compositeArray.getData(startByteArray, start, len));
+            return new RedisResponse(type, compositeArray.getData(startChunk, start, len));
         } else if (type == '*') {
             offset = readOffset;
 
@@ -131,7 +131,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                 end = readOffset;
                 len = end - start;
                 updateStartByteChunk(start);
-                return new RedisResponse(type, compositeArray.getData(startByteArray, start, len));  // 此处不减
+                return new RedisResponse(type, compositeArray.getData(startChunk, start, len));  // 此处不减
             }
 
             if (packetSize > compositeArray.remaining(readOffset)) {
@@ -145,7 +145,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             end = readOffset;
             len = end - start;
             updateStartByteChunk(start);
-            response.set(0, new RedisResponse(type, compositeArray.getData(startByteArray, start, len)));
+            response.set(0, new RedisResponse(type, compositeArray.getData(startChunk, start, len)));
 
             byte nType;
             RedisResponse res;
@@ -154,7 +154,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
                     throw new IndexOutOfBoundsException("Wait for more data.");
                 }
 
-                nType = readByteArray.get(readOffset++);
+                nType = readChunk.get(readOffset++);
                 updateReadOffsetAndReadByteChunk(readOffset);
                 res = parseResponse(nType);
                 response.set(i, res);
@@ -173,7 +173,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        ByteArray c = readByteArray;
+        ByteArrayChunk c = readChunk;
         byte b = c.get(readOffset);
         outer: while (c != null) {
 
@@ -224,7 +224,7 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
             throw new IndexOutOfBoundsException("Not enough data.");
         }
 
-        ByteArray c = readByteArray;
+        ByteArrayChunk c = readChunk;
         outer: while (c != null) {
 
             while (c.isInBoundary(offset)) {
@@ -253,24 +253,24 @@ public class RedisResponseDecoderV2 implements Decoder<List<RedisResponse>> {
         
     	readOffset = newReadOffset;
 
-        while (readByteArray != null) {
+        while (readChunk != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (readByteArray.isInBoundary(readOffset) || readOffset == compositeArray.getByteCount()) {
+            if (readChunk.isInBoundary(readOffset) || readOffset == compositeArray.getByteCount()) {
                 return;
             }
-            readByteArray = readByteArray.getNext();
+            readChunk = readChunk.getNext();
         }
     }
 
     // 当需要截取子数组时需要确定起始位置的 ByteChunk, 减少 findChunk 的调用次数
     private void updateStartByteChunk(int reachOffset) {
     	
-        while (startByteArray != null) {
+        while (startChunk != null) {
             // 当offset达到最大长度时也不继续,防止空指针异常
-            if (startByteArray.isInBoundary(reachOffset) || reachOffset == compositeArray.getByteCount()) {
+            if (startChunk.isInBoundary(reachOffset) || reachOffset == compositeArray.getByteCount()) {
                 return;
             }
-            startByteArray = startByteArray.getNext();
+            startChunk = startChunk.getNext();
         }
     }
 
