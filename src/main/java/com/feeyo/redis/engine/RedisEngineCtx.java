@@ -157,10 +157,10 @@ public class RedisEngineCtx {
         int frontIdleTimeout = frontIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
         int backendIdleTimeout = backendIdleTimeoutString == null ? 30 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
         
-        int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 1048576 : Integer.parseInt( frontSocketSoRcvbufString ); 
+        int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 2097152 : Integer.parseInt( frontSocketSoRcvbufString ); 
         int frontSocketSoSndbuf = frontSocketSoSndbufString == null ? 4194304 : Integer.parseInt( frontSocketSoSndbufString ); 
         int backSocketSoRcvbuf = backSocketSoRcvbufString == null ? 4194304 : Integer.parseInt( backSocketSoRcvbufString ); 
-        int backSocketSoSndbuf = backSocketSoSndbufString == null ? 1048576 : Integer.parseInt( backSocketSoSndbufString ); 
+        int backSocketSoSndbuf = backSocketSoSndbufString == null ? 4194304 : Integer.parseInt( backSocketSoSndbufString ); 
         // code safe
  		if ( frontSocketSoRcvbuf < 524288 ) frontSocketSoRcvbuf = 524288;
  		if ( frontSocketSoSndbuf < 524288 ) frontSocketSoSndbuf = 524288;
