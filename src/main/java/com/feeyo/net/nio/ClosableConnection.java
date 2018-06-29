@@ -229,7 +229,7 @@ public abstract class ClosableConnection {
 	// 
 	public abstract void close(String reason);
 	
-	// Control Flow Guard (CFG) 
+	// Network Flow Guard (NFG) 
 	protected boolean flowGuard(long length) {
 		return false;
 		// ignore
