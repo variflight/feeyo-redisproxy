@@ -36,18 +36,20 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestSize(firstRequest.getSize());
 		
 		// 旁路排队服务
-		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) ) {
-			
-			String host = node.getPhysicalNode().getHost();
-			int port = node.getPhysicalNode().getPort();
-			
-			BypassService.INSTANCE().queueUp( firstRequest, frontCon, host, port );
-			
-		}  else {
-			//
-			writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
-		}
+//		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) ) {
+//			
+//			String host = node.getPhysicalNode().getHost();
+//			int port = node.getPhysicalNode().getPort();
+//			
+//			BypassService.INSTANCE().queueUp( firstRequest, frontCon, host, port );
+//			
+//		}  else {
+//			//
+//			writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
+//		}
 		
+		writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
+//		
 	}
 	
 	public void writeToCustomerBackend(PhysicalNode physicalNode, ByteBuffer buffer, AbstractBackendCallback callBack) throws IOException {
