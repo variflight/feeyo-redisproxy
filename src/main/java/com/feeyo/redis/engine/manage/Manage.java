@@ -29,9 +29,9 @@ import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.nio.ClosableConnection;
-import com.feeyo.net.nio.NetFlowController;
-import com.feeyo.net.nio.NetFlowController.Ctrl;
+import com.feeyo.net.nio.NetFlowGuard;
 import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.NetFlowGuard.Guard;
 import com.feeyo.net.nio.buffer.BufferPool;
 import com.feeyo.net.nio.buffer.bucket.AbstractBucket;
 import com.feeyo.net.nio.buffer.bucket.BucketBufferPool;
@@ -1097,16 +1097,16 @@ public class Manage {
 					titleLine.append("HISTOGRAM");
 					lines.add(titleLine.toString());
 					
-					NetFlowController nfc = RedisEngineCtx.INSTANCE().getNetflowController();
-					Map<String, Ctrl> map = nfc.getCtrlMap();
-					for (Entry<String, Ctrl> entry : map.entrySet()) {
+					NetFlowGuard nfg = RedisEngineCtx.INSTANCE().getNetflowGuard();
+					Map<String, Guard> map = nfg.getGuardMap();
+					for (Entry<String, Guard> entry : map.entrySet()) {
 						
-						Ctrl ctrl = entry.getValue();
+						Guard guard = entry.getValue();
 						StringBuffer line = new StringBuffer();
 						line.append(entry.getKey()).append(", ");
-						line.append(ctrl.getPerSecondMaxSize()).append(", ");
-						line.append(ctrl.getRequestMaxSize()).append(", ");
-						line.append(ctrl.getHistogram());
+						line.append(guard.getPerSecondMaxSize()).append(", ");
+						line.append(guard.getRequestMaxSize()).append(", ");
+						line.append(guard.getHistogram());
 						
 						lines.add(line.toString());
 					}

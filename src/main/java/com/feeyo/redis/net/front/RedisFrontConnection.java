@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.net.nio.NetFlowController;
+import com.feeyo.net.nio.NetFlowGuard;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.UserCfg;
@@ -34,7 +34,7 @@ public class RedisFrontConnection extends FrontConnection {
 	private RedisFrontSession session;
 
 	//
-	protected NetFlowController netflowController;
+	protected NetFlowGuard netflowGuard;
 	
 	private AtomicBoolean _readLock = new AtomicBoolean(false);
 	
@@ -82,12 +82,12 @@ public class RedisFrontConnection extends FrontConnection {
 		this.userCfg = userCfg;
 	}
 	
-	public void setNetflowController(NetFlowController nfc) {
-		this.netflowController = nfc;
+	public void setNetFlowGuard(NetFlowGuard netflowGuard) {
+		this.netflowGuard = netflowGuard;
 	}
 	
-	public NetFlowController getNetflowController() {
-		return netflowController;
+	public NetFlowGuard getNetFlowGuard() {
+		return netflowGuard;
 	}
 	
 
@@ -105,7 +105,7 @@ public class RedisFrontConnection extends FrontConnection {
 	@Override
 	protected boolean flowGuard(long length) {
 		
-		if ( netflowController != null && netflowController.consumeBytes(this.getPassword(), length) ) {
+		if ( netflowGuard != null && netflowGuard.consumeBytes(this.getPassword(), length) ) {
 			
 			LOGGER.warn("##flow clean##, front: {} ", this);
 			

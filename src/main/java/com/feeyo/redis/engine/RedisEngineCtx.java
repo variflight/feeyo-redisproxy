@@ -15,7 +15,7 @@ import com.feeyo.net.nio.NIOAcceptor;
 import com.feeyo.net.nio.NIOConnector;
 import com.feeyo.net.nio.NIOReactor;
 import com.feeyo.net.nio.NIOReactorPool;
-import com.feeyo.net.nio.NetFlowController;
+import com.feeyo.net.nio.NetFlowGuard;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.SystemConfig;
 import com.feeyo.net.nio.buffer.BufferPool;
@@ -44,7 +44,7 @@ public class RedisEngineCtx {
 	private VirtualMemoryService virtualMemoryService;
 	private BufferPool bufferPool;	
 	
-	private volatile NetFlowController netflowController;
+	private volatile NetFlowGuard netflowGuard;
 	
 	// 
 	private volatile Map<String, NIOReactor> reactorMap = new HashMap<String, NIOReactor>();
@@ -116,8 +116,8 @@ public class RedisEngineCtx {
         
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
         
-        this.netflowController = new NetFlowController();
-        netflowController.setCfgs(netflowMap);
+        this.netflowGuard = new NetFlowGuard();
+        this.netflowGuard.setCfgs( netflowMap );
         
 		int[] increments = null;
 		if ( incrementString == null ) {
@@ -157,10 +157,10 @@ public class RedisEngineCtx {
         int frontIdleTimeout = frontIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
         int backendIdleTimeout = backendIdleTimeoutString == null ? 30 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
         
-        int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 1048576 : Integer.parseInt( frontSocketSoRcvbufString ); 
+        int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 2097152 : Integer.parseInt( frontSocketSoRcvbufString ); 
         int frontSocketSoSndbuf = frontSocketSoSndbufString == null ? 4194304 : Integer.parseInt( frontSocketSoSndbufString ); 
         int backSocketSoRcvbuf = backSocketSoRcvbufString == null ? 4194304 : Integer.parseInt( backSocketSoRcvbufString ); 
-        int backSocketSoSndbuf = backSocketSoSndbufString == null ? 1048576 : Integer.parseInt( backSocketSoSndbufString ); 
+        int backSocketSoSndbuf = backSocketSoSndbufString == null ? 4194304 : Integer.parseInt( backSocketSoSndbufString ); 
         // code safe
  		if ( frontSocketSoRcvbuf < 524288 ) frontSocketSoRcvbuf = 524288;
  		if ( frontSocketSoSndbuf < 524288 ) frontSocketSoSndbuf = 524288;
@@ -378,8 +378,8 @@ public class RedisEngineCtx {
 			this.netflowMap = newNetflowMap;	
 			
 			// 更新 netflow
-			if ( this.netflowController != null ) {
-				this.netflowController.setCfgs( this.netflowMap );
+			if ( this.netflowGuard != null ) {
+				this.netflowGuard.setCfgs( this.netflowMap );
 			}
 			
 		} catch (Exception e) {
@@ -598,8 +598,8 @@ public class RedisEngineCtx {
 		return virtualMemoryService;
 	}
 
-	public NetFlowController getNetflowController() {
-		return netflowController;
+	public NetFlowGuard getNetflowGuard() {
+		return netflowGuard;
 	}
 
 }
