@@ -248,10 +248,10 @@ public class Manage {
 						StringBuffer sBuffer = new StringBuffer();
 						sBuffer.append("total=").append( result.totalCount ).append(", ");
 						sBuffer.append("slow=").append( result.slowCount ).append(", ");
-						sBuffer.append("waitSlow=").append( result.waitSlowCount ).append(", ");
 						sBuffer.append("max=").append( result.maxCount ).append(", ");
 						sBuffer.append("min=").append( result.minCount ).append(", ");
 						sBuffer.append("avg=").append( result.avgCount ).append(", ");
+						sBuffer.append("waitSlow=").append( result.waitSlowCount ).append(", ");
 						sBuffer.append("procTime=").append( result.procTime ).append(", ");
 						sBuffer.append("waitTime=").append( result.waitTime ).append(", ");
 						sBuffer.append("created=").append( result.created );
@@ -579,14 +579,12 @@ public class Manage {
 				// SHOW BIGKEY_COUNT
 				} else if ( arg2.equalsIgnoreCase("BIGKEY_COUNT") ) {
 					List<String> lines = new ArrayList<String>();	
-					StringBuffer title = new StringBuffer();
-					title.append("BIGKEY_COUNT").append("    ").append("BYPASS_BIGKEY_COUNT");
-					lines.add(title.toString());
 					
 					BigKeyCollector bkc = StatUtil.getBigKeyCollector();
-					StringBuffer body = new StringBuffer();
-					body.append(bkc.getBigKeyCount()).append("      ").append(bkc.getBypassBigKeyCount());
-					lines.add(body.toString());
+					StringBuffer sBuffer = new StringBuffer();
+					sBuffer.append("total=").append( bkc.getBigKeyCount() ).append(", ");
+					sBuffer.append("bypass=").append( bkc.getBypassBigKeyCount() );
+					lines.add(sBuffer.toString());
 					
 					return encode( lines );
 					

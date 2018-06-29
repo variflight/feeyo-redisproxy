@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.redis.RedisPipelineResponse;
-import com.feeyo.net.codec.redis.RedisPipelineResponseDecoder;
 import com.feeyo.net.codec.redis.RedisPipelineResponseDecoderV2;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
@@ -16,8 +15,8 @@ import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.AbstractPipelineCommandHandler;
-import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
+import com.feeyo.redis.net.front.route.RouteResult;
 
 /**
  * handler for mget and mset command in clust pool
@@ -65,7 +64,7 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
     
     private class SegmentCallBack extends DirectTransTofrontCallBack {
 
-        private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
+        private RedisPipelineResponseDecoderV2 decoder = new RedisPipelineResponseDecoderV2();
 
         @Override
         public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {

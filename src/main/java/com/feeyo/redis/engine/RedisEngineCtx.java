@@ -93,10 +93,14 @@ public class RedisEngineCtx {
         String minChunkSizeString = this.serverMap.get("minChunkSize"); 
         String incrementString = this.serverMap.get("increment"); 
         String maxChunkSizeString = this.serverMap.get("maxChunkSize"); 
-        String bufferLocalPercentString = this.serverMap.get("bufferLocalPercent"); 
         
         String bossSizeString = this.serverMap.get("bossSize");
         String timerSizeString = this.serverMap.get("timerSize"); 
+        
+        String frontSocketSoRcvbufString = this.serverMap.get("frontSocketSoRcvbuf"); 
+        String frontSocketSoSndbufString = this.serverMap.get("frontSocketSoSndbuf"); 
+        String backSocketSoRcvbufString = this.serverMap.get("backSocketSoRcvbuf"); 
+        String backSocketSoSndbufString = this.serverMap.get("backSocketSoSndbuf"); 
        
         int port = portString == null ? 8066: Integer.parseInt( portString );
         
@@ -111,7 +115,6 @@ public class RedisEngineCtx {
         int decomposeBufferSize = decomposeBufferSizeString == null ? 64 * 1024 : Integer.parseInt( decomposeBufferSizeString ); 
         
         int minChunkSize = minChunkSizeString == null ? 0 : Integer.parseInt( minChunkSizeString ); 
-        //  int increment = incrementString == null ? 1024 : Integer.parseInt( incrementString ); 
         
         this.netflowController = new NetFlowController();
         netflowController.setCfgs(netflowMap);
@@ -133,15 +136,13 @@ public class RedisEngineCtx {
 		}
         
         int maxChunkSize = maxChunkSizeString == null ? 64 * 1024 : Integer.parseInt( maxChunkSizeString ); 
-        int bufferLocalPercent = bufferLocalPercentString == null ? 100 : Integer.parseInt( bufferLocalPercentString ); 
-        int threadLocalPercent = bufferLocalPercent / reactorSize;
         
         int bossSize = bossSizeString == null ? 10 : Integer.parseInt( bossSizeString ); 
         int timerSize = timerSizeString == null ? 6 : Integer.parseInt( timerSizeString ); 
 
         //PageBufferPool BucketBufferPool
         this.bufferPool = new BucketBufferPool(minBufferSize, maxBufferSize, decomposeBufferSize,
-        		minChunkSize, increments, maxChunkSize, threadLocalPercent);   
+        		minChunkSize, increments, maxChunkSize);   
         
 //        this.bufferPool = new PageBufferPool(minBufferSize, maxBufferSize, decomposeBufferSize,
 //        		minChunkSize, increments, maxChunkSize);
@@ -156,7 +157,17 @@ public class RedisEngineCtx {
         int frontIdleTimeout = frontIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
         int backendIdleTimeout = backendIdleTimeoutString == null ? 30 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
         
-        SystemConfig systemConfig = new SystemConfig();
+        int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 1048576 : Integer.parseInt( frontSocketSoRcvbufString ); 
+        int frontSocketSoSndbuf = frontSocketSoSndbufString == null ? 4194304 : Integer.parseInt( frontSocketSoSndbufString ); 
+        int backSocketSoRcvbuf = backSocketSoRcvbufString == null ? 4194304 : Integer.parseInt( backSocketSoRcvbufString ); 
+        int backSocketSoSndbuf = backSocketSoSndbufString == null ? 1048576 : Integer.parseInt( backSocketSoSndbufString ); 
+        // code safe
+ 		if ( frontSocketSoRcvbuf < 524288 ) frontSocketSoRcvbuf = 524288;
+ 		if ( frontSocketSoSndbuf < 524288 ) frontSocketSoSndbuf = 524288;
+ 		if ( backSocketSoRcvbuf < 524288 ) backSocketSoRcvbuf = 524288;
+ 		if ( backSocketSoSndbuf < 524288 ) backSocketSoSndbuf = 524288;
+        
+        SystemConfig systemConfig = new SystemConfig(frontSocketSoRcvbuf, frontSocketSoSndbuf, backSocketSoRcvbuf, backSocketSoSndbuf);
         systemConfig.setFrontIdleTimeout(  frontIdleTimeout );
         systemConfig.setBackendIdleTimeout( backendIdleTimeout );
         NetSystem.getInstance().setNetConfig( systemConfig );
@@ -305,7 +316,21 @@ public class RedisEngineCtx {
 		        int frontIdleTimeout = frontIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
 		        int backendIdleTimeout = backendIdleTimeoutString == null ? 30 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
 		        
-		        SystemConfig systemConfig = new SystemConfig();
+		        String frontSocketSoRcvbufString = this.serverMap.get("frontSocketSoRcvbuf"); 
+		        String frontSocketSoSndbufString = this.serverMap.get("frontSocketSoSndbuf"); 
+		        String backSocketSoRcvbufString = this.serverMap.get("backSocketSoRcvbuf"); 
+		        String backSocketSoSndbufString = this.serverMap.get("backSocketSoSndbuf"); 
+		        int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 1048576 : Integer.parseInt( frontSocketSoRcvbufString ); 
+		        int frontSocketSoSndbuf = frontSocketSoSndbufString == null ? 4194304 : Integer.parseInt( frontSocketSoSndbufString ); 
+		        int backSocketSoRcvbuf = backSocketSoRcvbufString == null ? 4194304 : Integer.parseInt( backSocketSoRcvbufString ); 
+		        int backSocketSoSndbuf = backSocketSoSndbufString == null ? 1048576 : Integer.parseInt( backSocketSoSndbufString ); 
+		        // code safe
+		 		if ( frontSocketSoRcvbuf < 524288 ) frontSocketSoRcvbuf = 524288;
+		 		if ( frontSocketSoSndbuf < 524288 ) frontSocketSoSndbuf = 524288;
+		 		if ( backSocketSoRcvbuf < 524288 ) backSocketSoRcvbuf = 524288;
+		 		if ( backSocketSoSndbuf < 524288 ) backSocketSoSndbuf = 524288;
+		        
+		        SystemConfig systemConfig = new SystemConfig(frontSocketSoRcvbuf, frontSocketSoSndbuf, backSocketSoRcvbuf, backSocketSoSndbuf);
 		        systemConfig.setFrontIdleTimeout(  frontIdleTimeout );
 		        systemConfig.setBackendIdleTimeout( backendIdleTimeout );
 		        NetSystem.getInstance().setNetConfig( systemConfig );
@@ -413,8 +438,22 @@ public class RedisEngineCtx {
 			String backendIdleTimeoutString = this.serverMap.get("backendIdleTimeout");
 			int frontIdleTimeout = frontIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
 			int backendIdleTimeout = backendIdleTimeoutString == null ? 30 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
+			
+			String frontSocketSoRcvbufString = this.serverMap.get("frontSocketSoRcvbuf");
+			String frontSocketSoSndbufString = this.serverMap.get("frontSocketSoSndbuf");
+			String backSocketSoRcvbufString = this.serverMap.get("backSocketSoRcvbuf");
+			String backSocketSoSndbufString = this.serverMap.get("backSocketSoSndbuf");
+			int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 1048576 : Integer.parseInt(frontSocketSoRcvbufString);
+			int frontSocketSoSndbuf = frontSocketSoSndbufString == null ? 4194304 : Integer.parseInt(frontSocketSoSndbufString);
+			int backSocketSoRcvbuf = backSocketSoRcvbufString == null ? 4194304 : Integer.parseInt(backSocketSoRcvbufString);
+			int backSocketSoSndbuf = backSocketSoSndbufString == null ? 1048576 : Integer.parseInt(backSocketSoSndbufString);
+			// code safe
+			if (frontSocketSoRcvbuf < 524288) frontSocketSoRcvbuf = 524288;
+			if (frontSocketSoSndbuf < 524288) frontSocketSoSndbuf = 524288;
+			if (backSocketSoRcvbuf < 524288) backSocketSoRcvbuf = 524288;
+			if (backSocketSoSndbuf < 524288) backSocketSoSndbuf = 524288;
 
-			SystemConfig systemConfig = new SystemConfig();
+			SystemConfig systemConfig = new SystemConfig(frontSocketSoRcvbuf, frontSocketSoSndbuf, backSocketSoRcvbuf, backSocketSoSndbuf);
 			systemConfig.setFrontIdleTimeout(  frontIdleTimeout );
 			systemConfig.setBackendIdleTimeout( backendIdleTimeout );
 			NetSystem.getInstance().setNetConfig( systemConfig );

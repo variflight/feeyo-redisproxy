@@ -7,18 +7,17 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.net.codec.redis.RedisPipelineResponse;
+import com.feeyo.net.codec.redis.RedisPipelineResponseDecoderV2;
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisRequestType;
-import com.feeyo.net.codec.redis.RedisPipelineResponse;
-import com.feeyo.net.codec.redis.RedisPipelineResponseDecoder;
-import com.feeyo.net.codec.redis.RedisPipelineResponseDecoderV2;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
+import com.feeyo.redis.net.front.route.RouteResult;
 
 public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	
@@ -51,7 +50,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	// 
 	private class PipelineDirectTransTofrontCallBack extends DirectTransTofrontCallBack {
 
-		private RedisPipelineResponseDecoder decoder = new RedisPipelineResponseDecoder();
+		private RedisPipelineResponseDecoderV2 decoder = new RedisPipelineResponseDecoderV2();
 		
 		@Override
 		public void handleResponse(BackendConnection backendCon, byte[] byteBuff) throws IOException {

@@ -20,12 +20,12 @@ public class HttpConnectionTest {
 		
 		
 		BufferPool bufferPool = new BucketBufferPool(1024 * 1024 * 40,  1024 * 1024 * 80, 1024 * 16,
-				1024, new int[]{1024}, 1024 * 32, 3);   
+				1024, new int[]{1024}, 1024 * 32);   
        
         
         new NetSystem(bufferPool, ExecutorUtil.create("BusinessExecutor-", 2), ExecutorUtil.create("TimerExecutor-", 2));
         
-        SystemConfig systemConfig = new SystemConfig();
+		SystemConfig systemConfig = new SystemConfig(1048576, 4194304, 4194304, 1048576);
         NetSystem.getInstance().setNetConfig( systemConfig );
 		
 		String name = "protobufConn";

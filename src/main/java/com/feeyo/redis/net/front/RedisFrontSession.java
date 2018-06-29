@@ -16,7 +16,7 @@ import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.net.front.handler.KafkaCommandHandler;
 import com.feeyo.net.codec.UnknowProtocolException;
 import com.feeyo.net.codec.redis.RedisRequest;
-import com.feeyo.net.codec.redis.RedisRequestDecoder;
+import com.feeyo.net.codec.redis.RedisRequestDecoderV2;
 import com.feeyo.net.codec.redis.RedisRequestPolicy;
 import com.feeyo.net.codec.redis.RedisRequestType;
 import com.feeyo.net.nio.NetSystem;
@@ -70,7 +70,7 @@ public class RedisFrontSession {
 	private long requestTimeMills; 
 	
     // 解析器 
-	private RedisRequestDecoder requestDecoder = new RedisRequestDecoder();
+	private RedisRequestDecoderV2 requestDecoder = new RedisRequestDecoderV2();
 	
 	private AbstractCommandHandler defaultCommandHandler;
 	private AbstractCommandHandler segmentCommandHandler;
