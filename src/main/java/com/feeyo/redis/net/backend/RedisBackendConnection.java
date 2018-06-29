@@ -143,7 +143,7 @@ public class RedisBackendConnection extends BackendConnection {
 		if (attachement != null && (attachement instanceof RedisFrontConnection)) {
 
 			RedisFrontConnection frontCon = (RedisFrontConnection) attachement;
-			NetFlowGuard netflowGuard = frontCon.getNetflowController();
+			NetFlowGuard netflowGuard = frontCon.getNetFlowGuard();
 			if (netflowGuard != null && netflowGuard.consumeBytes(frontCon.getPassword(), length)) {
 				LOGGER.warn("##flow clean##, backend: {} ", this);
 				this.close(" netflow problem, the response is cleaned up. ");

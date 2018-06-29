@@ -34,7 +34,7 @@ public class RedisFrontConnection extends FrontConnection {
 	private RedisFrontSession session;
 
 	//
-	protected NetFlowGuard netflowController;
+	protected NetFlowGuard netflowGuard;
 	
 	private AtomicBoolean _readLock = new AtomicBoolean(false);
 	
@@ -82,12 +82,12 @@ public class RedisFrontConnection extends FrontConnection {
 		this.userCfg = userCfg;
 	}
 	
-	public void setNetflowController(NetFlowGuard nfc) {
-		this.netflowController = nfc;
+	public void setNetFlowGuard(NetFlowGuard netflowGuard) {
+		this.netflowGuard = netflowGuard;
 	}
 	
-	public NetFlowGuard getNetflowController() {
-		return netflowController;
+	public NetFlowGuard getNetFlowGuard() {
+		return netflowGuard;
 	}
 	
 
@@ -105,7 +105,7 @@ public class RedisFrontConnection extends FrontConnection {
 	@Override
 	protected boolean flowGuard(long length) {
 		
-		if ( netflowController != null && netflowController.consumeBytes(this.getPassword(), length) ) {
+		if ( netflowGuard != null && netflowGuard.consumeBytes(this.getPassword(), length) ) {
 			
 			LOGGER.warn("##flow clean##, front: {} ", this);
 			
