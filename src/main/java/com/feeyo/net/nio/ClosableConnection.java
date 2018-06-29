@@ -175,8 +175,47 @@ public abstract class ClosableConnection {
 		}
 	}
 	
+	//
+	public void setReactor(String reactorName) {
+		this.reactor = reactorName;
+	}
+
+	public String getReactor() {
+		return this.reactor;
+	}
+
+	public boolean belongsReactor(String reacotr) {
+		return reactor.equals(reacotr);
+	}
+
+	public Object getAttachement() {
+		return attachement;
+	}
+
+	public void setAttachement(Object attachement) {
+		this.attachement = attachement;
+	}
+
+	public void setState(int newState) {
+		this.state = newState;
+	}
 	
-	// Accept register
+	public int getState() {
+		return state;
+	}
+
+	public Direction getDirection() {
+		return direction;
+	}
+
+	public void setDirection(Direction in) {
+		this.direction = in;
+	}
+	
+	//
+	// ______________________________________________________________________________________
+	
+	// Accept  register
 	public abstract void register(Selector selector) throws IOException;
 	
 	// 异步读取,该方法在 reactor 中被调用
@@ -184,7 +223,6 @@ public abstract class ClosableConnection {
 	
 	//
 	public abstract void doNextWriteCheck();
-	
 	public abstract void write(byte[] data);
 	public abstract void write(ByteBuffer data);
 	
@@ -197,6 +235,9 @@ public abstract class ClosableConnection {
 		// ignore
 	}
 	
+	
+	//
+	// ______________________________________________________________________________________
 	//
 	protected void disableRead() {
 		SelectionKey key = this.processKey;
@@ -240,44 +281,6 @@ public abstract class ClosableConnection {
 		if (needWakeup && wakeup) {
 			processKey.selector().wakeup();
 		}
-	}
-	
-	
-	//
-	public void setReactor(String reactorName) {
-		this.reactor = reactorName;
-	}
-
-	public String getReactor() {
-		return this.reactor;
-	}
-
-	public boolean belongsReactor(String reacotr) {
-		return reactor.equals(reacotr);
-	}
-
-	public Object getAttachement() {
-		return attachement;
-	}
-
-	public void setAttachement(Object attachement) {
-		this.attachement = attachement;
-	}
-
-	public void setState(int newState) {
-		this.state = newState;
-	}
-	
-	public int getState() {
-		return state;
-	}
-
-	public Direction getDirection() {
-		return direction;
-	}
-
-	public void setDirection(Direction in) {
-		this.direction = in;
 	}
 	
 }
