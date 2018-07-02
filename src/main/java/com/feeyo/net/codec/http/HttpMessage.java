@@ -40,18 +40,6 @@ public abstract class HttpMessage {
 	public HashMap<String, String> headers() {
 		return headers;
 	}
-	
-	public boolean containsHeader(String header) {
-		return headers.containsKey(header);
-	}
-	
-    public boolean containsHeader(String headName, String headValue, boolean ignoreCase) {
-    	
-    	if(headName == null || headValue == null)
-    		return false;
-    	
-    	return ignoreCase ? headValue.equalsIgnoreCase(headers.get(headName)): headValue.equals(headers.get(headName));
-    }
 
 	public String getHttpVersion() {
 		return httpVersion;
