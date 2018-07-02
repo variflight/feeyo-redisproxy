@@ -17,6 +17,7 @@ import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisRequestEncoder;
 import com.feeyo.net.codec.redis.RedisResponse;
 import com.feeyo.net.codec.redis.RedisResponseDecoderV2;
+import com.feeyo.net.nio.util.ProtoUtils;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
@@ -27,7 +28,6 @@ import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.virtualmemory.Message;
 import com.feeyo.redis.virtualmemory.PutMessageResult;
 import com.feeyo.redis.virtualmemory.Util;
-import com.feeyo.util.ProtoUtils;
 
 /**
  * 抽象 pipeline 处理
