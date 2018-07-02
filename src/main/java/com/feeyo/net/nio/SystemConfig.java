@@ -14,17 +14,19 @@ public final class SystemConfig {
 	private int frontIdleTimeout    = 5 * 60 * 1000;	// 单位毫秒
 	private int backendIdleTimeout	= 30 * 60 * 1000;	
 	
-	private int frontSocketSoRcvbuf = 512 * 1024;
-	private int frontSocketSoSndbuf = 512 * 1024;		//
-	
-	private int backSocketSoRcvbuf  = 512 * 1024;		//
-	private int backSocketSoSndbuf =  512 * 1024;
+	private final int frontSocketSoRcvbuf;
+	private final int frontSocketSoSndbuf;
+	private final int backSocketSoRcvbuf;
+	private final int backSocketSoSndbuf;
 	
 	private int frontSocketNoDelay = 1; 				// 0=false
 	private int backSocketNoDelay  = 1; 				// 1=true
 	
-	public SystemConfig() {
-
+	public SystemConfig(int frontSocketSoRcvbuf, int frontSocketSoSndbuf, int backSocketSoRcvbuf, int backSocketSoSndbuf) {
+		this.frontSocketSoRcvbuf = frontSocketSoRcvbuf;
+		this.frontSocketSoSndbuf = frontSocketSoSndbuf;
+		this.backSocketSoRcvbuf = backSocketSoRcvbuf;
+		this.backSocketSoSndbuf = backSocketSoSndbuf;
 	}
 
 	public static String getHomePath() {
@@ -99,32 +101,17 @@ public final class SystemConfig {
 		return frontSocketSoRcvbuf;
 	}
 
-	public void setFrontSocketSoRcvbuf(int frontSocketSoRcvbuf) {
-		this.frontSocketSoRcvbuf = frontSocketSoRcvbuf;
-	}
 
 	public int getFrontSocketSoSndbuf() {
 		return frontSocketSoSndbuf;
-	}
-
-	public void setFrontSocketSoSndbuf(int frontSocketSoSndbuf) {
-		this.frontSocketSoSndbuf = frontSocketSoSndbuf;
 	}
 
 	public int getBackSocketSoRcvbuf() {
 		return backSocketSoRcvbuf;
 	}
 
-	public void setBackSocketSoRcvbuf(int backSocketSoRcvbuf) {
-		this.backSocketSoRcvbuf = backSocketSoRcvbuf;
-	}
-
 	public int getBackSocketSoSndbuf() {
 		return backSocketSoSndbuf;
-	}
-
-	public void setBackSocketSoSndbuf(int backSocketSoSndbuf) {
-		this.backSocketSoSndbuf = backSocketSoSndbuf;
 	}
 
 	public int getFrontSocketNoDelay() {

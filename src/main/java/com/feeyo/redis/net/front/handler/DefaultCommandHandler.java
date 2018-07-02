@@ -48,6 +48,8 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 			writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
 		}
 		
+//		writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
+//		
 	}
 	
 	public void writeToCustomerBackend(PhysicalNode physicalNode, ByteBuffer buffer, AbstractBackendCallback callBack) throws IOException {

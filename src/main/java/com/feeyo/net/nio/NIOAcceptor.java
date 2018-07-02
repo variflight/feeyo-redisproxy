@@ -64,7 +64,7 @@ public final class NIOAcceptor extends Thread {
 		for (;;) {
 			++acceptCount;
 			try {
-				selector.select( 500L ); // 1000L to 500L
+				selector.select( 1000L ); 
 				Set<SelectionKey> keys = selector.selectedKeys();
 				try {
 					for (SelectionKey key : keys) {
@@ -89,8 +89,7 @@ public final class NIOAcceptor extends Thread {
 	private void accept() {
 		SocketChannel channel = null;
 		try {
-			channel = serverChannel.accept();
-		    channel.socket().setTcpNoDelay( true );					
+			channel = serverChannel.accept();			
 			channel.configureBlocking( false );
 			
 			// 设置QOS
@@ -98,7 +97,9 @@ public final class NIOAcceptor extends Thread {
 			// 高可靠性：0x04（二进制的倒数第三位为1）
 			// 最高吞吐量：0x08（二进制的倒数第四位为1）
 			// 最小延迟：0x10（二进制的倒数第五位为1）
-			channel.socket().setTrafficClass( 0x04 | 0x08 ); 	
+			//channel.socket().setTrafficClass( 0x04 | 0x08 ); 	
+			
+			
 			
 			// 构建 Connection
 			ClosableConnection c = factory.make(channel);

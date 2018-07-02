@@ -39,11 +39,6 @@ public class ZcConnectionHandler implements NIOHandler<ZcConnection> {
 		
 		conn.write( OK );
 	}
-
-	@Override
-	public boolean handleNetFlow(ZcConnection con, int dataLength) throws IOException {
-		return false;
-	}
 	
 
 }

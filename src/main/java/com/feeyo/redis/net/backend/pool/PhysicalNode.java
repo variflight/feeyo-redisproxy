@@ -34,12 +34,11 @@ public class PhysicalNode {
 	protected int port;
 	protected int minCon;
 	protected int maxCon;
-	protected boolean isZeroCopy;
 	
 	protected final BackendConnectionFactory factory;
 	
 	public PhysicalNode(BackendConnectionFactory factory, int poolType, String poolName, 
-			int minCon, int maxCon, String host, int port, boolean isZeroCopy) {
+			int minCon, int maxCon, String host, int port) {
 		
 		this.factory = factory;
 		this.poolType = poolType;
@@ -47,7 +46,6 @@ public class PhysicalNode {
 		
 		this.host = host;
 		this.port = port;
-		this.isZeroCopy = isZeroCopy;
 		this.minCon = minCon;
 		this.maxCon = maxCon;
 		
@@ -213,9 +211,6 @@ public class PhysicalNode {
 		this.port = port;
 	}	
 	
-	public boolean isZeroCopy() {
-		return isZeroCopy;
-	}
 
 	@Override
 	public String toString() {
@@ -228,8 +223,7 @@ public class PhysicalNode {
 		sb.append("host=").append(host).append(", ");
 		sb.append("port=").append(port).append(", ");
 		sb.append("minCon=").append(minCon).append(", ");
-		sb.append("maxCon=").append(maxCon).append(", ");
-		sb.append("isZeroCopy=").append(isZeroCopy).append(" ) ");
+		sb.append("maxCon=").append(maxCon).append(" ) ");
 		return sb.toString();
 	}
 	

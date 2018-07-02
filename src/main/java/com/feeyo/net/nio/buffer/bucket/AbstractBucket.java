@@ -29,20 +29,18 @@ public abstract class AbstractBucket implements Comparable<AbstractBucket> {
 	private long _shared = 0;
 	private boolean isExpand = false;
 	
-	private final int threadLocalPercent;
 
 	public AbstractBucket(BucketBufferPool pool, int chunkSize) {
-		this(pool, chunkSize, 0, false, 0);
+		this(pool, chunkSize, 0, false);
 	}
 
-	public AbstractBucket(BucketBufferPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
+	public AbstractBucket(BucketBufferPool pool, int chunkSize, int count, boolean isExpand) {
 		this.bufferPool = pool;
 		this.chunkSize = chunkSize;
 
 		this.count = new AtomicInteger(count);
 		this.usedCount = new AtomicInteger(0);
 		this.isExpand = isExpand;
-		this.threadLocalPercent = threadLocalPercent;
 
 		this.references = new ConcurrentHashMap<Long, ByteBufferReference>(count, 0.2F, 32);
 	}
@@ -206,10 +204,6 @@ public abstract class AbstractBucket implements Comparable<AbstractBucket> {
 
 	public int getChunkSize() {
 		return chunkSize;
-	}
-
-	public int getThreadLocalPercent() {
-		return threadLocalPercent;
 	}
 
 	@Override

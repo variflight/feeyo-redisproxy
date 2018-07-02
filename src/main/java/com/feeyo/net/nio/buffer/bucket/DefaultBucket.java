@@ -8,8 +8,8 @@ public class DefaultBucket extends AbstractBucket {
 	private final ConcurrentLinkedQueue<ByteBuffer> queue = new ConcurrentLinkedQueue<ByteBuffer>();
 
 	public DefaultBucket(BucketBufferPool pool, int chunkSize, 
-			int count, boolean isExpand, int threadLocalPercent) {
-		super(pool, chunkSize, count, isExpand, threadLocalPercent);
+			int count, boolean isExpand) {
+		super(pool, chunkSize, count, isExpand);
 
 		// 初始化
 		for(int j = 0; j < count; j++ ) {

@@ -37,7 +37,6 @@ public class XClusterPool extends AbstractPool{
         String name = poolCfg.getName();
         int minCon = poolCfg.getMinCon();
         int maxCon = poolCfg.getMaxCon();
-        boolean isZeroCopy = poolCfg.isZeroCopy();
         
         for (String nodeStr : poolCfg.getNodes()) {
             
@@ -49,7 +48,7 @@ public class XClusterPool extends AbstractPool{
             xNode.setSuffix( attrs[2] );
 
             PhysicalNode physicalNode = new PhysicalNode(backendConFactory, 
-            		type, name, minCon, maxCon, xNode.getIp(), xNode.getPort(), isZeroCopy);
+            		type, name, minCon, maxCon, xNode.getIp(), xNode.getPort());
             physicalNode.initConnections();
             xNode.setPhysicalNode(physicalNode);
             

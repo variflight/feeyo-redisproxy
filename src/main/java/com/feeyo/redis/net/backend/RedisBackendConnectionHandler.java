@@ -6,9 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.nio.NIOHandler;
-import com.feeyo.net.nio.NetFlowController;
 import com.feeyo.net.nio.util.StringUtil;
-import com.feeyo.redis.net.front.RedisFrontConnection;
 
 /**
  * backend redis NIO handler (only one for all backend redis connections)
@@ -52,26 +50,6 @@ public class RedisBackendConnectionHandler implements NIOHandler<RedisBackendCon
 	public void onConnectFailed(RedisBackendConnection con, Exception e) {
 		if ( con.getCallback() != null )
 			con.getCallback().connectionError(e, con);		
-	}
-
-	@Override
-	public boolean handleNetFlow(RedisBackendConnection con, int dataLength) throws IOException {
-		
-		if ( con.getAttachement() == null ) {
-			return false;
-		}
-		
-		//
-		if (con.getAttachement() instanceof RedisFrontConnection) {
-			
-			RedisFrontConnection frontCon = (RedisFrontConnection) con.getAttachement();
-			NetFlowController netflowCtrl = con.getNetflowController();
-			if ( netflowCtrl != null) {
-				return netflowCtrl.consumeBytes( frontCon.getPassword(), dataLength );
-			}
-		}
-		
-		return false;
 	}
 
 }

@@ -236,12 +236,11 @@ public class RedisClusterPool extends AbstractPool {
 				String name = poolCfg.getName();
 				int minCon = poolCfg.getMinCon();
 				int maxCon = poolCfg.getMaxCon();
-				boolean isZeroCopy = poolCfg.isZeroCopy();
 				
 				String host = clusterNode.getHost();
 				int port = clusterNode.getPort();
 				
-				PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port, isZeroCopy );
+				PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port );
 				physicalNode.initConnections();
 				clusterNode.setPhysicalNode(physicalNode);				
 			}			
@@ -456,12 +455,11 @@ public class RedisClusterPool extends AbstractPool {
 						String name = poolCfg.getName();
 						int minCon = poolCfg.getMinCon();
 						int maxCon = poolCfg.getMaxCon();
-						boolean isZeroCopy = poolCfg.isZeroCopy();
 						
 						String host = clusterNode.getHost();
 						int port = clusterNode.getPort();
 							
-						PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port, isZeroCopy );
+						PhysicalNode physicalNode = new PhysicalNode(backendConFactory, type, name, minCon, maxCon, host, port );
 						physicalNode.initConnections();
 						clusterNode.setPhysicalNode( physicalNode );
 					}

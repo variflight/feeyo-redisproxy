@@ -20,6 +20,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.redis.net.backend.pool.PoolType;
 
 
 public class ConfigLoader {
@@ -82,13 +83,12 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-				boolean isZeroCopy = getBooleanAttribute(nameNodeMap, "isZeroCopy", false);
 				
 				PoolCfg poolCfg;
-				if (type == 3) {
-					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon, isZeroCopy);
+				if (type == PoolType.KAFKA_CLUSTER ) {
+					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon);
 				} else {
-					poolCfg = new PoolCfg(id, name, type, minCon, maxCon, isZeroCopy);
+					poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
 				}
 				
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
@@ -174,7 +174,7 @@ public class ConfigLoader {
 				
 				boolean isControl = getBooleanAttribute(nameNodeMap, "control", true);
 				
-				if(perSecondMaxSize < 10 || requestMaxSize < 10 ) {
+				if(perSecondMaxSize < 1048576 || requestMaxSize < 262144 ) {
 					throw new Exception(" These parameters perSecondMaxSize or requestMaxSize have errors !!");
 				}
 				

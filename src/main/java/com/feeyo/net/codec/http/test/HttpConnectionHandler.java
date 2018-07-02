@@ -119,13 +119,6 @@ public class HttpConnectionHandler implements NIOHandler<HttpConnection>{
 		}
 		
 	}
-
-
-	@Override
-	public boolean handleNetFlow(HttpConnection con, int dataLength) throws IOException {
-		// TODO Auto-generated method stub
-		return false;
-	}
 	
 	
 	//

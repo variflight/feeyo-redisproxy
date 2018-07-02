@@ -29,9 +29,9 @@ import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.nio.ClosableConnection;
-import com.feeyo.net.nio.NetFlowController;
-import com.feeyo.net.nio.NetFlowController.Ctrl;
+import com.feeyo.net.nio.NetFlowGuard;
 import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.NetFlowGuard.Guard;
 import com.feeyo.net.nio.buffer.BufferPool;
 import com.feeyo.net.nio.buffer.bucket.AbstractBucket;
 import com.feeyo.net.nio.buffer.bucket.BucketBufferPool;
@@ -248,10 +248,10 @@ public class Manage {
 						StringBuffer sBuffer = new StringBuffer();
 						sBuffer.append("total=").append( result.totalCount ).append(", ");
 						sBuffer.append("slow=").append( result.slowCount ).append(", ");
-						sBuffer.append("waitSlow=").append( result.waitSlowCount ).append(", ");
 						sBuffer.append("max=").append( result.maxCount ).append(", ");
 						sBuffer.append("min=").append( result.minCount ).append(", ");
 						sBuffer.append("avg=").append( result.avgCount ).append(", ");
+						sBuffer.append("waitSlow=").append( result.waitSlowCount ).append(", ");
 						sBuffer.append("procTime=").append( result.procTime ).append(", ");
 						sBuffer.append("waitTime=").append( result.waitTime ).append(", ");
 						sBuffer.append("created=").append( result.created );
@@ -579,14 +579,12 @@ public class Manage {
 				// SHOW BIGKEY_COUNT
 				} else if ( arg2.equalsIgnoreCase("BIGKEY_COUNT") ) {
 					List<String> lines = new ArrayList<String>();	
-					StringBuffer title = new StringBuffer();
-					title.append("BIGKEY_COUNT").append("    ").append("BYPASS_BIGKEY_COUNT");
-					lines.add(title.toString());
 					
 					BigKeyCollector bkc = StatUtil.getBigKeyCollector();
-					StringBuffer body = new StringBuffer();
-					body.append(bkc.getBigKeyCount()).append("      ").append(bkc.getBypassBigKeyCount());
-					lines.add(body.toString());
+					StringBuffer sBuffer = new StringBuffer();
+					sBuffer.append("total=").append( bkc.getBigKeyCount() ).append(", ");
+					sBuffer.append("bypass=").append( bkc.getBypassBigKeyCount() );
+					lines.add(sBuffer.toString());
 					
 					return encode( lines );
 					
@@ -640,9 +638,7 @@ public class Manage {
 					List<String> lines = new ArrayList<String>();
 
 					long minStartupTime = -1;
-					long totalNetInCounter = 0;
 					long totalNetInBytes = 0;
-					long totalNetOutCounter = 0;
 					long totalNetOutBytes = 0;
 					
 					String poolName = new String( request.getArgs()[2] );
@@ -660,15 +656,12 @@ public class Manage {
 								StringBuffer sb = new StringBuffer();
 								sb.append("ID=").append(c.getId()).append(". ");
 								sb.append("StartupTime=").append(c.getStartupTime()).append(". ");
-								sb.append("NetInCount=").append(c.getNetInCounter()).append(". ");
 								sb.append("NetInBytes=").append(c.getNetInBytes()).append(". ");
 								sb.append("NetOutBytes=").append(c.getNetOutBytes()).append(". ");
 								lines.add( sb.toString() );
 								
 								minStartupTime = minStartupTime < 0 ? c.getStartupTime() : Math.min(minStartupTime, c.getStartupTime());
-								totalNetInCounter 	+= c.getNetInCounter();
 								totalNetInBytes 	+= c.getNetInBytes();
-								totalNetOutCounter  += c.getNetOutCounter();
 								totalNetOutBytes 	+= c.getNetOutBytes();
 							}
 						}
@@ -676,9 +669,7 @@ public class Manage {
 					
 					StringBuffer end = new StringBuffer();
 					end.append("MinStartupTime=").append(minStartupTime).append(". ");
-					end.append("TotalNetInCounter=").append(totalNetInCounter).append(". ");
 					end.append("TotalNetInBytes=").append(totalNetInBytes).append(". ");
-					end.append("totalNetOutCounter=").append(totalNetOutCounter).append(". ");
 					end.append("TotalNetOutBytes=").append(totalNetOutBytes).append(". ");
 					lines.add(end.toString());
 					
@@ -1106,16 +1097,16 @@ public class Manage {
 					titleLine.append("HISTOGRAM");
 					lines.add(titleLine.toString());
 					
-					NetFlowController nfc = RedisEngineCtx.INSTANCE().getNetflowController();
-					Map<String, Ctrl> map = nfc.getCtrlMap();
-					for (Entry<String, Ctrl> entry : map.entrySet()) {
+					NetFlowGuard nfg = RedisEngineCtx.INSTANCE().getNetflowGuard();
+					Map<String, Guard> map = nfg.getGuardMap();
+					for (Entry<String, Guard> entry : map.entrySet()) {
 						
-						Ctrl ctrl = entry.getValue();
+						Guard guard = entry.getValue();
 						StringBuffer line = new StringBuffer();
 						line.append(entry.getKey()).append(", ");
-						line.append(ctrl.getPerSecondMaxSize()).append(", ");
-						line.append(ctrl.getRequestMaxSize()).append(", ");
-						line.append(ctrl.getHistogram());
+						line.append(guard.getPerSecondMaxSize()).append(", ");
+						line.append(guard.getRequestMaxSize()).append(", ");
+						line.append(guard.getHistogram());
 						
 						lines.add(line.toString());
 					}

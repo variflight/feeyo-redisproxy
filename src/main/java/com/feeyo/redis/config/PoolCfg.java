@@ -16,17 +16,15 @@ public class PoolCfg {
 	
 	protected final int maxCon;
 	protected final int minCon;
-	protected final boolean isZeroCopy;
 
 	protected List<String> nodes = new ArrayList<String>();
 
-	public PoolCfg(int id, String name, int type, int minCon, int maxCon, boolean isZeroCopy) {
+	public PoolCfg(int id, String name, int type, int minCon, int maxCon) {
 		this.id = id;
 		this.name = name;
 		this.type = type;
 		this.minCon = minCon;
 		this.maxCon = maxCon;
-		this.isZeroCopy = isZeroCopy;
 	}
 
 	public int getId() {
@@ -47,10 +45,6 @@ public class PoolCfg {
 
 	public int getMinCon() {
 		return minCon;
-	}
-
-	public boolean isZeroCopy() {
-		return isZeroCopy;
 	}
 
 	public List<String> getNodes() {

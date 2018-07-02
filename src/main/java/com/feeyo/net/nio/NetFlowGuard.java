@@ -8,76 +8,75 @@ import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.NetFlowCfg;
 
 
-/**
- * 流量监控, bandwidth limitation
- *
+/*
+ * 网络流防护 
  */
-public class NetFlowController {
+public class NetFlowGuard {
 	
-  	private volatile Map<String, Ctrl> ctrlMap = null;
+  	private volatile Map<String, Guard> guardMap = null;
   	
   	//
 	public synchronized void setCfgs(Map<String, NetFlowCfg> cfgMap) {
 		
 		if ( cfgMap != null ) {
 			
-			Map<String, Ctrl> tmpCtrlMap = new HashMap<String, Ctrl>();
+			Map<String, Guard> tmpGuardMap = new HashMap<String, Guard>();
 			
 			for(Map.Entry<String, NetFlowCfg>  entry : cfgMap.entrySet() ) {
 				String pwd = entry.getKey();
 				NetFlowCfg cfg = entry.getValue();
 				
 				if ( cfg != null && cfg.isControl() ) {
-					Ctrl  ctrl = new Ctrl( cfg.getPerSecondMaxSize(), cfg.getRequestMaxSize() );
-					tmpCtrlMap.put(pwd, ctrl);
+					Guard  guard = new Guard( cfg.getPerSecondMaxSize(), cfg.getRequestMaxSize() );
+					tmpGuardMap.put(pwd, guard);
 				}
 				
 			}
 			
-			this.ctrlMap = tmpCtrlMap;
+			this.guardMap = tmpGuardMap;
 		}
 	}
 	
 	//
 	public boolean consumeBytes(String user, long numBytes) {
 		
-		if ( ctrlMap == null || ctrlMap.isEmpty() ) {
+		if ( guardMap == null || guardMap.isEmpty() ) {
 			return false;
 		}
 		
 		//
-		Ctrl ctrl = ctrlMap.get(user);
-		if ( ctrl != null ) {
-			return ctrl.consumeBytes( numBytes );
+		Guard guard = guardMap.get(user);
+		if ( guard != null ) {
+			return guard.consumeBytes( numBytes );
 		}
 		
 		return false;
 	}
 	
-	public Map<String, Ctrl> getCtrlMap() {
-		return ctrlMap;
+	public Map<String, Guard> getGuardMap() {
+		return guardMap;
 	}
 
 
 	//
-	public class Ctrl {
+	public class Guard {
 		
 		private int perSecondMaxSize;
 		private int requestMaxSize;
 		
 		//
-		private AtomicLong[] sizes;
+		private AtomicLong[] availableSizes;
 		private int currentIndex;
 		
-		public Ctrl(int perSecondMaxSize, int  requestMaxSize) {
+		public Guard(int perSecondMaxSize, int  requestMaxSize) {
 			
 			this.perSecondMaxSize = perSecondMaxSize;
 			this.requestMaxSize = requestMaxSize;
 			
 			//
-			this.sizes = new AtomicLong[60];
-			for (int i = 0; i < sizes.length; i++) {
-				this.sizes[i] = new AtomicLong( perSecondMaxSize );
+			this.availableSizes = new AtomicLong[60];
+			for (int i = 0; i < availableSizes.length; i++) {
+				this.availableSizes[i] = new AtomicLong( perSecondMaxSize );
 			}
 		}
 		
@@ -97,13 +96,13 @@ public class NetFlowController {
 						if (currentIndex != tempIndex) {
 							
 							// reset
-							sizes[tempIndex].set(perSecondMaxSize);
+							availableSizes[tempIndex].set(perSecondMaxSize);
 							currentIndex = tempIndex;
 						}
 					}
 				}
 
-				return decrement(sizes[currentIndex], numBytes) <= 0;
+				return decrement(availableSizes[currentIndex], numBytes) <= 0;
 			}
 
 			return true;
@@ -127,14 +126,14 @@ public class NetFlowController {
 		}
 		
 		public String getHistogram() {
-			if ( sizes != null && sizes.length == 60 ) {
+			if ( availableSizes != null && availableSizes.length == 60 ) {
 			    StringBuilder buf = new StringBuilder();
 		        buf.append('[');
-		        for (int i = 0; i < sizes.length; i++) {
+		        for (int i = 0; i < availableSizes.length; i++) {
 		            if (i != 0) {
 		                buf.append(", ");
 		            }
-		            buf.append( perSecondMaxSize - sizes[i].get() );
+		            buf.append( perSecondMaxSize - availableSizes[i].get() );
 		        }
 		        buf.append(']');
 		        return buf.toString();
