@@ -1,6 +1,7 @@
 package com.feeyo.redis.engine.manage.stat;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +40,7 @@ public class BigKeyCollector implements StatCollector {
 			}
 		
 			int len = bkList.size() > 100 ? 100 : bkList.size();
+			Collections.sort(bkList, new BigKey());
 			
 			List<BigKey> newList = new ArrayList<BigKey>( len );
 			for(int i = 0; i < len; i++) {
@@ -76,7 +78,7 @@ public class BigKeyCollector implements StatCollector {
 		//
 		try {
 			if ( bkList.size() >= LENGTH ) {
-				
+				Collections.sort(bkList, new BigKey());
 				// 缩容
 				while (bkList.size() >= ( LENGTH * 0.5 ) ) {
 					int index = bkList.size() - 1;
@@ -98,7 +100,10 @@ public class BigKeyCollector implements StatCollector {
 				
 				// 通过deleteResponseBigkey删掉的key
 				if (oldBK == null) {
-					oldBK = newBK;
+					oldBK = bkList.get(index);
+					if (!key.equals(oldBK.key)) {
+						return; // 防止此时List被清理掉，活着排序导致位置变换，导致记录混乱
+					}
 					bkHashMap.put( key, oldBK );
 				}
 				oldBK.lastCmd = cmd;
