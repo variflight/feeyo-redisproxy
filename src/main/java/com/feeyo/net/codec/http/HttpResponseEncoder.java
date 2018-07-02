@@ -42,7 +42,7 @@ public class HttpResponseEncoder {
         if(body != null) {
         	byte[] dest = new byte[ head.length + body.length ]; 
 	        System.arraycopy(head, 0, dest, 0, head.length);
-	        System.arraycopy(body, 0, dest, dest.length, body.length);
+	        System.arraycopy(body, 0, dest, head.length, body.length);
 	        return dest;
         }else {
         	return head;
