@@ -28,7 +28,7 @@ public class HttpConnectionTest {
 		SystemConfig systemConfig = new SystemConfig(1048576, 4194304, 4194304, 1048576);
         NetSystem.getInstance().setNetConfig( systemConfig );
 		
-		String name = "protobufConn";
+		String name = "HttpConn";
 		String bindIp = "0.0.0.0";
 		int port = 8066;
 		
