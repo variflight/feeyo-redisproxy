@@ -1,6 +1,6 @@
 package com.feeyo.net.codec.http;
 
-public class HttpRequest extends HttpMessage{
+public class HttpRequest extends HttpMessage {
 
 	private final String method;
 	private final String uri;

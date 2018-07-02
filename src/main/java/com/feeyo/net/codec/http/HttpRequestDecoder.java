@@ -6,7 +6,12 @@ import com.feeyo.net.codec.Decoder;
 import com.feeyo.net.codec.util.CompositeByteArray;
 import com.feeyo.net.codec.util.CompositeByteArray.ByteArrayChunk;
 
-
+/**
+ * Http request parse
+ * 
+ * @author xuwenfeng
+ *
+ */
 public class HttpRequestDecoder implements Decoder<HttpRequest> {
 
 	private static final Charset charset = Charset.forName("UTF-8");
