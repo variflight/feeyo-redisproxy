@@ -36,13 +36,17 @@ public class HttpResponseEncoder {
         buf.append(CRLF);
         
         // content
-        byte[] src1 = buf.toString().getBytes();
-        byte[] src2 = response.getContent();
+        byte[] head = buf.toString().getBytes();
+        byte[] body = response.getContent();
         
-        byte[] dest = new byte[ src1.length + src2.length ]; 
-        System.arraycopy(src1, 0, dest, 0, src1.length);
-        System.arraycopy(src2, 0, dest, dest.length, src2.length);
+        if(body != null) {
+        	byte[] dest = new byte[ head.length + body.length ]; 
+	        System.arraycopy(head, 0, dest, 0, head.length);
+	        System.arraycopy(body, 0, dest, dest.length, body.length);
+	        return dest;
+        }else {
+        	return head;
+        }
  
-		return dest;
 	}
 }
