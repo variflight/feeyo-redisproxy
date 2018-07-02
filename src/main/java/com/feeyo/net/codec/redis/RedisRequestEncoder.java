@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.Encoder;
 import com.feeyo.net.nio.NetSystem;
-import com.feeyo.util.ProtoUtils;
+import com.feeyo.net.nio.util.ProtoUtils;
 
 /**
 ----------------------Redis 协议----------------------- 
