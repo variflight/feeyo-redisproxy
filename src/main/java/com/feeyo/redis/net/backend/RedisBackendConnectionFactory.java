@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 import com.feeyo.net.nio.NetSystem;
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 
@@ -16,18 +15,15 @@ public class RedisBackendConnectionFactory implements BackendConnectionFactory {
 		
 		String host = physicalNode.getHost();
 		int port = physicalNode.getPort();
-		boolean isZeroCopy = physicalNode.isZeroCopy();
 		
 		SocketChannel channel = SocketChannel.open();
 		channel.configureBlocking(false);
 
-		RedisBackendConnection c = new RedisBackendConnection( isZeroCopy, channel );
+		RedisBackendConnection c = new RedisBackendConnection( channel );
 		NetSystem.getInstance().setSocketParams(c, false);
 
 		// 设置NIOHandlers
 		c.setHandler( new RedisBackendConnectionHandler() );
-		c.setNetflowController( RedisEngineCtx.INSTANCE().getNetflowController() );
-		
 		c.setHost( host );
 		c.setPort( port );
 		c.setPhysicalNode( physicalNode );

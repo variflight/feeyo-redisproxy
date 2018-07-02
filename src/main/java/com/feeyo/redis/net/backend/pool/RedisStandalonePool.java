@@ -44,11 +44,10 @@ public class RedisStandalonePool extends AbstractPool {
 		String poolName = poolCfg.getName();
 		int minCon = poolCfg.getMinCon();
 		int maxCon = poolCfg.getMaxCon();
-		boolean isZeroCopy = poolCfg.isZeroCopy();
 		
 		String[] ipAndPort = poolCfg.getNodes().get(0).split(":");	
 		this.physicalNode = new PhysicalNode(backendConFactory, 
-				poolType, poolName, minCon, maxCon, ipAndPort[0], Integer.parseInt( ipAndPort[1] ), isZeroCopy );
+				poolType, poolName, minCon, maxCon, ipAndPort[0], Integer.parseInt( ipAndPort[1] ) );
 		this.physicalNode.initConnections();		
 		return true;
 	}

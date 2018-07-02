@@ -2,6 +2,8 @@ package com.feeyo.net.codec.http.test;
 
 import java.util.List;
 
+import com.feeyo.net.codec.http.HttpResponse;
+import com.feeyo.net.codec.http.HttpResponseEncoder;
 import com.feeyo.net.codec.protobuf.ProtobufDecoder;
 import com.feeyo.net.codec.protobuf.test.Eraftpb.Message;
 import com.google.protobuf.MessageLite;
@@ -15,12 +17,10 @@ public class ProtobufRequestHandler implements RequestHandler{
 	public void handle(HttpConnection conn, String uri, byte[] data) {
 		
 		List<MessageLite> msg = decoder.decode(data);
-		
-		if(msg == null) {
-			conn.write("ERROR".getBytes());
-		}else {
-			conn.write("OK".getBytes());
-		}
+		HttpResponse response = msg == null ? new HttpResponse(400, "PARSE MSG ERROR") : new HttpResponse(200, "OK");
+		HttpResponseEncoder encoder = new HttpResponseEncoder();
+		conn.write(encoder.encode(response));
+		conn.close("finish");
 	}
 
 }

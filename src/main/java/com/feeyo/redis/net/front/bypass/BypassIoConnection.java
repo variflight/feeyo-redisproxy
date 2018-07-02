@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisResponse;
-import com.feeyo.net.codec.redis.RedisResponseDecoder;
+import com.feeyo.net.codec.redis.RedisResponseDecoderV2;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.JedisHolder;
@@ -35,7 +35,7 @@ public class BypassIoConnection {
 			jedisConn.sendCommand(request.getArgs());
 			byte[] response = jedisConn.getBinaryReply();
 			// parse
-			RedisResponseDecoder decoder = new RedisResponseDecoder();
+			RedisResponseDecoderV2 decoder = new RedisResponseDecoderV2();
 			List<RedisResponse> result = decoder.decode(response);
 			while (result == null) {
 				response = jedisConn.getBinaryReply();

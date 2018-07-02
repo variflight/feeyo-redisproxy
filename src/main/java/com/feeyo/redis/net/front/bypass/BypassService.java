@@ -128,15 +128,10 @@ public class BypassService {
 			
 		} catch (RejectedExecutionException re) {	
 			
-			// write err
-			StringBuffer errorSb = new StringBuffer();
-			errorSb.append("-ERR bypass err: ");
-			errorSb.append(re.getMessage() );
-			errorSb.append("\r\n");
-				
-			frontConn.write( errorSb.toString().getBytes() );
+			// front rejected 
+			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
 			
-			LOGGER.warn("process thread pool is full, reject, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
+			LOGGER.warn("Bypass traffic congestion, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
 							threadPoolExecutor.getMaximumPoolSize(),threadPoolExecutor.getTaskCount()} );						
 		}	

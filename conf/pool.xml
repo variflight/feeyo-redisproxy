@@ -2,7 +2,7 @@
 <redis>
 	<!-- type 0:非集群; 1:集群; 2:自定义集群; 3:kafka 集群 -->
 	
-	<pool id="1" name="pool1" type="0" maxCon="2000" minCon="6" isZeroCopy="false">
+	<pool id="1" name="pool1" type="0" maxCon="2000" minCon="6">
 	      <node ip="127.0.0.1" port="6379" />
 	</pool>	 
 	

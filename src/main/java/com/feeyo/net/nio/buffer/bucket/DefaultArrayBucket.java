@@ -12,8 +12,8 @@ public class DefaultArrayBucket extends AbstractBucket {
 	private final AtomicInteger offerIdx = new AtomicInteger(0);
 
 	@SuppressWarnings("unchecked")
-	public DefaultArrayBucket(BucketBufferPool pool, int chunkSize, int count, boolean isExpand, int threadLocalPercent) {
-		super(pool, chunkSize, count, isExpand, threadLocalPercent);
+	public DefaultArrayBucket(BucketBufferPool pool, int chunkSize, int count, boolean isExpand) {
+		super(pool, chunkSize, count, isExpand);
 
 		this.queueArray = new ConcurrentLinkedQueue[16];
 		for (int i = 0; i < queueArray.length; i++) {

@@ -6,9 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.nio.NIOHandler;
-import com.feeyo.net.nio.NetFlowController;
 import com.feeyo.net.nio.util.StringUtil;
-import com.feeyo.redis.net.front.RedisFrontConnection;
 
 public class KafkaBackendConnectionHandler implements NIOHandler<KafkaBackendConnection> {
 
@@ -46,16 +44,5 @@ public class KafkaBackendConnectionHandler implements NIOHandler<KafkaBackendCon
 		if ( con.getCallback() != null )
 			con.getCallback().connectionError(e, con);		
 	}
-
-	@Override
-	public boolean handleNetFlow(KafkaBackendConnection con, int dataLength) throws IOException {
-		if (con.getAttachement() instanceof RedisFrontConnection) {
-			RedisFrontConnection rfc = (RedisFrontConnection) con.getAttachement();
-			NetFlowController nfm = con.getNetflowController();
-			if (nfm != null)
-				return nfm.consumeBytes(rfc.getPassword(), dataLength);
-		}
-		return false;
-	}	
 
 }

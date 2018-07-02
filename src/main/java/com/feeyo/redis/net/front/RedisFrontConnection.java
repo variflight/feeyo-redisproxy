@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.feeyo.net.nio.NetFlowGuard;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.UserCfg;
@@ -22,12 +23,18 @@ public class RedisFrontConnection extends FrontConnection {
 	
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
+	//
+	private static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, the request is cleaned up. \r\n".getBytes();
+	
 	// 用户配置
 	private UserCfg userCfg;
 	
 	private boolean isAuthenticated;
 	
 	private RedisFrontSession session;
+
+	//
+	protected NetFlowGuard netflowGuard;
 	
 	private AtomicBoolean _readLock = new AtomicBoolean(false);
 	
@@ -74,24 +81,41 @@ public class RedisFrontConnection extends FrontConnection {
 	public void setUserCfg(UserCfg userCfg) {
 		this.userCfg = userCfg;
 	}
+	
+	public void setNetFlowGuard(NetFlowGuard netflowGuard) {
+		this.netflowGuard = netflowGuard;
+	}
+	
+	public NetFlowGuard getNetFlowGuard() {
+		return netflowGuard;
+	}
+	
 
 	@Override
 	public void close(String reason) {
 		super.close(reason);
+		releaseLock();
 	}
 	
 	public void releaseLock() {
 		_readLock.set(false);
 	}
 
-	
+	// 流量
 	@Override
-	public void flowClean() {
+	protected boolean flowGuard(long length) {
 		
-		LOGGER.warn("##flow clean##, front: {} ", this);
-		//
-		this.write( ERR_FLOW_LIMIT );
-		this.close("flow limit");
+		if ( netflowGuard != null && netflowGuard.consumeBytes(this.getPassword(), length) ) {
+			
+			LOGGER.warn("##flow clean##, front: {} ", this);
+			
+			//
+			this.write( ERR_FLOW_LIMIT );
+			this.close("flow limit");
+			return true;
+		}
+		
+		return false;
 	}
 	
 	
@@ -112,14 +136,9 @@ public class RedisFrontConnection extends FrontConnection {
 		sbuffer.append(", startup=").append( startupTime );
 		sbuffer.append(", lastRT=").append(  lastReadTime );
 		sbuffer.append(", lastWT=").append( lastWriteTime );
-		sbuffer.append(", attempts=").append( writeAttempts );	//
-		
-		if ( isClosed.get() ) {
-			sbuffer.append(", isClosed=").append( isClosed.get() );
-			sbuffer.append(", closeTime=").append(  closeTime );
-			sbuffer.append(", closeReason=").append( closeReason );
-		}
-		
+		sbuffer.append(", attempts=").append( writeAttempts );	
+		sbuffer.append(", isClosed=").append( isClosed.get() );
+
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}

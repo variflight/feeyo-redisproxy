@@ -12,9 +12,8 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.net.codec.UnknowProtocolException;
-import com.feeyo.net.codec.http.HttpDecoder;
 import com.feeyo.net.codec.http.HttpRequest;
+import com.feeyo.net.codec.http.HttpRequestDecoder;
 import com.feeyo.net.nio.NIOHandler;
 import com.feeyo.net.nio.util.StringUtil;
 
@@ -22,7 +21,7 @@ public class HttpConnectionHandler implements NIOHandler<HttpConnection>{
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger( HttpConnectionHandler.class ); 
 	
-	private HttpDecoder decoder = new HttpDecoder();
+	private HttpRequestDecoder decoder = new HttpRequestDecoder();
 	
 	// REST 
 	//
@@ -106,31 +105,19 @@ public class HttpConnectionHandler implements NIOHandler<HttpConnection>{
 		LOGGER.info("C#{} front request len = {}, buffer bytes\n {}", 
 				new Object[]{ conn.getId(), data.length, hexs });
 		
-		try {
-			HttpRequest request = decoder.decode(data );
-			if ( request != null ) {
-				
-				String method = request.getMethod();
-				String uri = request.getUri();
-				
-				// 处理 path & protobuf 对于转换
-				//
-				RequestHandler requestHandler = getHandler( method, uri );
-				requestHandler.handle(conn, uri, data);
-				
-			}
+		HttpRequest request = decoder.decode(data );
+		if ( request != null ) {
 			
-		} catch (UnknowProtocolException e) {
-			e.printStackTrace();
+			String method = request.getMethod();
+			String uri = request.getUri();
+			
+			// 处理 path & protobuf 对于转换
+			//
+			RequestHandler requestHandler = getHandler( method, uri );
+			requestHandler.handle(conn, uri, request.getContent());
+			
 		}
 		
-	}
-
-
-	@Override
-	public boolean handleNetFlow(HttpConnection con, int dataLength) throws IOException {
-		// TODO Auto-generated method stub
-		return false;
 	}
 	
 	

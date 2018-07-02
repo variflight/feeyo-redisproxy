@@ -1,6 +1,8 @@
 package com.feeyo.net.nio;
 
 import java.io.IOException;
+import java.net.StandardSocketOptions;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -162,22 +164,25 @@ public class NetSystem {
 	}
 	
 	public void setSocketParams(ClosableConnection con, boolean isFrontChannel) throws IOException {
-		//int sorcvbuf = 0;
-		int sosndbuf = 0;
-		
+		int sorcvbuf = 0;
+	    int sosndbuf = 0;
+	    int soNoDelay = 0;
+	    
 		if (isFrontChannel) {
-			//sorcvbuf = netConfig.getFrontsocketsorcvbuf();
-			sosndbuf = netConfig.getFrontsocketsosndbuf();
+			sorcvbuf = this.netConfig.getFrontsocketsorcvbuf();
+			sosndbuf = this.netConfig.getFrontsocketsosndbuf();
+			soNoDelay = this.netConfig.getFrontSocketNoDelay();
 		} else {
-			//sorcvbuf = netConfig.getBacksocketsorcvbuf();
-			sosndbuf = netConfig.getBacksocketsosndbuf();
+			sorcvbuf = this.netConfig.getBacksocketsorcvbuf();
+			sosndbuf = this.netConfig.getBacksocketsosndbuf();
+			soNoDelay = this.netConfig.getBackSocketNoDelay();
 		}
 		
-		// LINUX 2.6 该 RCVBUF 会自动调节
-		// con.getChannel().socket().setReceiveBufferSize( sorcvbuf );
-		con.getSocketChannel().socket().setSendBufferSize( sosndbuf  );  // SO_TCPNODELAY  关闭算法
-		con.getSocketChannel().socket().setTcpNoDelay( true );
-		con.getSocketChannel().socket().setKeepAlive( true );
-		con.getSocketChannel().socket().setReuseAddress( true );
+		SocketChannel socketChannel = con.getSocketChannel();
+		socketChannel.setOption(StandardSocketOptions.SO_RCVBUF, sorcvbuf);
+		socketChannel.setOption(StandardSocketOptions.SO_SNDBUF, sosndbuf);
+		socketChannel.setOption(StandardSocketOptions.TCP_NODELAY, soNoDelay == 1);
+	    socketChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
+	    socketChannel.setOption(StandardSocketOptions.SO_KEEPALIVE, true);
 	}
 }

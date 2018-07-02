@@ -20,8 +20,6 @@ public final class NIOReactor {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOReactor.class );
 	
-	private final static long SELECTOR_TIMEOUT = 40L; // 500L
-	
 	private final String name;
 	private final RW reactorR;
 
@@ -56,7 +54,7 @@ public final class NIOReactor {
 	// IO/RW 线程
 	private final class RW implements Runnable {
 		
-		private final Selector selector;
+		private volatile Selector selector;
 		private final ConcurrentLinkedQueue<ClosableConnection> pendingQueue;
 		private long reactCount;
         
@@ -68,35 +66,22 @@ public final class NIOReactor {
 		@Override
 		public void run() {
 			
-			Selector selector = this.selector;
 			Set<SelectionKey> keys = null;
-			long ioTimes = 0;
 			
 			for (;;) {
 				
 				++reactCount;
 				try {
 
-					// 查看有无连接就绪
-					selector.select( SELECTOR_TIMEOUT );
-
-					keys = selector.selectedKeys();
-					if ( keys != null && keys.isEmpty() ) {
-						
-						if (!pendingQueue.isEmpty()) {
-							ioTimes = 0;
-							processPendingQueue(selector); 	// 处理注册队列
-						}
-						continue;
-						
-					} else if ((ioTimes > 5) & !pendingQueue.isEmpty()) {
-						
-						ioTimes = 0;
-						processPendingQueue(selector); 		// 处理注册队列
-					}
+					Selector selector = this.selector;
 					
-
-					ioTimes++;
+					// 查看有无连接就绪
+					selector.select(500L); // 500L
+					
+					// 处理注册队列
+					processPendingQueue( selector );
+					
+					keys = selector.selectedKeys();
 					for (final SelectionKey key : keys) {
 
 						ClosableConnection con = null;
@@ -110,13 +95,9 @@ public final class NIOReactor {
 								
 								int ops = key.readyOps();
 								
-								// see ACE, first write,  Accept > Write > Read
-								
-								// 处理写
-								if ( (ops & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE ) {
-									con.doNextWriteCheck();
-								}
-								
+								// 1、first write,  Accept > Write > Read  ， ACE
+								// 2、first read, Accept > Read > Write	 ， NETTY 
+								// 
 								// 处理读
 								if ( (ops & SelectionKey.OP_READ) == SelectionKey.OP_READ ) {									
 									try {
@@ -130,7 +111,12 @@ public final class NIOReactor {
 										con.close("program err:" + e.toString());
 										continue;
 									}
-								}								
+								}	
+								
+								// 处理写
+								if ( (ops & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE ) {
+									con.doNextWriteCheck();
+								}
 								
 							} else {
 								key.cancel();
@@ -164,6 +150,11 @@ public final class NIOReactor {
 		
 		// 注册 IO 读写事件
 		private void processPendingQueue(Selector selector) {
+			
+			if (pendingQueue.isEmpty()) {
+				return;
+			}
+			
 			ClosableConnection c = null;
 			while ((c = pendingQueue.poll()) != null) {
 				try {

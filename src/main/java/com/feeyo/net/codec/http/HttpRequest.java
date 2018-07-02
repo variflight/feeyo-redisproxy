@@ -1,14 +1,21 @@
 package com.feeyo.net.codec.http;
 
-public class HttpRequest {
+public class HttpRequest extends HttpMessage {
 
-	private String method;
-	private String uri;
-
-	private byte[] data;
+	private final String method;
+	private final String uri;
 
 	public HttpRequest(String method, String uri) {
 		super();
+		if(method == null || uri == null) {
+			throw new IllegalArgumentException("Http method or uri may be not null");
+		}
+		this.method = method;
+		this.uri = uri;
+	}
+	
+	public HttpRequest(String httpVersion, String method, String uri) {
+		super(httpVersion);
 		this.method = method;
 		this.uri = uri;
 	}
@@ -21,12 +28,4 @@ public class HttpRequest {
 		return uri;
 	}
 	
-	public byte[] getData() {
-		return data;
-	}
-
-	public void setData(byte[] data) {
-		this.data = data;
-	}
-
 }

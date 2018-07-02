@@ -1,7 +1,6 @@
 package com.feeyo.net.nio;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -17,8 +16,6 @@ public abstract class ClosableConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ClosableConnection.class );
 	
-	//
-	public static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, the request is cleaned up. \r\n".getBytes();
 	
 	// 连接的方向，in表示是客户端连接过来的，out表示自己作为客户端去连接对端Sever
 	public enum Direction {
@@ -34,11 +31,6 @@ public abstract class ClosableConnection {
 	//
 	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
 	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
-	
-	// 支持 backend conn 内嵌套 
-	//
-	protected boolean isChild = false;
-	protected ClosableConnection parent = null;
 	
 	//
 	protected Direction direction = Direction.out;
@@ -63,26 +55,18 @@ public abstract class ClosableConnection {
 	protected long startupTime;
 	protected long lastReadTime;
 	protected long lastWriteTime;
-	protected long closeTime;											// debug
-	protected String closeReason = null;
 	
-																		//
-	protected long netInCounter;
+	//																//
 	protected long netInBytes;											
-	protected long netOutCounter;
 	protected long netOutBytes;
-	
 	protected int writeAttempts;
 	
 	protected long idleTimeout;
 	
 	@SuppressWarnings("rawtypes")
 	protected NIOHandler handler;
-	
-	protected NetFlowController netflowController;
 
-	public ClosableConnection() {}
-	
+
 	public ClosableConnection(SocketChannel socketChannel) {
 		this.socketChannel = socketChannel;
 		this.isClosed = new AtomicBoolean(false);
@@ -90,23 +74,6 @@ public abstract class ClosableConnection {
 		this.lastReadTime = startupTime;
 		this.lastWriteTime = startupTime;
 		this.id = ConnectIdGenerator.getINSTNCE().getId();
-	}
-	
-	//
-	public boolean isChild() {
-		return isChild;
-	}
-
-	public void setChild(boolean isChild) {
-		this.isChild = isChild;
-	}
-
-	public ClosableConnection getParent() {
-		return parent;
-	}
-
-	public void setParent(ClosableConnection parent) {
-		this.parent = parent;
 	}
 
 	
@@ -152,10 +119,6 @@ public abstract class ClosableConnection {
 		this.id = id;
 	}
 
-	public boolean isIdleTimeout() {
- 		return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + idleTimeout;
-	}
-
 	public SocketChannel getSocketChannel() {
 		return socketChannel;
 	}
@@ -176,16 +139,8 @@ public abstract class ClosableConnection {
 		return netInBytes;
 	}
 	
-	public long getNetInCounter() {
-		return netInCounter;
-	}
-
 	public long getNetOutBytes() {
 		return netOutBytes;
-	}
-
-	public long getNetOutCounter() {
-		return netOutCounter;
 	}
 	
 
@@ -197,63 +152,20 @@ public abstract class ClosableConnection {
 	public NIOHandler getHandler() {
 		return this.handler;
 	}
-	
-	public void setNetflowController(NetFlowController nfc) {
-		this.netflowController = nfc;
-	}
-	
-	public NetFlowController getNetflowController() {
-		return netflowController;
-	}
 
 	public boolean isConnected() {
 		boolean isConnected = (this.state != STATE_CONNECTING && state != STATE_CLOSING && state != STATE_CLOSED);
 		return isConnected;
 	}
 
-	// 
-	//
-	@SuppressWarnings("unchecked")
-	public void close(String reason) {
-		//
-		if ( !isClosed.get() ) {
-			
-			closeSocket();
-			isClosed.set(true);
-			
-			this.closeTime = TimeUtil.currentTimeMillis();
-			if ( reason != null ) 
-				this.closeReason = reason;
-			
-			this.cleanup();		
-			
-			if ( isChild )  {
-				NetSystem.getInstance().removeConnection( parent );
-				if ( parent.getHandler() != null )
-					parent.getHandler().onClosed(parent, reason);
-				
-			} else {
-				NetSystem.getInstance().removeConnection(this);
-				if ( this.handler != null )
-					this.handler.onClosed(this, reason);
-			}
-			
-			if ( LOGGER.isDebugEnabled() ) {
-				LOGGER.debug("close connection, reason:" + reason + " ," + this.toString());
-			}
-			
-			this.attachement = null; //help GC
-			
-		} else {
-		    this.cleanup();
-		}
-	}
-
 	public boolean isClosed() {
 		return isClosed.get();
 	}
 
-	
+	public boolean isIdleTimeout() {
+ 		return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + idleTimeout;
+	}
+
 	public void idleCheck() {		
 		if ( isIdleTimeout() ) {			
 			if ( LOGGER.isDebugEnabled() ) {
@@ -262,63 +174,90 @@ public abstract class ClosableConnection {
 			close("idle timeout ");
 		}
 	}
-
-	/**
-	 * 清理资源
-	 */
-	protected abstract void cleanup();
 	
-	
-	private void clearSelectionKey() {
-		try {
-			SelectionKey key = this.processKey;
-			if (key != null && key.isValid()) {
-				key.attach(null);
-				key.cancel();
-			}
-		} catch (Exception e) {
-			LOGGER.warn("clear selector keys err:" + e);
-		}
+	//
+	public void setReactor(String reactorName) {
+		this.reactor = reactorName;
 	}
 
+	public String getReactor() {
+		return this.reactor;
+	}
 
-	@SuppressWarnings("unchecked")
-	public void register(Selector selector) throws IOException {
-		try {	
-			processKey = socketChannel.register(selector, SelectionKey.OP_READ, this);
-			
-			if ( LOGGER.isDebugEnabled() ) {
-				LOGGER.debug("register:" + this);
-			}
-			
-			// 已连接、默认不需要认证
-	        this.setState( Connection.STATE_CONNECTED );  
-			
-	        // 支持代理 CON
-			if ( isChild ) {
-				NetSystem.getInstance().addConnection( parent );
-				if ( parent.getHandler() != null )
-					parent.getHandler().onConnected( parent );
-				
-			} else {
-				NetSystem.getInstance().addConnection(this);
-				if ( this.handler != null )
-					this.handler.onConnected( this );
-			}
-			
-		} finally {
-			if ( isClosed() ) {
-				clearSelectionKey();
-			}
-		}
+	public boolean belongsReactor(String reacotr) {
+		return reactor.equals(reacotr);
+	}
+
+	public Object getAttachement() {
+		return attachement;
+	}
+
+	public void setAttachement(Object attachement) {
+		this.attachement = attachement;
+	}
+
+	public void setState(int newState) {
+		this.state = newState;
+	}
+	
+	public int getState() {
+		return state;
+	}
+
+	public Direction getDirection() {
+		return direction;
+	}
+
+	public void setDirection(Direction in) {
+		this.direction = in;
 	}
 	
 	//
-	public abstract void doNextWriteCheck();
+	// ______________________________________________________________________________________
 	
+	// Accept  register
+	public abstract void register(Selector selector) throws IOException;
+	
+	// 异步读取,该方法在 reactor 中被调用
+	public abstract void asynRead() throws IOException;
+	
+	//
+	public abstract void doNextWriteCheck();
 	public abstract void write(byte[] data);
 	public abstract void write(ByteBuffer data);
 	
+	// 
+	public abstract void close(String reason);
+	
+	// Network Flow Guard (NFG) 
+	protected boolean flowGuard(long length) {
+		return false;
+		// ignore
+	}
+	
+	
+	//
+	// ______________________________________________________________________________________
+	//
+	protected void disableRead() {
+		SelectionKey key = this.processKey;
+		key.interestOps(key.interestOps() & OP_NOT_READ);
+	}
+
+	protected void enableRead() {
+		boolean needWakeup = false;
+		try {
+			SelectionKey key = this.processKey;
+			key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+			needWakeup = true;
+		} catch (Exception e) {
+			LOGGER.warn("enable read fail ", e);
+		}
+		
+		if (needWakeup) {
+			processKey.selector().wakeup();
+		}
+	}
 
 	protected void disableWrite() {
 		try {
@@ -342,101 +281,6 @@ public abstract class ClosableConnection {
 		if (needWakeup && wakeup) {
 			processKey.selector().wakeup();
 		}
-	}
-	
-	public void setReactor(String reactorName) {
-		this.reactor = reactorName;
-	}
-
-	public String getReactor() {
-		return this.reactor;
-	}
-
-	public boolean belongsReactor(String reacotr) {
-		return reactor.equals(reacotr);
-	}
-
-	public Object getAttachement() {
-		return attachement;
-	}
-
-	public void setAttachement(Object attachement) {
-		this.attachement = attachement;
-	}
-
-	protected void disableRead() {
-		SelectionKey key = this.processKey;
-		key.interestOps(key.interestOps() & OP_NOT_READ);
-	}
-
-	protected void enableRead() {
-		boolean needWakeup = false;
-		try {
-			SelectionKey key = this.processKey;
-			key.interestOps(key.interestOps() | SelectionKey.OP_READ);
-			needWakeup = true;
-		} catch (Exception e) {
-			LOGGER.warn("enable read fail ", e);
-		}
-		
-		if (needWakeup) {
-			processKey.selector().wakeup();
-		}
-	}
-
-	public void setState(int newState) {
-		
-		this.state = newState;
-	}
-	
-	/**
-	 * 异步读取,该方法在 reactor 中被调用
-	 */
-	public abstract void asynRead() throws IOException;
-	
-	
-	protected void closeSocket() {
-		if ( socketChannel != null ) {		
-			
-			if (socketChannel instanceof SocketChannel) {
-				Socket socket = ((SocketChannel) socketChannel).socket();
-				if (socket != null) {
-					try {
-						socket.close();
-					} catch (IOException e) {
-						LOGGER.error("closeChannelError", e);
-					}
-				}
-			}			
-			
-			boolean isSocketClosed = true;
-			try {
-				processKey.cancel();
-				socketChannel.close();
-			} catch (Throwable e) {
-			}			
-			boolean closed = isSocketClosed && (!socketChannel.isOpen());
-			if (!closed) {
-				LOGGER.warn("close socket of connnection failed " + this);
-			}
-		}
-	}
-
-	public int getState() {
-		return state;
-	}
-
-	public Direction getDirection() {
-		return direction;
-	}
-
-	public void setDirection(Direction in) {
-		this.direction = in;
-	}
-
-	public void flowClean() {
-		LOGGER.warn("Flow cleaning,  {}", this );
-		// ignore
 	}
 	
 }
