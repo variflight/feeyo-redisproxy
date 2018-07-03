@@ -41,12 +41,8 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			
 		case CommandParse.CONSUMER_CMD:
 			
-			boolean isErrorOffsetRecovery = true;
-			
 			// 指定点位消费，消费失败不回收点位
-			if (request.getNumArgs() > 2){
-				isErrorOffsetRecovery = false;
-			} 
+			boolean isErrorOffsetRecovery = request.getNumArgs() > 2 ? false : true;
 			
 			buffer = encoder.encodeConsumer(request, node.getPartition(), node.getOffset(), node.getMaxBytes());
 			backendCallback = new KafkaConsumerCmdCallback(new String(request.getArgs()[1]), node.getPartition(),
