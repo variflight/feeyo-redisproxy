@@ -5,11 +5,13 @@
 内部的服务能力，当前单节点RedisProxy，日处理查询量50亿+， QPS维持在( 50K～80K )
 
 ## 目前已实现的特性
-*  支持 redis standalone 、 redis cluster 代理
+*  支持 redis standalone 、 redis cluster、kafka cluster 代理
 *  支持 redis cluster 情况下的跨片 marge 操作，如：pipeline 、 mget、 mset、 del mulit key 指令， 通过虚拟内存，解决高并发情况下的 pipeline 的数据堆积问题
 *  支持 多租户、只读权限、自动分配db 
 *  支持 访问的数据监控、 use 指令，实时切换后端代理
 *  支持 用户、代理配置的热更新 等等 ...
+
+ <a href="resources/docs/RedisProxy&KafkaProxy.pdf" rel="nofollow"> 使用手册 </a>
 
 ## 关于 Architecture 
 ![img](resources/docs/images/3d5201396f213cf78c61c68c2e8c77a5.png)

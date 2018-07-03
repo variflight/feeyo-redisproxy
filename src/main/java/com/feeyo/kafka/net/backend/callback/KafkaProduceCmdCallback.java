@@ -8,9 +8,9 @@ import com.feeyo.kafka.net.backend.broker.offset.BrokerOffsetService;
 import com.feeyo.kafka.protocol.ApiKeys;
 import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.net.nio.NetSystem;
+import com.feeyo.net.nio.util.ProtoUtils;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.util.ProtoUtils;
 
 public class KafkaProduceCmdCallback extends KafkaCmdCallback {
 	

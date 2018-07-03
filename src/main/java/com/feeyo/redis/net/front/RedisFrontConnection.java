@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.net.nio.NetFlowGuard;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.UserCfg;
