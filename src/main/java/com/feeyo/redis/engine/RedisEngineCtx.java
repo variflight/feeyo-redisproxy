@@ -334,9 +334,6 @@ public class RedisEngineCtx {
 		        systemConfig.setFrontIdleTimeout(  frontIdleTimeout );
 		        systemConfig.setBackendIdleTimeout( backendIdleTimeout );
 		        NetSystem.getInstance().setNetConfig( systemConfig );
-				
-		        // zk 重新加载
-//	            ZkClient.INSTANCE().reloadZkCfg();
 
 	            //清理 old
 				for (final AbstractPool pool : _poolMap.values()) {	
