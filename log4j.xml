@@ -55,6 +55,13 @@
 			<param name="AcceptOnMatch" value="true" />
 		</filter>
 	</appender>
+	
+	<logger name="org.apache.kafka">
+            <level value="warn" />   
+            <appender-ref ref="debug-out" />
+            <appender-ref ref="warn-out" />
+            <appender-ref ref="error-out" />
+    </logger>
 
    	<root>
 		<level value="info"/>

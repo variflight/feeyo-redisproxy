@@ -200,12 +200,18 @@ public class OffsetLocalAdmin {
 		return false;
 	}
 
+	// 修复 offset
+	public void repairOffset(String user, TopicCfg topicCfg, int partition, long newOffset) {
+		BrokerPartition brokerPartition = topicCfg.getRunningInfo().getPartition(partition);
+		ConsumerOffset consumeOffset = brokerPartition.getConsumerOffset(user);
+		consumeOffset.repairOffset( newOffset );
+	}
 
 	// 申请offset
 	public long getOffset(String user, TopicCfg topicCfg, int partition) {
 		BrokerPartition brokerPartition = topicCfg.getRunningInfo().getPartition(partition);
-		ConsumerOffset cOffset = brokerPartition.getConsumerOffset(user);
-		long offset = cOffset.getNewOffset();
+		ConsumerOffset consumeOffset = brokerPartition.getConsumerOffset(user);
+		long offset = consumeOffset.getNewOffset();
 		return offset;
 	}
 

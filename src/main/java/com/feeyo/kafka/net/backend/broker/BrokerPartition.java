@@ -150,7 +150,7 @@ public class BrokerPartition {
 			if ( offset < logStartOffset ) {
 				// 如果是日志被kafka自动清除的点位超出范围，把点位设置成kafka日志开始的点位
 				ConsumerOffset consumerOffset = getConsumerOffset(consumer);
-				consumerOffset.setOffsetToLogStartOffset(logStartOffset);
+				consumerOffset.repairOffsetToLogStartOffset(logStartOffset);
 				
 			} else {
 				ConsumerOffset consumerOffset = getConsumerOffset(consumer);
@@ -208,11 +208,8 @@ public class BrokerPartition {
 			return currentOffset.get();
 		}
 		
-		/**
-		 * offset设置成kafka的logstartoffset
-		 * @param update
-		 */
-		public void setOffsetToLogStartOffset(long update) {
+		// offset 设置成 Kafka 的 logStartOffset
+		public void repairOffsetToLogStartOffset(long update) {
 			
 			while (true) {
 	            long current = currentOffset.get();
@@ -222,7 +219,14 @@ public class BrokerPartition {
 	            if (currentOffset.compareAndSet(current, update))
 	                break;
 	        }
-			
+		}
+		
+		public void repairOffset(long update) {
+			while (true) {
+	            long current = currentOffset.get();
+	            if (currentOffset.compareAndSet(current, update))
+	                break;
+	        }
 		}
 		
 		public long getNewOffset() {

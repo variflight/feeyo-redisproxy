@@ -31,9 +31,7 @@ import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.google.common.collect.Sets;
 
 public class KafkaPool extends AbstractPool {
-	
-	protected static final byte[] PING = "*1\r\n$4\r\nPING\r\n".getBytes();
-	
+
 	protected KafkaConHeartBeatHandler conHeartBeatHanler = new KafkaConHeartBeatHandler();
 	protected KafkaBackendConnectionFactory backendConFactory = new KafkaBackendConnectionFactory();
 

@@ -258,6 +258,21 @@ public class BrokerOffsetService {
 	}
 	
 	
+	// 修复offset
+	public boolean repairOffset(String user, TopicCfg topicCfg, int partition, long offset) {
+
+		if (runningMonitor.isMineRunning()) {
+			localAdmin.repairOffset(user, topicCfg, partition, offset);
+			return true;
+			
+		} else {
+			ServerRunningData master = this.runningMonitor.getActiveData();
+			LOGGER.warn(" Please forward jump to host={} port={} execution", master.getIp(), master.getPort());
+			return false;
+		}
+	}
+	
+	
 	// 获取offset
 	public long getOffset(String user, TopicCfg topicCfg, int partition) {
 		long offset;
