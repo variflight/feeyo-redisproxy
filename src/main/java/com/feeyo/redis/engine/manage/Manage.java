@@ -1117,49 +1117,6 @@ public class Manage {
 				}
 			} 
 			
-		// KAFKA
-		} else if ( arg1.length == 5) {
-			
-				//
-				if ( (arg1[0] == 'K' || arg1[0] == 'k' ) && 
-						 (arg1[1] == 'A' || arg1[1] == 'a' ) && 
-						 (arg1[2] == 'F' || arg1[2] == 'f' ) && 
-						 (arg1[3] == 'K' || arg1[3] == 'k' ) &&
-						 (arg1[4] == 'A' || arg1[4] == 'a' ) ) {
-					
-					// KAFKA REPAIR_OFFSET password topicName offset
-					if ( arg2.equalsIgnoreCase("REPAIR_OFFSET") ) {
-						
-						String password = new String( request.getArgs()[2] );
-						String topicName = new String( request.getArgs()[3] );
-						long offset = Long.parseLong( new String( request.getArgs()[4] ) );
-						
-						UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(password);
-						if ( userCfg != null ) {
-							int poolId = userCfg.getPoolId() ;
-							KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( poolId );
-							if ( kafkaPoolCfg != null ) {
-								TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topicName);
-								for(int partition=0; partition < topicCfg.getPartitions(); partition++) {
-									
-									boolean isRepair = BrokerOffsetService.INSTANCE().repairOffset(password, topicCfg, partition, offset);
-									if ( !isRepair ) {
-										return ("-ERR repair failed, partition=" + partition + "  \r\n").getBytes();
-									}
-								}
-								
-								return "+OK\r\n".getBytes();
-								
-							} else {
-								return ("-ERR repair failed, pool="+ poolId + " is null \r\n").getBytes();
-							}
-							
-						} else {
-							return ("-ERR repair failed, password=" + password + " is null \r\n").getBytes();
-						}
-					}
-					
-				}
 
 		// RELOAD
 		} else if ( arg1.length == 6 ) {
@@ -1238,6 +1195,47 @@ public class Manage {
 			}
 			
 			
+			// Repair Offset
+			if ( (arg1[0] == 'R' || arg1[0] == 'r' ) && 
+					 (arg1[1] == 'E' || arg1[1] == 'e' ) && 
+					 (arg1[2] == 'P' || arg1[2] == 'p' ) && 
+					 (arg1[3] == 'A' || arg1[3] == 'a' ) &&
+					 (arg1[4] == 'I' || arg1[4] == 'i' ) &&
+					 (arg1[5] == 'R' || arg1[5] == 'r' )) {
+				
+				// REPAIR OFFSET password topicName offset
+				if ( arg2.equalsIgnoreCase("OFFSET") ) {
+					
+					String password = new String( request.getArgs()[2] );
+					String topicName = new String( request.getArgs()[3] );
+					long offset = Long.parseLong( new String( request.getArgs()[4] ) );
+					
+					UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(password);
+					if ( userCfg != null ) {
+						int poolId = userCfg.getPoolId() ;
+						KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( poolId );
+						if ( kafkaPoolCfg != null ) {
+							TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topicName);
+							for(int partition=0; partition < topicCfg.getPartitions(); partition++) {
+								
+								boolean isRepair = BrokerOffsetService.INSTANCE().repairOffset(password, topicCfg, partition, offset);
+								if ( !isRepair ) {
+									return ("-ERR repair failed, partition=" + partition + "  \r\n").getBytes();
+								}
+							}
+							
+							return "+OK\r\n".getBytes();
+							
+						} else {
+							return ("-ERR repair failed, pool="+ poolId + " is null \r\n").getBytes();
+						}
+						
+					} else {
+						return ("-ERR repair failed, password=" + password + " is null \r\n").getBytes();
+					}
+				}
+				
+			}
 			
 			
 			
