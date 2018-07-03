@@ -1215,23 +1215,29 @@ public class Manage {
 						int poolId = userCfg.getPoolId() ;
 						KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( poolId );
 						if ( kafkaPoolCfg != null ) {
+							
 							TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topicName);
-							for(int partition=0; partition < topicCfg.getPartitions(); partition++) {
+							if ( topicCfg != null ) {
 								
-								boolean isRepair = BrokerOffsetService.INSTANCE().repairOffset(password, topicCfg, partition, offset);
-								if ( !isRepair ) {
-									return ("-ERR repair failed, partition=" + partition + "  \r\n").getBytes();
+								for(int partition=0; partition < topicCfg.getPartitions(); partition++) {
+									boolean isRepair = BrokerOffsetService.INSTANCE().repairOffset(password, topicCfg, partition, offset);
+									if ( !isRepair ) {
+										return ("-ERR repair failed, partition=" + partition + " exec err \r\n").getBytes();
+									}
 								}
+								
+							} else {
+								return ("-ERR repair failed, topic="+ topicName + " no configuration \r\n").getBytes();
 							}
 							
 							return "+OK\r\n".getBytes();
 							
 						} else {
-							return ("-ERR repair failed, pool="+ poolId + " is null \r\n").getBytes();
+							return ("-ERR repair failed, pool="+ poolId + " no configurationl \r\n").getBytes();
 						}
 						
 					} else {
-						return ("-ERR repair failed, password=" + password + " is null \r\n").getBytes();
+						return ("-ERR repair failed, password=" + password + " no configuration \r\n").getBytes();
 					}
 				}
 				
