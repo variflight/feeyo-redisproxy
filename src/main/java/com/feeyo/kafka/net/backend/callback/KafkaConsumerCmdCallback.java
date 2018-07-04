@@ -23,8 +23,8 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaConsumerCmdCallback.class );
 	
 	private String topic;
-	private long consumeOffset;
 	private int partition;
+	private long consumeOffset;
 	
 	// 消费失败是否把消费点位归还（指定点位消费时，不需要归还）
 	private boolean isErrorOffsetRecovery = true;
@@ -93,7 +93,9 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 		// 消费offset超出范围
 		} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
 			
-			LOGGER.warn("consume callback fr err: fr range={} {}, msg={}", new Object[]{ fr.getLogStartOffset() , fr.getLastStableOffset() , fr.getErrorMessage()} );
+			LOGGER.warn("consume callback fr err: topic={}, partition={}, offset={},  range={}, {}, msg={}", 
+					new Object[]{  topic, partition, consumeOffset, fr.getLogStartOffset() , fr.getLastStableOffset() , fr.getErrorMessage()} );
+			
 			if ( isErrorOffsetRecovery )
 				returnConsumerOffset(frontCon.getPassword(), topic, partition, consumeOffset);
 			
