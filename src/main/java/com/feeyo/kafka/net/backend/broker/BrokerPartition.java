@@ -224,8 +224,10 @@ public class BrokerPartition {
 		public void repairOffset(long update) {
 			while (true) {
 	            long current = currentOffset.get();
-	            if (currentOffset.compareAndSet(current, update))
-	                break;
+	            if (currentOffset.compareAndSet(current, update)) {
+	            		oldOffsetQueue.clear();
+	            		break;
+	            }
 	        }
 		}
 		
