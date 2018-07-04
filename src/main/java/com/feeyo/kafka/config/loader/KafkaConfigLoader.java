@@ -56,6 +56,7 @@ public class KafkaConfigLoader {
 					String[] producers = getAttribute(nameChildNodeMap, "producer", "").split(",");
 					String[] consumers = getAttribute(nameChildNodeMap, "consumer", "").split(",");
 					
+					
 					TopicCfg topicCfg = new TopicCfg(name, poolId, partitions, replicationFactor, producers, consumers);
 					map.put(name, topicCfg);
 				}

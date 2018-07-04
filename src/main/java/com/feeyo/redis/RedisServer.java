@@ -135,6 +135,8 @@ public class RedisServer {
 			
 		} catch (Throwable e) {
 			
+			e.printStackTrace();
+			
 			// exit
 			System.exit( 0 );
 		}

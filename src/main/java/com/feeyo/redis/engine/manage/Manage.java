@@ -1212,11 +1212,11 @@ public class Manage {
 					
 					UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(password);
 					if ( userCfg != null ) {
+						
 						int poolId = userCfg.getPoolId() ;
-						KafkaPoolCfg kafkaPoolCfg = (KafkaPoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( poolId );
-						if ( kafkaPoolCfg != null ) {
-							
-							TopicCfg topicCfg = kafkaPoolCfg.getTopicCfgMap().get(topicName);
+						PoolCfg poolCfg = (PoolCfg) RedisEngineCtx.INSTANCE().getPoolCfgMap().get( poolId );
+						if ( poolCfg != null && poolCfg instanceof KafkaPoolCfg ) {
+							TopicCfg topicCfg = ((KafkaPoolCfg)poolCfg).getTopicCfgMap().get(topicName);
 							if ( topicCfg != null ) {
 								
 								for(int partition=0; partition < topicCfg.getPartitions(); partition++) {
@@ -1233,7 +1233,7 @@ public class Manage {
 							return "+OK\r\n".getBytes();
 							
 						} else {
-							return ("-ERR repair failed, pool="+ poolId + " no configurationl \r\n").getBytes();
+							return ("-ERR repair failed, pool="+ poolId + " no configurationl or not the kafka pool type. \r\n").getBytes();
 						}
 						
 					} else {

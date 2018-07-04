@@ -78,7 +78,7 @@ public class KafkaPoolCfg extends PoolCfg {
 		Error processing create topic request for topic test01 with arguments (numPartitions=3, replicationFactor=2, replicasAssignments={}, configs={}) (kafka.server.AdminManager)
 		org.apache.kafka.common.errors.InvalidReplicationFactorException: Replication factor: 2 larger than available brokers: 1.
 	 */
-	private void initializeOfKafka(Map<String, TopicCfg> topicCfgMap) throws Exception {
+	private void initializeOfKafka(Map<String, TopicCfg> topicCfgMap) throws Exception, org.apache.kafka.common.errors.TimeoutException {
 		
 		if (topicCfgMap == null || topicCfgMap.isEmpty()) {
 			return;
@@ -164,7 +164,7 @@ public class KafkaPoolCfg extends PoolCfg {
 			}
 			
 		} catch(Throwable e) {
-			throw e;
+			throw new Exception("kafka pool init err: " + servers.toString(), e);
 			
 		} finally {
 			if (kafkaAdmin != null)

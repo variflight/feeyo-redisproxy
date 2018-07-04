@@ -51,9 +51,9 @@ public class CommandParse {
 		_cmds.put("SHOW", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, READ_CMD));
 		_cmds.put("RELOAD", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
 		_cmds.put("JVM", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, READ_CMD));
-		_cmds.put("ZK", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
 		_cmds.put("NODE", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
 		_cmds.put("USE", 				new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
+		_cmds.put("REPAIR", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
 		
 		// kafka
 		_cmds.put("KPUSH", 				new RedisRequestPolicy(KAFKA_CMD, PRODUCE_CMD, WRITE_CMD));
