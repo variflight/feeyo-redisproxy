@@ -24,16 +24,11 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.Node;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 /**
  * @see http://kafka.apache.org/protocol.html#protocol_api_keys
  */
 public class KafkaAdmin {
-	
-    private static Logger LOGGER = LoggerFactory.getLogger( KafkaAdmin.class );
 	
 	private AdminClient adminClient;
 	
@@ -57,34 +52,28 @@ public class KafkaAdmin {
 		return adminClient.createTopics(newTopics, cto);
 	}
 	
-	/**
-	 * 获取所有topic和配置信息
-	 * @return
-	 */
-	public Map<String, TopicDescription> getTopicAndDescriptions() {
-		
-		// 查询topic
-		ListTopicsOptions lto = new ListTopicsOptions();
-		lto.timeoutMs(10 * 1000);
-		ListTopicsResult ltr = adminClient.listTopics(lto);
-		
-		// 查询topic配置信息
+	// 获取所有topic和配置信息
+	public Map<String, TopicDescription> getTopicAndDescriptions() throws Exception {
+
 		try {
+			// 查询topic
+			ListTopicsOptions lto = new ListTopicsOptions();
+			lto.timeoutMs(10 * 1000);
+			ListTopicsResult ltr = adminClient.listTopics(lto);
+			
+			// 查询topic配置信息
 			DescribeTopicsOptions dto = new DescribeTopicsOptions();
 			dto.timeoutMs(15 * 1000);
 			DescribeTopicsResult dtr = adminClient.describeTopics(ltr.names().get(), dto);
 			return dtr.all().get();
+			
 		} catch (Exception e) {
-			LOGGER.error("get err:", e);
+			throw e;
 		}
-		return null;
 	}
 	
 	/**
 	 * 给topic增加分区
-	 * @param topic
-	 * @param partitions
-	 * @return
 	 */
 	public CreatePartitionsResult addPartitionsForTopic(String topic, int partitions) {
 		Map<String, NewPartitions> map = new HashMap<>();
