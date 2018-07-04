@@ -11,7 +11,7 @@ import com.google.protobuf.MessageLite;
 public class ProtobufRequestHandler implements RequestHandler{
 
 	// 定义 protobuf prototype
-	private ProtobufDecoder decoder = new ProtobufDecoder(Message.getDefaultInstance(), false);
+	private ProtobufDecoder<MessageLite> decoder = new ProtobufDecoder<MessageLite>(Message.getDefaultInstance(), false);
 
 	@Override
 	public void handle(HttpConnection conn, String uri, byte[] data) {

@@ -43,7 +43,7 @@ public class ProtobufTest {
 
 		ByteBuffer protobuf = encoder.encode(fromMsg);
 		
-		ProtobufDecoder decoder = new ProtobufDecoder(Message.getDefaultInstance(), true);
+		ProtobufDecoder<Message> decoder = new ProtobufDecoder<Message>(Message.getDefaultInstance(), true);
 		Message toMsg = (Message) decoder.decode(protobuf.array()).get(0);
 		System.out.println(toMsg.getIndex());
 		
