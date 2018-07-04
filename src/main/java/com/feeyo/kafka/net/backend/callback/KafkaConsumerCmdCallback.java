@@ -93,7 +93,7 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 		// 消费offset超出范围
 		} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
 			
-			LOGGER.warn("consume callback fr err: fr={}", fr);
+			LOGGER.warn("consume callback fr err: fr={}, " + fr.getLogStartOffset() + " - " + fr.getLastStableOffset() , fr.getErrorMessage());
 			if ( isErrorOffsetRecovery )
 				returnConsumerOffset(frontCon.getPassword(), topic, partition, consumeOffset);
 			
