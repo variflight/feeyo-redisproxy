@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -20,6 +21,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.feeyo.kafka.config.KafkaPoolCfg;
+import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.redis.net.backend.pool.PoolType;
 
 
@@ -141,6 +143,28 @@ public class ConfigLoader {
 				
 				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, 
 						isReadonly);
+				
+				// 非kafka pool的用户不能充当生产者 和 消费者
+				if (poolType != 3) {
+					for (Entry<Integer, PoolCfg> entry : poolMap.entrySet()) {
+						PoolCfg pc = entry.getValue();
+						if (pc instanceof KafkaPoolCfg) {
+							KafkaPoolCfg kpc = (KafkaPoolCfg) pc;
+							Map<String, TopicCfg> topicMap = kpc.getTopicCfgMap();
+							for (Entry<String, TopicCfg> topicEntry : topicMap.entrySet()) {
+								TopicCfg tc = topicEntry.getValue();
+								if (tc.isConsumer(password)) {
+									LOGGER.error(tc.getName() + ": kafka consumer can not be a user who is not in the kakfa pool");
+									throw new Exception(tc.getName() + ": kafka consumer can not be a user who is not in the kakfa pool");
+								}
+								if (tc.isProducer(password)) {
+									LOGGER.error(tc.getName() + ": kafa producer can not be a user who is not in the kakfa pool");
+									throw new Exception(tc.getName() + ": kafa producer can not be a user who is not in the kakfa pool");
+								}
+							}
+						}
+					}
+				}
 				
 				map.put(password, userCfg);
 			}

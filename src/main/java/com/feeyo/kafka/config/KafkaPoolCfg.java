@@ -7,6 +7,8 @@ import java.util.Map;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.TopicPartitionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
 import com.feeyo.kafka.config.loader.KafkaConfigLoader;
@@ -15,8 +17,12 @@ import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerRunningInfo;
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.redis.config.UserCfg;
+import com.feeyo.redis.engine.RedisEngineCtx;
 
 public class KafkaPoolCfg extends PoolCfg {
+	
+	private static Logger LOGGER = LoggerFactory.getLogger( KafkaPoolCfg.class );
 	
 	// topicName -> topicCfg
 	private volatile Map<String, TopicCfg> topicCfgMap = null;
@@ -38,6 +44,27 @@ public class KafkaPoolCfg extends PoolCfg {
 		
 		// 1、 加载新的配置 
 		Map<String, TopicCfg> newTopicCfgMap = KafkaConfigLoader.loadTopicCfgMap(this.id, ConfigLoader.buidCfgAbsPathFor("kafka.xml"));
+		
+		// 校验生产者消费者
+		Map<String, UserCfg> userMap = RedisEngineCtx.INSTANCE().getUserMap();
+		for (TopicCfg tc : newTopicCfgMap.values()) {
+			for (String producer : tc.getProducers()) {
+				UserCfg uc = userMap.get(producer);
+				if (uc == null || uc.getPoolType() != 3) {
+					LOGGER.error(tc.getName() + ": kafka producer can not be a user who is not exists or not in the kakfa pool");
+					throw new Exception(tc.getName() + ": kafka producer can not be a user who is not exists or not in the kakfa pool");
+				}
+			}
+			
+			for (String consumer : tc.getConsumers()) {
+				UserCfg uc = userMap.get(consumer);
+				if (uc == null || uc.getPoolType() != 3) {
+					LOGGER.error(tc.getName() + ": kafka consumer can not be a user who is not exists or not in the kakfa pool");
+					throw new Exception(tc.getName() + ": kafka consumer can not be a user who is not exists or not in the kakfa pool");
+				}
+			}
+		}
+		
 		this.initializeOfKafka( newTopicCfgMap );
 		
 		// 2、增加旧引用
