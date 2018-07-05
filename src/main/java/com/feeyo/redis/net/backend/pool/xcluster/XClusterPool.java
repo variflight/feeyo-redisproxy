@@ -5,6 +5,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -178,7 +179,53 @@ public class XClusterPool extends AbstractPool{
 		}
 		
 	}
-    
+
+    /**
+     * 延迟时间统计
+     *
+     * @param epoch
+     */
+    @Override
+    public void latencyTimeCheck(long epoch) {
+
+        for(XNode node : nodes.values()) {
+            PhysicalNode physicalNode = node.getPhysicalNode();
+            latencyTimeCheck(physicalNode, epoch);
+        }
+    }
+
+    private void latencyTimeCheck(PhysicalNode physicalNode, long epoch) {
+
+        String host = physicalNode.getHost();
+        int port = physicalNode.getPort();
+        String nodeId = host + ":" + port;
+        JedisConnection conn = null;
+
+        try {
+            conn = new JedisConnection(host, port, 2000, 0);
+
+            long requestMilliseconds = System.currentTimeMillis();
+
+            conn.sendCommand(RedisCommand.PING);
+            String value = conn.getBulkReply();
+
+            long responseMillisecond = System.currentTimeMillis();
+            if (!"PONG".equalsIgnoreCase(value)) {
+                LOGGER.error("The unexpected response from {} for latency check is {}", nodeId, value);
+            }
+
+            long cost = responseMillisecond - requestMilliseconds;
+            LatencyCollector.add(nodeId, epoch, cost);
+
+        } catch (JedisConnectionException e) {
+            LOGGER.error("Connection to {} with error {}", nodeId, e);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
     public PhysicalNode getPhysicalNode(String suffix) {
     	PhysicalNode node = nodes.get( suffix ).getPhysicalNode();
         return node;

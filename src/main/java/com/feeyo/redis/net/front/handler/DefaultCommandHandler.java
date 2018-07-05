@@ -34,13 +34,13 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestCmd( cmd );
 		frontCon.getSession().setRequestKey( requestKey );
 		frontCon.getSession().setRequestSize(firstRequest.getSize());
-		
+
+		String host = node.getPhysicalNode().getHost();
+		int port = node.getPhysicalNode().getPort();
+		String nodeId = host + ":" + port;
 		// 旁路排队服务
-		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) ) {
-			
-			String host = node.getPhysicalNode().getHost();
-			int port = node.getPhysicalNode().getPort();
-			
+		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) || BypassService.INSTANCE().isOverLoad(nodeId) ) {
+
 			BypassService.INSTANCE().queueUp( firstRequest, frontCon, host, port );
 			
 		}  else {
@@ -49,7 +49,7 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		}
 		
 //		writeToBackend(node.getPhysicalNode(), firstRequest.encode(), new DirectTransTofrontCallBack());
-//		
+//
 	}
 	
 	public void writeToCustomerBackend(PhysicalNode physicalNode, ByteBuffer buffer, AbstractBackendCallback callBack) throws IOException {

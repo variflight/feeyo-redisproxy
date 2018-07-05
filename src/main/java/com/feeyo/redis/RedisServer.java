@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.RedisEngineCtx;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.util.Log4jInitializer;
 
@@ -34,7 +36,10 @@ public class RedisServer {
 	
 	//心跳独立，避免被其他任务影响
 	private static final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
-	
+
+	// Redis节点延迟时间统计
+	private static final ScheduledExecutorService latencyScheduler = Executors.newSingleThreadScheduledExecutor();
+
 	public static void main(String[] args) throws IOException {
 		
 //		System.setProperty("com.sun.management.jmxremote.port", "8099");
@@ -52,7 +57,7 @@ public class RedisServer {
 		try {
 			
 			final Logger LOGGER = LoggerFactory.getLogger( "RedisServer" );
-			
+
 			// 引擎初始化
 			RedisEngineCtx.INSTANCE().init();
 			
@@ -124,6 +129,41 @@ public class RedisServer {
 					});
 				}			
 			}, 30L, 30L, TimeUnit.SECONDS);
+
+			/**
+			 * 节点延迟值 检测
+			 * 定时发送请求记录延迟值
+			 */
+			final AtomicLong count = new AtomicLong(0);
+			String value = RedisEngineCtx.INSTANCE().getServerMap().get("latencyIntervalMinutes");
+			final long interval = (value == null ? 15 : Integer.parseInt(value)) * 60;
+			final int requestCount = 10;
+			// 每个epoch内只发requestCount条请求, 计算每个请求之间的间隔
+			final long executeIntervalDuringEpoch = interval / requestCount;
+			NetSystem.getInstance().getLatencySchedulerExecutor().scheduleAtFixedRate(new Runnable() {
+
+				@Override
+				public void run() {
+
+					// 每requestCount个请求之后, epoch递增
+					long epoch = count.getAndIncrement() / requestCount;
+
+					Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+					for (AbstractPool pool : pools.values() ) {
+						pool.latencyTimeCheck(epoch);
+					}
+				}
+			}, 30L, executeIntervalDuringEpoch, TimeUnit.SECONDS);
+
+			// 每隔latencyIntervalMinutes进行一次统计
+			latencyScheduler.scheduleAtFixedRate(new Runnable() {
+
+				@Override
+				public void run() {
+
+					LatencyCollector.doStatistics();
+				}
+			}, 30L + interval, interval, TimeUnit.SECONDS);
 			
 			// CONSOLE 
 			StringBuffer strBuffer = new StringBuffer();
@@ -136,7 +176,7 @@ public class RedisServer {
 		} catch (Throwable e) {
 			
 			e.printStackTrace();
-			
+
 			// exit
 			System.exit( 0 );
 		}

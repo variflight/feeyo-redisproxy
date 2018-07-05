@@ -44,6 +44,7 @@ import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil.AccessStatInfoResult;
@@ -1113,6 +1114,42 @@ public class Manage {
 						lines.add(line.toString());
 					}
 					
+					return encode(lines);
+				}
+				// SHOW LATENCY
+				else if (arg2.equalsIgnoreCase("LATENCY") && numArgs == 2) {
+
+					List<String> lines = new ArrayList<>();
+					Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+					for (AbstractPool pool : pools.values()) {
+
+						if (pool instanceof RedisStandalonePool) {
+							for (String node: pool.getNodes()) {
+
+								String[] ipAndPort = node.split(":");
+								String address = ipAndPort[0] + ":" + ipAndPort[1];
+								lines.addAll(LatencyCollector.getNodeLatencyResult(address));
+							}
+						} else if (pool instanceof RedisClusterPool) {
+
+							RedisClusterPool redisClusterPool = (RedisClusterPool) pool;
+							Map<String, ClusterNode> masters = redisClusterPool.getMasters();
+
+							for (ClusterNode clusterNode : masters.values()) {
+								lines.addAll(LatencyCollector.getNodeLatencyResult(clusterNode.getHost() + ":" + clusterNode.getPort()));
+							}
+
+						} else if (pool instanceof KafkaPool) {
+
+							KafkaPool kafkaPool =  (KafkaPool) pool;
+							Map<Integer, PhysicalNode> physicalNodes = kafkaPool.getPhysicalNodes();
+							for (PhysicalNode physicalNode : physicalNodes.values()) {
+
+								lines.addAll(LatencyCollector.getNodeLatencyResult(physicalNode.getHost() + ":" + physicalNode.getPort()));
+							}
+						}
+					}
+
 					return encode(lines);
 				}
 			} 

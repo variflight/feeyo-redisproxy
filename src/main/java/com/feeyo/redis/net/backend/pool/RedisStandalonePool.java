@@ -4,6 +4,7 @@ import java.util.LinkedList;
 
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.util.jedis.JedisConnection;
@@ -221,7 +222,48 @@ public class RedisStandalonePool extends AbstractPool {
 //			closeByIdleMany(this.physicalNode, idleCons - minCons );			
 //		}
 	}
-	
+
+	/**
+	 * 延迟时间统计
+	 *
+	 * @param epoch
+	 */
+	@Override
+	public void latencyTimeCheck(long epoch) {
+
+		int size = poolCfg.getNodes().size();
+		if ( size == 1 ) {
+			String nodeId = poolCfg.getNodes().get(0);
+			String[] ipAndPort = nodeId.split(":");
+			String address = ipAndPort[0] + ":" + ipAndPort[1];
+			JedisConnection conn = null;
+			try {
+				conn = new JedisConnection(ipAndPort[0], Integer.parseInt( ipAndPort[1] ), 2000, 0);
+
+				long requestMilliseconds = System.currentTimeMillis();
+
+				conn.sendCommand(RedisCommand.PING);
+				String value = conn.getBulkReply();
+
+				long responseMillisecond = System.currentTimeMillis();
+				if (!"PONG".equalsIgnoreCase(value)) {
+					LOGGER.error("The unexpected response from {} for latency check is {}", address, value);
+				}
+
+				long cost = responseMillisecond - requestMilliseconds;
+                LOGGER.debug("==========================================The ping costs {} ms on epoch {}", cost, epoch);
+				LatencyCollector.add(address, epoch, cost);
+
+			} catch (JedisConnectionException e) {
+				LOGGER.error("Connection to {} with error {}", address, e);
+			} finally {
+				if (conn != null) {
+					conn.disconnect();
+				}
+			}
+		}
+	}
+
 	public int getActiveCount() {
 		return this.physicalNode.getActiveCount();
 	}

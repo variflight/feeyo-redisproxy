@@ -350,6 +350,37 @@ public class KafkaPool extends AbstractPool {
 
 	}
 
+	/**
+	 * 延迟时间统计
+	 *
+	 * @param epoch
+	 */
+	@Override
+	public void latencyTimeCheck(long epoch) {
+
+		String nodeId;
+		for (PhysicalNode physicalNode : physicalNodes.values()) {
+
+			nodeId = physicalNode.getHost() + ":" + physicalNode.getPort();
+			LatencyCheckHandler handler = new LatencyCheckHandler(nodeId, epoch);
+
+			try {
+
+				BackendConnection conn = physicalNode.getConnection(handler, null);
+				RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short) 1, Thread.currentThread().getName(), Utils.getCorrelationId());
+				Struct struct = requestHeader.toStruct();
+				ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(struct.sizeOf() + 4);
+				buffer.putInt(struct.sizeOf());
+				struct.writeTo(buffer);
+
+				handler.setRequestMilliseconds(System.currentTimeMillis());
+				conn.write(buffer);
+			} catch(IOException e) {
+				LOGGER.error("File to check latency on {}, error is {}", nodeId, e);
+			}
+		}
+	}
+
 	@Override
 	public PhysicalNode getPhysicalNode(int id) {
 		return physicalNodes.get(id);
