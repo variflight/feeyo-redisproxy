@@ -251,7 +251,6 @@ public class RedisStandalonePool extends AbstractPool {
 				}
 
 				long cost = responseMillisecond - requestMilliseconds;
-                LOGGER.debug("==========================================The ping costs {} ms on epoch {}", cost, epoch);
 				LatencyCollector.add(address, epoch, cost);
 
 			} catch (JedisConnectionException e) {

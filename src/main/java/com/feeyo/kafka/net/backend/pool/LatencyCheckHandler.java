@@ -39,17 +39,32 @@ public class LatencyCheckHandler implements BackendCallback {
     @Override
     public void handleResponse(BackendConnection conn, byte[] byteBuff) {
 
-        // +PONG\r\n
-        if (byteBuff.length == 7 && byteBuff[0] == '+' && byteBuff[1] == 'P' && byteBuff[2] == 'O' && byteBuff[3] == 'N' &&
-                byteBuff[4] == 'G') {
-
+        // kafka heartbeat
+        if (byteBuff.length >= 4 && isOk(byteBuff)) {
             long cost = System.currentTimeMillis() - requestMilliseconds;
             LatencyCollector.add(nodeId, epoch, cost);
-
             conn.release();
+
         } else {
-            conn.close("The unexpected response for latency check is " + new String(byteBuff));
+            conn.close("heartbeat err");
         }
+    }
+
+    private boolean isOk(byte[] buffer) {
+        int len = buffer.length;
+        if (len < 4) {
+            return false;
+        }
+        int v0 = (buffer[0] & 0xff) << 24;
+        int v1 = (buffer[1] & 0xff) << 16;
+        int v2 = (buffer[2] & 0xff) << 8;
+        int v3 = (buffer[3] & 0xff);
+
+        if (v0 + v1 + v2 + v3 > len - 4) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
