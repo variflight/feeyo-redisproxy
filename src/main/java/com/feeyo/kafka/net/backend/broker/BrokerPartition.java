@@ -5,6 +5,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.feeyo.net.nio.util.TimeUtil;
+
 public class BrokerPartition {
 	
 	private final int partition;
@@ -186,6 +188,9 @@ public class BrokerPartition {
 		private AtomicLong currentOffset;
 		private ConcurrentLinkedQueue<Long> oldOffsetQueue;
 		
+		private long repairOffsetTimeMill = 0;
+		private long repairOffset = 0;
+		
 		public ConsumerOffset(String consumer, long offset) {
 			this.consumer = consumer;
 			this.currentOffset = new AtomicLong(offset);
@@ -224,8 +229,12 @@ public class BrokerPartition {
 		public void repairOffset(long update) {
 			while (true) {
 	            long current = currentOffset.get();
-	            if (currentOffset.compareAndSet(current, update))
-	                break;
+	            if (currentOffset.compareAndSet(current, update)) {
+	            		oldOffsetQueue.clear();
+	            		repairOffsetTimeMill = TimeUtil.currentTimeMillis();
+	            		repairOffset = update;
+	            		break;
+	            }
 	        }
 		}
 		
@@ -238,6 +247,12 @@ public class BrokerPartition {
 		}
 		
 		public void returnOldOffset(Long offset) {
+			
+			// 在上次修复offset的一分钟之内，不接受大于修复offset5000的offset回滚
+			if (TimeUtil.currentTimeMillis() - repairOffsetTimeMill < 60 * 1000 && offset - repairOffset > 5000) {
+				return;
+			}
+			
 			this.oldOffsetQueue.offer(offset);
 		}
 
