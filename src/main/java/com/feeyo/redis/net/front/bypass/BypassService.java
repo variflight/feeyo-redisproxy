@@ -193,7 +193,7 @@ public class BypassService {
 		String corePoolSizeString = map.get("bypassCorePoolSize");
 		String maxPoolSizeString = map.get("bypassMaxPoolSize");
 		String queueSizeString = map.get("bypassQueueSize");
-		String latencyThresholdString = map.get("bypassQueueLatencyThreshold");
+		String latencyThresholdString = map.get("bypassNodeLatencyThreshold");
 
 		int new_requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
 		int new_corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);

@@ -29,7 +29,7 @@
 	<property name="bypassCorePoolSize">2</property>
 	<property name="bypassMaxPoolSize">4</property>
 	<property name="bypassQueueSize">20</property>
-	<property name="bypassQueueLatencyThreshold">0</property>
+	<property name="bypassNodeLatencyThreshold">0</property>
 
 	<!-- latency check -->
 	<property name="latencyIntervalMinutes">15</property>
