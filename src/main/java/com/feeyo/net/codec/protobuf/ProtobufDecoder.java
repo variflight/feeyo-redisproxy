@@ -16,7 +16,7 @@ import com.google.protobuf.MessageLite;
  * @author xuwenfeng
  *
  */
-public class ProtobufDecoder implements Decoder<List<MessageLite>> {
+public class ProtobufDecoder<T extends MessageLite> implements Decoder<List<T>> {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(ProtobufDecoder.class);
 	
@@ -45,11 +45,11 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		HAS_PARSER = hasParser;
 	}
 
-	public ProtobufDecoder(MessageLite prototype, boolean isCustomPkg) {
+	public ProtobufDecoder(T prototype, boolean isCustomPkg) {
 		this(prototype, null, isCustomPkg);
 	}
 
-	public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry, boolean isCustomPkg) {
+	public ProtobufDecoder(T prototype, ExtensionRegistry extensionRegistry, boolean isCustomPkg) {
 
 		if (prototype == null) {
 			throw new NullPointerException("prototype");
@@ -67,7 +67,7 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 	}
 
 	@Override
-	public List<MessageLite> decode(byte[] buf) {
+	public List<T> decode(byte[] buf) {
 
 		if (buf == null)
 			return null;
@@ -79,14 +79,14 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 
 		
 		
-		List<MessageLite> list = null;
+		List<T> list = null;
 		try {
 			
 			if ( !isCustomPkg ) {
 				//
-				MessageLite msg = parse( _buffer );
+				T msg = parse( _buffer );
 
-				list = new ArrayList<MessageLite>();
+				list = new ArrayList<T>();
 				list.add(msg);
 				
 			}  else  {
@@ -104,10 +104,10 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 						byte[] cb = new byte[totalSize - 4];
 						System.arraycopy(_buffer, _offset + 4, cb, 0, cb.length);
 	
-						MessageLite msg = parse( cb );
+						T msg = parse( cb );
 						
 						if (list == null)
-							list = new ArrayList<MessageLite>();
+							list = new ArrayList<T>();
 						
 						list.add(msg);
 						
@@ -131,21 +131,22 @@ public class ProtobufDecoder implements Decoder<List<MessageLite>> {
 		return list;
 	}
 
-	private MessageLite parse(byte[] buf) throws InvalidProtocolBufferException {
+	@SuppressWarnings("unchecked")
+	private T parse(byte[] buf) throws InvalidProtocolBufferException {
 		
-		MessageLite msg = null;
+		T msg = null;
 
 		if (extensionRegistry == null) {
 			if (HAS_PARSER) {
-				msg = prototype.getParserForType().parseFrom(buf);
+				msg = (T) prototype.getParserForType().parseFrom(buf);
 			} else {
-				msg = prototype.newBuilderForType().mergeFrom(buf).build();
+				msg = (T) prototype.newBuilderForType().mergeFrom(buf).build();
 			}
 		} else {
 			if (HAS_PARSER) {
-				msg = prototype.getParserForType().parseFrom(buf, extensionRegistry);
+				msg = (T) prototype.getParserForType().parseFrom(buf, extensionRegistry);
 			} else {
-				msg = prototype.newBuilderForType().mergeFrom(buf, extensionRegistry).build();
+				msg = (T) prototype.newBuilderForType().mergeFrom(buf, extensionRegistry).build();
 			}
 		}
 		return msg;
