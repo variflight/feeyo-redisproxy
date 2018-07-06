@@ -44,5 +44,12 @@ public abstract class HttpMessage {
 	public String getHttpVersion() {
 		return httpVersion;
 	}
+	
+	public boolean containsHeader(String headName, String headValue, boolean ignoreCase) {
+		
+		if(headName == null || headValue == null)
+			return false;
+		return ignoreCase ? headValue.equalsIgnoreCase(headers.get(headName)): headValue.equals(headers.get(headName));
+	}
 
 }
