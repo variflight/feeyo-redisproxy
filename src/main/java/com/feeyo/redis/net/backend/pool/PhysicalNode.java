@@ -34,6 +34,9 @@ public class PhysicalNode {
 	protected int port;
 	protected int minCon;
 	protected int maxCon;
+
+	// 节点是否负载
+	protected volatile boolean isOverLoad = false;
 	
 	protected final BackendConnectionFactory factory;
 	
@@ -226,5 +229,16 @@ public class PhysicalNode {
 		sb.append("maxCon=").append(maxCon).append(" ) ");
 		return sb.toString();
 	}
-	
+
+	public boolean isOverLoad() {
+		return isOverLoad;
+	}
+
+	/**
+	 * 每次Pool有效性检查时更新负载情况
+	 * @param overLoad
+	 */
+	public void setOverLoad(boolean overLoad) {
+		isOverLoad = overLoad;
+	}
 }

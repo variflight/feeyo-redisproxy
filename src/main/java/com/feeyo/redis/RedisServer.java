@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.RedisEngineCtx;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.util.Log4jInitializer;
 
@@ -34,7 +36,7 @@ public class RedisServer {
 	
 	//心跳独立，避免被其他任务影响
 	private static final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
-	
+
 	public static void main(String[] args) throws IOException {
 		
 //		System.setProperty("com.sun.management.jmxremote.port", "8099");
@@ -52,7 +54,7 @@ public class RedisServer {
 		try {
 			
 			final Logger LOGGER = LoggerFactory.getLogger( "RedisServer" );
-			
+
 			// 引擎初始化
 			RedisEngineCtx.INSTANCE().init();
 			
@@ -124,6 +126,22 @@ public class RedisServer {
 					});
 				}			
 			}, 30L, 30L, TimeUnit.SECONDS);
+
+			/**
+			 * 节点延迟值 检测
+			 * 定时发送请求记录延迟值
+			 */
+			NetSystem.getInstance().getLatencySchedulerExecutor().scheduleAtFixedRate(new Runnable() {
+
+				@Override
+				public void run() {
+
+					Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+					for (AbstractPool pool : pools.values() ) {
+						pool.latencyTimeCheck();
+					}
+				}
+			}, 30L, 5L, TimeUnit.SECONDS);
 			
 			// CONSOLE 
 			StringBuffer strBuffer = new StringBuffer();
@@ -136,7 +154,7 @@ public class RedisServer {
 		} catch (Throwable e) {
 			
 			e.printStackTrace();
-			
+
 			// exit
 			System.exit( 0 );
 		}

@@ -16,6 +16,7 @@ import com.feeyo.net.nio.util.TimeUtil;
 
 import com.feeyo.redis.config.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 
@@ -37,7 +38,7 @@ public class BypassService {
 	private int corePoolSize;
 	private int maxPoolSize;
 	private int queueSize;
-	
+
 	public static BypassService INSTANCE() {
 		
 		if ( _INSTANCE == null ) {
@@ -62,7 +63,6 @@ public class BypassService {
 		
 		StatUtil.getBigKeyCollector().setSize( requireSize );
 	}
-
 	
 	// 检测
 	public boolean testing(String requestCmd, String requestKey, int requestSize) {
@@ -128,7 +128,7 @@ public class BypassService {
 			
 		} catch (RejectedExecutionException re) {	
 			
-			// front rejected 
+			// front rejected
 			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
 			
 			LOGGER.warn("Bypass traffic congestion, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
@@ -187,7 +187,7 @@ public class BypassService {
 		int new_corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
 		int new_maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
 		int new_queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
-		
+
 		// code safe
 		if ( new_requireSize < 100 * 1024) new_requireSize = 100 * 1024;
 		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
@@ -197,14 +197,14 @@ public class BypassService {
 		if ( this.requireSize == new_requireSize &&
 			 this.corePoolSize == new_corePoolSize &&
 			 this.maxPoolSize == new_maxPoolSize &&
-			 this.queueSize == new_queueSize ) {
+			 this.queueSize == new_queueSize) {
 			return false;
 			
 		} else {
 			this.requireSize = new_requireSize;
 			this.corePoolSize = new_corePoolSize;
 			this.maxPoolSize = new_maxPoolSize;
-			this.queueSize = new_queueSize;		
+			this.queueSize = new_queueSize;
 			return true;
 		}
 	}

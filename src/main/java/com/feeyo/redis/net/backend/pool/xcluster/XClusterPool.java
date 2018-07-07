@@ -5,6 +5,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -114,6 +115,10 @@ public class XClusterPool extends AbstractPool{
         try {
             for (XNode node : nodes.values()) {
             	node.availableCheck();
+
+                PhysicalNode physicalNode = node.getPhysicalNode();
+                // redis节点平均延迟不能超过3s
+                physicalNode.setOverLoad(LatencyCollector.isOverLoad(physicalNode.getHost() + ":" + physicalNode.getPort(), 3000));
             }
         } finally {
             availableCheckFlag.set( false );
@@ -178,7 +183,51 @@ public class XClusterPool extends AbstractPool{
 		}
 		
 	}
-    
+
+    /**
+     * 延迟时间统计
+     */
+    @Override
+    public void latencyTimeCheck() {
+
+        for(XNode node : nodes.values()) {
+            PhysicalNode physicalNode = node.getPhysicalNode();
+            latencyTimeCheck(physicalNode);
+        }
+    }
+
+    private void latencyTimeCheck(PhysicalNode physicalNode) {
+
+        String host = physicalNode.getHost();
+        int port = physicalNode.getPort();
+        String nodeId = host + ":" + port;
+        JedisConnection conn = null;
+
+        try {
+            conn = new JedisConnection(host, port, 2000, 0);
+
+            long requestMilliseconds = System.currentTimeMillis();
+
+            conn.sendCommand(RedisCommand.PING);
+            String value = conn.getBulkReply();
+
+            long responseMillisecond = System.currentTimeMillis();
+            if (!"PONG".equalsIgnoreCase(value)) {
+                LOGGER.error("The unexpected response from {} for latency check is {}", nodeId, value);
+            }
+
+            long cost = responseMillisecond - requestMilliseconds;
+            LatencyCollector.add(nodeId, cost);
+
+        } catch (JedisConnectionException e) {
+            LOGGER.error("Connection to {} with error {}", nodeId, e);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
     public PhysicalNode getPhysicalNode(String suffix) {
     	PhysicalNode node = nodes.get( suffix ).getPhysicalNode();
         return node;

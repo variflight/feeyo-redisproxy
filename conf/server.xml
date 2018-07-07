@@ -29,7 +29,7 @@
 	<property name="bypassCorePoolSize">2</property>
 	<property name="bypassMaxPoolSize">4</property>
 	<property name="bypassQueueSize">20</property>
-	
+
 	<!-- socket buffer -->
 	<property name="frontSocketSoRcvbuf">2097152</property>
 	<property name="frontSocketSoSndbuf">4194304</property>
