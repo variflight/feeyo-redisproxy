@@ -35,12 +35,12 @@ public class DefaultCommandHandler extends AbstractCommandHandler {
 		frontCon.getSession().setRequestKey( requestKey );
 		frontCon.getSession().setRequestSize(firstRequest.getSize());
 
-		String host = node.getPhysicalNode().getHost();
-		int port = node.getPhysicalNode().getPort();
-		String nodeId = host + ":" + port;
+		boolean isOverLoad = node.getPhysicalNode().isOverLoad();
 		// 旁路排队服务
-		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) || BypassService.INSTANCE().isOverLoad(nodeId) ) {
+		if ( BypassService.INSTANCE().testing(cmd, requestKey, requestSize) || isOverLoad ) {
 
+			String host = node.getPhysicalNode().getHost();
+			int port = node.getPhysicalNode().getPort();
 			BypassService.INSTANCE().queueUp( firstRequest, frontCon, host, port );
 			
 		}  else {

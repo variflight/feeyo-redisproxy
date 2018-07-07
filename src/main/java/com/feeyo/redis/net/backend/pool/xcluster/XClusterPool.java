@@ -115,6 +115,10 @@ public class XClusterPool extends AbstractPool{
         try {
             for (XNode node : nodes.values()) {
             	node.availableCheck();
+
+                PhysicalNode physicalNode = node.getPhysicalNode();
+                // redis节点平均延迟不能超过3s
+                physicalNode.setOverLoad(LatencyCollector.isOverLoad(physicalNode.getHost() + ":" + physicalNode.getPort(), 3000));
             }
         } finally {
             availableCheckFlag.set( false );
@@ -182,19 +186,17 @@ public class XClusterPool extends AbstractPool{
 
     /**
      * 延迟时间统计
-     *
-     * @param epoch
      */
     @Override
-    public void latencyTimeCheck(long epoch) {
+    public void latencyTimeCheck() {
 
         for(XNode node : nodes.values()) {
             PhysicalNode physicalNode = node.getPhysicalNode();
-            latencyTimeCheck(physicalNode, epoch);
+            latencyTimeCheck(physicalNode);
         }
     }
 
-    private void latencyTimeCheck(PhysicalNode physicalNode, long epoch) {
+    private void latencyTimeCheck(PhysicalNode physicalNode) {
 
         String host = physicalNode.getHost();
         int port = physicalNode.getPort();
@@ -215,7 +217,7 @@ public class XClusterPool extends AbstractPool{
             }
 
             long cost = responseMillisecond - requestMilliseconds;
-            LatencyCollector.add(nodeId, epoch, cost);
+            LatencyCollector.add(nodeId, cost);
 
         } catch (JedisConnectionException e) {
             LOGGER.error("Connection to {} with error {}", nodeId, e);

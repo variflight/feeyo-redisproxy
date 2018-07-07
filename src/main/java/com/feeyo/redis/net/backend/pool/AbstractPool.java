@@ -77,7 +77,7 @@ public abstract class AbstractPool {
 	/**
 	 * 延迟时间统计
 	 */
-	public abstract void latencyTimeCheck(long epoch);
+	public abstract void latencyTimeCheck();
 
 
 	//TODO: 此处几个方法待进一步优化

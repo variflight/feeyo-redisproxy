@@ -38,7 +38,6 @@ public class BypassService {
 	private int corePoolSize;
 	private int maxPoolSize;
 	private int queueSize;
-	private int latencyThreshold;
 
 	public static BypassService INSTANCE() {
 		
@@ -63,16 +62,6 @@ public class BypassService {
 		this.threadPoolExecutor.prestartAllCoreThreads();
 		
 		StatUtil.getBigKeyCollector().setSize( requireSize );
-	}
-
-	// 检测节点是否过载
-	public boolean isOverLoad(String nodeId) {
-
-		if (latencyThreshold <= 0) {
-			return false;
-		}
-
-		return LatencyCollector.isOverLoad(nodeId, latencyThreshold);
 	}
 	
 	// 检测
@@ -193,14 +182,12 @@ public class BypassService {
 		String corePoolSizeString = map.get("bypassCorePoolSize");
 		String maxPoolSizeString = map.get("bypassMaxPoolSize");
 		String queueSizeString = map.get("bypassQueueSize");
-		String latencyThresholdString = map.get("bypassNodeLatencyThreshold");
 
 		int new_requireSize = requireSizeString == null ? 256 * 1024 : Integer.parseInt(requireSizeString);
 		int new_corePoolSize = corePoolSizeString == null ? 2 : Integer.parseInt(corePoolSizeString);
 		int new_maxPoolSize = maxPoolSizeString == null ? 4 : Integer.parseInt(maxPoolSizeString);
 		int new_queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
-		int new_latencyThreshold = latencyThresholdString == null ? 0 : Integer.parseInt(latencyThresholdString);
-		
+
 		// code safe
 		if ( new_requireSize < 100 * 1024) new_requireSize = 100 * 1024;
 		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
@@ -210,8 +197,7 @@ public class BypassService {
 		if ( this.requireSize == new_requireSize &&
 			 this.corePoolSize == new_corePoolSize &&
 			 this.maxPoolSize == new_maxPoolSize &&
-			 this.queueSize == new_queueSize &&
-			 this.latencyThreshold == new_latencyThreshold) {
+			 this.queueSize == new_queueSize) {
 			return false;
 			
 		} else {
@@ -219,7 +205,6 @@ public class BypassService {
 			this.corePoolSize = new_corePoolSize;
 			this.maxPoolSize = new_maxPoolSize;
 			this.queueSize = new_queueSize;
-			this.latencyThreshold = new_latencyThreshold;
 			return true;
 		}
 	}

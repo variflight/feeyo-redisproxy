@@ -9,6 +9,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.feeyo.kafka.util.BIOConnection;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.Node;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
@@ -191,7 +194,7 @@ public class KafkaPool extends AbstractPool {
 	@Override
 	public void availableCheck() {
 		heartbeatTime = System.currentTimeMillis();
-		
+
 		// CAS， 避免网络不好的情况下，频繁并发的检测
 		if (!availableCheckFlag.compareAndSet(false, true)) {
 			return;
@@ -280,7 +283,14 @@ public class KafkaPool extends AbstractPool {
 						oldNode.clearConnections("this node exception, automatic reload", true);
 					}
 					oldPhysicalNodes.clear();
-				} 
+				}
+				// 等所有节点检测之后判断负载
+				for (PhysicalNode physicalNode : physicalNodes.values()) {
+
+					String nodeId = physicalNode.getHost() + ":" + physicalNode.getPort();
+					// kafka节点平均延迟不能超过5s
+					physicalNode.setOverLoad(LatencyCollector.isOverLoad(nodeId, 5000));
+				}
 			}
 		} finally {
 			availableCheckFlag.set( false );
@@ -352,33 +362,67 @@ public class KafkaPool extends AbstractPool {
 
 	/**
 	 * 延迟时间统计
-	 *
-	 * @param epoch
 	 */
 	@Override
-	public void latencyTimeCheck(long epoch) {
+	public void latencyTimeCheck() {
 
-		String nodeId;
+		String nodeId, ipAddress;
+		int port;
+		BIOConnection conn = null;
 		for (PhysicalNode physicalNode : physicalNodes.values()) {
 
-			nodeId = physicalNode.getHost() + ":" + physicalNode.getPort();
-			LatencyCheckHandler handler = new LatencyCheckHandler(nodeId, epoch);
+			ipAddress = physicalNode.getHost();
+			port = physicalNode.getPort();
+			nodeId = ipAddress + ":" + port;
 
+			RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short) 1, Thread.currentThread().getName(), Utils.getCorrelationId());
+			Struct struct = requestHeader.toStruct();
+			ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(struct.sizeOf() + 4);
+			buffer.putInt(struct.sizeOf());
+			struct.writeTo(buffer);
+			buffer.flip();
+			byte[] requestBytes = new byte[buffer.remaining()];
+			buffer.get(requestBytes);
+			NetSystem.getInstance().getBufferPool().recycle(buffer);
+
+			long requestMilliseconds = System.currentTimeMillis();
 			try {
+				conn = new BIOConnection(ipAddress, port, 2000, 0);
+				conn.send(requestBytes);
+				byte[] bytes = conn.receive();
 
-				BackendConnection conn = physicalNode.getConnection(handler, null);
-				RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short) 1, Thread.currentThread().getName(), Utils.getCorrelationId());
-				Struct struct = requestHeader.toStruct();
-				ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(struct.sizeOf() + 4);
-				buffer.putInt(struct.sizeOf());
-				struct.writeTo(buffer);
-
-				handler.setRequestMilliseconds(System.currentTimeMillis());
-				conn.write(buffer);
-			} catch(IOException e) {
-				LOGGER.error("File to check latency on {}, error is {}", nodeId, e);
+				if (bytes.length >= 4 && isOk(bytes)) {
+					long responseMillisecond = System.currentTimeMillis();
+					long cost = responseMillisecond - requestMilliseconds;
+					LatencyCollector.add(nodeId, cost);
+				} else {
+					LOGGER.error("The unexpected response from kafka server {}", nodeId);
+				}
+			} catch (KafkaException e) {
+				LOGGER.error("Test connection kafka {} error.", nodeId);
+			} finally {
+				if (conn != null) {
+					conn.disconnect();
+				}
 			}
 		}
+	}
+
+	private boolean isOk(byte[] buffer) {
+		int len = buffer.length;
+		if (len < 4) {
+			return false;
+		}
+		int v0 = (buffer[0] & 0xff) << 24;
+		int v1 = (buffer[1] & 0xff) << 16;
+		int v2 = (buffer[2] & 0xff) << 8;
+		int v3 = (buffer[3] & 0xff);
+
+		if (v0 + v1 + v2 + v3 > len - 4) {
+			return false;
+		}
+
+		return true;
 	}
 
 	@Override

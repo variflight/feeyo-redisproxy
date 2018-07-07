@@ -159,6 +159,9 @@ public class RedisStandalonePool extends AbstractPool {
 		if ( heartbeatStatus == -1 ) {
 			physicalNode.clearConnections("this node exception, automatic reload", true);
 		}
+
+		// redis节点平均延迟不能超过3s
+		physicalNode.setOverLoad(LatencyCollector.isOverLoad(physicalNode.getHost() + ":" + physicalNode.getPort(), 3000));
 	}
 	
 	@Override
@@ -225,11 +228,9 @@ public class RedisStandalonePool extends AbstractPool {
 
 	/**
 	 * 延迟时间统计
-	 *
-	 * @param epoch
 	 */
 	@Override
-	public void latencyTimeCheck(long epoch) {
+	public void latencyTimeCheck() {
 
 		int size = poolCfg.getNodes().size();
 		if ( size == 1 ) {
@@ -251,7 +252,7 @@ public class RedisStandalonePool extends AbstractPool {
 				}
 
 				long cost = responseMillisecond - requestMilliseconds;
-				LatencyCollector.add(address, epoch, cost);
+				LatencyCollector.add(address, cost);
 
 			} catch (JedisConnectionException e) {
 				LOGGER.error("Connection to {} with error {}", address, e);
