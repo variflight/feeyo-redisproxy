@@ -34,7 +34,7 @@ public class RedisServer {
 	
 	//心跳独立，避免被其他任务影响
 	private static final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
-	
+
 	public static void main(String[] args) throws IOException {
 		
 //		System.setProperty("com.sun.management.jmxremote.port", "8099");
@@ -52,7 +52,7 @@ public class RedisServer {
 		try {
 			
 			final Logger LOGGER = LoggerFactory.getLogger( "RedisServer" );
-			
+
 			// 引擎初始化
 			RedisEngineCtx.INSTANCE().init();
 			
@@ -124,6 +124,22 @@ public class RedisServer {
 					});
 				}			
 			}, 30L, 30L, TimeUnit.SECONDS);
+
+			/**
+			 * 节点延迟值 检测
+			 * 定时发送请求记录延迟值
+			 */
+			NetSystem.getInstance().getLatencySchedulerExecutor().scheduleAtFixedRate(new Runnable() {
+
+				@Override
+				public void run() {
+
+					Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+					for (AbstractPool pool : pools.values() ) {
+						pool.latencyTimeCheck();
+					}
+				}
+			}, 30L, 5L, TimeUnit.SECONDS);
 			
 			// CONSOLE 
 			StringBuffer strBuffer = new StringBuffer();
@@ -136,7 +152,7 @@ public class RedisServer {
 		} catch (Throwable e) {
 			
 			e.printStackTrace();
-			
+
 			// exit
 			System.exit( 0 );
 		}

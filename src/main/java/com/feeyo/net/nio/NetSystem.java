@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +40,9 @@ public class NetSystem {
 	
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
+
+	// 周期性的触发检测节点负载能力的任务
+	private final ScheduledExecutorService latencySchedulerExecutor;
 	
 	private final int TIMEOUT = 1000 * 60 * 5; //5分钟
 	
@@ -55,6 +60,8 @@ public class NetSystem {
 		this.businessExecutor = businessExecutor;
 		this.timerExecutor = timerExecutor;
 		this.allConnections = new ConcurrentHashMap<Long, ClosableConnection>();
+		NameableThreadFactory tf = new NameableThreadFactory("LatencySchedulerExecutor-", true);
+		this.latencySchedulerExecutor = Executors.newScheduledThreadPool(timerExecutor.getCorePoolSize(), tf);
 		INSTANCE = this;
 	}
 
@@ -84,6 +91,10 @@ public class NetSystem {
 
 	public NameableExecutor getTimerExecutor() {
 		return timerExecutor;
+	}
+
+	public ScheduledExecutorService getLatencySchedulerExecutor() {
+		return latencySchedulerExecutor;
 	}
 
 	/**
@@ -167,7 +178,7 @@ public class NetSystem {
 		int sorcvbuf = 0;
 	    int sosndbuf = 0;
 	    int soNoDelay = 0;
-	    
+
 		if (isFrontChannel) {
 			sorcvbuf = this.netConfig.getFrontsocketsorcvbuf();
 			sosndbuf = this.netConfig.getFrontsocketsosndbuf();
