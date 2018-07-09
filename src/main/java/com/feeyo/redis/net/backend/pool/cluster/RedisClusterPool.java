@@ -478,14 +478,6 @@ public class RedisClusterPool extends AbstractPool {
 					}
 					oldMasters.clear();
 				}
-
-				// 等所有节点检测之后判断负载
-				for (ClusterNode clusterNode : masters.values()) {
-
-					PhysicalNode physicalNode = clusterNode.getPhysicalNode();
-					// redis节点平均延迟不能超过3s
-					physicalNode.setOverLoad(LatencyCollector.isOverLoad(physicalNode.getHost() + ":" + physicalNode.getPort(), 3000));
-				}
 			}
 			
 		} finally {
@@ -600,6 +592,9 @@ public class RedisClusterPool extends AbstractPool {
 				conn.disconnect();
 			}
 		}
+
+        // redis节点平均延迟不能超过3s
+        physicalNode.setOverLoad(LatencyCollector.isOverLoad(nodeId, 3000));
 	}
 
 	private static String getLocalHostQuietly() {

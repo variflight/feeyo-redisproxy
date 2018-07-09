@@ -284,13 +284,6 @@ public class KafkaPool extends AbstractPool {
 					}
 					oldPhysicalNodes.clear();
 				}
-				// 等所有节点检测之后判断负载
-				for (PhysicalNode physicalNode : physicalNodes.values()) {
-
-					String nodeId = physicalNode.getHost() + ":" + physicalNode.getPort();
-					// kafka节点平均延迟不能超过5s
-					physicalNode.setOverLoad(LatencyCollector.isOverLoad(nodeId, 5000));
-				}
 			}
 		} finally {
 			availableCheckFlag.set( false );
@@ -405,6 +398,9 @@ public class KafkaPool extends AbstractPool {
 					conn.disconnect();
 				}
 			}
+
+            // kafka节点平均延迟不能超过5s
+            physicalNode.setOverLoad(LatencyCollector.isOverLoad(nodeId, 5000));
 		}
 	}
 

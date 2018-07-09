@@ -160,8 +160,6 @@ public class RedisStandalonePool extends AbstractPool {
 			physicalNode.clearConnections("this node exception, automatic reload", true);
 		}
 
-		// redis节点平均延迟不能超过3s
-		physicalNode.setOverLoad(LatencyCollector.isOverLoad(physicalNode.getHost() + ":" + physicalNode.getPort(), 3000));
 	}
 	
 	@Override
@@ -261,6 +259,9 @@ public class RedisStandalonePool extends AbstractPool {
 					conn.disconnect();
 				}
 			}
+
+            // redis节点平均延迟不能超过3s
+            physicalNode.setOverLoad(LatencyCollector.isOverLoad(address, 3000));
 		}
 	}
 

@@ -115,10 +115,6 @@ public class XClusterPool extends AbstractPool{
         try {
             for (XNode node : nodes.values()) {
             	node.availableCheck();
-
-                PhysicalNode physicalNode = node.getPhysicalNode();
-                // redis节点平均延迟不能超过3s
-                physicalNode.setOverLoad(LatencyCollector.isOverLoad(physicalNode.getHost() + ":" + physicalNode.getPort(), 3000));
             }
         } finally {
             availableCheckFlag.set( false );
@@ -226,6 +222,9 @@ public class XClusterPool extends AbstractPool{
                 conn.disconnect();
             }
         }
+
+        // redis节点平均延迟不能超过3s
+        physicalNode.setOverLoad(LatencyCollector.isOverLoad(nodeId, 3000));
     }
 
     public PhysicalNode getPhysicalNode(String suffix) {
