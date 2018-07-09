@@ -26,12 +26,17 @@ public class HttpRequestDecoder implements Decoder<HttpRequest> {
         READ_INITIAL,
         READ_HEADER,
         READ_VARIABLE_LENGTH_CONTENT,
-        READ_FIXED_LENGTH_CONTENT
+        READ_FIXED_LENGTH_CONTENT,
+        READ_CHUNK_SIZE,
+        READ_CHUNKED_CONTENT,
+        READ_CHUNK_DELIMITER,
+        READ_CHUNK_FOOTER
 	}
 	
 	private int contentSize = 0;
 	
 	private CompositeByteArray compositeArray = null;
+	private CompositeByteArray chunkContent = null;
 	private ByteArrayChunk readChunk = null;
 	private int _offset = 0;
 
@@ -54,15 +59,17 @@ public class HttpRequestDecoder implements Decoder<HttpRequest> {
 			
 			switch (state) {
 
-			case SKIP_CONTROL_CHARS:
+			case SKIP_CONTROL_CHARS:{
 				skipControlCharacters();
 				this.state = State.READ_INITIAL;
+			}
 			
-			case READ_INITIAL:
+			case READ_INITIAL:{
 				parseHeadLine();
 				this.state = State.READ_HEADER;
-
-			case READ_HEADER:
+			}
+			
+			case READ_HEADER:{
 
 				if (this.request == null) {
 					throw new IllegalArgumentException("Http request may be not null");
@@ -70,8 +77,9 @@ public class HttpRequestDecoder implements Decoder<HttpRequest> {
 				
 				parseHeaders();
 				continue;
-				
-			case READ_FIXED_LENGTH_CONTENT:
+			}
+			
+			case READ_FIXED_LENGTH_CONTENT:{
 				
 				if (request == null) {
 					throw new IllegalArgumentException("Http request may be not null");
@@ -91,20 +99,67 @@ public class HttpRequestDecoder implements Decoder<HttpRequest> {
 				}else {
 					return null; 	// data not enough;
 				}
+			}
 				
-			case READ_VARIABLE_LENGTH_CONTENT:
+			case READ_VARIABLE_LENGTH_CONTENT:{
 				
 				if (request == null) {
 					throw new IllegalArgumentException("Http request may be not null");
 				}
-				len = compositeArray.getByteCount() - _offset;
-				if(len > 0) {
-					data = compositeArray.getData(_offset, len);
+				int contentLen = compositeArray.getByteCount() - _offset;
+				if(contentLen > 0) {
+					data = compositeArray.getData(_offset, contentLen);
 					request.setContent(data);
 				}
 				clear();
 				return request;
+			}
 				
+			case READ_CHUNK_SIZE:{
+				
+				if(chunkContent == null) {
+					chunkContent = new CompositeByteArray();
+				}
+				
+				byte[] chunkSizeHex = readLine();
+				if(chunkSizeHex == null) {
+					return null;
+				}
+				
+				contentSize = Integer.parseInt(new String(chunkSizeHex, charset).trim(), 16);
+		        state = contentSize == 0 ? State.READ_CHUNK_FOOTER : State.READ_CHUNKED_CONTENT;
+		        continue;
+			}
+			
+			case READ_CHUNKED_CONTENT:{
+				
+				byte[] chunk = read(contentSize);
+				if(chunk == null) {
+					return null;
+				}
+				
+				chunkContent.add(chunk);
+				
+	            state = State.READ_CHUNK_DELIMITER;
+	            continue;
+			}
+			
+			case READ_CHUNK_DELIMITER:{
+				//delimiter - CRLF
+				byte[] delimiter = readLine();
+				if(delimiter == null) {
+					return null;
+				}
+				
+				state = State.READ_CHUNK_SIZE;
+				continue;
+			}
+				
+			case READ_CHUNK_FOOTER:{
+				request.setContent(chunkContent.getData(0, chunkContent.getByteCount()));
+				clear();
+				return request;
+			}
 			default:
 				clear();
 				return request;
@@ -171,6 +226,15 @@ public class HttpRequestDecoder implements Decoder<HttpRequest> {
 		updateReadOffsetAndReadByteChunk(_offset);
 		return _linebuf;
 	}
+	
+	private byte[] read(int len) {
+		
+		if(len <= 0 || compositeArray.getByteCount() - _offset < len)
+			return null;
+		byte[] ret = compositeArray.getData(_offset, len);
+		_offset += len;
+		return ret;
+	}
 
 	private void parseHeadLine() {
 
@@ -225,17 +289,30 @@ public class HttpRequestDecoder implements Decoder<HttpRequest> {
 			}
 		}
 
-		String value = request.headers().get("content-length");
-		contentSize = value != null ? Integer.parseInt(value) : -1;
-		if (contentSize >= 0) {
-			state = State.READ_FIXED_LENGTH_CONTENT;
+		if (request.containsHeader("transfer-encoding", "chunked", true)) {
+			state = State.READ_CHUNK_SIZE;
 		} else {
-			state = State.READ_VARIABLE_LENGTH_CONTENT;
+		
+			String value = request.headers().get("content-length");
+			contentSize = value != null ? Integer.parseInt(value) : -1;
+			if (contentSize >= 0) {
+				state = State.READ_FIXED_LENGTH_CONTENT;
+			} else {
+				state = State.READ_VARIABLE_LENGTH_CONTENT;
+			}
 		}
 	}
-
+	
 	private void clear() {
-		compositeArray.clear();
+		
+		if(compositeArray!= null) {
+			compositeArray.clear();
+		}
+		
+		if(chunkContent != null) {
+			chunkContent.clear();
+		}
+		
 		_offset = 0;
 	}
 
