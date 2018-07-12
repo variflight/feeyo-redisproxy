@@ -11,6 +11,7 @@ import java.util.Set;
 
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.redis.engine.manage.stat.LatencyCollector;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
@@ -476,7 +477,7 @@ public class RedisClusterPool extends AbstractPool {
 						clusterNode.getPhysicalNode().clearConnections("this node exception, automatic reload", true);
 					}
 					oldMasters.clear();
-				} 
+				}
 			}
 			
 		} finally {
@@ -547,7 +548,55 @@ public class RedisClusterPool extends AbstractPool {
 		}
 		
 	}
-	
+
+	/**
+	 * 向集群中各master发送ping统计延迟时间
+	 */
+	@Override
+	public void latencyTimeCheck() {
+
+		for (ClusterNode clusterNode : masters.values()) {
+
+			PhysicalNode physicalNode = clusterNode.getPhysicalNode();
+			this.latencyTimeCheck(physicalNode);
+		}
+	}
+
+	private void latencyTimeCheck(PhysicalNode physicalNode) {
+
+		String host = physicalNode.getHost();
+		int port = physicalNode.getPort();
+		String nodeId = host + ":" + port;
+		JedisConnection conn = null;
+
+		try {
+			conn = new JedisConnection(host, port, 2000, 0);
+
+			long requestMilliseconds = System.currentTimeMillis();
+
+			conn.sendCommand(RedisCommand.PING);
+			String value = conn.getBulkReply();
+
+			long responseMillisecond = System.currentTimeMillis();
+			if (!"PONG".equalsIgnoreCase(value)) {
+				LOGGER.error("The unexpected response from {} for latency check is {}", nodeId, value);
+			}
+
+			long cost = responseMillisecond - requestMilliseconds;
+			LatencyCollector.add(nodeId, cost);
+
+		} catch (JedisConnectionException e) {
+			LOGGER.error("Connection to {} with error {}", nodeId, e);
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+			}
+		}
+
+        // redis节点平均延迟不能超过3s
+        physicalNode.setOverLoad(LatencyCollector.isOverLoad(nodeId, 3000));
+	}
+
 	private static String getLocalHostQuietly() {
 		String localAddress;
 		try {
