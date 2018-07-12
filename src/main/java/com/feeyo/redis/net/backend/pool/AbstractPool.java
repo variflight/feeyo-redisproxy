@@ -72,8 +72,11 @@ public abstract class AbstractPool {
 	/**
 	 * 心跳检查
 	 */
-	public abstract void heartbeatCheck(long timeout); 
-	
+	public abstract void heartbeatCheck(long timeout);
+    /**
+     * 延迟时间统计
+     */
+    public abstract void latencyTimeCheck();
 	
 	//TODO: 此处几个方法待进一步优化
 	//-------------------------------------------------

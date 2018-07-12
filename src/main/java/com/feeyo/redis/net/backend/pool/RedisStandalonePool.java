@@ -244,6 +244,43 @@ public class RedisStandalonePool extends AbstractPool {
 	@Override
 	public PhysicalNode getPhysicalNode(int id) {
 		return null;
-	}	
-	
+	}
+
+    /**
+     * 延迟时间统计
+     */
+    @Override
+    public void latencyTimeCheck() {
+
+        String nodeId = physicalNode.getName();
+        JedisConnection conn = null;
+        try {
+            conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 3000, 0);
+
+            long requestMilliseconds = System.currentTimeMillis();
+
+            conn.sendCommand(RedisCommand.PING);
+            String value = conn.getBulkReply();
+
+            long responseMillisecond = System.currentTimeMillis();
+            boolean isSuccess = true;
+            if (!"PONG".equalsIgnoreCase(value)) {
+                isSuccess = false;
+                LOGGER.warn("The unexpected response from {} for latency check is {}", nodeId, value);
+            }
+
+            long cost = responseMillisecond - requestMilliseconds;
+
+            physicalNode.addLatency(cost, isSuccess);
+            // redis节点平均延迟不能超过3s
+            physicalNode.updateOverLoad(3000);
+
+        } catch (JedisConnectionException e) {
+            LOGGER.error("Connection to {} with error {}", nodeId, e);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
 }
