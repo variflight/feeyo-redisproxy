@@ -206,14 +206,17 @@ public class XClusterPool extends AbstractPool{
             
             //
             for(int i=0; i<3; i++) {
-            	PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-        		latencySample.reqTime = System.nanoTime();
+
+        		long time = System.nanoTime();
             	
 	            conn.sendCommand(RedisCommand.PING);
 	            String value = conn.getBulkReply();
 	            if ( value != null && "PONG".equalsIgnoreCase(value) ) {
-	            	latencySample.respTime = System.nanoTime();
-	                physicalNode.addLatencySample( latencySample );
+	            	
+	            	PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
+	            	latencySample.time = time;
+		            latencySample.latency = (int) (System.nanoTime() - time);
+					physicalNode.addLatencySample( latencySample );
 	            }
             }
             physicalNode.calculateLatencyOverload( poolCfg.getMaxLatencyThreshold() );

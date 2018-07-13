@@ -3,8 +3,10 @@ package com.feeyo.redis.net.backend.pool;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.slf4j.Logger;
@@ -290,8 +292,7 @@ public class PhysicalNode {
 		        	if ( i == NUM )
 		                break;
 		            
-		            LatencySample samp = itr.next();
-		            latencys[i] =  (int) (samp.respTime - samp.reqTime);
+		            latencys[i] = itr.next().latency;
 		            i++;
 		        }
 		        
@@ -314,19 +315,44 @@ public class PhysicalNode {
 		
 		public List<LatencySample> getSamples() {
 			
+			Map<Long, List<LatencySample>> sampleMap = new HashMap<Long, List<LatencySample>>();
 			List<LatencySample> sampleList = new ArrayList<LatencySample>();
 			
-			int num = 10;
+			int num = 15;
 			int i = 0;
 			Iterator<LatencySample> itr = samples.iterator();
 			while (itr.hasNext()) {
 				if ( i >= num )
 					break;
 				
+				// 抽稀
 				LatencySample s = itr.next();
-				sampleList.add( s );
+				long mill = s.time / 1000000;
+				List<LatencySample> list = sampleMap.get( mill );
+				if ( list == null ) {
+					list = new ArrayList<LatencySample>();
+					list.add( s );
+					sampleMap.put(mill, list);
+				} else {
+					list.add( s );
+				}
 				i++;
 			}
+			
+			 for(Map.Entry<Long,List<LatencySample>> entry: sampleMap.entrySet()) {
+				 
+				 long key = entry.getKey();
+				 List<LatencySample> value = entry.getValue();
+				 
+				 int totalLatency = 0;
+				 int totalSize = value.size();
+
+				 for(LatencySample v: value) {
+					 
+				 }
+				 
+			 }
+			
 			
 			return sampleList;
 		}
@@ -334,8 +360,8 @@ public class PhysicalNode {
 	}
 
 	public static class LatencySample {
-		public long reqTime;
-		public long respTime;
+		public long time;
+		public int latency;
 	}
 	
 }

@@ -266,13 +266,15 @@ public class RedisStandalonePool extends AbstractPool {
             // 收集
             for(int i = 0; i<3; i++) {
             	
-            	PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-            	latencySample.reqTime = System.nanoTime();
-	            
+            	long time = System.nanoTime();;
+   
             	conn.sendCommand(RedisCommand.PING);
 	            String value = conn.getBulkReply();   
 	            if ( value != null && "PONG".equalsIgnoreCase(value) ) {
-		            latencySample.respTime = System.nanoTime();
+	            	
+	            	PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
+	            	latencySample.time = time;
+		            latencySample.latency = (int) (System.nanoTime() - time);
 		            physicalNode.addLatencySample(latencySample );
 	            }
             }

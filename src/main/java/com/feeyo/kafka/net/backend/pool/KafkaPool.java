@@ -378,8 +378,8 @@ public class KafkaPool extends AbstractPool {
 				
 				//
 				for(int i=0; i<3; i++) {
-				    PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-		    		latencySample.reqTime = System.nanoTime();
+
+		    		long time = System.nanoTime();
 					
 					org.apache.kafka.common.requests.ApiVersionsRequest.Builder build = 
 							new org.apache.kafka.common.requests.ApiVersionsRequest.Builder((short) 1);
@@ -389,7 +389,10 @@ public class KafkaPool extends AbstractPool {
 						org.apache.kafka.common.requests.ApiVersionsResponse rs = 
 								(org.apache.kafka.common.requests.ApiVersionsResponse) response.responseBody();
 						if (rs.error() == Errors.NONE) {
-							latencySample.respTime = System.nanoTime();
+							
+							PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
+			            	latencySample.time = time;
+				            latencySample.latency = (int) (System.nanoTime() - time);
 							physicalNode.addLatencySample( latencySample );
 							
 						}

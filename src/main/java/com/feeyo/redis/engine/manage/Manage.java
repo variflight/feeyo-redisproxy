@@ -1135,7 +1135,7 @@ public class Manage {
                             	StringBuffer strBuffer = new StringBuffer();
                             	strBuffer.append(" ").append( String.valueOf( standalonePool.getId() ) );
                             	strBuffer.append(" ").append( physicalNode.getHost() );
-                            	strBuffer.append(" ").append( (s.respTime - s.reqTime) );
+                            	strBuffer.append(" ").append( (s.latency) );
                             	
                             	lines.add( strBuffer.toString() );
                             }
@@ -1158,7 +1158,7 @@ public class Manage {
                                 	StringBuffer strBuffer = new StringBuffer();
                                 	strBuffer.append(" ").append( String.valueOf( redisClusterPool.getId() ) );
                                 	strBuffer.append(" ").append( physicalNode.getHost() );
-                                	strBuffer.append(" ").append( (s.respTime - s.reqTime) );
+                                	strBuffer.append(" ").append( (s.latency) );
                                 	
                                 	lines.add( strBuffer.toString() );
                                 }
@@ -1176,7 +1176,7 @@ public class Manage {
 	                            	StringBuffer strBuffer = new StringBuffer();
 	                            	strBuffer.append(" ").append( String.valueOf( kafkaPool.getId() ) );
 	                            	strBuffer.append(" ").append( physicalNode.getHost() );
-	                            	strBuffer.append(" ").append( (s.respTime - s.reqTime) );
+	                            	strBuffer.append(" ").append( (s.latency) );
 	                            	
 	                            	lines.add( strBuffer.toString() );
                                  }
