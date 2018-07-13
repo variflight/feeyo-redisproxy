@@ -193,8 +193,8 @@ public class PhysicalNode {
     	this.latencyTimeSeries.addSample(sample, maxLatencyThreshold);
     }
 	
-    public List<LatencySample> getLatencySample(int num) {
-    	return this.latencyTimeSeries.getSamples(num);
+    public List<LatencySample> getLatencySample() {
+    	return this.latencyTimeSeries.getSamples();
     }
     
 	
@@ -258,8 +258,8 @@ public class PhysicalNode {
 		// 3秒钟采集一次， 维持3分钟内的样本
 		private static final int SAMPLE_SIZE = 60;	
 		
-		// 15 秒样本数据，计算负载
-		private static final int NUM = 5; 
+		// 20 秒样本数据，计算负载
+		private static final int NUM = 10; 
 		
 		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
 		private volatile boolean isOverload = false;
@@ -277,6 +277,7 @@ public class PhysicalNode {
 	        if ( samplesSize > NUM ) {
 	        	
 	        	int[] latencys = new int[ NUM ];
+	        	int errorNum = 0;
 		       
 		        int i = 0;
 		        Iterator<LatencySample> itr = samples.iterator();
@@ -286,6 +287,7 @@ public class PhysicalNode {
 		            
 		            LatencySample samp = itr.next();
 		            latencys[i] =  (int) (samp.respTime - samp.reqTime);
+		            if ( samp.isError ) errorNum++;
 		            i++;
 		        }
 		        
@@ -299,15 +301,17 @@ public class PhysicalNode {
 		        	if ( min > v ) min = v;
 		        	total += v;
 		        }
-		        isOverload = ((total - min - max) / (NUM - 2)) >= maxLatencyThreshold;
+		        
+		        isOverload = ((total - min - max) / (NUM - 2)) >= maxLatencyThreshold || errorNum > ( NUM / 2 );
 	        }
 
 		}
 		
-		public List<LatencySample> getSamples(int num) {
+		public List<LatencySample> getSamples() {
 			
 			List<LatencySample> sampleList = new ArrayList<LatencySample>();
 			
+			int num = 10;
 			int i = 0;
 			Iterator<LatencySample> itr = samples.iterator();
 			while (itr.hasNext()) {

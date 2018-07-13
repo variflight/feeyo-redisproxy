@@ -271,9 +271,7 @@ public class RedisStandalonePool extends AbstractPool {
             physicalNode.addLatencySample(latencySample, poolCfg.getMaxLatencyThreshold() );
 
         } catch (JedisConnectionException e) {
-        	
-            LOGGER.error("Connection to {} with error {}", physicalNode.getName(), e);
-            
+        
             latencySample.respTime = System.currentTimeMillis();
             latencySample.isError = true;
             physicalNode.addLatencySample(latencySample, poolCfg.getMaxLatencyThreshold());

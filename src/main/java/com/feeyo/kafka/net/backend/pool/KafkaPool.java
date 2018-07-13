@@ -398,13 +398,11 @@ public class KafkaPool extends AbstractPool {
 				physicalNode.addLatencySample( latencySample, poolCfg.getMaxLatencyThreshold());
 
 			} catch (IOException e) {
-				
-				//
+
 				latencySample.respTime = System.currentTimeMillis();
 				latencySample.isError = true;
 				physicalNode.addLatencySample(latencySample, poolCfg.getMaxLatencyThreshold());
 				
-				LOGGER.error("Failed to get latency from kafka server {}", physicalNode.getName());
 			} finally {
 				
 				if (client != null) {

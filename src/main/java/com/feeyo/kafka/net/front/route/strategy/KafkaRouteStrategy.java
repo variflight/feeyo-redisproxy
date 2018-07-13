@@ -150,6 +150,9 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		PhysicalNode physicalNode = pool.getPhysicalNode(partition.getLeader().getId());
 		if (physicalNode == null)
 			throw new PhysicalNodeUnavailableException("node unavailable.");
+		
+		if( physicalNode != null && physicalNode.isOverload() )
+			throw new PhysicalNodeUnavailableException("node overload.");
 
 		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
