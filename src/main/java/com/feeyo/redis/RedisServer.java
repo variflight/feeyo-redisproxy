@@ -34,6 +34,8 @@ public class RedisServer {
 	
 	//心跳独立，避免被其他任务影响
 	private static final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
+    // 延迟时间定时检查执行器
+    private static final ScheduledExecutorService latencyTimeCheckScheduler = Executors.newSingleThreadScheduledExecutor();
 	
 	public static void main(String[] args) throws IOException {
 		
@@ -124,8 +126,29 @@ public class RedisServer {
 					});
 				}			
 			}, 30L, 30L, TimeUnit.SECONDS);
-			
-			// CONSOLE 
+
+            /**
+             * 节点延迟值 检测
+             * 定时发送请求记录延迟值
+             */
+            latencyTimeCheckScheduler.scheduleAtFixedRate(new Runnable(){
+
+                @Override
+                public void run() {
+
+                    NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+                            for(AbstractPool pool : pools.values() ) {
+                                pool.latencyTimeCheck();
+                            }
+                        }
+                    });
+                }
+            }, 30L, 5L, TimeUnit.SECONDS);
+
+			// CONSOLE
 			StringBuffer strBuffer = new StringBuffer();
 			strBuffer.append(" ================================================== ").append("\n");
 			strBuffer.append(" Feeyo-RedisProxy & Feeyo-KafkaProxy ").append("\n");
