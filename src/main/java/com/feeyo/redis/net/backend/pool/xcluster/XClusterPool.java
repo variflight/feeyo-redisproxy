@@ -178,26 +178,24 @@ public class XClusterPool extends AbstractPool{
 		}
 		
 	}
-    
-    public PhysicalNode getPhysicalNode(String suffix) {
-    	PhysicalNode node = nodes.get( suffix ).getPhysicalNode();
-        return node;
-    }
-
-	@Override
-	public PhysicalNode getPhysicalNode(int id) {
-		return null;
-	}
-    /**
-     * 延迟时间统计
-     */
+	
     @Override
     public void latencyCheck() {
-
-        for(XNode node : nodes.values()) {
-            PhysicalNode physicalNode = node.getPhysicalNode();
-            latencyCheck(physicalNode);
-        }
+    	
+    	// CAS， 避免网络不好的情况下，频繁并发的检测
+		if (!latencyCheckFlag.compareAndSet(false, true)) {
+			return;
+		}
+		
+		try {
+	        for(XNode node : nodes.values()) {
+	            PhysicalNode physicalNode = node.getPhysicalNode();
+	            latencyCheck(physicalNode);
+	        }
+	        
+		} finally {
+			latencyCheckFlag.set( false );
+		}
     }
 
     private void latencyCheck(PhysicalNode physicalNode) {
@@ -231,4 +229,16 @@ public class XClusterPool extends AbstractPool{
             }
         }
     }
+	
+    
+    public PhysicalNode getPhysicalNode(String suffix) {
+    	PhysicalNode node = nodes.get( suffix ).getPhysicalNode();
+        return node;
+    }
+
+	@Override
+	public PhysicalNode getPhysicalNode(int id) {
+		return null;
+	}
+	
 }

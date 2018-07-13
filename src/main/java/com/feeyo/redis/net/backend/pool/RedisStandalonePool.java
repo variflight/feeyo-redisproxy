@@ -251,9 +251,12 @@ public class RedisStandalonePool extends AbstractPool {
      */
     @Override
     public void latencyCheck() {
+    	
+    	// CAS， 避免网络不好的情况下，频繁并发的检测
+		if (!latencyCheckFlag.compareAndSet(false, true)) {
+			return;
+		}
 
-        String nodeId = physicalNode.getName();
-        
         long requestMilliseconds = System.currentTimeMillis();
         JedisConnection conn = null;
         try {
@@ -270,8 +273,8 @@ public class RedisStandalonePool extends AbstractPool {
             physicalNode.calcOverload(cost, isError, poolCfg.getMaxLatencyThreshold());
 
         } catch (JedisConnectionException e) {
-
-            LOGGER.error("Connection to {} with error {}", nodeId, e);
+        	
+            LOGGER.error("Connection to {} with error {}", physicalNode.getName(), e);
             
             long cost =  System.currentTimeMillis() - requestMilliseconds;
             physicalNode.calcOverload(cost, true, poolCfg.getMaxLatencyThreshold());
@@ -280,6 +283,9 @@ public class RedisStandalonePool extends AbstractPool {
             if (conn != null) {
                 conn.disconnect();
             }
+            
+            latencyCheckFlag.set( false );
         }
+        
     }
 }

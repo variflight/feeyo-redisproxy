@@ -26,8 +26,8 @@ public abstract class AbstractPool {
 
 	protected static final byte[] PING = "*1\r\n$4\r\nPING\r\n".getBytes();
 	
-	// 有效性检测标记
-	protected AtomicBoolean availableCheckFlag = new AtomicBoolean( false );
+	protected AtomicBoolean availableCheckFlag = new AtomicBoolean( false );	// 有效性检测标记
+	protected AtomicBoolean latencyCheckFlag = new AtomicBoolean( false ); 		// 延迟检测标记
 	
 	protected PoolCfg poolCfg;
 	
@@ -78,6 +78,7 @@ public abstract class AbstractPool {
      * 延迟检查
      */
     public abstract void latencyCheck();
+    
 	
 	//TODO: 此处几个方法待进一步优化
 	//-------------------------------------------------

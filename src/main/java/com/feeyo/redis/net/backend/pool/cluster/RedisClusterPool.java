@@ -571,12 +571,23 @@ public class RedisClusterPool extends AbstractPool {
      */
     @Override
     public void latencyCheck() {
+    	
+    	// CAS， 避免网络不好的情况下，频繁并发的检测
+		if (!latencyCheckFlag.compareAndSet(false, true)) {
+			return;
+		}
 
-        for (ClusterNode clusterNode : masters.values()) {
-
-            PhysicalNode physicalNode = clusterNode.getPhysicalNode();
-            this.latencyCheck(physicalNode);
-        }
+		try {
+	        
+			for (ClusterNode clusterNode : masters.values()) {
+	
+	            PhysicalNode physicalNode = clusterNode.getPhysicalNode();
+	            this.latencyCheck(physicalNode);
+	        }
+	        
+		} finally {
+			latencyCheckFlag.set( false );
+		}
     }
 
     private void latencyCheck(PhysicalNode physicalNode) {

@@ -34,9 +34,11 @@ public class RedisServer {
 	
 	//心跳独立，避免被其他任务影响
 	private static final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
-    // 延迟时间定时检查执行器
-    private static final ScheduledExecutorService latencyTimeCheckScheduler = Executors.newSingleThreadScheduledExecutor();
 	
+    // 延迟时间定时检查执行器
+    private static final ScheduledExecutorService latencyScheduler = Executors.newSingleThreadScheduledExecutor();
+	
+    
 	public static void main(String[] args) throws IOException {
 		
 //		System.setProperty("com.sun.management.jmxremote.port", "8099");
@@ -110,6 +112,7 @@ public class RedisServer {
 			 * 2、连接池过大、过小的动态调整f
 			 */
 			heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
+				
 				static final long TIMEOUT = 2 * 60 * 1000L;
 				
 				@Override
@@ -127,11 +130,11 @@ public class RedisServer {
 				}			
 			}, 30L, 30L, TimeUnit.SECONDS);
 
-            /**
-             * 节点延迟值 检测
-             * 定时发送请求记录延迟值
+			
+            /*
+             * 节点延迟 检测
              */
-            latencyTimeCheckScheduler.scheduleAtFixedRate(new Runnable(){
+            latencyScheduler.scheduleAtFixedRate(new Runnable(){
 
                 @Override
                 public void run() {
@@ -139,6 +142,7 @@ public class RedisServer {
                     NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
                         @Override
                         public void run() {
+                        	
                             Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
                             for(AbstractPool pool : pools.values() ) {
                                 pool.latencyCheck();

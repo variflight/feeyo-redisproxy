@@ -360,6 +360,11 @@ public class KafkaPool extends AbstractPool {
      */
     @Override
     public void latencyCheck() {
+    	
+    	// CAS， 避免网络不好的情况下，频繁并发的检测
+		if (!latencyCheckFlag.compareAndSet(false, true)) {
+			return;
+		}
 
         PhysicalNode physicalNode;
         for (Integer id : physicalNodes.keySet()) {
@@ -367,7 +372,6 @@ public class KafkaPool extends AbstractPool {
             physicalNode = physicalNodes.get(id);
 
             long requestMilliseconds = System.currentTimeMillis();
-            
 			KafkaConClient client = null;
 			try {
 
@@ -398,11 +402,13 @@ public class KafkaPool extends AbstractPool {
 				
 				LOGGER.error("Failed to get latency from kafka server {}", physicalNode.getName());
 			} finally {
+				
 				if (client != null) {
 					client.close();
 					client = null;
 				}
-
+				
+				latencyCheckFlag.set( false );
 			}
         }  
     }
