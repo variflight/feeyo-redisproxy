@@ -67,12 +67,16 @@ public class KafkaConClient {
 	}
 
 	public ClientResponse sendAndRecvice(ClientRequest clientRequest) throws IOException {
-
+		
+		//
 		NetworkClientUtils.awaitReady(client, node, Time.SYSTEM, 5000);
+		
 		//
 		ClientResponse response = NetworkClientUtils.sendAndReceive(client, clientRequest, Time.SYSTEM);
 		return response;
 	}
+	
+	
 	
 	public void close() {
 		closeQuietly(metrics, "Metrics");

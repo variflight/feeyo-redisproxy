@@ -1,8 +1,10 @@
 package com.feeyo.redis.net.backend.pool;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.slf4j.Logger;
@@ -38,11 +40,8 @@ public class PhysicalNode {
 	protected int minCon;
 	protected int maxCon;
 	
-    // 节点是否负载
-    protected volatile boolean isOverload = false;
-    
     // 
-    protected Deque<Object[]> latencyDeque = new ConcurrentLinkedDeque<>();
+    protected volatile LatencyTimeSeries latencyTimeSeries = new LatencyTimeSeries();
 
 	protected final BackendConnectionFactory factory;
 	
@@ -185,35 +184,19 @@ public class PhysicalNode {
 	}	
 	
 	//
-	//
     public boolean isOverload() {
-        return isOverload;
+        return this.latencyTimeSeries.isOverload;
     }
 
     //
-    public void calcOverload(Long cost, boolean isError, int maxLatencyThreshold) {
-    	
-        if (latencyDeque.size() == 50) {
-            latencyDeque.removeLast();
-        }
-        
-        latencyDeque.addFirst(new Object[] {cost, isError});
-        
-        // 计算 overload
-        int i = 0;
-        long allLatency = 0L;
-        int size = Math.min(10, latencyDeque.size());
-        Iterator<Object[]> itr = latencyDeque.iterator();
-        while (itr.hasNext()) {
-            if (i == size) {
-                break;
-            }
-            allLatency += (long) itr.next()[0];
-            i++;
-        }
-        isOverload = (allLatency / size) >= 5000;
+    public void addLatencySample(LatencySample sample, int maxLatencyThreshold) {
+    	this.latencyTimeSeries.addSample(sample, maxLatencyThreshold);
     }
 	
+    public List<LatencySample> getLatencySample(int num) {
+    	return this.latencyTimeSeries.getSamples(num);
+    }
+    
 	
 	public String getName() {
 		return name;
@@ -266,4 +249,70 @@ public class PhysicalNode {
 		sb.append("maxCon=").append(maxCon).append(" ) ");
 		return sb.toString();
 	}
+	
+	
+	//
+	//
+	public static class LatencyTimeSeries {
+		
+		// 3秒钟采集一次， 维持15分钟内的样本
+		private static final int LATENCY_TS_LEN = 300;		
+		
+		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
+		private volatile boolean isOverload = false;
+
+		public void addSample(LatencySample sample, int maxLatencyThreshold) {
+			
+			if (samples.size() >= LATENCY_TS_LEN ) {
+				samples.removeLast();
+			}
+			
+			samples.addFirst( sample );
+			
+			// node overload
+			//
+	        int num = 0;
+	        int count = Math.min(5, samples.size());
+	        
+	        long totalLatency = 0L;
+	        
+	        Iterator<LatencySample> itr = samples.iterator();
+	        while( itr.hasNext() ) {
+	        	if ( num == count)
+	                break;
+	            
+	            LatencySample s = itr.next();
+	            totalLatency += (s.respTime - s.reqTime);
+	            num++;
+	        }
+			
+	        isOverload = (totalLatency / count) >= maxLatencyThreshold;
+		}
+		
+		public List<LatencySample> getSamples(int num) {
+			
+			List<LatencySample> sampleList = new ArrayList<LatencySample>();
+			
+			int i = 0;
+			Iterator<LatencySample> itr = samples.iterator();
+			while (itr.hasNext()) {
+				if ( i >= num )
+					break;
+				
+				LatencySample s = itr.next();
+				sampleList.add( s );
+				i++;
+			}
+			
+			return sampleList;
+		}
+		
+	}
+
+	public static class LatencySample {
+		public long reqTime;
+		public long respTime;
+		public boolean isError;
+	}
+	
 }

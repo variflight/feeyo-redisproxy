@@ -371,7 +371,9 @@ public class KafkaPool extends AbstractPool {
 
             physicalNode = physicalNodes.get(id);
 
-            long requestMilliseconds = System.currentTimeMillis();
+            PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
+    		latencySample.reqTime = System.currentTimeMillis();
+    		
 			KafkaConClient client = null;
 			try {
 
@@ -387,18 +389,20 @@ public class KafkaPool extends AbstractPool {
 					org.apache.kafka.common.requests.ApiVersionsResponse rs = 
 							(org.apache.kafka.common.requests.ApiVersionsResponse) response.responseBody();
 					if (rs.error() == Errors.NONE) {
-						isError = true;
+						isError = false;
 					}
 				}
 				
-				long cost = System.currentTimeMillis() - requestMilliseconds;
-				physicalNode.calcOverload(cost, isError, poolCfg.getMaxLatencyThreshold());
+				latencySample.respTime = System.currentTimeMillis();
+				latencySample.isError = isError;
+				physicalNode.addLatencySample( latencySample, poolCfg.getMaxLatencyThreshold());
 
 			} catch (IOException e) {
 				
 				//
-				long cost = System.currentTimeMillis() - requestMilliseconds;
-				physicalNode.calcOverload(cost, true, poolCfg.getMaxLatencyThreshold());
+				latencySample.respTime = System.currentTimeMillis();
+				latencySample.isError = true;
+				physicalNode.addLatencySample(latencySample, poolCfg.getMaxLatencyThreshold());
 				
 				LOGGER.error("Failed to get latency from kafka server {}", physicalNode.getName());
 			} finally {
