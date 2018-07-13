@@ -255,8 +255,8 @@ public class PhysicalNode {
 	//
 	public static class LatencyTimeSeries {
 		
-		// 3秒钟采集一次， 维持15分钟内的样本
-		private static final int LATENCY_TS_LEN = 300;		
+		// 3秒钟采集一次， 维持5分钟内的样本
+		private static final int LATENCY_TS_LEN = 100;		
 		
 		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
 		private volatile boolean isOverload = false;
@@ -266,7 +266,6 @@ public class PhysicalNode {
 			if (samples.size() >= LATENCY_TS_LEN ) {
 				samples.removeLast();
 			}
-			
 			samples.addFirst( sample );
 			
 			// node overload
