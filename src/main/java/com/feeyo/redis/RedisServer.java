@@ -141,7 +141,7 @@ public class RedisServer {
                         public void run() {
                             Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
                             for(AbstractPool pool : pools.values() ) {
-                                pool.latencyTimeCheck();
+                                pool.latencyCheck();
                             }
                         }
                     });

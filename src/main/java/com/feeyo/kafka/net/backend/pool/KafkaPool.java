@@ -2,10 +2,15 @@ package com.feeyo.kafka.net.backend.pool;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
-import org.apache.kafka.clients.*;
+import org.apache.kafka.clients.ClientRequest;
+import org.apache.kafka.clients.ClientResponse;
 import org.apache.kafka.common.Node;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
@@ -26,15 +31,8 @@ import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.google.common.collect.Sets;
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.SaslConfigs;
-import org.apache.kafka.common.metrics.Metrics;
-import org.apache.kafka.common.network.ChannelBuilder;
-import org.apache.kafka.common.network.Selector;
+
 import org.apache.kafka.common.protocol.Errors;
-import org.apache.kafka.common.utils.LogContext;
-import org.apache.kafka.common.utils.Time;
 
 public class KafkaPool extends AbstractPool {
 
@@ -355,6 +353,60 @@ public class KafkaPool extends AbstractPool {
 		}
 
 	}
+	
+	
+    /**
+     * 延迟时间统计
+     */
+    @Override
+    public void latencyCheck() {
+
+        PhysicalNode physicalNode;
+        for (Integer id : physicalNodes.keySet()) {
+
+            physicalNode = physicalNodes.get(id);
+
+            long requestMilliseconds = System.currentTimeMillis();
+            
+			KafkaConClient client = null;
+			try {
+
+				client = new KafkaConClient(id, physicalNode.getHost(), physicalNode.getPort());
+				org.apache.kafka.common.requests.ApiVersionsRequest.Builder build = 
+						new org.apache.kafka.common.requests.ApiVersionsRequest.Builder((short) 1);
+				ClientRequest clientRequest = client.newClientRequest(build);
+
+				//
+				ClientResponse response = client.sendAndRecvice(clientRequest);
+				boolean isError = true;
+				if (response != null) {
+					org.apache.kafka.common.requests.ApiVersionsResponse rs = 
+							(org.apache.kafka.common.requests.ApiVersionsResponse) response.responseBody();
+					if (rs.error() == Errors.NONE) {
+						isError = true;
+					}
+				}
+				
+				long cost = System.currentTimeMillis() - requestMilliseconds;
+				physicalNode.calcOverload(cost, isError, poolCfg.getMaxLatencyThreshold());
+
+			} catch (IOException e) {
+				
+				//
+				long cost = System.currentTimeMillis() - requestMilliseconds;
+				physicalNode.calcOverload(cost, true, poolCfg.getMaxLatencyThreshold());
+				
+				LOGGER.error("Failed to get latency from kafka server {}", physicalNode.getName());
+			} finally {
+				if (client != null) {
+					client.close();
+					client = null;
+				}
+
+			}
+        }  
+    }
+    
 
 	@Override
 	public PhysicalNode getPhysicalNode(int id) {
@@ -364,61 +416,6 @@ public class KafkaPool extends AbstractPool {
 	public Map<Integer, PhysicalNode> getPhysicalNodes(){
 		return physicalNodes;
 	}
-    /**
-     * 延迟时间统计
-     */
-    @Override
-    public void latencyTimeCheck() {
-
-        PhysicalNode physicalNode;
-        for (Integer id : physicalNodes.keySet()) {
-
-            physicalNode = physicalNodes.get(id);
-            Node node = new Node(id, physicalNode.getHost(), physicalNode.getPort());
-
-            LogContext logContext = new LogContext("latency");
-            Metrics metrics = new Metrics(Time.SYSTEM);
-            ConfigDef defConf = new ConfigDef();
-            defConf.define(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, ConfigDef.Type.STRING, CommonClientConfigs
-                    .DEFAULT_SECURITY_PROTOCOL, ConfigDef.Importance.MEDIUM, CommonClientConfigs.SECURITY_PROTOCOL_DOC);
-            defConf.define(SaslConfigs.SASL_MECHANISM, ConfigDef.Type.STRING, SaslConfigs.DEFAULT_SASL_MECHANISM, ConfigDef
-                    .Importance.MEDIUM, SaslConfigs.SASL_MECHANISM_DOC);
-            AbstractConfig config = new AbstractConfig(defConf, new Properties());
-            ChannelBuilder channelBuilder = ClientUtils.createChannelBuilder(config);
-
-            Selector selector = new Selector(1000L, metrics, Time.SYSTEM, "latency", channelBuilder, logContext);
-            Metadata metadata = new Metadata(0, Long.MAX_VALUE, false);
-            NetworkClient kafkaClient = new NetworkClient(selector, metadata, Thread.currentThread().getName(), 10, 1000L, 1000L, 1,
-                    1024, 1000, Time.SYSTEM, true, new ApiVersions(), null, logContext);
-
-            org.apache.kafka.common.requests.ApiVersionsRequest.Builder build = new org.apache.kafka.common.requests
-                    .ApiVersionsRequest.Builder((short) 1);
-            ClientRequest clientRequest = kafkaClient.newClientRequest(node.idString(), build, 1000L, true);
-
-            try {
-
-                long requestMilliseconds = System.currentTimeMillis();
-                NetworkClientUtils.awaitReady(kafkaClient, node, Time.SYSTEM, 5000);
-
-                ClientResponse response = NetworkClientUtils.sendAndReceive(kafkaClient, clientRequest, Time.SYSTEM);
-
-                long responseMillisecond = System.currentTimeMillis();
-                long cost = responseMillisecond - requestMilliseconds;
-
-                boolean isSuccess = false;
-                if (response != null) {
-                    org.apache.kafka.common.requests.ApiVersionsResponse rs = (org.apache.kafka.common.requests.ApiVersionsResponse) response.responseBody();
-                    if (rs.error() == Errors.NONE) {
-                        isSuccess = true;
-                    }
-                }
-                physicalNode.addLatency(cost, isSuccess);
-                // kafka节点平均延迟不能超过5s
-                physicalNode.updateOverLoad(5000);
-
-            } catch (IOException e) {
-                LOGGER.error("Failed to get latency from kafka server {}", physicalNode.getName());
-            }
-        }
-    }
+	
+    
 }

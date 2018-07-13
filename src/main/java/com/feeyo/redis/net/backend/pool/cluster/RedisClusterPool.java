@@ -570,41 +570,39 @@ public class RedisClusterPool extends AbstractPool {
      * 向集群中各master发送ping统计延迟时间
      */
     @Override
-    public void latencyTimeCheck() {
+    public void latencyCheck() {
 
         for (ClusterNode clusterNode : masters.values()) {
 
             PhysicalNode physicalNode = clusterNode.getPhysicalNode();
-            this.latencyTimeCheck(physicalNode);
+            this.latencyCheck(physicalNode);
         }
     }
 
-    private void latencyTimeCheck(PhysicalNode physicalNode) {
+    private void latencyCheck(PhysicalNode physicalNode) {
 
-        JedisConnection conn = null;
+    	long requestMilliseconds = System.currentTimeMillis();
+        
+    	JedisConnection conn = null;
         try {
             conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 3000, 0);
-
-            long requestMilliseconds = System.currentTimeMillis();
-
             conn.sendCommand(RedisCommand.PING);
             String value = conn.getBulkReply();
 
-            long responseMillisecond = System.currentTimeMillis();
-            boolean isSuccess = true;
-            if (!"PONG".equalsIgnoreCase(value)) {
-                isSuccess = false;
-                LOGGER.error("The unexpected response from {} for latency check is {}", physicalNode.getName(), value);
+            boolean isError = true;
+            if ( value != null && "PONG".equalsIgnoreCase(value)) {
+            	isError = false;
             }
 
-            long cost = responseMillisecond - requestMilliseconds;
-
-            physicalNode.addLatency(cost, isSuccess);
-            // redis节点平均延迟不能超过3s
-            physicalNode.updateOverLoad(3000);
+            long cost = System.currentTimeMillis() - requestMilliseconds;
+            physicalNode.calcOverload(cost, isError, poolCfg.getMaxLatencyThreshold());
 
         } catch (JedisConnectionException e) {
             LOGGER.error("Connection to {} with error {}", physicalNode.getName(), e);
+            
+            long cost = System.currentTimeMillis() - requestMilliseconds;
+            physicalNode.calcOverload(cost, true, poolCfg.getMaxLatencyThreshold());
+            
         } finally {
             if (conn != null) {
                 conn.disconnect();

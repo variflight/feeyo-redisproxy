@@ -1,10 +1,8 @@
 package com.feeyo.redis.net.backend.pool;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.slf4j.Logger;
@@ -39,9 +37,12 @@ public class PhysicalNode {
 	protected int port;
 	protected int minCon;
 	protected int maxCon;
+	
     // 节点是否负载
-    protected volatile boolean isOverLoad;
-    protected Deque<Object[]> latencyDeque;
+    protected volatile boolean isOverload = false;
+    
+    // 
+    protected Deque<Object[]> latencyDeque = new ConcurrentLinkedDeque<>();
 
 	protected final BackendConnectionFactory factory;
 	
@@ -59,9 +60,6 @@ public class PhysicalNode {
 		
 		this.size = maxCon;
 		this.name = host + ":" + port;
-
-        isOverLoad = false;
-        latencyDeque = new ConcurrentLinkedDeque<>();
 	}
 	
 	// 新建连接，异步填充后端连接池
@@ -186,6 +184,37 @@ public class PhysicalNode {
 		}
 	}	
 	
+	//
+	//
+    public boolean isOverload() {
+        return isOverload;
+    }
+
+    //
+    public void calcOverload(Long cost, boolean isError, int maxLatencyThreshold) {
+    	
+        if (latencyDeque.size() == 50) {
+            latencyDeque.removeLast();
+        }
+        
+        latencyDeque.addFirst(new Object[] {cost, isError});
+        
+        // 计算 overload
+        int i = 0;
+        long allLatency = 0L;
+        int size = Math.min(10, latencyDeque.size());
+        Iterator<Object[]> itr = latencyDeque.iterator();
+        while (itr.hasNext()) {
+            if (i == size) {
+                break;
+            }
+            allLatency += (long) itr.next()[0];
+            i++;
+        }
+        isOverload = (allLatency / size) >= 5000;
+    }
+	
+	
 	public String getName() {
 		return name;
 	}
@@ -237,57 +266,4 @@ public class PhysicalNode {
 		sb.append("maxCon=").append(maxCon).append(" ) ");
 		return sb.toString();
 	}
-    public boolean isOverLoad() {
-        return isOverLoad;
-    }
-
-    public void addLatency(Long cost, boolean isSuccess) {
-        if (latencyDeque.size() == 50) {
-            latencyDeque.removeLast();
-        }
-        latencyDeque.addFirst(new Object[] {cost, isSuccess});
-    }
-
-    /**
-     * 暂时按取平均值的方式, 后面可以用策略模式 + 配置项重写
-     * @param thresholdLatency
-     */
-    public void updateOverLoad(int thresholdLatency) {
-        int i = 0;
-        long allLatency = 0L;
-        int size = Math.min(10, latencyDeque.size());
-        Iterator<Object[]> itr = latencyDeque.iterator();
-        while (itr.hasNext()) {
-
-            if (i == size) {
-                break;
-            }
-            allLatency += (long) itr.next()[0];
-            i++;
-        }
-        isOverLoad = (allLatency / size) >= thresholdLatency;
-    }
-
-    public List<String> getNodeLatencyResult() {
-
-        List<String> result = new ArrayList<>();
-        int i = 0;
-        int size = Math.min(10, latencyDeque.size());
-        Iterator<Object[]> itr = latencyDeque.iterator();
-        StringBuffer latencyInfo = new StringBuffer("The node [");
-        latencyInfo.append(name).append("] recently latency is: ");
-
-        Object[] tempArr;
-        while (itr.hasNext()) {
-
-            if (i == size) {
-                break;
-            }
-            tempArr = itr.next();
-            latencyInfo.append(tempArr[0]).append("(").append((boolean) tempArr[1] ? "Ok" : "Fail").append(")  ");
-            i++;
-        }
-        result.add(latencyInfo.toString());
-        return result;
-    }
 }

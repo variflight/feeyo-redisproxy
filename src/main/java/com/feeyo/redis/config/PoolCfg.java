@@ -16,15 +16,18 @@ public class PoolCfg {
 	
 	protected final int maxCon;
 	protected final int minCon;
+	
+	protected final int maxLatencyThreshold;
 
 	protected List<String> nodes = new ArrayList<String>();
 
-	public PoolCfg(int id, String name, int type, int minCon, int maxCon) {
+	public PoolCfg(int id, String name, int type, int minCon, int maxCon, int maxLatencyThreshold) {
 		this.id = id;
 		this.name = name;
 		this.type = type;
 		this.minCon = minCon;
 		this.maxCon = maxCon;
+		this.maxLatencyThreshold = maxLatencyThreshold;
 	}
 
 	public int getId() {
@@ -45,6 +48,10 @@ public class PoolCfg {
 
 	public int getMinCon() {
 		return minCon;
+	}
+	
+	public int getMaxLatencyThreshold() {
+		return maxLatencyThreshold;
 	}
 
 	public List<String> getNodes() {

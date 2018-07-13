@@ -1118,33 +1118,33 @@ public class Manage {
 				// SHOW LATENCY
 				} else if (arg2.equalsIgnoreCase("LATENCY") && numArgs == 2) {
 
-                    List<String> lines = new ArrayList<>();
-                    Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
-                    for (AbstractPool pool : pools.values()) {
-
-                        if (pool instanceof RedisStandalonePool) {
-
-                            RedisStandalonePool standalonePool = (RedisStandalonePool) pool;
-                            lines.addAll(standalonePool.getPhysicalNode().getNodeLatencyResult());
-                        } else if (pool instanceof RedisClusterPool) {
-
-                            RedisClusterPool redisClusterPool = (RedisClusterPool) pool;
-                            Map<String, ClusterNode> masters = redisClusterPool.getMasters();
-
-                            for (ClusterNode clusterNode : masters.values()) {
-                                lines.addAll(clusterNode.getPhysicalNode().getNodeLatencyResult());
-                            }
-                        } else if (pool instanceof KafkaPool) {
-
-                            KafkaPool kafkaPool =  (KafkaPool) pool;
-                            Map<Integer, PhysicalNode> physicalNodes = kafkaPool.getPhysicalNodes();
-                            for (PhysicalNode physicalNode : physicalNodes.values()) {
-                                lines.addAll(physicalNode.getNodeLatencyResult());
-                            }
-                        }
-                    }
-
-                    return encode(lines);
+//                    List<String> lines = new ArrayList<>();
+//                    Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+//                    for (AbstractPool pool : pools.values()) {
+//
+//                        if (pool instanceof RedisStandalonePool) {
+//
+//                            RedisStandalonePool standalonePool = (RedisStandalonePool) pool;
+//                            lines.addAll(standalonePool.getPhysicalNode().getNodeLatencyResult());
+//                        } else if (pool instanceof RedisClusterPool) {
+//
+//                            RedisClusterPool redisClusterPool = (RedisClusterPool) pool;
+//                            Map<String, ClusterNode> masters = redisClusterPool.getMasters();
+//
+//                            for (ClusterNode clusterNode : masters.values()) {
+//                                lines.addAll(clusterNode.getPhysicalNode().getNodeLatencyResult());
+//                            }
+//                        } else if (pool instanceof KafkaPool) {
+//
+//                            KafkaPool kafkaPool =  (KafkaPool) pool;
+//                            Map<Integer, PhysicalNode> physicalNodes = kafkaPool.getPhysicalNodes();
+//                            for (PhysicalNode physicalNode : physicalNodes.values()) {
+//                                lines.addAll(physicalNode.getNodeLatencyResult());
+//                            }
+//                        }
+//                    }
+//
+//                    return encode(lines);
                 }
 			} 
 			
