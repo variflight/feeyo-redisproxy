@@ -200,26 +200,26 @@ public class XClusterPool extends AbstractPool{
 
     private void latencyCheck(PhysicalNode physicalNode) {
 
-    	PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-		latencySample.reqTime = System.currentTimeMillis();
-        
     	JedisConnection conn = null;
         try {
             conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 3000, 0);
-            conn.sendCommand(RedisCommand.PING);
-            String value = conn.getBulkReply();
-
-            latencySample.respTime = System.currentTimeMillis();
-            latencySample.isError = ( value != null && "PONG".equalsIgnoreCase(value) ) ? false : true;
-            physicalNode.addLatencySample(latencySample, poolCfg.getMaxLatencyThreshold() );
+            
+            //
+            for(int i=0; i<3; i++) {
+            	PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
+        		latencySample.reqTime = System.nanoTime();
+            	
+	            conn.sendCommand(RedisCommand.PING);
+	            String value = conn.getBulkReply();
+	            if ( value != null && "PONG".equalsIgnoreCase(value) ) {
+	            	latencySample.respTime = System.nanoTime();
+	                physicalNode.addLatencySample( latencySample );
+	            }
+            }
+            physicalNode.calculateLatencyOverload( poolCfg.getMaxLatencyThreshold() );
 
         } catch (JedisConnectionException e) {
-        	
-            LOGGER.error("Connection to {} with error {}", physicalNode.getName(), e);
-            
-            latencySample.respTime = System.currentTimeMillis();
-            latencySample.isError = true;
-            physicalNode.addLatencySample(latencySample, poolCfg.getMaxLatencyThreshold() );
+            LOGGER.error("latency err:" + physicalNode.getHost(), e);
             
         } finally {
             if (conn != null) {

@@ -371,37 +371,36 @@ public class KafkaPool extends AbstractPool {
 
             physicalNode = physicalNodes.get(id);
 
-            PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-    		latencySample.reqTime = System.currentTimeMillis();
-    		
 			KafkaConClient client = null;
 			try {
 
 				client = new KafkaConClient(id, physicalNode.getHost(), physicalNode.getPort());
-				org.apache.kafka.common.requests.ApiVersionsRequest.Builder build = 
-						new org.apache.kafka.common.requests.ApiVersionsRequest.Builder((short) 1);
-				ClientRequest clientRequest = client.newClientRequest(build);
-
+				
 				//
-				ClientResponse response = client.sendAndRecvice(clientRequest);
-				boolean isError = true;
-				if (response != null) {
-					org.apache.kafka.common.requests.ApiVersionsResponse rs = 
-							(org.apache.kafka.common.requests.ApiVersionsResponse) response.responseBody();
-					if (rs.error() == Errors.NONE) {
-						isError = false;
-					}
+				for(int i=0; i<3; i++) {
+				    PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
+		    		latencySample.reqTime = System.nanoTime();
+					
+					org.apache.kafka.common.requests.ApiVersionsRequest.Builder build = 
+							new org.apache.kafka.common.requests.ApiVersionsRequest.Builder((short) 1);
+					ClientRequest clientRequest = client.newClientRequest(build);
+					ClientResponse response = client.sendAndRecvice(clientRequest);
+					if (response != null) {
+						org.apache.kafka.common.requests.ApiVersionsResponse rs = 
+								(org.apache.kafka.common.requests.ApiVersionsResponse) response.responseBody();
+						if (rs.error() == Errors.NONE) {
+							latencySample.respTime = System.nanoTime();
+							physicalNode.addLatencySample( latencySample );
+							
+						}
+					} 
 				}
 				
-				latencySample.respTime = System.currentTimeMillis();
-				latencySample.isError = isError;
-				physicalNode.addLatencySample( latencySample, poolCfg.getMaxLatencyThreshold());
+				//
+				physicalNode.calculateLatencyOverload( poolCfg.getMaxLatencyThreshold() );
 
 			} catch (IOException e) {
-
-				latencySample.respTime = System.currentTimeMillis();
-				latencySample.isError = true;
-				physicalNode.addLatencySample(latencySample, poolCfg.getMaxLatencyThreshold());
+				LOGGER.warn("latency err, host:" + physicalNode.getHost(), e);
 				
 			} finally {
 				

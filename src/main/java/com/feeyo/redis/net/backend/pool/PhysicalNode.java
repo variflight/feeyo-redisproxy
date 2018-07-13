@@ -189,8 +189,12 @@ public class PhysicalNode {
     }
 
     //
-    public void addLatencySample(LatencySample sample, int maxLatencyThreshold) {
-    	this.latencyTimeSeries.addSample(sample, maxLatencyThreshold);
+    public void addLatencySample(LatencySample sample) {
+    	this.latencyTimeSeries.addSample(sample);
+    }
+    
+    public void calculateLatencyOverload(float maxLatencyThreshold) {
+    	this.latencyTimeSeries.calculateOverload( maxLatencyThreshold );
     }
 	
     public List<LatencySample> getLatencySample() {
@@ -258,26 +262,27 @@ public class PhysicalNode {
 		// 3秒钟采集一次， 维持3分钟内的样本
 		private static final int SAMPLE_SIZE = 60;	
 		
-		// 20 秒样本数据，计算负载
-		private static final int NUM = 10; 
+		// 15 秒样本数据，计算负载
+		private static final int NUM = 15; 
 		
 		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
 		private volatile boolean isOverload = false;
 
-		public void addSample(LatencySample sample, int maxLatencyThreshold) {
+		public void addSample(LatencySample sample) {
 			
-			int samplesSize = samples.size();
-			if (samplesSize >= SAMPLE_SIZE ) {
+			if ( samples.size() >= SAMPLE_SIZE) {
 				samples.removeLast();
 			}
 			samples.addFirst( sample );
+
+		}
+		
+		public void calculateOverload(float maxLatencyThreshold ) {
 			
-			
-	        // 必须确认有足够的样本
-	        if ( samplesSize > NUM ) {
+			 // 必须确认有足够的样本
+	        if ( samples.size() > NUM ) {
 	        	
 	        	int[] latencys = new int[ NUM ];
-	        	int errorNum = 0;
 		       
 		        int i = 0;
 		        Iterator<LatencySample> itr = samples.iterator();
@@ -287,7 +292,6 @@ public class PhysicalNode {
 		            
 		            LatencySample samp = itr.next();
 		            latencys[i] =  (int) (samp.respTime - samp.reqTime);
-		            if ( samp.isError ) errorNum++;
 		            i++;
 		        }
 		        
@@ -302,9 +306,10 @@ public class PhysicalNode {
 		        	total += v;
 		        }
 		        
-		        isOverload = (((total - min - max) / (NUM - 2)) >= maxLatencyThreshold) || (errorNum > ( NUM / 2 ));
+		        // 毫秒转 纳秒
+		        isOverload = ((total - min - max) / (NUM - 2)) >= ( maxLatencyThreshold * 1000000 );
 	        }
-
+			
 		}
 		
 		public List<LatencySample> getSamples() {
@@ -331,7 +336,6 @@ public class PhysicalNode {
 	public static class LatencySample {
 		public long reqTime;
 		public long respTime;
-		public boolean isError;
 	}
 	
 }

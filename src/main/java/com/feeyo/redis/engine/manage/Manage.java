@@ -1120,8 +1120,8 @@ public class Manage {
 				} else if (arg2.equalsIgnoreCase("LATENCY") && numArgs == 2 ) {
 
                     List<String> lines = new ArrayList<>();
-                    lines.add("|     poolId     |               host              |       latency         |    isError   |");
-                    lines.add("-------------------------------------------------------------------------------------------");
+                    lines.add("|     poolId     |               host              |       latency         |");
+                    lines.add("----------------------------------------------------------------------------");
                     Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
                     for (AbstractPool pool : pools.values()) {
 
@@ -1136,7 +1136,6 @@ public class Manage {
                             	strBuffer.append(" ").append( String.valueOf( standalonePool.getId() ) );
                             	strBuffer.append(" ").append( physicalNode.getHost() );
                             	strBuffer.append(" ").append( (s.respTime - s.reqTime) );
-                            	strBuffer.append(" ").append( s.isError );
                             	
                             	lines.add( strBuffer.toString() );
                             }
@@ -1160,7 +1159,6 @@ public class Manage {
                                 	strBuffer.append(" ").append( String.valueOf( redisClusterPool.getId() ) );
                                 	strBuffer.append(" ").append( physicalNode.getHost() );
                                 	strBuffer.append(" ").append( (s.respTime - s.reqTime) );
-                                	strBuffer.append(" ").append( s.isError );
                                 	
                                 	lines.add( strBuffer.toString() );
                                 }
@@ -1179,7 +1177,6 @@ public class Manage {
 	                            	strBuffer.append(" ").append( String.valueOf( kafkaPool.getId() ) );
 	                            	strBuffer.append(" ").append( physicalNode.getHost() );
 	                            	strBuffer.append(" ").append( (s.respTime - s.reqTime) );
-	                            	strBuffer.append(" ").append( s.isError );
 	                            	
 	                            	lines.add( strBuffer.toString() );
                                  }

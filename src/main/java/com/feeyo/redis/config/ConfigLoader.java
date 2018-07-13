@@ -85,7 +85,7 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-				int maxLatencyThreshold = getIntAttribute(nameNodeMap, "maxLatencyThreshold", 5);
+				float maxLatencyThreshold = getFloatAttribute(nameNodeMap, "maxLatencyThreshold", 0.5F);
 				
 				PoolCfg poolCfg;
 				if (type == PoolType.KAFKA_CLUSTER ) {
@@ -241,6 +241,10 @@ public class ConfigLoader {
 		return getValue(map.getNamedItem(attr), defaultVal);
 	}
 
+	private static float getFloatAttribute(NamedNodeMap map, String attr, float defaultVal) {
+		return getFloatValue(map.getNamedItem(attr), defaultVal);
+	}
+	
 	private static int getIntAttribute(NamedNodeMap map, String attr, int defaultVal) {
 		return getIntValue(map.getNamedItem(attr), defaultVal);
 	}
@@ -257,7 +261,11 @@ public class ConfigLoader {
 	private static String getValue(Node node, String defaultVal) {
 		return node == null ? defaultVal : node.getNodeValue();
 	}
-
+	
+	private static float getFloatValue(Node node, float defaultVal) {
+		return node == null ? defaultVal : Float.valueOf(node.getNodeValue());
+	}
+	
 	private static int getIntValue(Node node, int defaultVal) {
 		return node == null ? defaultVal : Integer.valueOf(node.getNodeValue());
 	}

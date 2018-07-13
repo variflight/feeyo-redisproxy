@@ -151,7 +151,7 @@ public class RedisServer {
                     });
                 }
                 
-            }, 10L, 2L, TimeUnit.SECONDS);
+            }, 15L, 3L, TimeUnit.SECONDS);
 
 			// CONSOLE
 			StringBuffer strBuffer = new StringBuffer();
