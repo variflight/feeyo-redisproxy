@@ -302,7 +302,7 @@ public class PhysicalNode {
 		        	total += v;
 		        }
 		        
-		        isOverload = ((total - min - max) / (NUM - 2)) >= maxLatencyThreshold || errorNum > ( NUM / 2 );
+		        isOverload = (((total - min - max) / (NUM - 2)) >= maxLatencyThreshold) || (errorNum > ( NUM / 2 ));
 	        }
 
 		}
