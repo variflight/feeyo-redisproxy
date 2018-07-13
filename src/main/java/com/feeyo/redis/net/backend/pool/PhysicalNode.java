@@ -255,37 +255,53 @@ public class PhysicalNode {
 	//
 	public static class LatencyTimeSeries {
 		
-		// 3秒钟采集一次， 维持5分钟内的样本
-		private static final int LATENCY_TS_LEN = 100;		
+		// 3秒钟采集一次， 维持3分钟内的样本
+		private static final int SAMPLE_SIZE = 60;	
+		
+		// 15 秒样本数据，计算负载
+		private static final int NUM = 5; 
 		
 		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
 		private volatile boolean isOverload = false;
 
 		public void addSample(LatencySample sample, int maxLatencyThreshold) {
 			
-			if (samples.size() >= LATENCY_TS_LEN ) {
+			int samplesSize = samples.size();
+			if (samplesSize >= SAMPLE_SIZE ) {
 				samples.removeLast();
 			}
 			samples.addFirst( sample );
 			
-			// node overload
-			//
-	        int num = 0;
-	        int count = Math.min(5, samples.size());
-	        
-	        long totalLatency = 0L;
-	        
-	        Iterator<LatencySample> itr = samples.iterator();
-	        while( itr.hasNext() ) {
-	        	if ( num == count)
-	                break;
-	            
-	            LatencySample s = itr.next();
-	            totalLatency += (s.respTime - s.reqTime);
-	            num++;
-	        }
 			
-	        isOverload = (totalLatency / count) >= maxLatencyThreshold;
+	        // 必须确认有足够的样本
+	        if ( samplesSize > NUM ) {
+	        	
+	        	int[] latencys = new int[ NUM ];
+		       
+		        int i = 0;
+		        Iterator<LatencySample> itr = samples.iterator();
+		        while( itr.hasNext() ) {
+		        	if ( i == NUM )
+		                break;
+		            
+		            LatencySample samp = itr.next();
+		            latencys[i] =  (int) (samp.respTime - samp.reqTime);
+		            i++;
+		        }
+		        
+		        // 计算，去掉最高值&最低值, 利用中间值计算平均
+		        int total = 0;
+		        int max = latencys[0];
+		        int min = latencys[0];
+		        for(int j = 0; j < latencys.length; j++) {
+		        	int v = latencys[j];
+		        	if ( max < v ) max = v;
+		        	if ( min > v ) min = v;
+		        	total += v;
+		        }
+		        isOverload = ((total - min - max) / (NUM - 2)) >= maxLatencyThreshold;
+	        }
+
 		}
 		
 		public List<LatencySample> getSamples(int num) {
