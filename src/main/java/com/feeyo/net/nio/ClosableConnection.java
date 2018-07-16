@@ -29,8 +29,8 @@ public abstract class ClosableConnection {
 	public static final int STATE_CLOSED = -2;
 	
 	//
-	protected static final int OP_NOT_READ = ~SelectionKey.OP_READ;
-	protected static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
+	public static final int OP_NOT_READ = ~SelectionKey.OP_READ;
+	public static final int OP_NOT_WRITE = ~SelectionKey.OP_WRITE;
 	
 	//
 	protected Direction direction = Direction.out;

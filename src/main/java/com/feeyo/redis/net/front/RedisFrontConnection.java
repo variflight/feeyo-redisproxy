@@ -2,7 +2,10 @@ package com.feeyo.redis.net.front;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +25,8 @@ public class RedisFrontConnection extends FrontConnection {
 	
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
-	//
-	private static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, request clean. \r\n".getBytes();
+	// 用户连接数
+	private static Map<String, AtomicInteger> CONN_NUM = new ConcurrentHashMap<String, AtomicInteger>();
 	
 	// 用户配置
 	private UserCfg userCfg;
@@ -69,9 +72,39 @@ public class RedisFrontConnection extends FrontConnection {
 		return password;
 	}
 
-	public void setPassword(String password) {
+	public void setPassword(String newPassword) {
+		
+		// 最大连接数检查
 		//
-		this.password = password;
+		AtomicInteger num1 = CONN_NUM.get( newPassword );
+		if( num1 != null ) {
+			//
+			if (  num1.get() > this.userCfg.getMaxCon() ) {
+				//
+				this.write( "-ERR Too many connections, please try again later. \r\n".getBytes() );
+				this.close("maxConn limit");
+				return;
+			}
+			
+			num1.incrementAndGet();
+			
+		} else {
+			num1 = new AtomicInteger(1);
+			CONN_NUM.put(newPassword, num1);
+		}
+		
+		
+		// 去重
+		//
+		if ( isAuthenticated ) {
+			AtomicInteger num2 = CONN_NUM.get( password );
+			if ( num2 != null && !this.password.equals( newPassword ) ) {
+				num2.decrementAndGet();
+			}
+		}
+		
+		//
+		this.password = newPassword;
 		this.isAuthenticated = true;
 	}
 	
@@ -98,8 +131,21 @@ public class RedisFrontConnection extends FrontConnection {
 
 	@Override
 	public void close(String reason) {
+		
 		super.close(reason);
 		this.releaseLock();
+		
+		// 已认证
+		if ( isAuthenticated ) {
+			
+			AtomicInteger num = CONN_NUM.get( password );
+			if ( num != null ) {
+				int v = num.decrementAndGet();
+				if ( v < 0 ) {
+					LOGGER.warn("CONN_NUM err, pwd:{} v:{}", password, v );
+				}
+			}
+		}
 		
 	}
 	
@@ -116,7 +162,7 @@ public class RedisFrontConnection extends FrontConnection {
 			LOGGER.warn("##flow clean##, front: {} ", this);
 			
 			//
-			this.write( ERR_FLOW_LIMIT );
+			this.write( "-ERR netflow problem, request clean. \r\n".getBytes() );
 			this.close("flow limit");
 			return true;
 		}
@@ -148,6 +194,5 @@ public class RedisFrontConnection extends FrontConnection {
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}
-	
 	
 }
