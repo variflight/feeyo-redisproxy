@@ -100,15 +100,17 @@ server.xml, 网络及堆外内存池的相关配置
 
 pool.xml, 连接池配置信息
 	
-| 节点        | 属性    	|  描述 |
-| :--------  | :-----   | :-------------------------------------------------------- |
-| pool       | id      	|   唯一编号    												|
-| pool       | name     |   名称    													|
-| pool       | type    	|   类型，0 表示 redis standalone， 1 表示redis cluster    		|
-| pool       | maxCon   |   最大的连接数，超过拒绝透传    								|
-| pool       | minCon   |   最小的连接数   										 	|
-| node       | ip      	|   实际redis node ip   										|
-| node       | port     |   实际redis node port    									|
+| 节点        | 属性    			  |  描述 |
+| :--------  | :----------------  | :---------------------------------------------------------- |
+| pool       | id      			  |   唯一编号    												|
+| pool       | name     		  |   名称    													|
+| pool       | type    			  |   类型，0 表示 redis standalone， 1 表示redis cluster    		|
+| pool       | maxCon   		  |   最大的连接数，超过拒绝透传    									|
+| pool       | minCon   		  |   最小的连接数   										 		|
+| node       | ip      			  |   实际redis node ip   										|
+| node       | port     		  |   实际redis node port    									|
+| node       | latencyThreshold   |   物理节点的延迟阀值，单位毫秒，支持float    						|
+
   
 user.xml, 用户配置信息
 
@@ -118,6 +120,7 @@ user.xml, 用户配置信息
 | user       | poolId   |   通过该id 连接后端连接池    						|
 | user       | prefix  	|   自动前缀  									|
 | user       | selectDb |   非集群情况下，支持强制读写的 redis db， 默认0    	|
+| user       | maxCon   |   该用户的最大连接数，默认800   					|
 | user       | readonly |   是否只读账户，默认非只读账户   					|
 | user       | isAdmin  |   是否管理员，默认非管理员   						|
   
