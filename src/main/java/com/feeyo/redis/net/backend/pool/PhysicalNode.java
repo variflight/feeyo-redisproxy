@@ -43,7 +43,8 @@ public class PhysicalNode {
 	protected int maxCon;
 	
     // 
-    protected volatile LatencyTimeSeries latencyTimeSeries = new LatencyTimeSeries();
+	private volatile boolean isOverload = false;
+    private LatencyTimeSeries latencyTimeSeries = new LatencyTimeSeries();
 
 	protected final BackendConnectionFactory factory;
 	
@@ -187,7 +188,7 @@ public class PhysicalNode {
 	
 	//
     public boolean isOverload() {
-        return this.latencyTimeSeries.isOverload;
+        return this.isOverload;
     }
 
     //
@@ -195,12 +196,19 @@ public class PhysicalNode {
     	this.latencyTimeSeries.addSample(sample);
     }
     
-    public void calculateLatencyOverload(float maxLatencyThreshold) {
-    	this.latencyTimeSeries.calculateOverload( maxLatencyThreshold );
+    public void calculateOverloadByLatencySample(float latencyThreshold) {
+    	//
+    	int latency = this.latencyTimeSeries.calculateLatency();
+    	if ( latency == -1 ) {
+    		this.isOverload = false;
+    		
+    	} else {
+    		this.isOverload = (latency >= ( latencyThreshold * 1000000 ) );
+    	}
     }
 	
-    public List<LatencySample> getLatencySample() {
-    	return this.latencyTimeSeries.getSamples();
+    public List<LatencySample> getLatencySamples() {
+    	return this.latencyTimeSeries.getSparseSamples();
     }
     
 	
@@ -267,7 +275,6 @@ public class PhysicalNode {
 		private static final int NUM = 9; 
 		
 		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
-		private volatile boolean isOverload = false;
 
 		public void addSample(LatencySample sample) {
 			
@@ -278,7 +285,7 @@ public class PhysicalNode {
 
 		}
 		
-		public void calculateOverload(float maxLatencyThreshold ) {
+		public int calculateLatency() {
 			
 			 // 必须确认有足够的样本
 	        if ( samples.size() > NUM ) {
@@ -306,13 +313,14 @@ public class PhysicalNode {
 		        	total += v;
 		        }
 		        
-		        // 纳秒 check
-		        isOverload = ((total - min - max) / (NUM - 2)) >= ( maxLatencyThreshold * 1000000 );
+		        // 纳秒
+		        return ((total - min - max) / (NUM - 2));
 	        }
-			
+	        
+			return -1;
 		}
 		
-		public List<LatencySample> getSamples() {
+		public List<LatencySample> getSparseSamples() {
 
 			Map<Long, List<LatencySample>> sampleMap = new HashMap<Long, List<LatencySample>>();
 

@@ -219,7 +219,7 @@ public class XClusterPool extends AbstractPool{
 					physicalNode.addLatencySample( latencySample );
 	            }
             }
-            physicalNode.calculateLatencyOverload( poolCfg.getMaxLatencyThreshold() );
+            physicalNode.calculateOverloadByLatencySample( poolCfg.getLatencyThreshold() );
 
         } catch (JedisConnectionException e) {
             LOGGER.error("latency err:" + physicalNode.getHost(), e);

@@ -1129,7 +1129,7 @@ public class Manage {
 
                             RedisStandalonePool standalonePool = (RedisStandalonePool) pool;
                             PhysicalNode physicalNode = standalonePool.getPhysicalNode();
-                            List<LatencySample> samples = physicalNode.getLatencySample();
+                            List<LatencySample> samples = physicalNode.getLatencySamples();
                             for(LatencySample s: samples) {
                             	
                             	StringBuffer strBuffer = new StringBuffer();
@@ -1152,7 +1152,7 @@ public class Manage {
                             for (ClusterNode clusterNode : masters.values()) {
 
                             	PhysicalNode physicalNode = clusterNode.getPhysicalNode();
-                                List<LatencySample> samples = physicalNode.getLatencySample();
+                                List<LatencySample> samples = physicalNode.getLatencySamples();
                                 for(LatencySample s: samples) {
                                 	
                                 	StringBuffer strBuffer = new StringBuffer();
@@ -1170,7 +1170,7 @@ public class Manage {
                             Map<Integer, PhysicalNode> physicalNodes = kafkaPool.getPhysicalNodes();
                             for (PhysicalNode physicalNode : physicalNodes.values()) {
                             	
-                            	 List<LatencySample> samples = physicalNode.getLatencySample();
+                            	 List<LatencySample> samples = physicalNode.getLatencySamples();
                                  for(LatencySample s: samples) {
                                 	 
 	                            	StringBuffer strBuffer = new StringBuffer();

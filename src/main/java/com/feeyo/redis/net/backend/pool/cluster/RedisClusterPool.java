@@ -613,7 +613,7 @@ public class RedisClusterPool extends AbstractPool {
 					physicalNode.addLatencySample( latencySample );
 	            }
             }
-            physicalNode.calculateLatencyOverload( poolCfg.getMaxLatencyThreshold() );
+            physicalNode.calculateOverloadByLatencySample( poolCfg.getLatencyThreshold() );
             
 
         } catch (JedisConnectionException e) {

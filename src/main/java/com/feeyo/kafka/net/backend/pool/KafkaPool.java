@@ -400,7 +400,7 @@ public class KafkaPool extends AbstractPool {
 				}
 				
 				//
-				physicalNode.calculateLatencyOverload( poolCfg.getMaxLatencyThreshold() );
+				physicalNode.calculateOverloadByLatencySample( poolCfg.getLatencyThreshold() );
 
 			} catch (IOException e) {
 				LOGGER.warn("latency err, host:" + physicalNode.getHost(), e);

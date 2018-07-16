@@ -85,13 +85,13 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-				float maxLatencyThreshold = getFloatAttribute(nameNodeMap, "maxLatencyThreshold", 0.5F);
+				float latencyThreshold = getFloatAttribute(nameNodeMap, "latencyThreshold", 0.5F);
 				
 				PoolCfg poolCfg;
 				if (type == PoolType.KAFKA_CLUSTER ) {
-					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon, maxLatencyThreshold);
+					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon, latencyThreshold);
 				} else {
-					poolCfg = new PoolCfg(id, name, type, minCon, maxCon, maxLatencyThreshold);
+					poolCfg = new PoolCfg(id, name, type, minCon, maxCon, latencyThreshold);
 				}
 				
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
