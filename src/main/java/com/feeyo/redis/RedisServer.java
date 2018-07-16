@@ -35,6 +35,10 @@ public class RedisServer {
 	//心跳独立，避免被其他任务影响
 	private static final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
 	
+    // 延迟时间定时检查执行器
+    private static final ScheduledExecutorService latencyScheduler = Executors.newSingleThreadScheduledExecutor();
+	
+    
 	public static void main(String[] args) throws IOException {
 		
 //		System.setProperty("com.sun.management.jmxremote.port", "8099");
@@ -108,6 +112,7 @@ public class RedisServer {
 			 * 2、连接池过大、过小的动态调整f
 			 */
 			heartbeatScheduler.scheduleAtFixedRate(new Runnable(){
+				
 				static final long TIMEOUT = 2 * 60 * 1000L;
 				
 				@Override
@@ -124,8 +129,31 @@ public class RedisServer {
 					});
 				}			
 			}, 30L, 30L, TimeUnit.SECONDS);
+
 			
-			// CONSOLE 
+            /*
+             * 节点延迟 检测
+             */
+            latencyScheduler.scheduleAtFixedRate(new Runnable(){
+
+                @Override
+                public void run() {
+
+                    NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                        	
+                            Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+                            for(AbstractPool pool : pools.values() ) {
+                                pool.latencyCheck();
+                            }
+                        }
+                    });
+                }
+                
+            }, 15L, 3L, TimeUnit.SECONDS);
+
+			// CONSOLE
 			StringBuffer strBuffer = new StringBuffer();
 			strBuffer.append(" ================================================== ").append("\n");
 			strBuffer.append(" Feeyo-RedisProxy & Feeyo-KafkaProxy ").append("\n");

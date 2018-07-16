@@ -1,6 +1,13 @@
 package com.feeyo.redis.net.backend.pool;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +42,10 @@ public class PhysicalNode {
 	protected int minCon;
 	protected int maxCon;
 	
+    // 
+	private volatile boolean isOverload = false;
+    private LatencyTimeSeries latencyTimeSeries = new LatencyTimeSeries();
+
 	protected final BackendConnectionFactory factory;
 	
 	public PhysicalNode(BackendConnectionFactory factory, int poolType, String poolName, 
@@ -50,7 +61,7 @@ public class PhysicalNode {
 		this.maxCon = maxCon;
 		
 		this.size = maxCon;
-		this.name = host + ":" + port;		
+		this.name = host + ":" + port;
 	}
 	
 	// 新建连接，异步填充后端连接池
@@ -175,6 +186,32 @@ public class PhysicalNode {
 		}
 	}	
 	
+	//
+    public boolean isOverload() {
+        return this.isOverload;
+    }
+
+    //
+    public void addLatencySample(LatencySample sample) {
+    	this.latencyTimeSeries.addSample(sample);
+    }
+    
+    public void calculateOverloadByLatencySample(float latencyThreshold) {
+    	//
+    	int latency = this.latencyTimeSeries.calculateLatency();
+    	if ( latency == -1 ) {
+    		this.isOverload = false;
+    		
+    	} else {
+    		this.isOverload = (latency >= ( latencyThreshold * 1000000 ) );
+    	}
+    }
+	
+    public List<LatencySample> getLatencySamples() {
+    	return this.latencyTimeSeries.getSparseSamples();
+    }
+    
+	
 	public String getName() {
 		return name;
 	}
@@ -225,6 +262,111 @@ public class PhysicalNode {
 		sb.append("minCon=").append(minCon).append(", ");
 		sb.append("maxCon=").append(maxCon).append(" ) ");
 		return sb.toString();
+	}
+	
+	
+	//
+	//
+	public static class LatencyTimeSeries {
+		
+		private static final int SAMPLE_SIZE = 15;	
+		
+		// 计算负载
+		private static final int NUM = 9; 
+		
+		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
+
+		public void addSample(LatencySample sample) {
+			
+			if ( samples.size() >= SAMPLE_SIZE) {
+				samples.removeLast();
+			}
+			samples.addFirst( sample );
+
+		}
+		
+		public int calculateLatency() {
+			
+			 // 必须确认有足够的样本
+	        if ( samples.size() > NUM ) {
+	        	
+	        	int[] latencys = new int[ NUM ];
+		       
+		        int i = 0;
+		        Iterator<LatencySample> itr = samples.iterator();
+		        while( itr.hasNext() ) {
+		        	if ( i == NUM )
+		                break;
+		            
+		            latencys[i] = itr.next().latency;
+		            i++;
+		        }
+		        
+		        // 计算，去掉最高值&最低值, 利用中间值计算平均
+		        int total = 0;
+		        int max = latencys[0];
+		        int min = latencys[0];
+		        for(int j = 0; j < latencys.length; j++) {
+		        	int v = latencys[j];
+		        	if ( max < v ) max = v;
+		        	if ( min > v ) min = v;
+		        	total += v;
+		        }
+		        
+		        // 纳秒
+		        return ((total - min - max) / (NUM - 2));
+	        }
+	        
+			return -1;
+		}
+		
+		public List<LatencySample> getSparseSamples() {
+
+			Map<Long, List<LatencySample>> sampleMap = new HashMap<Long, List<LatencySample>>();
+
+			// 抽稀
+			Iterator<LatencySample> itr = samples.iterator();
+			while ( itr.hasNext() ) {
+				LatencySample s = itr.next();
+				long mill = s.time / 1000000;
+				List<LatencySample> list = sampleMap.get(mill);
+				if (list == null) {
+					list = new ArrayList<LatencySample>();
+					list.add(s);
+					sampleMap.put(mill, list);
+				} else {
+					list.add(s);
+				}
+			}
+			
+			
+			List<LatencySample> sampleList = new ArrayList<LatencySample>();
+			
+			for (Map.Entry<Long, List<LatencySample>> entry : sampleMap.entrySet()) {
+
+				int total = 0;
+				int cnt = 0;
+				for (LatencySample v : entry.getValue()) {
+					total = v.latency;
+					cnt++;
+					
+				}
+				
+				LatencySample avgSample =  new LatencySample();
+				avgSample.time = entry.getKey();
+				avgSample.latency =  total / cnt ;
+				
+				sampleList.add( avgSample );
+			}
+
+			return sampleList;
+		}
+		
+	}
+
+	public static class LatencySample {
+		public long time;
+		public int latency;
 	}
 	
 }

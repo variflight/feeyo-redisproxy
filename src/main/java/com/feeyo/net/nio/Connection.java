@@ -146,7 +146,7 @@ public class Connection extends ClosableConnection {
 			this.doNextWriteCheck();
 			
 		} catch (Exception e) {
-			LOGGER.error("write err:", e);
+			LOGGER.error("write err, id="+ id + " direction=" + direction, e);
 			this.close("write err:" + e);
 			//throw new IOException( e );
 		}

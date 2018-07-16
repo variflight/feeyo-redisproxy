@@ -2,7 +2,10 @@ package com.feeyo.redis.net.front;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +25,13 @@ public class RedisFrontConnection extends FrontConnection {
 	
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
-	//
-	private static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, the request is cleaned up. \r\n".getBytes();
+	// 用户连接数
+	private static Map<String, AtomicInteger> CONN_NUM = new ConcurrentHashMap<String, AtomicInteger>();
 	
 	// 用户配置
 	private UserCfg userCfg;
 	
+	private String password;
 	private boolean isAuthenticated;
 	
 	private RedisFrontSession session;
@@ -49,30 +53,73 @@ public class RedisFrontConnection extends FrontConnection {
 	
 	@Override
 	public void asynRead() throws IOException {
-		
+		//
 		if (_readLock.compareAndSet(false, true)) {
 			super.asynRead();
 		}
-		
 	}
 	
 	@Override
 	public boolean isIdleTimeout() {
 		if ( isAuthenticated ) {
 			return super.isIdleTimeout();
+			
 		} else {
 			return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + AUTH_TIMEOUT;
 		}
 	}
 	
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String newPassword) {
+		
+		// 最大连接数检查
+		//
+		AtomicInteger num1 = CONN_NUM.get( newPassword );
+		if( num1 != null ) {
+			//
+			int maxConn = this.userCfg.getMaxCon();
+			if (  num1.get() > maxConn ) {
+				
+				StringBuffer reasonSb = new StringBuffer(90);
+				reasonSb.append("-ERR");
+				reasonSb.append(" Too many connections [").append( maxConn ).append("]");
+				reasonSb.append(", please try again later.");
+				reasonSb.append("\r\n");
+				
+				//
+				this.write( reasonSb.toString().getBytes() );
+				this.close("maxConn limit");
+				return;
+			}
+			
+			num1.incrementAndGet();
+			
+		} else {
+			CONN_NUM.put(newPassword, new AtomicInteger(1));
+		}
+		
+		
+		// 去重
+		//
+		if ( isAuthenticated ) {
+			AtomicInteger num2 = CONN_NUM.get( password );
+			if ( num2 != null && !this.password.equals( newPassword ) ) {
+				num2.decrementAndGet();
+			}
+		}
+		
+		//
+		this.password = newPassword;
+		this.isAuthenticated = true;
+	}
+	
 	public boolean isAuthenticated() {
 		return isAuthenticated;
 	}
-
-	public void setAuthenticated(boolean isAuthenticated) {
-		this.isAuthenticated = isAuthenticated;
-	}
-
+	
 	public UserCfg getUserCfg() {
 		return userCfg;
 	}
@@ -92,8 +139,22 @@ public class RedisFrontConnection extends FrontConnection {
 
 	@Override
 	public void close(String reason) {
+		
 		super.close(reason);
-		releaseLock();
+		this.releaseLock();
+		
+		// 已认证
+		if ( isAuthenticated ) {
+			
+			AtomicInteger num = CONN_NUM.get( password );
+			if ( num != null ) {
+				int v = num.decrementAndGet();
+				if ( v < 0 ) {
+					LOGGER.warn("CONN_NUM err, pwd:{} v:{}", password, v );
+				}
+			}
+		}
+		
 	}
 	
 	public void releaseLock() {
@@ -109,7 +170,7 @@ public class RedisFrontConnection extends FrontConnection {
 			LOGGER.warn("##flow clean##, front: {} ", this);
 			
 			//
-			this.write( ERR_FLOW_LIMIT );
+			this.write( "-ERR netflow problem, request clean. \r\n".getBytes() );
 			this.close("flow limit");
 			return true;
 		}
@@ -141,6 +202,5 @@ public class RedisFrontConnection extends FrontConnection {
 		sbuffer.append("]");
 		return  sbuffer.toString();
 	}
-	
 	
 }

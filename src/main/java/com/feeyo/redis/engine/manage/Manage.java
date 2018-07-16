@@ -52,6 +52,7 @@ import com.feeyo.redis.net.backend.RedisBackendConnection;
 import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
+import com.feeyo.redis.net.backend.pool.PhysicalNode.LatencySample;
 import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
@@ -1114,7 +1115,77 @@ public class Manage {
 					}
 					
 					return encode(lines);
-				}
+
+				// SHOW LATENCY poolId
+				} else if (arg2.equalsIgnoreCase("LATENCY") && numArgs == 2 ) {
+
+                    List<String> lines = new ArrayList<>();
+                    lines.add("|     poolId     |               host              |       latency         |");
+                    lines.add("----------------------------------------------------------------------------");
+                    Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
+                    for (AbstractPool pool : pools.values()) {
+
+                        if (pool instanceof RedisStandalonePool) {
+
+                            RedisStandalonePool standalonePool = (RedisStandalonePool) pool;
+                            PhysicalNode physicalNode = standalonePool.getPhysicalNode();
+                            List<LatencySample> samples = physicalNode.getLatencySamples();
+                            for(LatencySample s: samples) {
+                            	
+                            	StringBuffer strBuffer = new StringBuffer();
+                            	strBuffer.append(" ").append( String.valueOf( standalonePool.getId() ) );
+                            	strBuffer.append(" ").append( physicalNode.getHost() );
+                            	strBuffer.append(" ").append( (s.latency) );
+                            	
+                            	lines.add( strBuffer.toString() );
+                            }
+                            
+                          
+                        } else if (pool instanceof RedisClusterPool) {
+
+                            RedisClusterPool redisClusterPool = (RedisClusterPool) pool;
+                            Map<String, ClusterNode> masters = redisClusterPool.getMasters();
+                            
+                            // add pool
+                            lines.add( String.valueOf( redisClusterPool.getId() )  );
+                            
+                            for (ClusterNode clusterNode : masters.values()) {
+
+                            	PhysicalNode physicalNode = clusterNode.getPhysicalNode();
+                                List<LatencySample> samples = physicalNode.getLatencySamples();
+                                for(LatencySample s: samples) {
+                                	
+                                	StringBuffer strBuffer = new StringBuffer();
+                                	strBuffer.append(" ").append( String.valueOf( redisClusterPool.getId() ) );
+                                	strBuffer.append(" ").append( physicalNode.getHost() );
+                                	strBuffer.append(" ").append( (s.latency) );
+                                	
+                                	lines.add( strBuffer.toString() );
+                                }
+                                
+                            }
+                        } else if (pool instanceof KafkaPool) {
+
+                            KafkaPool kafkaPool =  (KafkaPool) pool;
+                            Map<Integer, PhysicalNode> physicalNodes = kafkaPool.getPhysicalNodes();
+                            for (PhysicalNode physicalNode : physicalNodes.values()) {
+                            	
+                            	 List<LatencySample> samples = physicalNode.getLatencySamples();
+                                 for(LatencySample s: samples) {
+                                	 
+	                            	StringBuffer strBuffer = new StringBuffer();
+	                            	strBuffer.append(" ").append( String.valueOf( kafkaPool.getId() ) );
+	                            	strBuffer.append(" ").append( physicalNode.getHost() );
+	                            	strBuffer.append(" ").append( (s.latency) );
+	                            	
+	                            	lines.add( strBuffer.toString() );
+                                 }
+                            }
+                        }
+                    }
+
+                    return encode(lines);
+                }
 			} 
 			
 

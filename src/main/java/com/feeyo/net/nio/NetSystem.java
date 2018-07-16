@@ -117,6 +117,7 @@ public class NetSystem {
 	 * 定时执行该方法，回收部分资源。
 	 */
 	public void checkConnections() {
+		
 		Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 		while (it.hasNext()) {
 			ClosableConnection c = it.next().getValue();

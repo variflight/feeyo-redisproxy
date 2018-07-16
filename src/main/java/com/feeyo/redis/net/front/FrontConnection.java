@@ -8,7 +8,6 @@ import com.feeyo.net.nio.Connection;
 public class FrontConnection extends Connection {
 
 	private volatile long lastTime;
-	protected String password;
 
 	public FrontConnection(SocketChannel socketChannel) {
 		super(socketChannel);
@@ -25,15 +24,7 @@ public class FrontConnection extends Connection {
 		errorBuffer.append("\r\n");
 		write(errorBuffer.toString().getBytes());
 	}
-
-	public String getPassword() {
-		return password;
-	}
-
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
+	
 	public long getLastTime() {
 		return lastTime;
 	}

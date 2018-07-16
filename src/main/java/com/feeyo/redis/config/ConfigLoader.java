@@ -85,12 +85,13 @@ public class ConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
+				float latencyThreshold = getFloatAttribute(nameNodeMap, "latencyThreshold", 0.5F);
 				
 				PoolCfg poolCfg;
 				if (type == PoolType.KAFKA_CLUSTER ) {
-					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon);
+					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon, latencyThreshold);
 				} else {
-					poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
+					poolCfg = new PoolCfg(id, name, type, minCon, maxCon, latencyThreshold);
 				}
 				
 				List<Node> nodeList = getChildNodes(nodesElement, "node");
@@ -135,13 +136,14 @@ public class ConfigLoader {
 					prefix = null;
 				}
 				int selectDb = getIntAttribute(nameNodeMap, "selectDb", -1);
+				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 800);
 				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
 					
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
-				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, 
+				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, maxCon, isAdmin == 0 ? false : true, 
 						isReadonly);
 				
 				// 非kafka pool的用户不能充当生产者 和 消费者
@@ -240,6 +242,10 @@ public class ConfigLoader {
 		return getValue(map.getNamedItem(attr), defaultVal);
 	}
 
+	private static float getFloatAttribute(NamedNodeMap map, String attr, float defaultVal) {
+		return getFloatValue(map.getNamedItem(attr), defaultVal);
+	}
+	
 	private static int getIntAttribute(NamedNodeMap map, String attr, int defaultVal) {
 		return getIntValue(map.getNamedItem(attr), defaultVal);
 	}
@@ -256,7 +262,11 @@ public class ConfigLoader {
 	private static String getValue(Node node, String defaultVal) {
 		return node == null ? defaultVal : node.getNodeValue();
 	}
-
+	
+	private static float getFloatValue(Node node, float defaultVal) {
+		return node == null ? defaultVal : Float.valueOf(node.getNodeValue());
+	}
+	
 	private static int getIntValue(Node node, int defaultVal) {
 		return node == null ? defaultVal : Integer.valueOf(node.getNodeValue());
 	}

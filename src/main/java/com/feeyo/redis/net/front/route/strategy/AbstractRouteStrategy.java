@@ -43,6 +43,9 @@ public abstract class AbstractRouteStrategy {
 			if ( physicalNode == null )
 				throw new PhysicalNodeUnavailableException("node unavailable.");
 			
+			if( physicalNode != null && physicalNode.isOverload() )
+				throw new PhysicalNodeUnavailableException("node overload.");
+			
 			node.setPhysicalNode( physicalNode );
 			
 			for(int i = 0; i < requests.size(); i++) {
@@ -73,6 +76,9 @@ public abstract class AbstractRouteStrategy {
 				PhysicalNode physicalNode = clusterPool.getPhysicalNodeBySlot(slot) ;
 				if ( physicalNode == null )
 					throw new PhysicalNodeUnavailableException("node unavailable.");
+				
+				if( physicalNode != null && physicalNode.isOverload() )
+					throw new PhysicalNodeUnavailableException("node overload.");
 
 				allocateRequestIdxToPhysicalNode(nodes, i, physicalNode);
 			}
@@ -92,6 +98,9 @@ public abstract class AbstractRouteStrategy {
 				PhysicalNode physicalNode = xPool.getPhysicalNode( suffix );
 				if ( physicalNode == null )
 					throw new PhysicalNodeUnavailableException("node unavailable.");
+				
+				if( physicalNode != null && physicalNode.isOverload() )
+					throw new PhysicalNodeUnavailableException("node overload.");
 				
 				allocateRequestIdxToPhysicalNode(nodes, i, physicalNode);
 			}
