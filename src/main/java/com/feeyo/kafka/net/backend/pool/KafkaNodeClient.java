@@ -24,7 +24,7 @@ import org.apache.kafka.common.requests.AbstractRequest;
 import org.apache.kafka.common.utils.LogContext;
 import org.apache.kafka.common.utils.Time;
 
-public class KafkaConClient {
+public class KafkaNodeClient {
 	
 	private Node node = null;
 	private Metrics metrics = null;
@@ -32,7 +32,7 @@ public class KafkaConClient {
 	private Selector selector = null;
 	private ChannelBuilder channelBuilder = null;
 	
-	public KafkaConClient(int id, String host, int port) {
+	public KafkaNodeClient(int id, String host, int port) {
 		node = new Node(id, host, port);
 		
 		//
