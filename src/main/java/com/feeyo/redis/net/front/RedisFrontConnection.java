@@ -63,6 +63,7 @@ public class RedisFrontConnection extends FrontConnection {
 	public boolean isIdleTimeout() {
 		if ( isAuthenticated ) {
 			return super.isIdleTimeout();
+			
 		} else {
 			return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + AUTH_TIMEOUT;
 		}
@@ -79,9 +80,17 @@ public class RedisFrontConnection extends FrontConnection {
 		AtomicInteger num1 = CONN_NUM.get( newPassword );
 		if( num1 != null ) {
 			//
-			if (  num1.get() > this.userCfg.getMaxCon() ) {
+			int maxConn = this.userCfg.getMaxCon();
+			if (  num1.get() > maxConn ) {
+				
+				StringBuffer reasonSb = new StringBuffer(90);
+				reasonSb.append("-ERR");
+				reasonSb.append(" Too many connections [").append( maxConn ).append("]");
+				reasonSb.append(", please try again later.");
+				reasonSb.append("\r\n");
+				
 				//
-				this.write( "-ERR Too many connections, please try again later. \r\n".getBytes() );
+				this.write( reasonSb.toString().getBytes() );
 				this.close("maxConn limit");
 				return;
 			}
@@ -89,8 +98,7 @@ public class RedisFrontConnection extends FrontConnection {
 			num1.incrementAndGet();
 			
 		} else {
-			num1 = new AtomicInteger(1);
-			CONN_NUM.put(newPassword, num1);
+			CONN_NUM.put(newPassword, new AtomicInteger(1));
 		}
 		
 		
