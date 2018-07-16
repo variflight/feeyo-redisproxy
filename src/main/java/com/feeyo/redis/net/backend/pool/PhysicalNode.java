@@ -261,11 +261,10 @@ public class PhysicalNode {
 	//
 	public static class LatencyTimeSeries {
 		
-		// 3秒钟采集一次， 维持3分钟内的样本
-		private static final int SAMPLE_SIZE = 60;	
+		private static final int SAMPLE_SIZE = 15;	
 		
-		// 15 秒样本数据，计算负载
-		private static final int NUM = 15; 
+		// 计算负载
+		private static final int NUM = 9; 
 		
 		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
 		private volatile boolean isOverload = false;
@@ -307,53 +306,51 @@ public class PhysicalNode {
 		        	total += v;
 		        }
 		        
-		        // 毫秒转 纳秒
+		        // 纳秒 check
 		        isOverload = ((total - min - max) / (NUM - 2)) >= ( maxLatencyThreshold * 1000000 );
 	        }
 			
 		}
 		
 		public List<LatencySample> getSamples() {
-			
+
 			Map<Long, List<LatencySample>> sampleMap = new HashMap<Long, List<LatencySample>>();
-			List<LatencySample> sampleList = new ArrayList<LatencySample>();
-			
-			int num = 15;
-			int i = 0;
+
+			// 抽稀
 			Iterator<LatencySample> itr = samples.iterator();
-			while (itr.hasNext()) {
-				if ( i >= num )
-					break;
-				
-				// 抽稀
+			while ( itr.hasNext() ) {
 				LatencySample s = itr.next();
 				long mill = s.time / 1000000;
-				List<LatencySample> list = sampleMap.get( mill );
-				if ( list == null ) {
+				List<LatencySample> list = sampleMap.get(mill);
+				if (list == null) {
 					list = new ArrayList<LatencySample>();
-					list.add( s );
+					list.add(s);
 					sampleMap.put(mill, list);
 				} else {
-					list.add( s );
+					list.add(s);
 				}
-				i++;
 			}
 			
-			 for(Map.Entry<Long,List<LatencySample>> entry: sampleMap.entrySet()) {
-				 
-				 long key = entry.getKey();
-				 List<LatencySample> value = entry.getValue();
-				 
-				 int totalLatency = 0;
-				 int totalSize = value.size();
+			
+			List<LatencySample> sampleList = new ArrayList<LatencySample>();
+			
+			for (Map.Entry<Long, List<LatencySample>> entry : sampleMap.entrySet()) {
 
-				 for(LatencySample v: value) {
-					 
-				 }
-				 
-			 }
-			
-			
+				int total = 0;
+				int cnt = 0;
+				for (LatencySample v : entry.getValue()) {
+					total = v.latency;
+					cnt++;
+					
+				}
+				
+				LatencySample avgSample =  new LatencySample();
+				avgSample.time = entry.getKey();
+				avgSample.latency =  total / cnt ;
+				
+				sampleList.add( avgSample );
+			}
+
 			return sampleList;
 		}
 		
