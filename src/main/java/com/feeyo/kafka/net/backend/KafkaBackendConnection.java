@@ -33,7 +33,7 @@ public class KafkaBackendConnection extends BackendConnection {
 			NetFlowGuard netflowGuard = frontCon.getNetFlowGuard();
 			if (netflowGuard != null && netflowGuard.consumeBytes(frontCon.getPassword(), length)) {
 				LOGGER.warn("##flow clean##,  kafkaBackend: {} ", this);
-				this.close(" netflow problem, the response is cleaned up. ");
+				this.close(" netflow problem, response clean. ");
 				return true;
 			}
 		}

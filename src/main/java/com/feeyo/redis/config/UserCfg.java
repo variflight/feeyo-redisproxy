@@ -4,28 +4,32 @@ import java.util.Arrays;
 
 public class UserCfg {
 	
-	private int poolId;
-	private int poolType = -1;
+	private final int poolId;
+	private final int poolType;
 	
-	private String password;
-	private byte[] prefix;		//前缀
-	private int selectDb;
-	private boolean isAdmin = false;
-	private boolean isReadonly = false;
+	private final String password;
+	private final byte[] prefix;		// 前缀
+	private int selectDb;				// 库
+	private final int maxCon;			// 最大连接数
+	
+	private final boolean isAdmin;
+	private final boolean isReadonly;
+	
 	
 	// 通过管理指令 use pool 改变
+	//
 	private int usePoolId;
 	private int usePoolType = -1;
 
 	
 	public UserCfg(int poolId, int poolType, String password,  String prefix, 
-			int selectDb, boolean isAdmin, boolean isReadonly) {
-		super();
+			int selectDb, int maxCon, boolean isAdmin, boolean isReadonly) {
 		this.poolId = poolId;
 		this.poolType = poolType;
 		this.password = password;		
 		this.prefix = prefix == null ? null : prefix.getBytes();
 		this.selectDb = selectDb;
+		this.maxCon = maxCon;
 		this.isAdmin = isAdmin;
 		this.isReadonly = isReadonly;
 		
@@ -55,6 +59,10 @@ public class UserCfg {
 			selectDb = 0;
 		}
 		return selectDb;
+	}
+
+	public int getMaxCon() {
+		return maxCon;
 	}
 
 	public boolean isAdmin() {

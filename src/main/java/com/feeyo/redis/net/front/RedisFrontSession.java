@@ -369,7 +369,6 @@ public class RedisFrontSession {
 		if (userCfg != null) {
 			frontCon.setUserCfg(userCfg);
 			frontCon.setPassword(password);
-			frontCon.setAuthenticated(true);
 			frontCon.write(OK);
 			return true;
 		} else {

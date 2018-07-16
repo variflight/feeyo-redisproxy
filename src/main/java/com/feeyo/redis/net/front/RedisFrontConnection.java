@@ -23,11 +23,12 @@ public class RedisFrontConnection extends FrontConnection {
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
 	//
-	private static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, the request is cleaned up. \r\n".getBytes();
+	private static final byte[] ERR_FLOW_LIMIT = "-ERR netflow problem, request clean. \r\n".getBytes();
 	
 	// 用户配置
 	private UserCfg userCfg;
 	
+	private String password;
 	private boolean isAuthenticated;
 	
 	private RedisFrontSession session;
@@ -49,11 +50,10 @@ public class RedisFrontConnection extends FrontConnection {
 	
 	@Override
 	public void asynRead() throws IOException {
-		
+		//
 		if (_readLock.compareAndSet(false, true)) {
 			super.asynRead();
 		}
-		
 	}
 	
 	@Override
@@ -65,14 +65,20 @@ public class RedisFrontConnection extends FrontConnection {
 		}
 	}
 	
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		//
+		this.password = password;
+		this.isAuthenticated = true;
+	}
+	
 	public boolean isAuthenticated() {
 		return isAuthenticated;
 	}
-
-	public void setAuthenticated(boolean isAuthenticated) {
-		this.isAuthenticated = isAuthenticated;
-	}
-
+	
 	public UserCfg getUserCfg() {
 		return userCfg;
 	}
@@ -93,7 +99,8 @@ public class RedisFrontConnection extends FrontConnection {
 	@Override
 	public void close(String reason) {
 		super.close(reason);
-		releaseLock();
+		this.releaseLock();
+		
 	}
 	
 	public void releaseLock() {

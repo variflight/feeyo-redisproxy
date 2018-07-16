@@ -136,13 +136,14 @@ public class ConfigLoader {
 					prefix = null;
 				}
 				int selectDb = getIntAttribute(nameNodeMap, "selectDb", -1);
+				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 800);
 				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
 					
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
-				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, isAdmin == 0 ? false : true, 
+				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, maxCon, isAdmin == 0 ? false : true, 
 						isReadonly);
 				
 				// 非kafka pool的用户不能充当生产者 和 消费者
