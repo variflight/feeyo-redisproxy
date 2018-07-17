@@ -371,10 +371,10 @@ public class KafkaPool extends AbstractPool {
 
             physicalNode = physicalNodes.get(id);
 
-			KafkaConClient client = null;
+			KafkaNodeClient client = null;
 			try {
 
-				client = new KafkaConClient(id, physicalNode.getHost(), physicalNode.getPort());
+				client = new KafkaNodeClient(id, physicalNode.getHost(), physicalNode.getPort());
 				
 				//
 				for(int i=0; i<3; i++) {
