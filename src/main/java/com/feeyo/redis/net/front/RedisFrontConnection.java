@@ -26,13 +26,13 @@ public class RedisFrontConnection extends FrontConnection {
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
 	// 用户连接数
-	private static Map<String, AtomicInteger> CONN_NUM = new ConcurrentHashMap<String, AtomicInteger>();
+	private static Map<String, AtomicInteger> conNums = new ConcurrentHashMap<String, AtomicInteger>();
 	
 	// 用户配置
 	private UserCfg userCfg;
 	
-	private String password;
-	private boolean isAuthenticated;
+	private volatile String password;
+	private volatile boolean isAuthenticated;
 	
 	private RedisFrontSession session;
 
@@ -77,7 +77,7 @@ public class RedisFrontConnection extends FrontConnection {
 		
 		// 最大连接数检查
 		//
-		AtomicInteger num1 = CONN_NUM.get( newPassword );
+		AtomicInteger num1 = conNums.get( newPassword );
 		if( num1 != null ) {
 			//
 			int maxConn = this.userCfg.getMaxCon();
@@ -98,14 +98,14 @@ public class RedisFrontConnection extends FrontConnection {
 			num1.incrementAndGet();
 			
 		} else {
-			CONN_NUM.put(newPassword, new AtomicInteger(1));
+			conNums.put(newPassword, new AtomicInteger(1));
 		}
 		
 		
 		// 去重
 		//
 		if ( isAuthenticated ) {
-			AtomicInteger num2 = CONN_NUM.get( password );
+			AtomicInteger num2 = conNums.get( password );
 			if ( num2 != null && !this.password.equals( newPassword ) ) {
 				num2.decrementAndGet();
 			}
@@ -144,17 +144,21 @@ public class RedisFrontConnection extends FrontConnection {
 		this.releaseLock();
 		
 		// 已认证
-		if ( isAuthenticated ) {
+		synchronized (this) {
 			
-			AtomicInteger num = CONN_NUM.get( password );
-			if ( num != null ) {
-				int v = num.decrementAndGet();
-				if ( v < 0 ) {
-					LOGGER.warn("CONN_NUM err, pwd:{} v:{}", password, v );
+			if ( isAuthenticated ) {
+				
+				isAuthenticated = false;
+				
+				AtomicInteger num = conNums.get( password );
+				if ( num != null ) {
+					int v = num.decrementAndGet();
+					if ( v < 0 ) {
+						LOGGER.warn("Negative value of the number of user connections, {}  v={}", password, v );
+					}
 				}
 			}
 		}
-		
 	}
 	
 	public void releaseLock() {
