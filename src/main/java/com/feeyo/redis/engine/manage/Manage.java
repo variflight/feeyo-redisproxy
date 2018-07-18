@@ -1116,12 +1116,12 @@ public class Manage {
 					
 					return encode(lines);
 
-				// SHOW LATENCY poolId
+				// SHOW LATENCY
 				} else if (arg2.equalsIgnoreCase("LATENCY") && numArgs == 2 ) {
 
                     List<String> lines = new ArrayList<>();
-                    lines.add("|     poolId     |               host              |       latency         |");
-                    lines.add("----------------------------------------------------------------------------");
+                    lines.add("|  poolId  |            host           |        time        |   latency  |  overload  |");
+                    lines.add("--------------------------------------------------------------------------------------");
                     Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
                     for (AbstractPool pool : pools.values()) {
 
@@ -1135,8 +1135,11 @@ public class Manage {
                             	StringBuffer strBuffer = new StringBuffer();
                             	strBuffer.append(" ").append( String.valueOf( standalonePool.getId() ) );
                             	strBuffer.append(" ").append( physicalNode.getHost() );
+                            	strBuffer.append(":").append( physicalNode.getPort() );
+                            	strBuffer.append(" ").append( (s.time) );
                             	strBuffer.append(" ").append( (s.latency) );
-                            	
+                            	strBuffer.append(" ").append( ( physicalNode.isOverload() ) );
+
                             	lines.add( strBuffer.toString() );
                             }
                             
