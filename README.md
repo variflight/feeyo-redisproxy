@@ -24,7 +24,7 @@
 		KPUSH {topic}{partition}{content}
 		KPOP {topic}
 		KPOP {topic}{partition}{offset}
-		KPARTITION {topic}	    	 				
+		KPARTITIONS {topic}	    	 				
 		KOFFSET {topic}{partition}{time}	    	 				  
 	
 		注：KPOP 不指定 consume offset， 我们自动管理， 指定点位的，我们不管理，也不更新，
