@@ -1149,9 +1149,6 @@ public class Manage {
                             RedisClusterPool redisClusterPool = (RedisClusterPool) pool;
                             Map<String, ClusterNode> masters = redisClusterPool.getMasters();
                             
-                            // add pool
-                            lines.add( String.valueOf( redisClusterPool.getId() )  );
-                            
                             for (ClusterNode clusterNode : masters.values()) {
 
                             	PhysicalNode physicalNode = clusterNode.getPhysicalNode();
@@ -1160,8 +1157,10 @@ public class Manage {
                                 	
                                 	StringBuffer strBuffer = new StringBuffer();
                                 	strBuffer.append(" ").append( String.valueOf( redisClusterPool.getId() ) );
-                                	strBuffer.append(" ").append( physicalNode.getHost() );
+                                	strBuffer.append(" ").append( physicalNode.getHost() ).append(":").append( physicalNode.getPort() );
+                                	strBuffer.append(" ").append( (s.time) );
                                 	strBuffer.append(" ").append( (s.latency) );
+                                	strBuffer.append(" ").append( ( physicalNode.isOverload() ) );
                                 	
                                 	lines.add( strBuffer.toString() );
                                 }
@@ -1178,8 +1177,10 @@ public class Manage {
                                 	 
 	                            	StringBuffer strBuffer = new StringBuffer();
 	                            	strBuffer.append(" ").append( String.valueOf( kafkaPool.getId() ) );
-	                            	strBuffer.append(" ").append( physicalNode.getHost() );
+	                            	strBuffer.append(" ").append( physicalNode.getHost() ).append(":").append( physicalNode.getPort() );
+	                            	strBuffer.append(" ").append( (s.time) );
 	                            	strBuffer.append(" ").append( (s.latency) );
+	                            	strBuffer.append(" ").append( ( physicalNode.isOverload() ) );
 	                            	
 	                            	lines.add( strBuffer.toString() );
                                  }
