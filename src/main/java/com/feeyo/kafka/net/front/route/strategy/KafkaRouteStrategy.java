@@ -76,7 +76,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		
 					// 指定分区
 					} else {
-						int pt = Integer.parseInt(new String(request.getArgs()[3]));
+						int pt = Integer.parseInt(new String(request.getArgs()[2]));
 						partition = topicCfg.getRunningInfo().getPartition(pt);
 					}
 				}
