@@ -44,7 +44,7 @@ public class KafkaEncoder {
 		
 		short version = BrokerApiVersion.getProduceVersion();
 		
-		Record record = new Record(0, new String(request.getArgs()[1]), request.getArgs()[1], request.getArgs()[2]);
+		Record record = new Record(0, new String(request.getArgs()[1]), request.getArgs()[1], request.getArgs()[request.getNumArgs() - 1]);
 		record.setTimestamp(TimeUtil.currentTimeMillis());
 		record.setTimestampDelta(0);
 		ProduceRequest pr = new ProduceRequest(version, ACKS, PRODUCE_WAIT_TIME_MS, null, partition, record);
