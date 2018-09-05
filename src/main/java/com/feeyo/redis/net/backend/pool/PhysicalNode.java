@@ -347,7 +347,7 @@ public class PhysicalNode {
 				int total = 0;
 				int cnt = 0;
 				for (LatencySample v : entry.getValue()) {
-					total = v.latency;
+					total += v.latency;
 					cnt++;
 					
 				}
