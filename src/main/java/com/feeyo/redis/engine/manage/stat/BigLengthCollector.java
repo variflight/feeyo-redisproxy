@@ -110,6 +110,7 @@ public class BigLengthCollector implements StatCollector {
 								bigLen = new BigLength();
 								bigLen.cmd = cmd;
 								bigLen.key = key;
+								bigLen.password = password;
 								bigLengthMap.put(key, bigLen);
 							}
 							bigLen.length.set( (int)length );
@@ -209,6 +210,12 @@ public class BigLengthCollector implements StatCollector {
 	
 	@Override
 	public void onScheduleToZore() {
+		ConcurrentHashMap<String, String[]> tmp = new ConcurrentHashMap<String, String[]>();
+		for (BigLength bigLength : bigLengthMap.values()) { 
+			tmp.put(bigLength.key, new String[] { bigLength.password, bigLength.cmd} );
+		}
+		
+		keyMap.putAll(tmp);
 	}
 	
 	@Override
