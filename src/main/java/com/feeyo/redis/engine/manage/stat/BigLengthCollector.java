@@ -116,9 +116,10 @@ public class BigLengthCollector implements StatCollector {
 							bigLen.length.set( (int)length );
 							
 						} else {
-							keyMap.remove( key );
+							bigLengthMap.remove( key );
 						}
 						
+						keyMap.remove(key);
 						
 						//###########################################
 						if (bigLengthMap.size() > 100) {
