@@ -46,8 +46,6 @@ public abstract class AbstractRouteStrategy {
 			if( physicalNode != null && physicalNode.isOverload() )
 				throw new PhysicalNodeUnavailableException("node overload.");
 			
-			node.setPhysicalNode( physicalNode );
-			
 			for(int i = 0; i < requests.size(); i++) {
 				node.addRequestIndex(i);
 			}
