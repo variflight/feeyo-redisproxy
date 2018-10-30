@@ -13,39 +13,50 @@ public class HttpResponseEncoder {
 	
 	private static final String CRLF = "\r\n"; 	
 	private static final String SP = " "; 		
-	private static final String COLON = ":"; 		
+	private static final String COLON = ":"; 	
+	
+	
+	private String encodeHeader(HttpResponse response) {
+		
+		// headline
+		StringBuffer headerSb = new StringBuffer();
+		headerSb.append( response.getHttpVersion() ).append(SP);
+        headerSb.append( String.valueOf( response.getStatusCode() ) ).append(SP);
+        headerSb.append( response.getReasonPhrase() ).append(CRLF);
+        
+       
+		   
+        // headers
+        for (Map.Entry<String, String> h : response.headers().entrySet()) {
+			headerSb.append(h.getKey()).append(COLON).append(SP);
+			headerSb.append(h.getValue()).append(CRLF);
+		}
+        headerSb.append(CRLF);
+        
+        return headerSb.toString();
+		
+	}
 	
 	public byte[] encode(HttpResponse response) {
 		
 		if ( response == null )
 			return null;
 		
-		
-		// headline
-		StringBuffer buf = new StringBuffer();
-		buf.append( response.getHttpVersion() ).append(SP);
-        buf.append(String.valueOf(response.getStatusCode())).append(SP);
-        buf.append( response.getReasonPhrase() ).append(CRLF);
-	    
-        
-        // headers
-        for (Map.Entry<String, String> h : response.headers().entrySet()) {
-			buf.append(h.getKey()).append(COLON).append(SP);
-			buf.append(h.getValue()).append(CRLF);
-		}
-        buf.append(CRLF);
-        
-        // content
-        byte[] head = buf.toString().getBytes();
+	    // body
         byte[] body = response.getContent();
-        
-        if(body != null) {
-        	byte[] dest = new byte[ head.length + body.length ]; 
-	        System.arraycopy(head, 0, dest, 0, head.length);
-	        System.arraycopy(body, 0, dest, head.length, body.length);
+		
+		// header
+		response.headers().put(HttpHeaderNames.CONTENT_LENGTH, String.valueOf( body == null ? 0 : body.length ) );
+    	byte[] header = this.encodeHeader( response ).getBytes();
+		
+        if( body != null ) {
+        	byte[] dest = new byte[ header.length + body.length  ]; 
+	        System.arraycopy(header, 0, dest, 0, header.length);
+	        System.arraycopy(body, 0, dest, header.length, body.length);
 	        return dest;
-        }else {
-        	return head;
+	        
+        } else {
+        	return header;
         }
  
 	}
