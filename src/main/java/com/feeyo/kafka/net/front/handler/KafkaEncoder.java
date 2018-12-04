@@ -47,13 +47,16 @@ public class KafkaEncoder {
 		Record record = new Record(0, new String(request.getArgs()[1]), request.getArgs()[1], request.getArgs()[request.getNumArgs() - 1]);
 		record.setTimestamp(TimeUtil.currentTimeMillis());
 		record.setTimestampDelta(0);
+		
 		ProduceRequest pr = new ProduceRequest(version, ACKS, PRODUCE_WAIT_TIME_MS, null, partition, record);
 		Struct body = pr.toStruct();
 		
-		RequestHeader requestHeader = new RequestHeader(ApiKeys.PRODUCE.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
+		RequestHeader requestHeader = new RequestHeader(ApiKeys.PRODUCE.id, version, 
+				Thread.currentThread().getName(), Utils.getCorrelationId());
 		Struct header = requestHeader.toStruct();
 		
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT);
+		int size = body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT;
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( size );
 		buffer.putInt(body.sizeOf() + header.sizeOf());
 		header.writeTo(buffer);
 		body.writeTo(buffer);
@@ -79,7 +82,9 @@ public class KafkaEncoder {
 		Struct header = requestHeader.toStruct();
 		Struct body = fetchRequest.toStruct();
 		
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT);
+		
+		int size = body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT;
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( size );
 		buffer.putInt(body.sizeOf() + header.sizeOf());
 		header.writeTo(buffer);
 		body.writeTo(buffer);

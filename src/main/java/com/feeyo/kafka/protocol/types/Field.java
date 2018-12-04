@@ -6,6 +6,7 @@ package com.feeyo.kafka.protocol.types;
  *
  */
 public class Field {
+	
     public final String name;
     public final String docString;
     public final Type type;
