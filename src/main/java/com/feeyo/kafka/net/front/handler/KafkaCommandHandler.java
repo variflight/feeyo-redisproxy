@@ -40,7 +40,6 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			break;
 			
 		case CommandParse.CONSUMER_CMD:
-			
 			// 指定点位消费，消费失败不回收点位
 			boolean isErrorOffsetRecovery = request.getNumArgs() > 2 ? false : true;
 			
