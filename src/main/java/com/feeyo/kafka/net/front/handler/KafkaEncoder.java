@@ -92,18 +92,21 @@ public class KafkaEncoder {
 		
 		short version = BrokerApiVersion.getListOffsetsVersion();
 		
-		RequestHeader requestHeader = new RequestHeader(ApiKeys.LIST_OFFSETS.id, version, Thread.currentThread().getName(), Utils.getCorrelationId());
+		RequestHeader requestHeader = new RequestHeader(ApiKeys.LIST_OFFSETS.id, version, 
+				Thread.currentThread().getName(), Utils.getCorrelationId());
 		
 		String topic = new String(request.getArgs()[1]);
 		int partition = Integer.parseInt(new String(request.getArgs()[2]));
 		// 根据时间查询最后此时间之后第一个点位。时间-1查询最大点位，-2查询最小点位。
 		long timestamp = Long.parseLong(new String(request.getArgs()[3]));
-		ListOffsetRequest listOffsetRequest = new ListOffsetRequest(version, topic, partition, timestamp, REPLICA_ID, ISOLATION_LEVEL);
+		ListOffsetRequest listOffsetRequest = new ListOffsetRequest(version, topic, partition, 
+				timestamp, REPLICA_ID, ISOLATION_LEVEL);
 		
 		Struct header = requestHeader.toStruct();
 		Struct body = listOffsetRequest.toStruct();
 		
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT);
+		int size = body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT;
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( size );
 		buffer.putInt(body.sizeOf() + header.sizeOf());
 		header.writeTo(buffer);
 		body.writeTo(buffer);

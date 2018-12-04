@@ -276,6 +276,7 @@ public class KafkaPool extends AbstractPool {
 					
 					// 备份old
 					Map<Integer, PhysicalNode> oldPhysicalNodes = this.physicalNodes;
+					
 					// 切换new
 					this.physicalNodes = newPhysicalNodes;
 					
