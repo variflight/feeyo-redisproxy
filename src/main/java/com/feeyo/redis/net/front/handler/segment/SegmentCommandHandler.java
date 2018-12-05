@@ -75,7 +75,9 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
 
             String address = backendCon.getPhysicalNode().getName();
             
-            ResponseMargeResult result = addAndMargeResponse(address, pipelineResponse.getCount(), pipelineResponse.getResps());
+            ResponseMargeResult result = addAndMargeResponse(address, 
+            		pipelineResponse.getCount(), pipelineResponse.getResps());
+            
 			if ( result.getStatus() == ResponseMargeResult.ALL_NODE_COMPLETED ) {
 				List<DataOffset> offsets = result.getDataOffsets();
 				if (offsets != null) {

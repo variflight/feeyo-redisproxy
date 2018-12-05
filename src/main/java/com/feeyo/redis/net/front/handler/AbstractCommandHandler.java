@@ -20,8 +20,6 @@ import java.nio.ByteBuffer;
  * 负责处理前端指令解析,分发
  * 
  * @see http://redis.io/topics/protocol
- * @see http://redisbook.com/preview/server/execute_command.html
- * @see https://wizardforcel.gitbooks.io/redis-doc/content/doc/5.html
  *  
  * @author zhuam
  *

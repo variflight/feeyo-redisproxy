@@ -267,10 +267,6 @@ public class BrokerPartition {
 		public void setCurrentOffset(long currentOffset) {
 			this.currentOffset.set(currentOffset);
 		}
-
 	}
-
-	
-	
 		
 }

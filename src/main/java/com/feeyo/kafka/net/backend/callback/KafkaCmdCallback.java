@@ -14,6 +14,17 @@ import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 
+/**
+ * @see https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-Responses
+ * 
+ * Response => CorrelationId ResponseMessage
+ *		CorrelationId => int32
+ *		ResponseMessage => MetadataResponse | ProduceResponse | FetchResponse | OffsetResponse | OffsetCommitResponse | OffsetFetchResponse
+ * 
+ * 
+ * @author yangtao
+ *
+ */
 public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaCmdCallback.class );
@@ -30,7 +41,40 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 	
 	private static int HEAD_LENGTH = 4;
 	
-	private byte[] buffer;
+	// TODO: 此处待优化，使用 CompositeByteArray
+	private byte[] tmpRespBytes;
+	
+	private void append(byte[] buf) {
+		if (tmpRespBytes == null) {
+			tmpRespBytes = buf;
+		} else {
+			byte[] newBytes = new byte[this.tmpRespBytes.length + buf.length];
+			System.arraycopy(tmpRespBytes, 0, newBytes, 0, tmpRespBytes.length);
+			System.arraycopy(buf, 0, newBytes, tmpRespBytes.length, buf.length);
+			this.tmpRespBytes = newBytes;
+			newBytes = null;
+			buf = null;
+		}
+	}
+	
+	// 检查有没有断包
+	private boolean isCompletePkg() {
+		//
+		int len = this.tmpRespBytes.length;
+		if (len < HEAD_LENGTH) {
+			return false;
+		}
+		
+		int v0 = (this.tmpRespBytes[0] & 0xff) << 24;
+		int v1 = (this.tmpRespBytes[1] & 0xff) << 16;  
+		int v2 = (this.tmpRespBytes[2] & 0xff) << 8;  
+	    int v3 = (this.tmpRespBytes[3] & 0xff); 
+	    
+	    if (v0 + v1 + v2 + v3 > len - HEAD_LENGTH) {
+	    	return false;
+	    }
+		return true;
+	}
 	
 	@Override
 	public void handleResponse(BackendConnection conn, byte[] byteBuff) throws IOException {
@@ -38,24 +82,26 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 		// 防止断包
 		this.append(byteBuff);
 		
-		if ( !this.isComplete() ) {
+		if ( !this.isCompletePkg() ) {
 			return;
 		}
 		
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( this.buffer.length );
+		//
+		ByteBuffer responseBuf = NetSystem.getInstance().getBufferPool().allocate( this.tmpRespBytes.length );
 		try {
-			// 去除头部的长度
-			buffer.put(this.buffer, HEAD_LENGTH, this.buffer.length - HEAD_LENGTH);
-			buffer.flip();
 			
-			int responseSize = this.buffer.length;
-			this.buffer = null;
+			// 去除头部的长度
+			responseBuf.put(this.tmpRespBytes, HEAD_LENGTH, this.tmpRespBytes.length - HEAD_LENGTH);
+			responseBuf.flip();
+			
+			int responseSize = this.tmpRespBytes.length;
+			this.tmpRespBytes = null;
 			
 			// parse header
-			ResponseHeader.parse(buffer);
+			ResponseHeader.parse( responseBuf );
 			
 			// parse body
-			parseResponseBody(conn, buffer);
+			parseResponseBody(conn, responseBuf);
 			
 			// release
 			RedisFrontConnection frontCon = getFrontCon( conn );
@@ -82,46 +128,12 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 		} catch (Exception e) {
 			LOGGER.error("", e);
 		} finally {
-			
-			NetSystem.getInstance().getBufferPool().recycle(buffer);
-			
+			NetSystem.getInstance().getBufferPool().recycle(responseBuf);
 		}
 		
 	}
 
-	public abstract void parseResponseBody(BackendConnection conn, ByteBuffer buffer);
+	// parse body
+	public abstract void parseResponseBody(BackendConnection conn, ByteBuffer byteBuff);
 
-	private void append(byte[] buf) {
-		if (buffer == null) {
-			buffer = buf;
-		} else {
-			byte[] newBuffer = new byte[this.buffer.length + buf.length];
-			System.arraycopy(buffer, 0, newBuffer, 0, buffer.length);
-			System.arraycopy(buf, 0, newBuffer, buffer.length, buf.length);
-			this.buffer = newBuffer;
-			newBuffer = null;
-			buf = null;
-		}
-	}
-	
-	/**
-	 * 检查有没有断包
-	 * @return
-	 */
-	private boolean isComplete() {
-		int len = this.buffer.length;
-		if (len < HEAD_LENGTH) {
-			return false;
-		}
-		int v0 = (this.buffer[0] & 0xff) << 24;
-		int v1 = (this.buffer[1] & 0xff) << 16;  
-		int v2 = (this.buffer[2] & 0xff) << 8;  
-	    int v3 = (this.buffer[3] & 0xff); 
-	    
-	    if (v0 + v1 + v2 + v3 > len - HEAD_LENGTH) {
-	    		return false;
-	    }
-		
-		return true;
-	}
 }

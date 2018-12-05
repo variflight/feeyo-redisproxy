@@ -22,7 +22,7 @@ import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 
 /**
- * Kafka command
+ * Kafka RouteStrategy
  *
  * @author yangtao
  */
@@ -54,7 +54,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		}
 
 		// 分区
-		BrokerPartition partition = null;
+		BrokerPartition brokerPartition = null;
 		long offset = -1;
 		int maxBytes = 1;
 
@@ -72,12 +72,12 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		
 					// 轮询分区
 					if (request.getNumArgs() == 3) {
-						partition = topicCfg.getRunningInfo().getPartitionByProducer();
+						brokerPartition = topicCfg.getRunningInfo().getPartitionByProducer();
 		
 					// 指定分区
 					} else {
 						int pt = Integer.parseInt(new String(request.getArgs()[2]));
-						partition = topicCfg.getRunningInfo().getPartition(pt);
+						brokerPartition = topicCfg.getRunningInfo().getPartition(pt);
 					}
 				}
 	
@@ -93,14 +93,14 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		
 					// 轮询分区
 					if (request.getNumArgs() == 2) {
-						partition = topicCfg.getRunningInfo().getPartitionByConsumer();
+						brokerPartition = topicCfg.getRunningInfo().getPartitionByConsumer();
 						offset = BrokerOffsetService.INSTANCE().getOffset(userCfg.getPassword(), topicCfg,
-								partition.getPartition());
+								brokerPartition.getPartition());
 		
 					// 指定分区
 					} else {
 						int pt = Integer.parseInt(new String(request.getArgs()[2]));
-						partition = topicCfg.getRunningInfo().getPartition(pt);
+						brokerPartition = topicCfg.getRunningInfo().getPartition(pt);
 						offset = Long.parseLong(new String(request.getArgs()[3]));
 						if (request.getNumArgs() == 5) {
 							maxBytes = Integer.parseInt(new String(request.getArgs()[4]));
@@ -136,29 +136,31 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 					}
 		
 					int pt = Integer.parseInt(new String(request.getArgs()[2]));
-					partition = topicCfg.getRunningInfo().getPartition(pt);
+					brokerPartition = topicCfg.getRunningInfo().getPartition(pt);
 				}
 				break;
 		}
 
-		if (partition == null) {
+		if (brokerPartition == null) {
 			throw new InvalidRequestException("wrong partition", false);
 		}
 
 		//
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
-		PhysicalNode physicalNode = pool.getPhysicalNode(partition.getLeader().getId());
+		PhysicalNode physicalNode = pool.getPhysicalNode(brokerPartition.getLeader().getId());
 		if (physicalNode == null)
 			throw new PhysicalNodeUnavailableException("node unavailable.");
 		
 		if( physicalNode != null && physicalNode.isOverload() )
 			throw new PhysicalNodeUnavailableException("node overload.");
 
+		// 注入 offset & partition & maxBytes
+		//
 		KafkaRouteNode node = new KafkaRouteNode();
 		node.setPhysicalNode(physicalNode);
 		node.addRequestIndex(0);
 		node.setOffset(offset);
-		node.setPartition(partition.getPartition());
+		node.setPartition(brokerPartition.getPartition());
 		node.setMaxBytes(maxBytes);
 
 		List<RouteNode> nodes = new ArrayList<RouteNode>(1);

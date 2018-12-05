@@ -28,43 +28,47 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	protected void commonHandle(RouteResult routeResult) throws IOException {
 		
 		KafkaRouteNode node = (KafkaRouteNode) routeResult.getRouteNodes().get(0);
+		
+		//
+		ByteBuffer requestBuf = null;
+		KafkaCmdCallback callback = null;
+		
 		RedisRequest request = routeResult.getRequests().get(0);
-		
-		ByteBuffer buffer = null;
-		KafkaCmdCallback backendCallback = null;
-		
 		switch (request.getPolicy().getHandleType()) {
-		case CommandParse.PRODUCE_CMD:
-			buffer = encoder.encodeProduce(request, node.getPartition());
-			backendCallback = new KafkaProduceCmdCallback(node.getPartition());
-			break;
-			
-		case CommandParse.CONSUMER_CMD:
-			// 指定点位消费，消费失败不回收点位
-			boolean isErrorOffsetRecovery = request.getNumArgs() > 2 ? false : true;
-			
-			buffer = encoder.encodeConsumer(request, node.getPartition(), node.getOffset(), node.getMaxBytes());
-			backendCallback = new KafkaConsumerCmdCallback(new String(request.getArgs()[1]), node.getPartition(),
-					node.getOffset(), isErrorOffsetRecovery);
-			break;
-			
-		case CommandParse.OFFSET_CMD:
-			buffer = encoder.encodeListOffsets(request);
-			backendCallback = new KafkaOffsetCmdCallback();
-			break;
+			case CommandParse.PRODUCE_CMD: {
+				int partition = node.getPartition();
+	
+				requestBuf = encoder.encodeProduceRequest(request, partition);
+				callback = new KafkaProduceCmdCallback(node.getPartition());
+				break;
+			}
+			case CommandParse.CONSUMER_CMD: {
+				// 指定点位消费，消费失败不回收点位
+				boolean isErrorOffsetRecovery = request.getNumArgs() > 2 ? false : true;
+				String topic = new String(request.getArgs()[1]);
+				int partition = node.getPartition();
+				long offset = node.getOffset();
+				int maxBytes = node.getMaxBytes();
+	
+				requestBuf = encoder.encodeFetchRequest(request, partition, offset, maxBytes);
+				callback = new KafkaConsumerCmdCallback(topic, partition, offset, isErrorOffsetRecovery);
+				break;
+			}
+			case CommandParse.OFFSET_CMD: {
+				requestBuf = encoder.encodeListOffsetRequest(request);
+				callback = new KafkaOffsetCmdCallback();
+				break;
+			}
 		}
-		
-		byte[] requestKey = request.getArgs()[1];
-		String cmd = new String(request.getArgs()[0]).toUpperCase();
-		
+
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
-		frontCon.getSession().setRequestCmd( cmd );
-		frontCon.getSession().setRequestKey( new String( requestKey ) );
-		frontCon.getSession().setRequestSize( buffer.position() );
+		frontCon.getSession().setRequestCmd( new String(request.getArgs()[0]).toUpperCase() );
+		frontCon.getSession().setRequestKey( new String( request.getArgs()[1] ) );
+		frontCon.getSession().setRequestSize( requestBuf.position() );
 		
 		// 透传
-		writeToBackend(node.getPhysicalNode(), buffer, backendCallback);
+		this.writeToBackend(node.getPhysicalNode(), requestBuf, callback);
 	}
 
 	@Override
@@ -92,5 +96,4 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			frontCon.writeErrMessage( reason );
 		}
 	}
-
 }

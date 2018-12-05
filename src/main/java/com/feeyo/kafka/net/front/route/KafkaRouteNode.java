@@ -3,10 +3,13 @@ package com.feeyo.kafka.net.front.route;
 import com.feeyo.redis.net.front.route.RouteNode;
 
 public class KafkaRouteNode extends RouteNode {
+	
 	// 点位
 	private long offset;
+	
 	// 分区
 	private int partition;
+	
 	// 如果是消费的话，消费的bytes
 	private int maxBytes;
 	
