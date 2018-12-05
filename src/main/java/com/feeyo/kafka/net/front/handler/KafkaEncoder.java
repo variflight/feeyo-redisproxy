@@ -31,8 +31,6 @@ import com.feeyo.net.nio.util.TimeUtil;
  * 		ClientId => string
  * 		RequestMessage => MetadataRequest | ProduceRequest | FetchRequest | OffsetRequest | OffsetCommitRequest | OffsetFetchRequest
  * 
- * 
- * 
  * @author yangtao
  *
  */
@@ -59,6 +57,8 @@ public class KafkaEncoder {
 	
 	private static final int LENGTH_BYTE_COUNT = 4;
 	
+	// 用户可以使用他们喜欢的任何标识符，他们会被用在记录错误，监测统计信息等场景
+	private static final String CLIENT_ID = "KafkaProxy";
 	
 	//
 	public ByteBuffer encodeProduceRequest(RedisRequest request, int partition) {
@@ -80,8 +80,9 @@ public class KafkaEncoder {
 		Struct body = pr.toStruct();
 		
 		// apiKeyId、 version、 clientId、correlation
-		String clientId = Thread.currentThread().getName();
-		RequestHeader requestHeader = new RequestHeader(ApiKeys.PRODUCE.id, version, clientId, Utils.getCorrelationId());
+		//这是一个用户提供的整数, 会被服务器原封不动地回传给客户端, 用于匹配客户机和服务器之间的请求和响应
+		int correlationId = Utils.getCorrelationId();
+		RequestHeader requestHeader = new RequestHeader(ApiKeys.PRODUCE.id, version, CLIENT_ID, correlationId);
 		Struct header = requestHeader.toStruct();
 		
 		int size = body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT;
@@ -110,10 +111,9 @@ public class KafkaEncoder {
 		PartitionData partitionData = new PartitionData(offset, LOG_START_OFFSET, maxBytes);
 		topicAndPartitionData.addData(partition, partitionData);
 		
-		String clientId = Thread.currentThread().getName();
-		
 		// apiKeyId、 version、 clientId、correlation
-		RequestHeader requestHeader = new RequestHeader(ApiKeys.FETCH.id, version, clientId, Utils.getCorrelationId());
+		int correlationId = Utils.getCorrelationId();
+		RequestHeader requestHeader = new RequestHeader(ApiKeys.FETCH.id, version, CLIENT_ID, correlationId);
 		Struct header = requestHeader.toStruct();
 		Struct body = fetchRequest.toStruct();
 		
@@ -132,18 +132,16 @@ public class KafkaEncoder {
 		short version = BrokerApiVersion.getListOffsetsVersion();
 		
 		// apiKeyId、 version、 clientId、correlation
-		String clientId = Thread.currentThread().getName();
-		RequestHeader requestHeader = new RequestHeader(ApiKeys.LIST_OFFSETS.id, version, clientId, Utils.getCorrelationId());
-		
+		int correlationId = Utils.getCorrelationId();
+		RequestHeader requestHeader = new RequestHeader(ApiKeys.LIST_OFFSETS.id, version, CLIENT_ID, correlationId);
+
+		//
 		String topic = new String(request.getArgs()[1]);
 		int partition = Integer.parseInt(new String(request.getArgs()[2]));
-		
-		// 根据时间查询最后此时间之后第一个点位。时间-1查询最大点位，-2查询最小点位。
-		long timestamp = Long.parseLong(new String(request.getArgs()[3]));
+		long timestamp = Long.parseLong(new String(request.getArgs()[3])); 	// 根据时间查询最后此时间之后第一个点位。时间-1查询最大点位，-2查询最小点位。
 		
 		// version、 topic、 partition、 timestamp、 replicaId、 isolationLevel
-		ListOffsetRequest listOffsetRequest = new ListOffsetRequest(version, topic, partition, 
-				timestamp, REPLICA_ID, ISOLATION_LEVEL);
+		ListOffsetRequest listOffsetRequest = new ListOffsetRequest(version, topic, partition, timestamp, REPLICA_ID, ISOLATION_LEVEL);
 		
 		Struct header = requestHeader.toStruct();
 		Struct body = listOffsetRequest.toStruct();
