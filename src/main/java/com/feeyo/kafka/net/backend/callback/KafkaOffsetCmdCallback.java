@@ -14,14 +14,14 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 public class KafkaOffsetCmdCallback extends KafkaCmdCallback {
 
 	@Override
-	public void parseResponseBody(BackendConnection conn, ByteBuffer buffer) {
+	public void parseResponseBody(BackendConnection conn, ByteBuffer byteBuff) {
 
 		short version = BrokerApiVersion.getListOffsetsVersion();
-		Struct response = ApiKeys.LIST_OFFSETS.parseResponse(version, buffer);
+		Struct response = ApiKeys.LIST_OFFSETS.parseResponse(version, byteBuff);
 		ListOffsetResponse lor = new ListOffsetResponse(response);
 		
-		// 1k的buffer 肯定够用
-		ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(1024);
+		// 1k 的 buffer 肯定够用
+		ByteBuffer responseBuf = NetSystem.getInstance().getBufferPool().allocate(1024);
 		if (lor.isCorrect()) {
 			
 			byte[] size = ProtoUtils.convertIntToByteArray(OFFSET_RESPONSE_SIZE);
@@ -30,23 +30,23 @@ public class KafkaOffsetCmdCallback extends KafkaCmdCallback {
 			byte[] timestampArr = String.valueOf(lor.getTimestamp()).getBytes();
 			byte[] timestampLength = ProtoUtils.convertIntToByteArray(timestampArr.length);
 			
-			
-			bb.put(ASTERISK).put(size).put(CRLF)
-				.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF)
-				.put(DOLLAR).put(timestampLength).put(CRLF).put(timestampArr).put(CRLF);
+			//
+			responseBuf.put(ASTERISK).put(size).put(CRLF);
+			responseBuf.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF);
+			responseBuf.put(DOLLAR).put(timestampLength).put(CRLF).put(timestampArr).put(CRLF);
 			
 		} else {
+			
 			byte[] size = ProtoUtils.convertIntToByteArray(1);
 			byte[] msg = lor.getErrorMessage().getBytes();
 			byte[] msgLen = ProtoUtils.convertIntToByteArray(msg.length);
 
-			bb.put(ASTERISK).put(size).put(CRLF)
-				.put(DOLLAR).put(msgLen).put(CRLF).put(msg).put(CRLF);
+			responseBuf.put(ASTERISK).put(size).put(CRLF);
+			responseBuf.put(DOLLAR).put(msgLen).put(CRLF).put(msg).put(CRLF);
 		}
 		
-		//
+		// response to front
 		RedisFrontConnection frontCon = getFrontCon( conn );
-		frontCon.write(bb);
-	}
-	
+		frontCon.write(responseBuf);
+	}	
 }

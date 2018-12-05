@@ -18,6 +18,7 @@ import com.feeyo.net.nio.util.ProtoUtils;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 
+
 public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( KafkaConsumerCmdCallback.class );
@@ -37,14 +38,14 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 	}
 	
 	@Override
-	public void parseResponseBody(BackendConnection conn, ByteBuffer respBuffer) {
+	public void parseResponseBody(BackendConnection conn, ByteBuffer byteBuff) {
 		
 		//
 		RedisFrontConnection frontCon = getFrontCon( conn );
 		
 		short version = BrokerApiVersion.getConsumerVersion();
 		
-		Struct response = ApiKeys.FETCH.parseResponse(version, respBuffer);
+		Struct response = ApiKeys.FETCH.parseResponse(version, byteBuff);
 		FetchResponse fr = new FetchResponse(response);
 		if (fr.isCorrect()) {
 			List<Record> records = fr.getRecords();
@@ -59,6 +60,7 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 			byte[] size = ProtoUtils.convertIntToByteArray(CONSUMER_RESPONSE_SIZE * records.size());
 			
 			for (int i = 0;i<records.size();i++) {
+				
 				Record record = records.get(i);
 				byte[] value = record.getValue();
 				
@@ -69,6 +71,7 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 					frontCon.write(NULL);
 					return;
 				}
+				
 				byte[] partitonArr = ProtoUtils.convertIntToByteArray(partition);
 				byte[] partitonLength = ProtoUtils.convertIntToByteArray(partitonArr.length);
 				byte[] offsetArr = String.valueOf(record.getOffset()).getBytes();
@@ -80,14 +83,16 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 						+ 1 + partitonLength.length + 2 + partitonArr.length + 2
 						+ 1 + offsetLength.length + 2 + offsetArr.length + 2 
 						+ 1 + valueLenght.length + 2 + value.length + 2;
-				ByteBuffer bb = NetSystem.getInstance().getBufferPool().allocate(bufferSize);
+				
+				ByteBuffer responseBuf = NetSystem.getInstance().getBufferPool().allocate(bufferSize);
 				if (i == 0) {
-					bb.put(ASTERISK).put(size).put(CRLF);
+					responseBuf.put(ASTERISK).put(size).put(CRLF);
 				}
-				bb.put(DOLLAR).put(partitonLength).put(CRLF).put(partitonArr).put(CRLF)
-				.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF)
-				.put(DOLLAR).put(valueLenght).put(CRLF).put(value).put(CRLF);
-				frontCon.write(bb);
+				responseBuf.put(DOLLAR).put(partitonLength).put(CRLF).put(partitonArr).put(CRLF);
+				responseBuf.put(DOLLAR).put(offsetLength).put(CRLF).put(offsetArr).put(CRLF);
+				responseBuf.put(DOLLAR).put(valueLenght).put(CRLF).put(value).put(CRLF);
+				
+				frontCon.write(responseBuf);
 			}
 		
 		// 消费offset超出范围
