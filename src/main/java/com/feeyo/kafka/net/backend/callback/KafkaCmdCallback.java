@@ -133,6 +133,7 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 		
 	}
 
+	// parse body
 	public abstract void parseResponseBody(BackendConnection conn, ByteBuffer byteBuff);
 
 }
