@@ -35,24 +35,30 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		
 		RedisRequest request = routeResult.getRequests().get(0);
 		switch (request.getPolicy().getHandleType()) {
-		case CommandParse.PRODUCE_CMD:
-			requestBuf = encoder.encodeProduceRequest(request, node.getPartition());
-			callback = new KafkaProduceCmdCallback(node.getPartition());
-			break;
-			
-		case CommandParse.CONSUMER_CMD:
-			// 指定点位消费，消费失败不回收点位
-			boolean isErrorOffsetRecovery = request.getNumArgs() > 2 ? false : true;
-			
-			requestBuf = encoder.encodeFetchRequest(request, node.getPartition(), node.getOffset(), node.getMaxBytes());
-			callback = new KafkaConsumerCmdCallback(new String(request.getArgs()[1]), node.getPartition(),
-					node.getOffset(), isErrorOffsetRecovery);
-			break;
-			
-		case CommandParse.OFFSET_CMD:
-			requestBuf = encoder.encodeListOffsetRequest(request);
-			callback = new KafkaOffsetCmdCallback();
-			break;
+			case CommandParse.PRODUCE_CMD: {
+				int partition = node.getPartition();
+	
+				requestBuf = encoder.encodeProduceRequest(request, partition);
+				callback = new KafkaProduceCmdCallback(node.getPartition());
+				break;
+			}
+			case CommandParse.CONSUMER_CMD: {
+				// 指定点位消费，消费失败不回收点位
+				boolean isErrorOffsetRecovery = request.getNumArgs() > 2 ? false : true;
+				String topic = new String(request.getArgs()[1]);
+				int partition = node.getPartition();
+				long offset = node.getOffset();
+				int maxBytes = node.getMaxBytes();
+	
+				requestBuf = encoder.encodeFetchRequest(request, partition, offset, maxBytes);
+				callback = new KafkaConsumerCmdCallback(topic, partition, offset, isErrorOffsetRecovery);
+				break;
+			}
+			case CommandParse.OFFSET_CMD: {
+				requestBuf = encoder.encodeListOffsetRequest(request);
+				callback = new KafkaOffsetCmdCallback();
+				break;
+			}
 		}
 
 		// 埋点
@@ -90,5 +96,4 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 			frontCon.writeErrMessage( reason );
 		}
 	}
-
 }

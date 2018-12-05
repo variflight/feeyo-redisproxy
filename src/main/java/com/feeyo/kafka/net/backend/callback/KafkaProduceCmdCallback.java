@@ -24,13 +24,15 @@ public class KafkaProduceCmdCallback extends KafkaCmdCallback {
 	public void parseResponseBody(BackendConnection conn, ByteBuffer byteBuff) {
 		
 		short version = BrokerApiVersion.getProduceVersion();
+		
+		// parse ProduceResponse
 		Struct response = ApiKeys.PRODUCE.parseResponse(version, byteBuff);
 		ProduceResponse pr = new ProduceResponse(response);
 		
 		//
 		RedisFrontConnection frontCon = getFrontCon( conn );
 		
-		// 1k的buffer 肯定够用
+		// 1k 的 buffer 肯定够用
 		ByteBuffer responseBuf = NetSystem.getInstance().getBufferPool().allocate(1024);
 		if ( pr.isCorrect() ) {
 			
