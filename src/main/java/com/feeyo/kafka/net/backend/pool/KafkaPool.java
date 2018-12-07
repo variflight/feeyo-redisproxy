@@ -35,6 +35,9 @@ import com.google.common.collect.Sets;
 import org.apache.kafka.common.protocol.Errors;
 
 public class KafkaPool extends AbstractPool {
+	
+	// 用户可以使用他们喜欢的任何标识符，他们会被用在记录错误，监测统计信息等场景
+	private static final String CLIENT_ID = "KafkaProxy";
 
 	protected KafkaConHeartBeatHandler conHeartBeatHanler = new KafkaConHeartBeatHandler();
 	protected KafkaBackendConnectionFactory backendConFactory = new KafkaBackendConnectionFactory();
@@ -42,6 +45,7 @@ public class KafkaPool extends AbstractPool {
 	private Map<Integer, PhysicalNode> physicalNodes = new HashMap<Integer, PhysicalNode>(3);
 	public volatile int heartbeatStatus = 1;
 	public volatile long heartbeatTime = -1;
+	
 	/**
 	 * available node list
 	 */
@@ -90,19 +94,23 @@ public class KafkaPool extends AbstractPool {
 	 * 加载kafka版本
 	 */
 	private void loadKafkaVersion() {
+		
 		for (Entry<Integer, PhysicalNode> entry : physicalNodes.entrySet()) {
 
 			PhysicalNode physicalNode = entry.getValue();
 
 			try {
 
-				RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short) 1,
-						Thread.currentThread().getName(), Utils.getCorrelationId());
+				// apiKeyId、 version、 clientId、correlation
+				int correlationId = Utils.getCorrelationId();
+				RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short) 1, CLIENT_ID, correlationId);
 
 				Struct struct = requestHeader.toStruct();
-				final ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate(struct.sizeOf() + 4);
-				buffer.putInt(struct.sizeOf());
-				struct.writeTo(buffer);
+				int size = struct.sizeOf() + 4;
+						
+				final ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( size );
+				buffer.putInt( struct.sizeOf() );
+				struct.writeTo( buffer );
 
 				// ApiVersionCallback
 				KafkaCmdCallback apiVersionCallback = new KafkaCmdCallback() {
@@ -306,9 +314,14 @@ public class KafkaPool extends AbstractPool {
 					heartbeatTime, closeTime);
 			if (!heartBeatCons.isEmpty()) {
 				for (BackendConnection conn : heartBeatCons) {
-					RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short)1, Thread.currentThread().getName(), Utils.getCorrelationId());
+					
+					// apiKeyId、 version、 clientId、correlation
+					int correlationId = Utils.getCorrelationId();
+					RequestHeader requestHeader = new RequestHeader(ApiKeys.API_VERSIONS.id, (short)1, CLIENT_ID, correlationId);
 					Struct struct = requestHeader.toStruct();
-					ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( struct.sizeOf() + 4);
+					int size = struct.sizeOf() + 4;
+					//
+					ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( size );
 					buffer.putInt(struct.sizeOf());
 					struct.writeTo(buffer);
 					
@@ -384,6 +397,7 @@ public class KafkaPool extends AbstractPool {
 					
 					org.apache.kafka.common.requests.ApiVersionsRequest.Builder build = 
 							new org.apache.kafka.common.requests.ApiVersionsRequest.Builder((short) 1);
+					
 					ClientRequest clientRequest = client.newClientRequest(build);
 					ClientResponse response = client.sendAndRecvice(clientRequest);
 					if (response != null) {
