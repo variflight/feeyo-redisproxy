@@ -32,6 +32,9 @@ public class KafkaNodeClient {
 	private Selector selector = null;
 	private ChannelBuilder channelBuilder = null;
 	
+	// 用户可以使用他们喜欢的任何标识符，他们会被用在记录错误，监测统计信息等场景
+	private static final String CLIENT_ID = "KafkaProxy";
+	
 	public KafkaNodeClient(int id, String host, int port) {
 		node = new Node(id, host, port);
 		
@@ -52,7 +55,7 @@ public class KafkaNodeClient {
 		channelBuilder = ClientUtils.createChannelBuilder(config);
 		selector = new Selector(1000L, metrics, Time.SYSTEM, "cc", channelBuilder, logContext);
 		client = new NetworkClient(selector, new Metadata(0, Long.MAX_VALUE, false),
-				Thread.currentThread().getName(), 10, 1000L, 1000L, 1, 1024, 1000, Time.SYSTEM, true, new ApiVersions(),
+				CLIENT_ID, 10, 1000L, 1000L, 1, 1024, 1000, Time.SYSTEM, true, new ApiVersions(),
 				null, logContext);
 	}
 	
@@ -75,8 +78,6 @@ public class KafkaNodeClient {
 		ClientResponse response = NetworkClientUtils.sendAndReceive(client, clientRequest, Time.SYSTEM);
 		return response;
 	}
-	
-	
 	
 	public void close() {
 		closeQuietly(metrics, "Metrics");
