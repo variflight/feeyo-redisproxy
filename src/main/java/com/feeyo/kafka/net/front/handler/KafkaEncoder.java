@@ -85,9 +85,10 @@ public class KafkaEncoder {
 		RequestHeader requestHeader = new RequestHeader(ApiKeys.PRODUCE.id, version, CLIENT_ID, correlationId);
 		Struct header = requestHeader.toStruct();
 		
-		int size = body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT;
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( size );
-		buffer.putInt(body.sizeOf() + header.sizeOf());
+		int headerBodySize = body.sizeOf() + header.sizeOf();
+		int bufferSize = headerBodySize + LENGTH_BYTE_COUNT;
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( bufferSize );
+		buffer.putInt( headerBodySize );
 		header.writeTo(buffer);
 		body.writeTo(buffer);
 		return buffer;
@@ -117,9 +118,10 @@ public class KafkaEncoder {
 		Struct header = requestHeader.toStruct();
 		Struct body = fetchRequest.toStruct();
 		
-		int size = body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT;
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( size );
-		buffer.putInt(body.sizeOf() + header.sizeOf());
+		int headerBodySize = body.sizeOf() + header.sizeOf();
+		int bufferSize = headerBodySize + LENGTH_BYTE_COUNT;
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( bufferSize );
+		buffer.putInt( headerBodySize );
 		header.writeTo(buffer);
 		body.writeTo(buffer);
 		
@@ -146,9 +148,10 @@ public class KafkaEncoder {
 		Struct header = requestHeader.toStruct();
 		Struct body = listOffsetRequest.toStruct();
 		
-		int size = body.sizeOf() + header.sizeOf() + LENGTH_BYTE_COUNT;
-		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( size );
-		buffer.putInt(body.sizeOf() + header.sizeOf());
+		int headerBodySize = body.sizeOf() + header.sizeOf();
+		int bufferSize = headerBodySize + LENGTH_BYTE_COUNT;
+		ByteBuffer buffer = NetSystem.getInstance().getBufferPool().allocate( bufferSize );
+		buffer.putInt( headerBodySize );
 		header.writeTo(buffer);
 		body.writeTo(buffer);
 		
