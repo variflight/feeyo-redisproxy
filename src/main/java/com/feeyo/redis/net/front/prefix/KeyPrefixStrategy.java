@@ -1,6 +1,7 @@
 package com.feeyo.redis.net.front.prefix;
 
 import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.redis.config.UserCfg;
 
 /**
  * Key 前缀策略
@@ -19,24 +20,30 @@ public abstract class KeyPrefixStrategy {
 	public static final int NoKey = 7;
 	public static final int SecondKey = 8;
 	
-	protected byte[] concat(byte[]... arrays) {
-		int length = 0;
-		for (byte[] array : arrays) {
-			length += array.length;
+	protected byte[] concat(byte[] prefix, byte[] key) {
+		if (prefix == null) {
+			return key;
 		}
+		int length = prefix.length + key.length;
 		byte[] result = new byte[length];
-		int pos = 0;
-		for (byte[] array : arrays) {
-			System.arraycopy(array, 0, result, pos, array.length);
-			pos += array.length;
-		}
+		
+		System.arraycopy(prefix, 0, result, 0, prefix.length);
+		System.arraycopy(key, 0, result, prefix.length, key.length);
+		
 		return result;
+	}
+	
+	protected void illegalCharacterFilter(byte[] key, UserCfg userCfg) throws KeyIllegalCharacterException {
+		String k = new String(key);
+		if (userCfg.getKeyRule() != null && !userCfg.getKeyRule().matcher(k).find()) {
+			throw new KeyIllegalCharacterException(k + " has illegal character");
+		}
 	}
 	
 	/**
 	 * 重新构建 key
 	 */
-	public abstract  void rebuildKey(RedisRequest request, byte[] prefix);
+	public abstract  void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalCharacterException;
 	
 	/**
 	 * 获取新的路由 key

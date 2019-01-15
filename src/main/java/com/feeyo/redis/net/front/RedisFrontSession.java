@@ -33,6 +33,7 @@ import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
+import com.feeyo.redis.net.front.prefix.KeyIllegalCharacterException;
 import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
@@ -233,15 +234,7 @@ public class RedisFrontSession {
 					}
 					
 				} else {
-					
-					// err
-					StringBuffer errCmdBuffer = new StringBuffer(50);
-					errCmdBuffer.append("-ERR ");
-					errCmdBuffer.append( e.getMessage() );
-					errCmdBuffer.append( ".\r\n" );
-					
-					byte[] ERR_INVALID_COMMAND = errCmdBuffer.toString().getBytes();
-					frontCon.write( ERR_INVALID_COMMAND );
+					frontCon.write( getDefaultErrorInvalidCommand(e) );
 				}
 				
 				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
@@ -273,6 +266,8 @@ public class RedisFrontSession {
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
+			} catch (KeyIllegalCharacterException e) {
+				frontCon.write( getDefaultErrorInvalidCommand(e) );
 			}
 			
 		} catch (UnknowProtocolException e0) {
@@ -288,6 +283,16 @@ public class RedisFrontSession {
 				frontCon.releaseLock();
 		}
 		
+	}
+
+	private byte[] getDefaultErrorInvalidCommand(Exception e) {
+		// err
+		StringBuffer errCmdBuffer = new StringBuffer(50);
+		errCmdBuffer.append("-ERR ");
+		errCmdBuffer.append( e.getMessage() );
+		errCmdBuffer.append( ".\r\n" );
+		
+		return errCmdBuffer.toString().getBytes();
 	}
 	
 	/**

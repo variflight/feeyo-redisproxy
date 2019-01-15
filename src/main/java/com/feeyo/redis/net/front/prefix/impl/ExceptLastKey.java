@@ -1,6 +1,8 @@
 package com.feeyo.redis.net.front.prefix.impl;
 
 import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.redis.config.UserCfg;
+import com.feeyo.redis.net.front.prefix.KeyIllegalCharacterException;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
 
 /**
@@ -12,10 +14,11 @@ import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
 public class ExceptLastKey extends KeyPrefixStrategy {
 
 	@Override
-	public void rebuildKey(RedisRequest request, byte[] prefix) {
+	public void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalCharacterException {
 		byte[][] args = request.getArgs();
-		for (int i = 1; i < args.length - 1; i++) {						
-			args[i] = concat(prefix, args[i]);
+		for (int i = 1; i < args.length - 1; i++) {
+			illegalCharacterFilter(args[i], userCfg);
+			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}		
 	}
 

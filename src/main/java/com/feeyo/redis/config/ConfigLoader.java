@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -123,6 +124,7 @@ public class ConfigLoader {
 	
 	public static Map<String, UserCfg> loadUserMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception  {
 
+		Pattern defaultKeyRule = loadDefaultKeyRule(uri);
 		Map<String, UserCfg> map = new HashMap<String, UserCfg>();
 		try {
 			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("user");
@@ -139,12 +141,17 @@ public class ConfigLoader {
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 800);
 				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
-					
+				String rule = getAttribute(nameNodeMap, "keyRule", null);
+				Pattern keyRule = defaultKeyRule;
+				if (rule != null  && !rule.isEmpty()) {
+					keyRule = Pattern.compile(rule);
+				}
+				
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
 				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, maxCon, isAdmin == 0 ? false : true, 
-						isReadonly);
+						isReadonly, keyRule);
 				
 				// 非kafka pool的用户不能充当生产者 和 消费者
 				if (poolType != 3) {
@@ -175,6 +182,23 @@ public class ConfigLoader {
 			throw e;
 		}
 		return map;
+	}
+	
+	private static Pattern loadDefaultKeyRule(String uri) {
+
+		try {
+			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("all");
+			if (nodeList != null && nodeList.getLength() > 0) {
+				Node node = nodeList.item(0);
+				NamedNodeMap nameNodeMap = node.getAttributes();		
+				String rule = getAttribute(nameNodeMap, "defaultKeyRule", null);
+				if (rule != null  && !rule.isEmpty()) {
+					return Pattern.compile(rule);
+				}
+			}
+		} catch (Exception e) {
+		}
+		return null;
 	}
 	
 

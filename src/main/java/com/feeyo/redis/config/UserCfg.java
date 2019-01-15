@@ -1,6 +1,7 @@
 package com.feeyo.redis.config;
 
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 public class UserCfg {
 	
@@ -14,6 +15,8 @@ public class UserCfg {
 	
 	private final boolean isAdmin;
 	private final boolean isReadonly;
+	private final Pattern keyRule;
+	
 	
 	
 	// 通过管理指令 use pool 改变
@@ -23,7 +26,7 @@ public class UserCfg {
 
 	
 	public UserCfg(int poolId, int poolType, String password,  String prefix, 
-			int selectDb, int maxCon, boolean isAdmin, boolean isReadonly) {
+			int selectDb, int maxCon, boolean isAdmin, boolean isReadonly, Pattern keyRule) {
 		this.poolId = poolId;
 		this.poolType = poolType;
 		this.password = password;		
@@ -35,6 +38,7 @@ public class UserCfg {
 		
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
+		this.keyRule = keyRule;
 	}
 	
 
@@ -77,7 +81,11 @@ public class UserCfg {
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
 	}
-	
+
+	public Pattern getKeyRule() {
+		return keyRule;
+	}
+
 
 	@Override
 	public int hashCode() {
