@@ -6,16 +6,16 @@ package com.feeyo.redis.net.front.prefix;
  * @author zhuam
  *
  */
-public class KeyIllegalCharacterException extends Exception {
+public class KeyIllegalException extends Exception {
 
 	private static final long serialVersionUID = -7389705871040422092L;
 	
 	
-	public KeyIllegalCharacterException(String message) {
+	public KeyIllegalException(String message) {
 		super(message);
 	}
 
-	public KeyIllegalCharacterException(String message, Throwable cause) {
+	public KeyIllegalException(String message, Throwable cause) {
 		super(message, cause);
 	}
 }

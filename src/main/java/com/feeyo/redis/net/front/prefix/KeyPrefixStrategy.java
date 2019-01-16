@@ -19,8 +19,12 @@ public abstract class KeyPrefixStrategy {
 	public static final int MKey = 6;
 	public static final int NoKey = 7;
 	public static final int SecondKey = 8;
+	public static final int EvalKey = 9;
 	
-	protected byte[] concat(byte[] prefix, byte[] key) {
+	protected byte[] concat(UserCfg userCfg, byte[] key) throws KeyIllegalException {
+		illegalCharacterFilter(userCfg, key);
+		
+		byte[] prefix = userCfg.getPrefix();
 		if (prefix == null) {
 			return key;
 		}
@@ -33,17 +37,17 @@ public abstract class KeyPrefixStrategy {
 		return result;
 	}
 	
-	protected void illegalCharacterFilter(byte[] key, UserCfg userCfg) throws KeyIllegalCharacterException {
+	private void illegalCharacterFilter(UserCfg userCfg, byte[] key) throws KeyIllegalException {
 		String k = new String(key);
 		if (userCfg.getKeyRule() != null && !userCfg.getKeyRule().matcher(k).find()) {
-			throw new KeyIllegalCharacterException(k + " has illegal character");
+			throw new KeyIllegalException(k + " has illegal character");
 		}
 	}
 	
 	/**
 	 * 重新构建 key
 	 */
-	public abstract  void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalCharacterException;
+	public abstract  void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException;
 	
 	/**
 	 * 获取新的路由 key

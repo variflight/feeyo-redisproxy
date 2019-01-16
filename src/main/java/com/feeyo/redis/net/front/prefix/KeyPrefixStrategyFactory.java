@@ -4,13 +4,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.feeyo.redis.net.front.prefix.impl.AllKey;
+import com.feeyo.redis.net.front.prefix.impl.EvalKey;
 import com.feeyo.redis.net.front.prefix.impl.ExceptFirstKey;
 import com.feeyo.redis.net.front.prefix.impl.ExceptLastKey;
+import com.feeyo.redis.net.front.prefix.impl.FirstKey;
+import com.feeyo.redis.net.front.prefix.impl.FristSecondKey;
 import com.feeyo.redis.net.front.prefix.impl.MKey;
 import com.feeyo.redis.net.front.prefix.impl.NoKey;
 import com.feeyo.redis.net.front.prefix.impl.SecondKey;
-import com.feeyo.redis.net.front.prefix.impl.FirstKey;
-import com.feeyo.redis.net.front.prefix.impl.FristSecondKey;
 
 public class KeyPrefixStrategyFactory {
 	
@@ -74,6 +75,13 @@ public class KeyPrefixStrategyFactory {
 		}
 	};
 	
+	private static ThreadLocal<EvalKey> evalKey = new ThreadLocal<EvalKey>() {
+		@Override
+		protected EvalKey initialValue() {
+			return new EvalKey();
+		}
+	};
+	
 	static {
 		keyStrategys.put("CLUSTER", KeyPrefixStrategy.NoKey);
 		keyStrategys.put("INFO", KeyPrefixStrategy.NoKey);
@@ -126,6 +134,9 @@ public class KeyPrefixStrategyFactory {
 		keyStrategys.put("MSETNX", KeyPrefixStrategy.MKey);		
 		keyStrategys.put("OBJECT", KeyPrefixStrategy.SecondKey);
 		
+		// eval
+		keyStrategys.put("EVAL",  	KeyPrefixStrategy.EvalKey);
+		
 		// Kafka nokey
 		keyStrategys.put("KPUSH", 			KeyPrefixStrategy.NoKey);
 		keyStrategys.put("KPOP",  			KeyPrefixStrategy.NoKey);
@@ -161,6 +172,8 @@ public class KeyPrefixStrategyFactory {
 			return noKey.get();
 		case KeyPrefixStrategy.SecondKey:
 			return secondKey.get();
+		case KeyPrefixStrategy.EvalKey:
+			return evalKey.get();
 		default:
 			return firstKey.get();
 		}

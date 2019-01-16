@@ -33,7 +33,7 @@ import com.feeyo.redis.net.front.handler.DefaultCommandHandler;
 import com.feeyo.redis.net.front.handler.PipelineCommandHandler;
 import com.feeyo.redis.net.front.handler.PubSub;
 import com.feeyo.redis.net.front.handler.segment.SegmentCommandHandler;
-import com.feeyo.redis.net.front.prefix.KeyIllegalCharacterException;
+import com.feeyo.redis.net.front.prefix.KeyIllegalException;
 import com.feeyo.redis.net.front.route.FullRequestNoThroughtException;
 import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
@@ -266,7 +266,7 @@ public class RedisFrontSession {
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
-			} catch (KeyIllegalCharacterException e) {
+			} catch (KeyIllegalException e) {
 				frontCon.write( getDefaultErrorInvalidCommand(e) );
 			}
 			

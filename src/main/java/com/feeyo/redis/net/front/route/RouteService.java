@@ -10,7 +10,7 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.backend.pool.PoolType;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.CommandParse;
-import com.feeyo.redis.net.front.prefix.KeyIllegalCharacterException;
+import com.feeyo.redis.net.front.prefix.KeyIllegalException;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategyFactory;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
@@ -52,7 +52,7 @@ public class RouteService {
 	// 路由计算, 必须认证后
 	public static RouteResult route(List<RedisRequest> requests, RedisFrontConnection frontCon)
 			throws InvalidRequestException, FullRequestNoThroughtException, PhysicalNodeUnavailableException,
-			KeyIllegalCharacterException {
+			KeyIllegalException {
 		
 		UserCfg userCfg = frontCon.getUserCfg();
 		
