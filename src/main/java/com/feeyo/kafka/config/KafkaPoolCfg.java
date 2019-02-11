@@ -16,8 +16,8 @@ import com.feeyo.kafka.net.backend.broker.BrokerNode;
 import com.feeyo.kafka.net.backend.broker.BrokerPartition;
 import com.feeyo.kafka.net.backend.broker.BrokerRunningInfo;
 import com.feeyo.redis.config.ConfigLoader;
-import com.feeyo.redis.config.PoolCfg;
-import com.feeyo.redis.config.UserCfg;
+import com.feeyo.config.PoolCfg;
+import com.feeyo.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 public class KafkaPoolCfg extends PoolCfg {

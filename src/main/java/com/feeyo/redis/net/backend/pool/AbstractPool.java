@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.config.PoolCfg;
 import com.feeyo.redis.net.backend.BackendConnection;
 
 /**

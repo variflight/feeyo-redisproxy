@@ -1,4 +1,4 @@
-package com.feeyo.redis.config;
+package com.feeyo.config;
 
 import java.util.ArrayList;
 import java.util.List;

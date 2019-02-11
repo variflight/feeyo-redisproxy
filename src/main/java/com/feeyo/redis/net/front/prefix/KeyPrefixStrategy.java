@@ -1,7 +1,7 @@
 package com.feeyo.redis.net.front.prefix;
 
 import com.feeyo.net.codec.redis.RedisRequest;
-import com.feeyo.redis.config.UserCfg;
+import com.feeyo.config.UserCfg;
 
 /**
  * Key 前缀策略

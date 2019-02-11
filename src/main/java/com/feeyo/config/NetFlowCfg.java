@@ -1,4 +1,4 @@
-package com.feeyo.redis.config;
+package com.feeyo.config;
 
 public class NetFlowCfg {
 

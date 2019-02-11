@@ -1,18 +1,6 @@
 package com.feeyo.kafka.net.backend.broker.offset;
 
-import java.io.IOException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.I0Itec.zkclient.IZkStateListener;
-import org.I0Itec.zkclient.exception.ZkNoNodeException;
-import org.I0Itec.zkclient.exception.ZkNodeExistsException;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.feeyo.config.UserCfg;
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.OffsetCfg;
 import com.feeyo.kafka.config.TopicCfg;
@@ -23,8 +11,19 @@ import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningData;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningListener;
 import com.feeyo.kafka.net.backend.broker.zk.running.ServerRunningMonitor;
 import com.feeyo.redis.config.ConfigLoader;
-import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
+import org.I0Itec.zkclient.IZkStateListener;
+import org.I0Itec.zkclient.exception.ZkNoNodeException;
+import org.I0Itec.zkclient.exception.ZkNodeExistsException;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 //
 public class BrokerOffsetService {

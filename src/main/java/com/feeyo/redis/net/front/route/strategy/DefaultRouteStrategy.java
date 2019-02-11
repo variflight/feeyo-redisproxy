@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisRequestType;
-import com.feeyo.redis.config.UserCfg;
+import com.feeyo.config.UserCfg;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;

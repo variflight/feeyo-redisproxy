@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.feeyo.net.nio.util.TimeUtil;
-import com.feeyo.redis.config.NetFlowCfg;
+import com.feeyo.config.NetFlowCfg;
 
 
 /*
