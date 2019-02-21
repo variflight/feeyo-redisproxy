@@ -171,7 +171,7 @@ public class ConfigLoader {
 				map.put(password, userCfg);
 			}
 		} catch (Exception e) {
-			LOGGER.error("load user.xml err " + e);
+			LOGGER.error("load user.xml err ", e);
 			throw e;
 		}
 		return map;

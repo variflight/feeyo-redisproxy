@@ -48,15 +48,15 @@ public class RedisEngineCtx {
 	private volatile Map<Integer, PoolCfg> poolCfgMap = null;
 	private volatile Map<Integer, AbstractPool> poolMap = null;
 	private volatile Map<String, NetFlowCfg> netflowMap = null;
-
 	private volatile Properties mailProperty = null;
 
 	// backup
 	private volatile  Map<Integer, AbstractPool> _poolMap = null;
 	private volatile  Map<String, UserCfg> _userMap = null;
 	private volatile  Map<String, String> _serverMap = null;
-	private volatile Map<String, NetFlowCfg> _netflowMap = null;
+	private volatile  Map<String, NetFlowCfg> _netflowMap = null;
 	private volatile  Properties _mailProperty = null;
+	private volatile Map<Integer, PoolCfg> _poolCfgMap = null;
 
 	private ReentrantLock lock;
 
@@ -246,7 +246,7 @@ public class RedisEngineCtx {
 			Map<String, String> newServerMap = ConfigLoader.loadServerMap( ConfigLoader.buidCfgAbsPathFor("server.xml") );
 			Map<Integer, PoolCfg> newPoolCfgMap = ConfigLoader.loadPoolMap( ConfigLoader.buidCfgAbsPathFor("pool.xml") );
 			Map<String, UserCfg> newUserMap = ConfigLoader.loadUserMap(newPoolCfgMap, ConfigLoader.buidCfgAbsPathFor("user.xml") );
-			Map<String, NetFlowCfg> newNetflowMap = this.netflowMap = ConfigLoader.loadNetFlowMap(ConfigLoader.buidCfgAbsPathFor("netflow.xml"));
+			Map<String, NetFlowCfg> newNetflowMap = ConfigLoader.loadNetFlowMap(ConfigLoader.buidCfgAbsPathFor("netflow.xml"));
 			Properties newMailProperty = ConfigLoader.loadMailProperties(ConfigLoader.buidCfgAbsPathFor("mail.properties"));
 
 			// 2、用户自检
@@ -295,6 +295,7 @@ public class RedisEngineCtx {
 				this._serverMap = serverMap;
 				this._netflowMap = netflowMap;
 				this._mailProperty = mailProperty;
+				this._poolCfgMap = poolCfgMap;
 
 
 				//切换 new
@@ -303,6 +304,7 @@ public class RedisEngineCtx {
 				this.serverMap = newServerMap;
 				this.netflowMap = newNetflowMap;
 				this.mailProperty = newMailProperty;
+				this.poolCfgMap = newPoolCfgMap;
 
 				// server.xml 部分设置生效
 				String frontIdleTimeoutString = this.serverMap.get("frontIdleTimeout");
