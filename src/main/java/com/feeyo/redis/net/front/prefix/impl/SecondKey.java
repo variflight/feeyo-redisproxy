@@ -19,6 +19,9 @@ public class SecondKey extends KeyPrefixStrategy {
 		if (args == null || args.length < 3 ) {
 			return;
 		}
+		//
+		illegalCharacterFilter(userCfg, args[2]);
+		//
 		args[2] = concat(userCfg, args[2]);		
 	}
 

@@ -22,8 +22,7 @@ public abstract class KeyPrefixStrategy {
 	public static final int EvalKey = 9;
 	
 	protected byte[] concat(UserCfg userCfg, byte[] key) throws KeyIllegalException {
-		illegalCharacterFilter(userCfg, key);
-		
+		//
 		byte[] prefix = userCfg.getPrefix();
 		if (prefix == null) {
 			return key;
@@ -37,7 +36,7 @@ public abstract class KeyPrefixStrategy {
 		return result;
 	}
 	
-	private void illegalCharacterFilter(UserCfg userCfg, byte[] key) throws KeyIllegalException {
+	protected void illegalCharacterFilter(UserCfg userCfg, byte[] key) throws KeyIllegalException {
 		String k = new String(key);
 		if (userCfg.getKeyRule() != null && !userCfg.getKeyRule().matcher(k).find()) {
 			throw new KeyIllegalException(k + " has illegal character");

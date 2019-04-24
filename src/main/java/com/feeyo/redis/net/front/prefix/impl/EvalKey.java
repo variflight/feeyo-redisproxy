@@ -19,6 +19,9 @@ public class EvalKey extends KeyPrefixStrategy {
 		int keyLength = Integer.parseInt(new String(args[2]));
 		
 		for (int i = 3; i < keyLength + 3; i++) {
+			//
+			illegalCharacterFilter(userCfg, args[i]);
+			//
 			args[i] = concat(userCfg, args[i]);
 		}
 		
