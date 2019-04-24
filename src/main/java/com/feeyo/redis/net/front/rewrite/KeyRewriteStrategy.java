@@ -23,6 +23,9 @@ public abstract class KeyRewriteStrategy {
 	public static final int SecondKey = 8;
 	public static final int EvalKey = 9;
 	
+	/**
+	 * 增加 key 前缀
+	 */
 	protected byte[] concat(byte[] prefix, byte[] key) throws KeyIllegalException {
 		//
 		if (prefix == null) {
