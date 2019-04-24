@@ -20,42 +20,26 @@ import java.util.regex.Pattern;
 public abstract class AbstractConfigLoader {
     /**
      * 获取 server 配置
-     *
-     * @return result
-     * @throws Exception e
      */
     public abstract Map<String, String> loadServerMap() throws Exception;
 
     /**
      * 获取连接池配置
-     *
-     * @return result
-     * @throws Exception e
      */
     public abstract Map<Integer, PoolCfg> loadPoolMap() throws Exception;
 
     /**
      * 获取user配置
-     *
-     * @param poolMap 连接池配置
-     * @return result
-     * @throws Exception e
      */
     public abstract Map<String, UserCfg> loadUserMap(Map<Integer, PoolCfg> poolMap) throws Exception;
 
     /**
      * 获取流量控制配置
-     *
-     * @return result
-     * @throws Exception e
      */
     public abstract Map<String, NetFlowCfg> loadNetFlowMap() throws Exception;
 
     /**
      * 邮件服务配置
-     *
-     * @return result
-     * @throws Exception e
      */
     public abstract Properties loadMailProperties() throws Exception;
 

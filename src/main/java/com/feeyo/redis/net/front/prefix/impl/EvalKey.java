@@ -10,10 +10,10 @@ public class EvalKey extends KeyPrefixStrategy {
 	@Override
 	public void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		byte[][] args = request.getArgs();
-		
 		if (args.length < 4) {
 			throw new KeyIllegalException(
-					"eval cmd must put keys to params! if this is no params, please do not use eval in redis, because u can do it in your code instead!");
+					"eval cmd must put keys to params! if this is no params, "
+					+ "please do not use eval in redis, because u can do it in your code instead!");
 		}
 		
 		int keyLength = Integer.parseInt(new String(args[2]));

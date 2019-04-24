@@ -17,7 +17,7 @@ public class ConfigLoaderFactory {
         if (clusterMap.get("id") == null || clusterMap.get("id").isEmpty()) {
             return new LocalConfigLoader();
         } else {
-            return new RemoteConfigLoader(clusterMap.get("id"), clusterMap.get("zkServerHost"));
+            return new ZookeeperConfigLoader(clusterMap.get("id"), clusterMap.get("zkServerHost"));
         }
     }
 

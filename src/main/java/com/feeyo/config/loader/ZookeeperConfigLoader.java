@@ -21,15 +21,15 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
-public class RemoteConfigLoader extends AbstractConfigLoader {
+public class ZookeeperConfigLoader extends AbstractConfigLoader {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(RemoteConfigLoader.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(ZookeeperConfigLoader.class);
 
     private String id;
     private String zkServerHost;
     private static String BASE_PATH="/feeyo/config";
 
-    public RemoteConfigLoader(String id, String zkServerHost) {
+    public ZookeeperConfigLoader(String id, String zkServerHost) {
         this.id = id;
         this.zkServerHost = zkServerHost;
         ZkClientx.getZkClient(zkServerHost);

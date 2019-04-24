@@ -21,6 +21,7 @@ import java.util.Properties;
 import java.util.regex.Pattern;
 
 public class LocalConfigLoader extends AbstractConfigLoader {
+	
     private static Logger LOGGER = LoggerFactory.getLogger(LocalConfigLoader.class);
 
     public Map<String, String> loadServerMap() throws Exception {
