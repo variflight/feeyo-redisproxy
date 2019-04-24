@@ -36,6 +36,7 @@ public abstract class KeyPrefixStrategy {
 		return result;
 	}
 	
+	//
 	protected void checkIllegalCharacter(UserCfg userCfg, byte[] key) 
 			throws KeyIllegalException {
 		//
