@@ -83,6 +83,7 @@ public class KeyRewriteStrategyFactory {
 	};
 	
 	static {
+		//
 		keyStrategys.put("CLUSTER", KeyRewriteStrategy.NoKey);
 		keyStrategys.put("INFO", KeyRewriteStrategy.NoKey);
 		keyStrategys.put("TIME", KeyRewriteStrategy.NoKey);
