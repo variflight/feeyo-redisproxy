@@ -16,8 +16,8 @@ import com.feeyo.kafka.net.backend.broker.BrokerPartition.ConsumerOffset;
 import com.feeyo.kafka.net.backend.broker.zk.ZkClientx;
 import com.feeyo.kafka.net.backend.broker.zk.ZkPathUtil;
 import com.feeyo.kafka.util.JsonUtils;
-import com.feeyo.config.PoolCfg;
-import com.feeyo.config.UserCfg;
+import com.feeyo.redis.config.PoolCfg;
+import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 
 /**

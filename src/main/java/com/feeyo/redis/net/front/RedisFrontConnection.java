@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
-import com.feeyo.config.UserCfg;
+import com.feeyo.redis.config.UserCfg;
 
 /**
  * 

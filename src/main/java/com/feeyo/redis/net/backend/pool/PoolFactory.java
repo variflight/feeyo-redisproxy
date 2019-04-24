@@ -1,7 +1,7 @@
 package com.feeyo.redis.net.backend.pool;
 
 import com.feeyo.kafka.net.backend.pool.KafkaPool;
-import com.feeyo.config.PoolCfg;
+import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.backend.pool.xcluster.XClusterPool;
 

@@ -25,7 +25,7 @@ import com.feeyo.kafka.protocol.types.Struct;
 import com.feeyo.kafka.util.Utils;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
-import com.feeyo.config.PoolCfg;
+import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.pool.AbstractPool;

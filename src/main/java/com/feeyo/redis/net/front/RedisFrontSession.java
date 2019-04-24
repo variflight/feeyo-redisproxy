@@ -21,7 +21,7 @@ import com.feeyo.net.codec.redis.RedisRequestPolicy;
 import com.feeyo.net.codec.redis.RedisRequestType;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.ProtoUtils;
-import com.feeyo.config.UserCfg;
+import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.Manage;
 import com.feeyo.redis.net.backend.BackendConnection;

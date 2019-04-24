@@ -1,7 +1,7 @@
 package com.feeyo.redis.net.front.prefix.impl;
 
 import com.feeyo.net.codec.redis.RedisRequest;
-import com.feeyo.config.UserCfg;
+import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.front.prefix.KeyIllegalException;
 import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
 
