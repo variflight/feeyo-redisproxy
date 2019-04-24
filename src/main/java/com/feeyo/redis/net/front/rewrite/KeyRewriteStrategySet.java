@@ -1,17 +1,9 @@
 package com.feeyo.redis.net.front.rewrite;
 
+import com.feeyo.redis.net.front.rewrite.impl.*;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import com.feeyo.redis.net.front.rewrite.impl.AllKey;
-import com.feeyo.redis.net.front.rewrite.impl.EvalKey;
-import com.feeyo.redis.net.front.rewrite.impl.ExceptFirstKey;
-import com.feeyo.redis.net.front.rewrite.impl.ExceptLastKey;
-import com.feeyo.redis.net.front.rewrite.impl.FirstKey;
-import com.feeyo.redis.net.front.rewrite.impl.FristSecondKey;
-import com.feeyo.redis.net.front.rewrite.impl.MKey;
-import com.feeyo.redis.net.front.rewrite.impl.NoKey;
-import com.feeyo.redis.net.front.rewrite.impl.SecondKey;
 
 public class KeyRewriteStrategySet {
 	
@@ -81,7 +73,14 @@ public class KeyRewriteStrategySet {
 			return new EvalKey();
 		}
 	};
-	
+
+    private static ThreadLocal<SetKey> setKey = new ThreadLocal<SetKey>() {
+        @Override
+        protected SetKey initialValue() {
+            return new SetKey();
+        }
+    };
+
 	static {
 		//
 		keyStrategys.put("CLUSTER", KeyRewriteStrategy.NoKey);
@@ -137,6 +136,8 @@ public class KeyRewriteStrategySet {
 		
 		// eval
 		keyStrategys.put("EVAL",  	KeyRewriteStrategy.EvalKey);
+        // set
+        keyStrategys.put("SET",  	KeyRewriteStrategy.SetKey);
 		
 		// Kafka nokey
 		keyStrategys.put("KPUSH", 			KeyRewriteStrategy.NoKey);
@@ -149,35 +150,37 @@ public class KeyRewriteStrategySet {
 	
 	// 
 	// TODO: 修复一个并发问题，不采用锁，直接 new, 耗内存哦，采用ThreadLocal
-	public static KeyRewriteStrategy getStrategy(String cmd) {		
-		
-		Integer strategyCode = keyStrategys.get( cmd );
-		if ( strategyCode == null ) {
-			return firstKey.get();
-		}
-		
-		switch( strategyCode ) {
-		case KeyRewriteStrategy.AllKey:
-			return allKey.get();
-		case KeyRewriteStrategy.ExceptFirstKey:
-			return exceptFirstKey.get();
-		case KeyRewriteStrategy.ExceptLastKey:
-			return exceptLastKey.get();
-		case KeyRewriteStrategy.FirstKey:
-			return firstKey.get();
-		case KeyRewriteStrategy.FristSecondKey:
-			return fristSecondKey.get();
-		case KeyRewriteStrategy.MKey:
-			return mKey.get();
-		case KeyRewriteStrategy.NoKey:
-			return noKey.get();
-		case KeyRewriteStrategy.SecondKey:
-			return secondKey.get();
-		case KeyRewriteStrategy.EvalKey:
-			return evalKey.get();
-		default:
-			return firstKey.get();
-		}
-	}
+    public static KeyRewriteStrategy getStrategy(String cmd) {
+
+        Integer strategyCode = keyStrategys.get(cmd);
+        if (strategyCode == null) {
+            return firstKey.get();
+        }
+
+        switch (strategyCode) {
+            case KeyRewriteStrategy.AllKey:
+                return allKey.get();
+            case KeyRewriteStrategy.ExceptFirstKey:
+                return exceptFirstKey.get();
+            case KeyRewriteStrategy.ExceptLastKey:
+                return exceptLastKey.get();
+            case KeyRewriteStrategy.FirstKey:
+                return firstKey.get();
+            case KeyRewriteStrategy.FristSecondKey:
+                return fristSecondKey.get();
+            case KeyRewriteStrategy.MKey:
+                return mKey.get();
+            case KeyRewriteStrategy.NoKey:
+                return noKey.get();
+            case KeyRewriteStrategy.SecondKey:
+                return secondKey.get();
+            case KeyRewriteStrategy.EvalKey:
+                return evalKey.get();
+            case KeyRewriteStrategy.SetKey:
+                return setKey.get();
+            default:
+                return firstKey.get();
+        }
+    }
 
 }

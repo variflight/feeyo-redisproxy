@@ -1,9 +1,9 @@
 package com.feeyo.redis.net.front.rewrite;
 
-import java.util.regex.Pattern;
-
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.redis.config.UserCfg;
+
+import java.util.regex.Pattern;
 
 /**
  * Key 前缀策略
@@ -22,6 +22,7 @@ public abstract class KeyRewriteStrategy {
 	public static final int NoKey = 7;
 	public static final int SecondKey = 8;
 	public static final int EvalKey = 9;
+    public static final int SetKey = 10;
 	
 	/**
 	 * 增加 key 前缀
