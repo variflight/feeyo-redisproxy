@@ -13,7 +13,7 @@ import com.feeyo.redis.net.front.rewrite.impl.MKey;
 import com.feeyo.redis.net.front.rewrite.impl.NoKey;
 import com.feeyo.redis.net.front.rewrite.impl.SecondKey;
 
-public class KeyRewriteStrategyFactory {
+public class KeyRewriteStrategySet {
 	
 	private static Map<String, Integer> keyStrategys = new HashMap<String, Integer>();
 	

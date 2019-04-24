@@ -12,7 +12,7 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.rewrite.KeyIllegalException;
 import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
-import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategyFactory;
+import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategySet;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.DefaultRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.SegmentRouteStrategy;
@@ -98,7 +98,7 @@ public class RouteService {
 			}
 						
 			// 前缀、默认值 改写策略 
-			KeyRewriteStrategy strategy = KeyRewriteStrategyFactory.getStrategy(cmd);
+			KeyRewriteStrategy strategy = KeyRewriteStrategySet.getStrategy(cmd);
 			strategy.rewriteKey(request, userCfg);
 		}
 		
