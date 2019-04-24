@@ -10,16 +10,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.*;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.File;
 import java.io.FileInputStream;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 
-public class ConfigLoader {
+public class ConfigLoader extends AbstractConfigLoader {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( ConfigLoader.class );
 	
@@ -237,73 +234,6 @@ public class ConfigLoader {
 			
 		}
 		return props;
-	}
-	
-
-	private static Document loadXmlDoc(String uri) throws Exception {
-		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-		DocumentBuilder db = dbf.newDocumentBuilder();
-		Document doc = db.parse(uri);
-		return doc;
-	}
-
-	private static String getAttribute(NamedNodeMap map, String attr, String defaultVal) {
-		return getValue(map.getNamedItem(attr), defaultVal);
-	}
-
-	private static float getFloatAttribute(NamedNodeMap map, String attr, float defaultVal) {
-		return getFloatValue(map.getNamedItem(attr), defaultVal);
-	}
-	
-	private static int getIntAttribute(NamedNodeMap map, String attr, int defaultVal) {
-		return getIntValue(map.getNamedItem(attr), defaultVal);
-	}
-	
-	static short getShortAttribute(NamedNodeMap map, String attr, short defaultVal) {
-		return getShortValue(map.getNamedItem(attr), defaultVal);
-	}
-	
-	private static boolean getBooleanAttribute(NamedNodeMap map, String attr, boolean defaultVal) {
-		return getBooleanValue(map.getNamedItem(attr), defaultVal);
-	}
-
-
-	private static String getValue(Node node, String defaultVal) {
-		return node == null ? defaultVal : node.getNodeValue();
-	}
-	
-	private static float getFloatValue(Node node, float defaultVal) {
-		return node == null ? defaultVal : Float.valueOf(node.getNodeValue());
-	}
-	
-	private static int getIntValue(Node node, int defaultVal) {
-		return node == null ? defaultVal : Integer.valueOf(node.getNodeValue());
-	}
-	
-	private static short getShortValue(Node node, short defaultVal) {
-		return node == null ? defaultVal : Short.valueOf(node.getNodeValue());
-	}
-	
-	private static boolean getBooleanValue(Node node, boolean defaultVal) {
-		return node == null ? defaultVal : Boolean.valueOf(node.getNodeValue());
-	}
-
-	private static List<Node> getChildNodes(Node theNode, String childElName) {
-		LinkedList<Node> nodes = new LinkedList<Node>();
-		NodeList childs = theNode.getChildNodes();
-		for (int j = 0; j < childs.getLength(); j++) {
-			if (childs.item(j).getNodeType() == Document.ELEMENT_NODE && childs.item(j).getNodeName().equals(childElName)) {
-				nodes.add(childs.item(j));
-			}
-		}
-		return nodes;
-	}
-	
-	public static String buidCfgAbsPathFor(String fileName) {
-		StringBuffer path = new StringBuffer();
-		path.append( System.getProperty("FEEYO_HOME") ).append( File.separator );
-		path.append( "conf" ).append( File.separator ).append( fileName );
-        return path.toString();
 	}
 
 }
