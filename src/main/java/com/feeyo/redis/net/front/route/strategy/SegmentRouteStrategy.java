@@ -1,8 +1,5 @@
 package com.feeyo.redis.net.front.route.strategy;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisRequestPolicy;
 import com.feeyo.net.codec.redis.RedisRequestType;
@@ -12,8 +9,11 @@ import com.feeyo.redis.net.front.handler.segment.Segment;
 import com.feeyo.redis.net.front.handler.segment.SegmentType;
 import com.feeyo.redis.net.front.route.InvalidRequestException;
 import com.feeyo.redis.net.front.route.PhysicalNodeUnavailableException;
-import com.feeyo.redis.net.front.route.RouteResult;
 import com.feeyo.redis.net.front.route.RouteNode;
+import com.feeyo.redis.net.front.route.RouteResult;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * pipeline && mget and mset and del and exists and default command route
@@ -24,7 +24,7 @@ import com.feeyo.redis.net.front.route.RouteNode;
 public class SegmentRouteStrategy extends AbstractRouteStrategy {
 	
 
-	private RedisRequestType rewrite(RedisRequest request, List<RedisRequest> newRequests, List<Segment> segments)
+	private RedisRequestType rewrite(RedisRequest request, List<RedisRequest> newRequests, List<Segment> segments, byte[] expireTime )
 			throws InvalidRequestException {
 
 		byte[][] args = request.getArgs();
@@ -41,7 +41,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			int[] indexs = new int[(args.length - 1) / 2];
 			for (int j = 1; j < args.length; j += 2) {
 				RedisRequest newRequest = new RedisRequest();
-				newRequest.setArgs(new byte[][] { "SET".getBytes(), args[j], args[j + 1] });
+                newRequest.setArgs(new byte[][]{"SET".getBytes(), args[j], args[j + 1], "EX".getBytes(), expireTime});
 				newRequest.setPolicy( request.getPolicy() );
 				newRequests.add(newRequest);
 	
@@ -130,9 +130,8 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			// 
 			if ( CommandParse.MGETSET_CMD == policy.getHandleType()
 					|| (CommandParse.DEL_CMD == policy.getHandleType()  && request.getArgs().length > 2 )
-					|| (CommandParse.EXISTS_CMD == policy.getHandleType() && request.getArgs().length > 2) ) {
-				
-				requestType = rewrite(request, newRequests, segments);
+					|| (CommandParse.EXISTS_CMD == policy.getHandleType() && request.getArgs().length > 2)) {
+                requestType = rewrite(request, newRequests, segments, userCfg.getExpireTime());
 
 			} else {
 				newRequests.add(request);

@@ -6,11 +6,11 @@ import com.feeyo.redis.net.front.rewrite.KeyIllegalException;
 import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
 
 /**
- * 变换第一个Key
- * @author zhuam
+ * 针对Set指令
+ * @author dsliu
  *
  */
-public class FirstKey extends KeyRewriteStrategy {
+public class SetKey extends KeyRewriteStrategy {
 
 	@Override
 	public void rewriteKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
@@ -21,8 +21,18 @@ public class FirstKey extends KeyRewriteStrategy {
 		byte[][] args = request.getArgs();
 		
 		checkIllegalCharacter(userCfg.getKeyRule(), args[1]);
-		//修改前缀
-		args[1] = concat(userCfg.getPrefix(), args[1]);
+        //修改前缀
+        args[1] = concat(userCfg.getPrefix(), args[1]);
+
+        //针对没有过期时间的添加 默认过期时间
+        byte[] exBytes = "EX".getBytes();
+        if (numArgs == 3) {
+            byte[][] newArgs = new byte[][]{args[0], args[1], args[2], exBytes, userCfg.getExpireTime()};
+            request.setArgs(newArgs);
+        } else if (numArgs == 4) {
+            byte[][] newArgs = new byte[][]{args[0], args[1], args[2], exBytes, userCfg.getExpireTime(), args[3]};
+            request.setArgs(newArgs);
+        }
 
 	}
 

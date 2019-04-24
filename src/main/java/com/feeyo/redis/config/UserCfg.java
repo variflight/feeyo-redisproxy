@@ -16,7 +16,7 @@ public class UserCfg {
 	private final boolean isAdmin;
 	private final boolean isReadonly;
 	private final Pattern keyRule;
-	
+    private final byte[] expireTime;//过期时间 单位s 默认 12小时=43200s
 	
 	
 	// 通过管理指令 use pool 改变
@@ -26,7 +26,7 @@ public class UserCfg {
 
 	
 	public UserCfg(int poolId, int poolType, String password,  String prefix, 
-			int selectDb, int maxCon, boolean isAdmin, boolean isReadonly, Pattern keyRule) {
+			int selectDb, int maxCon, boolean isAdmin, boolean isReadonly, Pattern keyRule, int expireTime) {
 		this.poolId = poolId;
 		this.poolType = poolType;
 		this.password = password;		
@@ -35,10 +35,11 @@ public class UserCfg {
 		this.maxCon = maxCon;
 		this.isAdmin = isAdmin;
 		this.isReadonly = isReadonly;
-		
+
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
 		this.keyRule = keyRule;
+        this.expireTime = String.valueOf(expireTime).getBytes();
 	}
 	
 
@@ -77,7 +78,11 @@ public class UserCfg {
 		return isReadonly;
 	}
 
-	public void setUsePool(int poolId, int poolType) {
+    public byte[] getExpireTime() {
+        return expireTime;
+    }
+
+    public void setUsePool(int poolId, int poolType) {
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
 	}
