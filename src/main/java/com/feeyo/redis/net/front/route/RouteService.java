@@ -10,9 +10,9 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.backend.pool.PoolType;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.CommandParse;
-import com.feeyo.redis.net.front.prefix.KeyIllegalException;
-import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
-import com.feeyo.redis.net.front.prefix.KeyPrefixStrategyFactory;
+import com.feeyo.redis.net.front.rewrite.KeyIllegalException;
+import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
+import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategyFactory;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.DefaultRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.SegmentRouteStrategy;
@@ -97,8 +97,8 @@ public class RouteService {
 				isNeedSegment = true;
 			}
 						
-			// 前缀构建 
-			KeyPrefixStrategy strategy = KeyPrefixStrategyFactory.getStrategy(cmd);
+			// 前缀、默认值 改写策略 
+			KeyRewriteStrategy strategy = KeyRewriteStrategyFactory.getStrategy(cmd);
 			strategy.rebuildKey(request, userCfg);
 		}
 		

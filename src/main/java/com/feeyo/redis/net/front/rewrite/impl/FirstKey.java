@@ -1,16 +1,16 @@
-package com.feeyo.redis.net.front.prefix.impl;
+package com.feeyo.redis.net.front.rewrite.impl;
 
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.net.front.prefix.KeyIllegalException;
-import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
+import com.feeyo.redis.net.front.rewrite.KeyIllegalException;
+import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
 
 /**
  * 变换第一个Key
  * @author zhuam
  *
  */
-public class FirstKey extends KeyPrefixStrategy {
+public class FirstKey extends KeyRewriteStrategy {
 
 	@Override
 	public void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {

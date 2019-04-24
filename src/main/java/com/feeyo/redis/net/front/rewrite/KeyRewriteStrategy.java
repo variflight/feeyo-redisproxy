@@ -1,4 +1,4 @@
-package com.feeyo.redis.net.front.prefix;
+package com.feeyo.redis.net.front.rewrite;
 
 import java.util.regex.Pattern;
 
@@ -11,7 +11,7 @@ import com.feeyo.redis.config.UserCfg;
  * @author zhuam
  *
  */
-public abstract class KeyPrefixStrategy {
+public abstract class KeyRewriteStrategy {
 	
 	public static final int AllKey = 1;
 	public static final int ExceptFirstKey = 2;

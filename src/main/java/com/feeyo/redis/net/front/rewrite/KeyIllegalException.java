@@ -1,4 +1,4 @@
-package com.feeyo.redis.net.front.prefix;
+package com.feeyo.redis.net.front.rewrite;
 
 /**
  * 所有请求都不需要透传

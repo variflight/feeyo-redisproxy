@@ -1,22 +1,24 @@
-package com.feeyo.redis.net.front.prefix.impl;
+package com.feeyo.redis.net.front.rewrite.impl;
 
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.redis.config.UserCfg;
-import com.feeyo.redis.net.front.prefix.KeyIllegalException;
-import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
+import com.feeyo.redis.net.front.rewrite.KeyIllegalException;
+import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
 
 /**
- * 除了前两个
+ * 
+ * 所有的KEY 进行变换
  * 
  * @author zhuam
  *
  */
-public class ExceptFirstKey extends KeyPrefixStrategy {
+public class AllKey extends KeyRewriteStrategy {
 
 	@Override
 	public void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		byte[][] args = request.getArgs();
-		for (int i = 2; i < args.length; i++) {
+		for (int i = 1; i < args.length; i++) {	
+			//
 			checkIllegalCharacter(userCfg.getKeyRule(), args[i]);
 			//
 			args[i] = concat(userCfg.getPrefix(), args[i]);
@@ -25,9 +27,8 @@ public class ExceptFirstKey extends KeyPrefixStrategy {
 
 	@Override
 	public byte[] getKey(RedisRequest request) {
-		if ( request.getNumArgs() >  2 )
-			return request.getArgs()[2];
+		if ( request.getNumArgs() >  1 )
+			return request.getArgs()[1];
 		return null;
 	}
-
 }
