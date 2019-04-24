@@ -20,7 +20,7 @@ public class EvalKey extends KeyPrefixStrategy {
 		
 		for (int i = 3; i < keyLength + 3; i++) {
 			//
-			illegalCharacterFilter(userCfg, args[i]);
+			checkIllegalCharacter(userCfg, args[i]);
 			//
 			args[i] = concat(userCfg, args[i]);
 		}

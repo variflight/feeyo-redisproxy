@@ -19,7 +19,7 @@ public class AllKey extends KeyPrefixStrategy {
 		byte[][] args = request.getArgs();
 		for (int i = 1; i < args.length; i++) {	
 			//
-			illegalCharacterFilter(userCfg, args[i]);
+			checkIllegalCharacter(userCfg, args[i]);
 			//
 			args[i] = concat(userCfg, args[i]);
 		}

@@ -36,7 +36,9 @@ public abstract class KeyPrefixStrategy {
 		return result;
 	}
 	
-	protected void illegalCharacterFilter(UserCfg userCfg, byte[] key) throws KeyIllegalException {
+	protected void checkIllegalCharacter(UserCfg userCfg, byte[] key) 
+			throws KeyIllegalException {
+		//
 		String k = new String(key);
 		if (userCfg.getKeyRule() != null && !userCfg.getKeyRule().matcher(k).find()) {
 			throw new KeyIllegalException(k + " has illegal character");

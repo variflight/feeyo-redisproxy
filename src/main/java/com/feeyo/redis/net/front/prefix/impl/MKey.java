@@ -17,7 +17,7 @@ public class MKey extends KeyPrefixStrategy {
 	public void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		byte[][] args = request.getArgs();
 		for (int i = 1; i < args.length; i = i + 2) {
-			illegalCharacterFilter(userCfg, args[i]);
+			checkIllegalCharacter(userCfg, args[i]);
 			//
 			args[i] = concat(userCfg, args[i]);
 		}

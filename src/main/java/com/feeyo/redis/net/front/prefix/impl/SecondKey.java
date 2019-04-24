@@ -20,7 +20,7 @@ public class SecondKey extends KeyPrefixStrategy {
 			return;
 		}
 		//
-		illegalCharacterFilter(userCfg, args[2]);
+		checkIllegalCharacter(userCfg, args[2]);
 		//
 		args[2] = concat(userCfg, args[2]);		
 	}
