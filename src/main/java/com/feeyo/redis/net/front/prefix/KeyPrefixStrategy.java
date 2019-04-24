@@ -1,5 +1,7 @@
 package com.feeyo.redis.net.front.prefix;
 
+import java.util.regex.Pattern;
+
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.redis.config.UserCfg;
 
@@ -21,9 +23,8 @@ public abstract class KeyPrefixStrategy {
 	public static final int SecondKey = 8;
 	public static final int EvalKey = 9;
 	
-	protected byte[] concat(UserCfg userCfg, byte[] key) throws KeyIllegalException {
+	protected byte[] concat(byte[] prefix, byte[] key) throws KeyIllegalException {
 		//
-		byte[] prefix = userCfg.getPrefix();
 		if (prefix == null) {
 			return key;
 		}
@@ -32,16 +33,17 @@ public abstract class KeyPrefixStrategy {
 		
 		System.arraycopy(prefix, 0, result, 0, prefix.length);
 		System.arraycopy(key, 0, result, prefix.length, key.length);
-		
 		return result;
 	}
 	
-	//
-	protected void checkIllegalCharacter(UserCfg userCfg, byte[] key) 
+	/**
+	 * 无效字符集检测，发现后抛出异常
+	 */
+	protected void checkIllegalCharacter(Pattern keyRule, byte[] key) 
 			throws KeyIllegalException {
 		//
 		String k = new String(key);
-		if (userCfg.getKeyRule() != null && !userCfg.getKeyRule().matcher(k).find()) {
+		if ( keyRule != null && !keyRule.matcher(k).find()) {
 			throw new KeyIllegalException(k + " has illegal character");
 		}
 	}
@@ -49,7 +51,8 @@ public abstract class KeyPrefixStrategy {
 	/**
 	 * 重新构建 key
 	 */
-	public abstract  void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException;
+	public abstract  void rebuildKey(RedisRequest request, UserCfg userCfg) 
+			throws KeyIllegalException;
 	
 	/**
 	 * 获取新的路由 key

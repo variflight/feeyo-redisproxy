@@ -20,9 +20,9 @@ public class EvalKey extends KeyPrefixStrategy {
 		
 		for (int i = 3; i < keyLength + 3; i++) {
 			//
-			checkIllegalCharacter(userCfg, args[i]);
+			checkIllegalCharacter(userCfg.getKeyRule(), args[i]);
 			//
-			args[i] = concat(userCfg, args[i]);
+			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}
 		
 	}

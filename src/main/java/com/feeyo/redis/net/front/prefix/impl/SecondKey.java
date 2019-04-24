@@ -20,9 +20,9 @@ public class SecondKey extends KeyPrefixStrategy {
 			return;
 		}
 		//
-		checkIllegalCharacter(userCfg, args[2]);
+		checkIllegalCharacter(userCfg.getKeyRule(), args[2]);
 		//
-		args[2] = concat(userCfg, args[2]);		
+		args[2] = concat(userCfg.getPrefix(), args[2]);		
 	}
 
 	@Override

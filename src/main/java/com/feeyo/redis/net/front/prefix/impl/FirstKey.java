@@ -19,9 +19,9 @@ public class FirstKey extends KeyPrefixStrategy {
 		}		
 		byte[][] args = request.getArgs();
 		
-		checkIllegalCharacter(userCfg, args[1]);
+		checkIllegalCharacter(userCfg.getKeyRule(), args[1]);
 		//
-		args[1] = concat(userCfg, args[1]);		
+		args[1] = concat(userCfg.getPrefix(), args[1]);		
 	}
 
 	@Override

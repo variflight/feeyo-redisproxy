@@ -17,9 +17,9 @@ public class ExceptFirstKey extends KeyPrefixStrategy {
 	public void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		byte[][] args = request.getArgs();
 		for (int i = 2; i < args.length; i++) {
-			checkIllegalCharacter(userCfg, args[i]);
+			checkIllegalCharacter(userCfg.getKeyRule(), args[i]);
 			//
-			args[i] = concat(userCfg, args[i]);
+			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}
 	}
 
