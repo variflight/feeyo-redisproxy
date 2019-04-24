@@ -14,7 +14,7 @@ import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
 public class MKey extends KeyRewriteStrategy {
 
 	@Override
-	public void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
+	public void rewriteKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		byte[][] args = request.getArgs();
 		for (int i = 1; i < args.length; i = i + 2) {
 			checkIllegalCharacter(userCfg.getKeyRule(), args[i]);

@@ -99,7 +99,7 @@ public class RouteService {
 						
 			// 前缀、默认值 改写策略 
 			KeyRewriteStrategy strategy = KeyRewriteStrategyFactory.getStrategy(cmd);
-			strategy.rebuildKey(request, userCfg);
+			strategy.rewriteKey(request, userCfg);
 		}
 		
 		// 全部自动回复

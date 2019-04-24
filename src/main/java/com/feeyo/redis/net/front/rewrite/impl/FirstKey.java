@@ -13,7 +13,7 @@ import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
 public class FirstKey extends KeyRewriteStrategy {
 
 	@Override
-	public void rebuildKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
+	public void rewriteKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		if ( request.getNumArgs() < 2) {
 			return;
 		}		

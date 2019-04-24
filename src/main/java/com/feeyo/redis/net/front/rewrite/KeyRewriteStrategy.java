@@ -49,9 +49,9 @@ public abstract class KeyRewriteStrategy {
 	}
 	
 	/**
-	 * 重新构建 key
+	 * 改写 key
 	 */
-	public abstract  void rebuildKey(RedisRequest request, UserCfg userCfg) 
+	public abstract void rewriteKey(RedisRequest request, UserCfg userCfg) 
 			throws KeyIllegalException;
 	
 	/**
