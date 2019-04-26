@@ -78,6 +78,14 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 				byte[] offsetLength = ProtoUtils.convertIntToByteArray(offsetArr.length);
 				byte[] valueLenght = ProtoUtils.convertIntToByteArray(value.length);
 				
+				/*
+				   *<参数数量> CRLF
+					$<参数 1 的字节数量> CRLF
+					<参数 1 的数据> CRLF
+					...
+					$<参数 N 的字节数量> CRLF
+					<参数 N 的数据> CRLF
+				 */
 				// 计算 bufferSize $1\r\n1\r\n$4\r\n2563\r\n$4\r\ntest\r\n
 				int bufferSize = 1 + size.length + 2 
 						+ 1 + partitonLength.length + 2 + partitonArr.length + 2

@@ -81,7 +81,7 @@ public class KafkaPool extends AbstractPool {
 
 			// 防止配置文件未更新的情况
 			availableHostList.add(node.host() + ":" + node.port());
-			backupHostList.add(node.host() + ":" + node.host());
+			backupHostList.add(node.host() + ":" + node.port());
 		}
 		
 		// 加载 ApiVersion

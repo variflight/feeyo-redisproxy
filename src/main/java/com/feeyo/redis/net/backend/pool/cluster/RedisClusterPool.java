@@ -1,14 +1,5 @@
 package com.feeyo.redis.net.backend.pool.cluster;
 
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.PoolCfg;
 import com.feeyo.redis.net.backend.BackendConnection;
@@ -16,10 +7,13 @@ import com.feeyo.redis.net.backend.RedisBackendConnectionFactory;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.ConHeartBeatHandler;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
-import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.JedisConnection;
+import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
 import com.google.common.collect.Sets;
+
+import java.net.InetAddress;
+import java.util.*;
 
 /**
  * 新的实现，去除了对 slave 关系的维护
@@ -122,7 +116,11 @@ public class RedisClusterPool extends AbstractPool {
 					}
 					
 					// 端口
-					node.setPort(Integer.parseInt(fields[1].split(":")[1]));
+					String port = fields[1].split(":")[1];
+					if (port.contains("@")) {
+						port =  port.split("@")[0];
+					}
+					node.setPort(Integer.parseInt(port));
 					
 					// 标示、可用状态
 					node.setFlagInfo( fields[2] );					

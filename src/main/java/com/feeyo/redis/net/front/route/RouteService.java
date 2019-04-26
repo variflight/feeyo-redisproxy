@@ -10,8 +10,9 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.backend.pool.PoolType;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.CommandParse;
-import com.feeyo.redis.net.front.prefix.KeyPrefixStrategy;
-import com.feeyo.redis.net.front.prefix.KeyPrefixStrategyFactory;
+import com.feeyo.redis.net.front.rewrite.KeyIllegalException;
+import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
+import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategySet;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.DefaultRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.SegmentRouteStrategy;
@@ -49,8 +50,9 @@ public class RouteService {
 	}
 	
 	// 路由计算, 必须认证后
-	public static RouteResult route(List<RedisRequest> requests, RedisFrontConnection frontCon) 
-			throws InvalidRequestException, FullRequestNoThroughtException, PhysicalNodeUnavailableException {
+	public static RouteResult route(List<RedisRequest> requests, RedisFrontConnection frontCon)
+			throws InvalidRequestException, FullRequestNoThroughtException, PhysicalNodeUnavailableException,
+			KeyIllegalException {
 		
 		UserCfg userCfg = frontCon.getUserCfg();
 		
@@ -95,12 +97,9 @@ public class RouteService {
 				isNeedSegment = true;
 			}
 						
-			// 前缀构建 
-			byte[] prefix = userCfg.getPrefix();
-			if (prefix != null) {
-				KeyPrefixStrategy strategy = KeyPrefixStrategyFactory.getStrategy(cmd);
-				strategy.rebuildKey(request, prefix);
-			}
+			// 前缀、默认值 改写策略 
+			KeyRewriteStrategy strategy = KeyRewriteStrategySet.getStrategy(cmd);
+			strategy.rewriteKey(request, userCfg);
 		}
 		
 		// 全部自动回复

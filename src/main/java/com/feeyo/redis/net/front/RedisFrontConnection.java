@@ -2,10 +2,7 @@ package com.feeyo.redis.net.front;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +23,7 @@ public class RedisFrontConnection extends FrontConnection {
 	private static final long AUTH_TIMEOUT = 15 * 1000L;
 	
 	// 用户连接数
-	private static Map<String, AtomicInteger> conNums = new ConcurrentHashMap<String, AtomicInteger>();
+//	private static Map<String, AtomicInteger> conNums = new ConcurrentHashMap<String, AtomicInteger>();
 	
 	// 用户配置
 	private UserCfg userCfg;
@@ -77,39 +74,39 @@ public class RedisFrontConnection extends FrontConnection {
 		
 		// 最大连接数检查
 		//
-		AtomicInteger num1 = conNums.get( newPassword );
-		if( num1 != null ) {
-			//
-			int maxConn = this.userCfg.getMaxCon();
-			if (  num1.get() > maxConn ) {
-				
-				StringBuffer reasonSb = new StringBuffer(90);
-				reasonSb.append("-ERR");
-				reasonSb.append(" Too many connections [").append( maxConn ).append("]");
-				reasonSb.append(", please try again later.");
-				reasonSb.append("\r\n");
-				
-				//
-				this.write( reasonSb.toString().getBytes() );
-				this.close("maxConn limit");
-				return;
-			}
-			
-			num1.incrementAndGet();
-			
-		} else {
-			conNums.put(newPassword, new AtomicInteger(1));
-		}
-		
-		
-		// 去重
-		//
-		if ( isAuthenticated ) {
-			AtomicInteger num2 = conNums.get( password );
-			if ( num2 != null && !this.password.equals( newPassword ) ) {
-				num2.decrementAndGet();
-			}
-		}
+//		AtomicInteger num1 = conNums.get( newPassword );
+//		if( num1 != null ) {
+//			//
+//			int maxConn = this.userCfg.getMaxCon();
+//			if (  num1.get() > maxConn ) {
+//				
+//				StringBuffer reasonSb = new StringBuffer(90);
+//				reasonSb.append("-ERR");
+//				reasonSb.append(" Too many connections [").append( maxConn ).append("]");
+//				reasonSb.append(", please try again later.");
+//				reasonSb.append("\r\n");
+//				
+//				//
+//				this.write( reasonSb.toString().getBytes() );
+//				this.close("maxConn limit");
+//				return;
+//			}
+//			
+//			num1.incrementAndGet();
+//			
+//		} else {
+//			conNums.put(newPassword, new AtomicInteger(1));
+//		}
+//		
+//		
+//		// 去重
+//		//
+//		if ( isAuthenticated ) {
+//			AtomicInteger num2 = conNums.get( password );
+//			if ( num2 != null && !this.password.equals( newPassword ) ) {
+//				num2.decrementAndGet();
+//			}
+//		}
 		
 		//
 		this.password = newPassword;
@@ -144,21 +141,21 @@ public class RedisFrontConnection extends FrontConnection {
 		this.releaseLock();
 		
 		// 已认证
-		synchronized (this) {
-			
-			if ( isAuthenticated ) {
-				
-				isAuthenticated = false;
-				
-				AtomicInteger num = conNums.get( password );
-				if ( num != null ) {
-					int v = num.decrementAndGet();
-					if ( v < 0 ) {
-						LOGGER.warn("Negative value of the number of user connections, {}  v={}", password, v );
-					}
-				}
-			}
-		}
+//		synchronized (this) {
+//			
+//			if ( isAuthenticated ) {
+//				
+//				isAuthenticated = false;
+//				
+//				AtomicInteger num = conNums.get( password );
+//				if ( num != null ) {
+//					int v = num.decrementAndGet();
+//					if ( v < 0 ) {
+//						LOGGER.warn("Negative value of the number of user connections, {}  v={}", password, v );
+//					}
+//				}
+//			}
+//		}
 	}
 	
 	public void releaseLock() {
