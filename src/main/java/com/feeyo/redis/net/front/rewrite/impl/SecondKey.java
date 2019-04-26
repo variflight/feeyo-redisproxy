@@ -20,7 +20,7 @@ public class SecondKey extends KeyRewriteStrategy {
 			return;
 		}
 		//
-		checkIllegalCharacter(userCfg.getKeyRule(), args[2]);
+		checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[2]);
 		//
 		args[2] = concat(userCfg.getPrefix(), args[2]);		
 	}

@@ -19,7 +19,7 @@ public class AllKey extends KeyRewriteStrategy {
 		byte[][] args = request.getArgs();
 		for (int i = 1; i < args.length; i++) {	
 			//
-			checkIllegalCharacter(userCfg.getKeyRule(), args[i]);
+			checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[i]);
 			//
 			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}

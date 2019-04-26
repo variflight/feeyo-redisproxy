@@ -20,7 +20,7 @@ public class EvalKey extends KeyRewriteStrategy {
 		
 		for (int i = 3; i < keyLength + 3; i++) {
 			//
-			checkIllegalCharacter(userCfg.getKeyRule(), args[i]);
+			checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[i]);
 			//
 			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}

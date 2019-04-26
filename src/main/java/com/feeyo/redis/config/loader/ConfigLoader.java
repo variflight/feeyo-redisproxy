@@ -121,21 +121,21 @@ public class ConfigLoader extends AbstractConfigLoader {
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 800);
 				boolean isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0)  == 0 ? false : true;				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
-				String rule = getAttribute(nameNodeMap, "keyRule", null);
+				String keyRegularExprStr = getAttribute(nameNodeMap, "keyRegularExpr", null);
                 int expireTime = getIntAttribute(nameNodeMap, "expireTime", 12 * 60 * 60);  // 12H
                 //
-				Pattern keyRule = null;
-				if (rule != null  && !rule.isEmpty()) {
-					keyRule = Pattern.compile(rule);
-				} else {
-					keyRule = Pattern.compile("^[A-Za-z0-9-_: \\.]*$");
-				}
+				Pattern keyRegularExpr = null;
+				if (keyRegularExprStr != null  && !keyRegularExprStr.isEmpty()) 
+					keyRegularExpr = Pattern.compile(keyRegularExprStr);
+//				else 
+//					keyRegularExpr = Pattern.compile("^[A-Za-z0-9-_: \\.]*$");
+				
 				
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
 				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, 
-						maxCon, isAdmin, isReadonly, keyRule, expireTime);
+						maxCon, isAdmin, isReadonly, keyRegularExpr, expireTime);
 				
 				// 非kafka pool的用户不能充当生产者 和 消费者
 				if (poolType != 3) {

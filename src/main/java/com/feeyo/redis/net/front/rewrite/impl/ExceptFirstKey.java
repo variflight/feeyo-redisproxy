@@ -17,7 +17,7 @@ public class ExceptFirstKey extends KeyRewriteStrategy {
 	public void rewriteKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		byte[][] args = request.getArgs();
 		for (int i = 2; i < args.length; i++) {
-			checkIllegalCharacter(userCfg.getKeyRule(), args[i]);
+			checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[i]);
 			//
 			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}
