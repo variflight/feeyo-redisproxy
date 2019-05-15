@@ -30,7 +30,7 @@ public class BypassService {
 	private static BypassService _INSTANCE = null;
 	
 	//
-	private volatile ThreadPoolExecutor threadPoolExecutor;
+	private volatile BypassThreadExecutor threadPoolExecutor;
 	
 	private int requireSize;
 	private int corePoolSize;
@@ -130,9 +130,9 @@ public class BypassService {
 			// front rejected 
 			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
 			
-			LOGGER.warn("Bypass traffic congestion, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
+			LOGGER.warn("Bypass traffic congestion, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, front={}/{}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
-							threadPoolExecutor.getMaximumPoolSize(),threadPoolExecutor.getTaskCount()} );						
+							threadPoolExecutor.getMaxSubmittedTaskCount(),threadPoolExecutor.getSubmittedTasksCount(), frontConn.getHost(), frontConn.getPassword()} );						
 		}	
 	}
 	
@@ -148,7 +148,7 @@ public class BypassService {
 				ThreadPoolExecutor oldThreadPoolExecutor = this.threadPoolExecutor;
 				
 				// create new threadPool
-				ThreadPoolExecutor newThreadPoolExecutor = new BypassThreadExecutor(
+				BypassThreadExecutor newThreadPoolExecutor = new BypassThreadExecutor(
 						corePoolSize, maxPoolSize, queueSize, new ThreadFactoryImpl("BypassService"));
 				newThreadPoolExecutor.prestartAllCoreThreads();
 								
