@@ -20,7 +20,7 @@ public class SetKey extends KeyRewriteStrategy {
         }
 		byte[][] args = request.getArgs();
 		
-		checkIllegalCharacter(userCfg.getKeyRule(), args[1]);
+		checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[1]);
         //修改前缀
         args[1] = concat(userCfg.getPrefix(), args[1]);
 
