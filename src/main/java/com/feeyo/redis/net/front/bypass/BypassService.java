@@ -1,24 +1,21 @@
 package com.feeyo.redis.net.front.bypass;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisResponse;
-
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.loader.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-
 import com.feeyo.util.ThreadFactoryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /*
  * 旁路服务
@@ -129,11 +126,11 @@ public class BypassService {
 			
 			// front rejected 
 			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
-			
-			LOGGER.warn("Bypass traffic congestion, active={} poolSize={} corePoolSize={} maxPoolSize={} taskCount={}",
-					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
-							threadPoolExecutor.getMaximumPoolSize(),threadPoolExecutor.getTaskCount()} );						
-		}	
+
+            LOGGER.warn("Bypass traffic congestion, active={} poolSize={} corePoolSize={} maxPoolSize={} largestPoolSize={} taskCount={}",
+                    new Object[]{threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(),
+                            threadPoolExecutor.getMaximumPoolSize(), threadPoolExecutor.getLargestPoolSize(), threadPoolExecutor.getTaskCount()});
+        }
 	}
 	
 	public byte[] reload() {
