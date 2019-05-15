@@ -33,8 +33,8 @@ public class BigLengthCollector implements StatCollector {
 	
 	private static long lastCheckTime = TimeUtil.currentTimeMillis();
 	private static AtomicBoolean isChecking = new AtomicBoolean(false);
-	
-	
+
+    private static ConcurrentHashMap<String, Long> errorMap = new ConcurrentHashMap<String, Long>();
 
 	/**
 	 * 检查 redis key
@@ -138,7 +138,12 @@ public class BigLengthCollector implements StatCollector {
 						
 					} catch (JedisDataException e1) {
 					} catch (JedisConnectionException e2) {
-                        LOGGER.error("Failed to connecting {}:{}", physicalNode.getHost(), physicalNode.getPort());
+                        Long lastTime = errorMap.get(physicalNode.getHost());
+                        if (lastTime == null || lastCheckTime - lastTime > 30000) {
+                            LOGGER.error("Failed to connecting {}:{}", physicalNode.getHost(), physicalNode.getPort());
+                            errorMap.put(physicalNode.getHost(), lastCheckTime);
+                        }
+
 					} finally {
 						if ( conn != null ) {
 							conn.disconnect();
