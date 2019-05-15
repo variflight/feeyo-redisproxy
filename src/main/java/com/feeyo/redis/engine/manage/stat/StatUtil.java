@@ -167,10 +167,10 @@ public class StatUtil {
 							body.append("\r\n");
 							body.append("\r\n");
 							
-							String[] attachments = null;
+							//String[] attachments = null;
 							
-							Properties prop = RedisEngineCtx.INSTANCE().getMailProperties();
-							MailUtil.send(prop, subject.toString(), body.toString(), attachments);
+							//Properties prop = RedisEngineCtx.INSTANCE().getMailProperties();
+							//MailUtil.send(prop, subject.toString(), body.toString(), attachments);
 							
 							
 						} catch(Throwable t) {
