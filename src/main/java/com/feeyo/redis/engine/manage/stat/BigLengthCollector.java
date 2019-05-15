@@ -1,12 +1,5 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
@@ -16,6 +9,12 @@ import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
 import com.feeyo.util.jedis.exception.JedisConnectionException;
 import com.feeyo.util.jedis.exception.JedisDataException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class BigLengthCollector implements StatCollector {
 	
@@ -139,7 +138,7 @@ public class BigLengthCollector implements StatCollector {
 						
 					} catch (JedisDataException e1) {
 					} catch (JedisConnectionException e2) {
-						LOGGER.error("", e2);	
+                        LOGGER.error("Failed to connecting {}:{}", physicalNode.getHost(), physicalNode.getPort());
 					} finally {
 						if ( conn != null ) {
 							conn.disconnect();
