@@ -139,7 +139,7 @@ public class BigLengthCollector implements StatCollector {
 					} catch (JedisDataException e1) {
 					} catch (JedisConnectionException e2) {
                         Long lastTime = errorMap.get(physicalNode.getHost());
-                        if (lastTime == null || lastCheckTime - lastTime > 30000) {
+                        if (lastTime == null || ((lastCheckTime - lastTime) > 30000)) {
                             LOGGER.error("Failed to connecting {}:{}", physicalNode.getHost(), physicalNode.getPort());
                             errorMap.put(physicalNode.getHost(), lastCheckTime);
                         }
