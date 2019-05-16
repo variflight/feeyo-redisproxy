@@ -7,10 +7,13 @@ import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
-
+import com.feeyo.util.jedis.exception.JedisConnectionException;
+import com.feeyo.util.jedis.exception.JedisDataException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,7 +36,7 @@ public class BigLengthCollector implements StatCollector {
 	private static long lastCheckTime = TimeUtil.currentTimeMillis();
 	private static AtomicBoolean isChecking = new AtomicBoolean(false);
 
-    private static ConcurrentHashMap<String, Long> errorMap = new ConcurrentHashMap<String, Long>();
+
 
 	/**
 	 * 检查 redis key
@@ -47,8 +50,8 @@ public class BigLengthCollector implements StatCollector {
 		try {
 
 			lastCheckTime = TimeUtil.currentTimeMillis();
-			
-			
+
+            Set<String> connectionExceptionIps = new HashSet<>();
 			for (java.util.Map.Entry<String, String[]>  listKey : keyMap.entrySet()) {
 				
 				String key = listKey.getKey();
@@ -66,7 +69,12 @@ public class BigLengthCollector implements StatCollector {
 					} else {
 						physicalNode = pool.getPhysicalNode();
 					}
-					
+
+                    //连接异常IP 其他需要连接到这个IP的 本周期内不连接
+                    if (connectionExceptionIps.contains(physicalNode.getHost() + ":" + physicalNode.getPort())) {
+                        continue;
+                    }
+
 					JedisConnection conn = null;		
 					try {
 						
@@ -135,15 +143,12 @@ public class BigLengthCollector implements StatCollector {
 						}
 						
 						
-					} catch (Exception e2) {
-						//
-                        Long lastTime = errorMap.get(physicalNode.getHost());
-                        if (lastTime == null || ((lastCheckTime - lastTime) > 30000)) {
-                            LOGGER.error("Failed to connecting {}:{}", physicalNode.getHost(), physicalNode.getPort());
-                            errorMap.put(physicalNode.getHost(), lastCheckTime);
-                        }
-
-					} finally {
+					} catch (JedisDataException e1) {
+                        LOGGER.warn(" big length check data exception key {} user {} error {} ", new Object[]{key, password, e1.getMessage()});
+                    } catch (JedisConnectionException e2) {
+                        connectionExceptionIps.add(physicalNode.getHost() + ":" + physicalNode.getPort());
+                        LOGGER.error("", e2);
+                    }finally {
 						if ( conn != null ) {
 							conn.disconnect();
 						}
