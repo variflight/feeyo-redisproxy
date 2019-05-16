@@ -19,8 +19,8 @@ public class EvalKey extends KeyRewriteStrategy {
 	
 	/**
 	 * fix
-	 * request err: [
-		inline=false
+	 * cmd = HGET
+	 * params= [
 		arg=EVAL
 		arg=local hexists = redis.call("hexists", KEYS[1], KEYS[2])
 		if hexists == 0 then
