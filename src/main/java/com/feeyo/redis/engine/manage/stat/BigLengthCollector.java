@@ -7,8 +7,6 @@ import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
-import com.feeyo.util.jedis.exception.JedisConnectionException;
-import com.feeyo.util.jedis.exception.JedisDataException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,15 +68,20 @@ public class BigLengthCollector implements StatCollector {
 						physicalNode = pool.getPhysicalNode();
 					}
 
-                    //连接异常IP 其他需要连接到这个IP的 本周期内不连接
-                    if (connectionExceptionIps.contains(physicalNode.getHost() + ":" + physicalNode.getPort())) {
+                    if (physicalNode == null) {
                         continue;
                     }
 
-					JedisConnection conn = null;		
-					try {
-						
-						// 前置设置 readonly
+                    String ip = physicalNode.getHost() + ":" + physicalNode.getPort();
+                    //连接异常IP 其他需要连接到这个IP的 本周期内不连接
+                    if (connectionExceptionIps.contains(ip)) {
+                        continue;
+                    }
+
+                        JedisConnection conn = null;
+                        try {
+
+                            // 前置设置 readonly
 						conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 1000, 0);
 						
 						if ( cmd.equals("HMSET") 	
@@ -141,14 +144,12 @@ public class BigLengthCollector implements StatCollector {
 							}
 							bigLengthMap.remove( min.key );
 						}
-						
-						
-					} catch (JedisDataException e1) {
-                        LOGGER.warn(" big length check data exception key {} user {} error {} ", new Object[]{key, password, e1.getMessage()});
-                    } catch (JedisConnectionException e2) {
-                        connectionExceptionIps.add(physicalNode.getHost() + ":" + physicalNode.getPort());
-                        LOGGER.error("", e2);
-                    }finally {
+
+
+                        } catch (Exception e2) {
+                            connectionExceptionIps.add(ip);
+                            LOGGER.error("", e2);
+                        }finally {
 						if ( conn != null ) {
 							conn.disconnect();
 						}
@@ -229,7 +230,7 @@ public class BigLengthCollector implements StatCollector {
 	
 	@Override
 	public void onSchedulePeroid(int peroid) {
-		if (TimeUtil.currentTimeMillis() - lastCheckTime >= peroid * 1000 ) {
+		if (TimeUtil.currentTimeMillis() - lastCheckTime >= peroid * 1000 * 10 ) {
 			checkListKeyLength();
         }
 	}
