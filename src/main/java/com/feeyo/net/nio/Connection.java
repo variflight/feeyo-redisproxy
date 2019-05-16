@@ -420,7 +420,7 @@ public class Connection extends ClosableConnection {
 	}
 	
 	// 清理资源
-	private void cleanup() {
+	private synchronized void cleanup() {
 		
 		if (readBuffer != null) {
 			recycle(readBuffer);

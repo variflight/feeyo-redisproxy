@@ -137,7 +137,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 
 				long backId =  backendCon != null ? backendCon.getId() : -1;
 				LOGGER.error("backend write to front err, back id=" + backId , e2);
-				
+
 				// 由 reactor close
 				throw e2;
 			}

@@ -130,9 +130,10 @@ public class BypassService {
 			// front rejected 
 			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
 			
-			LOGGER.warn("Bypass rejected, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, front={}/{}",
+			LOGGER.warn("Bypass rejected, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, frontConn={}/{}/{}/{}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
-							threadPoolExecutor.getMaxSubmittedTaskCount(),threadPoolExecutor.getSubmittedTasksCount(), frontConn.getHost(), frontConn.getPassword()} );						
+							threadPoolExecutor.getMaxSubmittedTaskCount(),threadPoolExecutor.getSubmittedTasksCount(), 
+							frontConn.getHost(), frontConn.getPassword(), frontConn.getSession().getRequestCmd(), frontConn.getSession().getRequestKey() } );						
 		}	
 	}
 	
