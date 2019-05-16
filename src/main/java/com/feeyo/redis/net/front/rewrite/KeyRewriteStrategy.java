@@ -27,17 +27,27 @@ public abstract class KeyRewriteStrategy {
 	/**
 	 * 增加 key 前缀
 	 */
-	protected byte[] concat(byte[] prefix, byte[] key) throws KeyIllegalException {
+	protected byte[] concat(byte[] prefix, byte[] key)  {
 		//
 		if (prefix == null) {
 			return key;
 		}
+		
+		// TODO: 此处不需要考虑{} 问题，直接前面加 prefix 即可
+		//
+		// RedisCluster 为了兼容 multi-key 操作，提供了“hash tags”操作，每个key可以包含自定义的“tags”，
+		// 在存储的时候根据tags计算此key应该映射到哪个node上。通过“hash tags”可以强制某些keys被保存到同一个节点上，便于进行“multi key”操作。
+		// 基本上如果关键字包含“{...}”，那么在{和}之间的字符串被hash，然而可能有多个匹配的{或}该算法由以下规则规定：
+		// 如果key包含｛，在｛的右边有一个｝，并在第一次出现｛与第一次出现｝之间有一个或者多个字符串，那么就作为key进行hash。
+		// 例如，{user1000}.following和{user1000}.followed就在同一个hash slot；foo{}{bar}整个字符被hash，foo{{bar}},{bar被hash；foo{bar}{zap},bar被hash
+		
 		int length = prefix.length + key.length;
 		byte[] result = new byte[length];
 		
 		System.arraycopy(prefix, 0, result, 0, prefix.length);
 		System.arraycopy(key, 0, result, prefix.length, key.length);
 		return result;
+		
 	}
 	
 	/**
@@ -45,9 +55,12 @@ public abstract class KeyRewriteStrategy {
 	 */
 	protected void checkKeyIllegalCharacter(Pattern regularExpr, byte[] key) 
 			throws KeyIllegalException {
+		
+		if ( regularExpr == null )
+			return;
 		//
 		String k = new String(key);
-		if ( regularExpr != null && !regularExpr.matcher(k).find()) {
+		if ( !regularExpr.matcher(k).find()) {
 			throw new KeyIllegalException(k + " has illegal character");
 		}
 	}

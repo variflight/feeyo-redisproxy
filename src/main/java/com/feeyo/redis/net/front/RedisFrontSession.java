@@ -237,7 +237,7 @@ public class RedisFrontSession {
 					frontCon.write( getDefaultErrorInvalidCommand(e) );
 				}
 				
-				LOGGER.warn("con: {}, request err: {}", this.frontCon, requests);
+				LOGGER.warn("con: {}, invalid request err: {}", this.frontCon, requests);
 			
 			// auto response
 			} catch (FullRequestNoThroughtException e) {
