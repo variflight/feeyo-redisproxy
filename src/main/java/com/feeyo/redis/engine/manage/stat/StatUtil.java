@@ -3,7 +3,6 @@ package com.feeyo.redis.engine.manage.stat;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -18,15 +17,12 @@ import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
-import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
 import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
-import com.feeyo.util.MailUtil;
-import com.feeyo.util.NetworkUtil;
 
 /**
  * 数据埋点收集器
@@ -99,6 +95,9 @@ public class StatUtil {
 						
 						// send mail
 						// ##################################################################################
+						
+						// ignore send mail
+						/*
 						try {
 							
 							
@@ -167,15 +166,16 @@ public class StatUtil {
 							body.append("\r\n");
 							body.append("\r\n");
 							
-							//String[] attachments = null;
+							String[] attachments = null;
 							
-							//Properties prop = RedisEngineCtx.INSTANCE().getMailProperties();
-							//MailUtil.send(prop, subject.toString(), body.toString(), attachments);
+							Properties prop = RedisEngineCtx.INSTANCE().getMailProperties();
+							MailUtil.send(prop, subject.toString(), body.toString(), attachments);
 							
 							
 						} catch(Throwable t) {
 							//ignore
 						}
+						*/
 						// ##################################################################################
 						
 						
@@ -192,7 +192,7 @@ public class StatUtil {
 					zeroTimeMillis = cal.getTimeInMillis();
 		        }
 		        
-		        
+		        //
 		        for(StatCollector listener: collectors) {
 					try {
 						listener.onSchedulePeroid( STATISTIC_PEROID );
