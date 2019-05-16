@@ -131,9 +131,9 @@ public class BypassService {
 			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
 			
 			LOGGER.warn("Bypass rejected, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, frontConn={}/{}/{}/{}",
-					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(), 
-							threadPoolExecutor.getMaxSubmittedTaskCount(),threadPoolExecutor.getSubmittedTasksCount(), 
-							frontConn.getHost(), frontConn.getPassword(), frontConn.getSession().getRequestCmd(), frontConn.getSession().getRequestKey() } );						
+					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(),
+							threadPoolExecutor.getMaxSubmittedTaskCount(),threadPoolExecutor.getSubmittedTasksCount(),
+							frontConn.getHost(), frontConn.getPassword(), frontConn.getSession().getRequestCmd(), frontConn.getSession().getRequestKey() } );
 		}	
 	}
 	
@@ -193,7 +193,11 @@ public class BypassService {
 		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
 		if ( new_maxPoolSize > 6 ) new_maxPoolSize = 6;
 		if ( new_queueSize > 100 ) new_queueSize = 100;
-		
+
+        // output
+        System.out.println( String.format("bypassRequireSize=%s, bypassCorePoolSize=%s, bypassMaxPoolSize=%s, bypassQueueSize=%s",
+                new_requireSize, new_corePoolSize, new_maxPoolSize, new_queueSize) );
+
 		if ( this.requireSize == new_requireSize &&
 			 this.corePoolSize == new_corePoolSize &&
 			 this.maxPoolSize == new_maxPoolSize &&
