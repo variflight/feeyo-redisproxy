@@ -14,6 +14,7 @@ import com.google.common.collect.Sets;
 
 import java.net.InetAddress;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 新的实现，去除了对 slave 关系的维护
@@ -34,7 +35,7 @@ public class RedisClusterPool extends AbstractPool {
 	/**
 	 * 主节点
 	 */
-	private Map<String, ClusterNode> masters = new HashMap<String, ClusterNode>(6);
+	private Map<String, ClusterNode> masters = new ConcurrentHashMap<>(6);
 	
 	/**
 	 * cluster把所有的物理节点映射到[0-16383]slot 的数组
@@ -302,8 +303,7 @@ public class RedisClusterPool extends AbstractPool {
 			return master.getPhysicalNode();
 		}	
 		
-		LOGGER.error("Get physical node err: slot={}, masterId={}, master={}",
-				new Object[]{ slot, masterId, master } );
+		// LOGGER.error("Get physical node err: slot={}, masterId={}, master={}", new Object[]{ slot, masterId, master } );
 		
 		return null;
 	}
