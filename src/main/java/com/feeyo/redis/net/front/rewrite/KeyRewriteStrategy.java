@@ -45,9 +45,12 @@ public abstract class KeyRewriteStrategy {
 	 */
 	protected void checkKeyIllegalCharacter(Pattern regularExpr, byte[] key) 
 			throws KeyIllegalException {
+		
+		if ( regularExpr == null )
+			return;
 		//
 		String k = new String(key);
-		if ( regularExpr != null && !regularExpr.matcher(k).find()) {
+		if ( !regularExpr.matcher(k).find()) {
 			throw new KeyIllegalException(k + " has illegal character");
 		}
 	}
