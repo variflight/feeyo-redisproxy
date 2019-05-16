@@ -29,9 +29,7 @@ public class EvalKey extends KeyRewriteStrategy {
 	public void rewriteKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		byte[][] args = request.getArgs();
 		if (args.length < 4) {
-			throw new KeyIllegalException(
-					"eval cmd must put keys to params! if this is no params, "
-					+ "please do not use eval in redis, because u can do it in your code instead!");
+			throw new KeyIllegalException("EVAL command must put keys to params, if this is no params, please do not use 'EVAL' !");
 		}
 		
 		int keySize = Integer.parseInt(new String(args[2]));
