@@ -227,7 +227,7 @@ public class CommandParse {
 		_cmds.put("UNWATCH", 			new RedisRequestPolicy(DISABLED_CMD, THROUGH_CMD, WRITE_CMD)); //取消监视
 		
 		// Script 
-		_cmds.put("EVAL", 				new RedisRequestPolicy(NO_CLUSTER_CMD, THROUGH_CMD, WRITE_CMD));
+		_cmds.put("EVAL", 				new RedisRequestPolicy(COMMON_CMD, THROUGH_CMD, WRITE_CMD)); // NO_CLUSTER_CMD
 		_cmds.put("EVALSHA", 			new RedisRequestPolicy(DISABLED_CMD, THROUGH_CMD, WRITE_CMD));
 		_cmds.put("SCRIPT", 			new RedisRequestPolicy(DISABLED_CMD, THROUGH_CMD, WRITE_CMD));
 		
