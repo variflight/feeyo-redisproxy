@@ -85,8 +85,7 @@ public class ConfigLoader extends AbstractConfigLoader {
 					int port = getIntAttribute(attrs, "port", 6379);
 					String suffix = getAttribute(attrs, "suffix", null);
 					if (type == 2 && suffix == null) {
-						throw new Exception(
-								"Customer Cluster nodes need to set unique suffix property");
+						throw new Exception("Customer Cluster nodes need to set unique suffix property");
 					} else {
 						poolCfg.addNode(ip + ":" + port + ":" + suffix);
 					}
@@ -106,7 +105,6 @@ public class ConfigLoader extends AbstractConfigLoader {
 	
 	public static Map<String, UserCfg> loadUserMap(Map<Integer, PoolCfg> poolMap, String uri) throws Exception  {
 
-		Pattern defaultKeyRule = loadDefaultKeyRule(uri);
 		Map<String, UserCfg> map = new HashMap<String, UserCfg>();
 		try {
 			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("user");
@@ -121,20 +119,23 @@ public class ConfigLoader extends AbstractConfigLoader {
 				}
 				int selectDb = getIntAttribute(nameNodeMap, "selectDb", -1);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 800);
-				int isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0);				
+				boolean isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0)  == 0 ? false : true;				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
-				String rule = getAttribute(nameNodeMap, "keyRule", null);
-                int expireTime = getIntAttribute(nameNodeMap, "expireTime", 43200);
-				Pattern keyRule = defaultKeyRule;
-				if (rule != null  && !rule.isEmpty()) {
-					keyRule = Pattern.compile(rule);
-				}
+				String keyRegularExprStr = getAttribute(nameNodeMap, "keyRegularExpr", null);
+                int expireTime = getIntAttribute(nameNodeMap, "expireTime", 12 * 60 * 60);  // 12H
+                //
+				Pattern keyRegularExpr = null;
+				if (keyRegularExprStr != null  && !keyRegularExprStr.isEmpty()) 
+					keyRegularExpr = Pattern.compile(keyRegularExprStr);
+//				else 
+//					keyRegularExpr = Pattern.compile("^[A-Za-z0-9-_: \\.]*$");
+				
 				
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
-				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, maxCon, isAdmin == 0 ? false : true, 
-						isReadonly, keyRule, expireTime);
+				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, 
+						maxCon, isAdmin, isReadonly, keyRegularExpr, expireTime);
 				
 				// 非kafka pool的用户不能充当生产者 和 消费者
 				if (poolType != 3) {
@@ -165,23 +166,6 @@ public class ConfigLoader extends AbstractConfigLoader {
 			throw e;
 		}
 		return map;
-	}
-	
-	private static Pattern loadDefaultKeyRule(String uri) {
-
-		try {
-			NodeList nodeList = loadXmlDoc(uri).getElementsByTagName("all");
-			if (nodeList != null && nodeList.getLength() > 0) {
-				Node node = nodeList.item(0);
-				NamedNodeMap nameNodeMap = node.getAttributes();		
-				String rule = getAttribute(nameNodeMap, "defaultKeyRule", null);
-				if (rule != null  && !rule.isEmpty()) {
-					return Pattern.compile(rule);
-				}
-			}
-		} catch (Exception e) {
-		}
-		return null;
 	}
 	
 

@@ -578,7 +578,6 @@ public class RedisClusterPool extends AbstractPool {
 		try {
 	        
 			for (ClusterNode clusterNode : masters.values()) {
-	
 	            PhysicalNode physicalNode = clusterNode.getPhysicalNode();
 	            this.latencyCheck(physicalNode);
 	        }
@@ -589,13 +588,9 @@ public class RedisClusterPool extends AbstractPool {
     }
 
     private void latencyCheck(PhysicalNode physicalNode) {
-
-    	
-        
     	JedisConnection conn = null;
         try {
             conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 3000, 0);
-            
             //
             for( int i =0; i<3; i++) {
 
@@ -612,7 +607,6 @@ public class RedisClusterPool extends AbstractPool {
 	            }
             }
             physicalNode.calculateOverloadByLatencySample( poolCfg.getLatencyThreshold() );
-            
 
         } catch (JedisConnectionException e) {
         	LOGGER.warn("latency err, host:" + physicalNode.getHost(), e);

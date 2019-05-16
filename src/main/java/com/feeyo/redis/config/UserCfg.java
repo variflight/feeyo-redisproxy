@@ -15,7 +15,7 @@ public class UserCfg {
 	
 	private final boolean isAdmin;
 	private final boolean isReadonly;
-	private final Pattern keyRule;
+	private final Pattern keyRegularExpr;
     private final byte[] expireTime;//过期时间 单位s 默认 12小时=43200s
 	
 	
@@ -26,7 +26,8 @@ public class UserCfg {
 
 	
 	public UserCfg(int poolId, int poolType, String password,  String prefix, 
-			int selectDb, int maxCon, boolean isAdmin, boolean isReadonly, Pattern keyRule, int expireTime) {
+			int selectDb, int maxCon, boolean isAdmin, boolean isReadonly, 
+			Pattern keyRegularExpr, int expireTime) {
 		this.poolId = poolId;
 		this.poolType = poolType;
 		this.password = password;		
@@ -38,7 +39,8 @@ public class UserCfg {
 
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
-		this.keyRule = keyRule;
+		//
+		this.keyRegularExpr = keyRegularExpr;
         this.expireTime = String.valueOf(expireTime).getBytes();
 	}
 	
@@ -87,8 +89,8 @@ public class UserCfg {
 		this.usePoolType = poolType;
 	}
 
-	public Pattern getKeyRule() {
-		return keyRule;
+	public Pattern getKeyRegularExpr() {
+		return keyRegularExpr;
 	}
 
 

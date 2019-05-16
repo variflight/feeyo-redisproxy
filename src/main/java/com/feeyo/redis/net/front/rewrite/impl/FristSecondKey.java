@@ -17,7 +17,7 @@ public class FristSecondKey extends KeyRewriteStrategy {
 	public void rewriteKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
 		byte[][] args = request.getArgs();
 		for (int i = 1; i < 3; i++) {
-			checkIllegalCharacter(userCfg.getKeyRule(), args[i]);
+			checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[i]);
 			//
 			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}

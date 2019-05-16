@@ -7,8 +7,7 @@ import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
-import com.feeyo.util.jedis.exception.JedisConnectionException;
-import com.feeyo.util.jedis.exception.JedisDataException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,8 +135,8 @@ public class BigLengthCollector implements StatCollector {
 						}
 						
 						
-					} catch (JedisDataException e1) {
-					} catch (JedisConnectionException e2) {
+					} catch (Exception e2) {
+						//
                         Long lastTime = errorMap.get(physicalNode.getHost());
                         if (lastTime == null || ((lastCheckTime - lastTime) > 30000)) {
                             LOGGER.error("Failed to connecting {}:{}", physicalNode.getHost(), physicalNode.getPort());

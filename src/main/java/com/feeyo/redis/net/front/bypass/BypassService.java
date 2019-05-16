@@ -1,21 +1,24 @@
 package com.feeyo.redis.net.front.bypass;
 
-import com.feeyo.net.codec.redis.RedisRequest;
-import com.feeyo.net.codec.redis.RedisResponse;
-import com.feeyo.net.nio.util.TimeUtil;
-import com.feeyo.redis.config.loader.ConfigLoader;
-import com.feeyo.redis.engine.RedisEngineCtx;
-import com.feeyo.redis.engine.manage.stat.StatUtil;
-import com.feeyo.redis.net.front.RedisFrontConnection;
-import com.feeyo.util.ThreadFactoryImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.feeyo.net.codec.redis.RedisRequest;
+import com.feeyo.net.codec.redis.RedisResponse;
+
+import com.feeyo.net.nio.util.TimeUtil;
+import com.feeyo.redis.config.loader.ConfigLoader;
+import com.feeyo.redis.engine.RedisEngineCtx;
+import com.feeyo.redis.engine.manage.stat.StatUtil;
+import com.feeyo.redis.net.front.RedisFrontConnection;
+
+import com.feeyo.util.ThreadFactoryImpl;
 
 /*
  * 旁路服务
@@ -27,7 +30,7 @@ public class BypassService {
 	private static BypassService _INSTANCE = null;
 	
 	//
-	private volatile ThreadPoolExecutor threadPoolExecutor;
+	private volatile BypassThreadExecutor threadPoolExecutor;
 	
 	private int requireSize;
 	private int corePoolSize;
@@ -126,11 +129,12 @@ public class BypassService {
 			
 			// front rejected 
 			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
-
-            LOGGER.warn("Bypass traffic congestion, active={} poolSize={} corePoolSize={} maxPoolSize={} largestPoolSize={} taskCount={}",
-                    new Object[]{threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(),
-                            threadPoolExecutor.getMaximumPoolSize(), threadPoolExecutor.getLargestPoolSize(), threadPoolExecutor.getTaskCount()});
-        }
+			
+			LOGGER.warn("Bypass rejected, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, frontConn={}/{}/{}/{}",
+					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(),
+							threadPoolExecutor.getMaxSubmittedTaskCount(),threadPoolExecutor.getSubmittedTasksCount(),
+							frontConn.getHost(), frontConn.getPassword(), frontConn.getSession().getRequestCmd(), frontConn.getSession().getRequestKey() } );
+		}	
 	}
 	
 	public byte[] reload() {
@@ -145,7 +149,7 @@ public class BypassService {
 				ThreadPoolExecutor oldThreadPoolExecutor = this.threadPoolExecutor;
 				
 				// create new threadPool
-				ThreadPoolExecutor newThreadPoolExecutor = new BypassThreadExecutor(
+				BypassThreadExecutor newThreadPoolExecutor = new BypassThreadExecutor(
 						corePoolSize, maxPoolSize, queueSize, new ThreadFactoryImpl("BypassService"));
 				newThreadPoolExecutor.prestartAllCoreThreads();
 								

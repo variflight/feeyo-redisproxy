@@ -43,11 +43,11 @@ public abstract class KeyRewriteStrategy {
 	/**
 	 * 无效字符集检测，发现后抛出异常
 	 */
-	protected void checkIllegalCharacter(Pattern keyRule, byte[] key) 
+	protected void checkKeyIllegalCharacter(Pattern regularExpr, byte[] key) 
 			throws KeyIllegalException {
 		//
 		String k = new String(key);
-		if ( keyRule != null && !keyRule.matcher(k).find()) {
+		if ( regularExpr != null && !regularExpr.matcher(k).find()) {
 			throw new KeyIllegalException(k + " has illegal character");
 		}
 	}
