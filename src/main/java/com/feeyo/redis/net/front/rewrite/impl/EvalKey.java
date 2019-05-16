@@ -6,6 +6,24 @@ import com.feeyo.redis.net.front.rewrite.KeyIllegalException;
 import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
 
 public class EvalKey extends KeyRewriteStrategy {
+	
+	/**
+	 * fix
+	 * request err: [
+		inline=false
+		arg=EVAL
+		arg=local hexists = redis.call("hexists", KEYS[1], KEYS[2])
+		if hexists == 0 then
+		    redis.call("hset", KEYS[1], KEYS[2], ARGV[1])
+		end
+		return redis.call("hget", KEYS[1], KEYS[2])
+		
+		arg=2
+		arg=bav:1562198400
+		arg=HFE:WXN:GY7124
+		arg={"id":288485281214173185,"md5":"CBC1C8040A589C3014E4986828CE0D3D","saved":false,"updateTime":1557891856456}
+		]
+	 */
 
 	@Override
 	public void rewriteKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
@@ -16,15 +34,12 @@ public class EvalKey extends KeyRewriteStrategy {
 					+ "please do not use eval in redis, because u can do it in your code instead!");
 		}
 		
-		int keyLength = Integer.parseInt(new String(args[2]));
-		
-		for (int i = 3; i < keyLength + 3; i++) {
-			//
+		int keySize = Integer.parseInt(new String(args[2]));
+		for (int i = 3; i < keySize + 3; i++) {
 			checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[i]);
 			//
 			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}
-		
 	}
 
 	@Override
