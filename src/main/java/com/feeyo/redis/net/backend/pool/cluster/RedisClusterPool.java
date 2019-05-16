@@ -187,7 +187,7 @@ public class RedisClusterPool extends AbstractPool {
 				break;
 				
 			} catch (JedisConnectionException e) {
-				LOGGER.error("discover cluster err:", e);	
+				LOGGER.warn("discover cluster err:", e);	
 			} finally {
 				if (conn != null) {
 					conn.disconnect();
@@ -201,7 +201,7 @@ public class RedisClusterPool extends AbstractPool {
 			
 			for(ClusterNode node: nodes) {
 				if ( !node.isConnected() || node.isFail() ) {					
-					LOGGER.error("cluster node err: {}", node.toString());	
+					LOGGER.warn("cluster node err: {}", node.toString());	
 				} else {
 					availableHostList.add( node.getHost() + ":" + node.getPort() );
 				}
@@ -316,7 +316,7 @@ public class RedisClusterPool extends AbstractPool {
 			if ( clusterNode.getType().equalsIgnoreCase("master") ) {
 				String connectInfo = clusterNode.getConnectInfo();
 				if ( connectInfo.indexOf("connected") == -1 ) {
-					LOGGER.error("test connection err: {}",  clusterNode);
+					LOGGER.warn("test connection err: {}",  clusterNode);
 					result = false;
 					break;
 				}
@@ -340,7 +340,7 @@ public class RedisClusterPool extends AbstractPool {
 			List<ClusterNode> clusterNodes = discoverClusterNodes();
 			if ( clusterNodes.size() < 3 ) {
 				heartbeatStatus = -1;
-				LOGGER.error("redis pool err: heartbeatStatus={}", heartbeatStatus);
+				LOGGER.warn("redis pool err: heartbeatStatus={}", heartbeatStatus);
 				
 			} else {
 				heartbeatStatus = 1;	
@@ -445,7 +445,7 @@ public class RedisClusterPool extends AbstractPool {
 				// 集群发生变化， 自动切换
 				if ( isNodeAdd || isNodeDel || isNodeSoltDiff ) {
 					
-					LOGGER.error("ClusterChange: heartbeat={}, log={}", heartbeatTime, logBuffer.toString());
+					LOGGER.warn("ClusterChange: heartbeat={}, log={}", heartbeatTime, logBuffer.toString());
 					
 					// 建立 master 后端连接				
 					for (ClusterNode clusterNode : newMasters.values()) {					
@@ -588,14 +588,14 @@ public class RedisClusterPool extends AbstractPool {
     }
 
     private void latencyCheck(PhysicalNode physicalNode) {
+    	//
     	JedisConnection conn = null;
         try {
             conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 3000, 0);
             //
             for( int i =0; i<3; i++) {
-
         		long time = System.nanoTime();
-            	
+            	//
 	            conn.sendCommand(RedisCommand.PING);
 	            String value = conn.getBulkReply();
 	            if ( value != null && "PONG".equalsIgnoreCase(value) ) {
@@ -607,7 +607,7 @@ public class RedisClusterPool extends AbstractPool {
 	            }
             }
             physicalNode.calculateOverloadByLatencySample( poolCfg.getLatencyThreshold() );
-
+            //
         } catch (JedisConnectionException e) {
         	LOGGER.warn("latency err, host:" + physicalNode.getHost(), e);
             

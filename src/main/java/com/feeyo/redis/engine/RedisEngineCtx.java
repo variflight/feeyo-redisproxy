@@ -148,8 +148,8 @@ public class RedisEngineCtx {
 
         String frontIdleTimeoutString = this.serverMap.get("frontIdleTimeout");
         String backendIdleTimeoutString = this.serverMap.get("backendIdleTimeout");
-        int frontIdleTimeout = frontIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
-        int backendIdleTimeout = backendIdleTimeoutString == null ? 30 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
+        int frontIdleTimeout = frontIdleTimeoutString == null ? 1 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
+        int backendIdleTimeout = backendIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
 
         int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 2097152 : Integer.parseInt( frontSocketSoRcvbufString );
         int frontSocketSoSndbuf = frontSocketSoSndbufString == null ? 4194304 : Integer.parseInt( frontSocketSoSndbufString );

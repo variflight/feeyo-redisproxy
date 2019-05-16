@@ -148,11 +148,12 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		//
 		KafkaPool pool = (KafkaPool) RedisEngineCtx.INSTANCE().getPoolMap().get(topicCfg.getPoolId());
 		PhysicalNode physicalNode = pool.getPhysicalNode(brokerPartition.getLeader().getId());
-		if (physicalNode == null)
+		if ( physicalNode == null ) {
 			throw new PhysicalNodeUnavailableException("node unavailable.");
-		
-		if( physicalNode != null && physicalNode.isOverload() )
+		//	
+		} else if ( physicalNode.isOverload() ) {
 			throw new PhysicalNodeUnavailableException("node overload.");
+		}
 
 		// 注入 offset & partition & maxBytes
 		//
