@@ -5,6 +5,16 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.net.front.rewrite.KeyIllegalException;
 import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
 
+/**
+ * EVAL 定义
+ * EVAL script numkeys key [key ...] arg [arg ...]
+ * 
+ * TODO：About redis cluster
+ * 在一个节点接收到 EVAL 指令之后，他会检查 KEYS，算出对应的 Slots，
+ * 如果所有 KEY 不是落到同一个 Slot 上，会提示 CROSSSLOT Keys in request don't hash to the same slot
+ * 
+ *
+ */
 public class EvalKey extends KeyRewriteStrategy {
 	
 	/**
