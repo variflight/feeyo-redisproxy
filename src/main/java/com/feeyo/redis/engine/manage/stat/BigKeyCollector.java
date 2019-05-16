@@ -37,6 +37,7 @@ public class BigKeyCollector implements StatCollector {
 		try {
 			
 			while (!locking.compareAndSet(false, true)) {
+				// ignore
 			}
 		
 			int len = bkList.size() > 100 ? 100 : bkList.size();
@@ -61,10 +62,10 @@ public class BigKeyCollector implements StatCollector {
 			return;
 		
 		//  check size
-		if ( requestSize < REQUIRED_SIZE && responseSize < REQUIRED_SIZE  ) {	
+		if ( requestSize < REQUIRED_SIZE && responseSize < REQUIRED_SIZE  )
 			return;
-		}
 		
+		//
 		totalCount.incrementAndGet();
 		if (isBypass) {
 			bypassCount.incrementAndGet();
