@@ -39,7 +39,7 @@ public class NetSystem {
 	
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
-	
+
 	private final ConcurrentHashMap<Long, ClosableConnection> allConnections;
 	private SystemConfig netConfig;
 	private NIOConnector connector;
@@ -119,7 +119,7 @@ public class NetSystem {
 		
 		//
 		int backendSlowTime = netConfig != null ? netConfig.getBackendSlowTimeout() : 5 * 60 * 1000;
-		
+
 		Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 		while (it.hasNext()) {
 			ClosableConnection c = it.next().getValue();
@@ -154,7 +154,7 @@ public class NetSystem {
 								errSB.append("front is closed, close it" ).append( c );
 								errSB.append(" , and attach it " ).append( c.getAttachement() );
 								LOGGER.error( errSB.toString() );
-								
+
 								c.close("because the front con is closed! ");
 							}
 						}

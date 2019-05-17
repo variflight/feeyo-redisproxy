@@ -83,10 +83,7 @@ public class BypassService {
 
 
 					try {
-                        //判断前端连接
-                        if (frontConn == null) {
-                            return;
-                        }
+
                         String password = frontConn.getPassword();
                         String cmd = frontConn.getSession().getRequestCmd();
                         String key = frontConn.getSession().getRequestKey();
@@ -119,11 +116,7 @@ public class BypassService {
 						}
 						
 					} catch(IOException e) {
-
-                        if (frontConn != null) {
-                            frontConn.close("write err");
-                        }
-
+					    frontConn.close("write err");
                         LOGGER.error("bypass write to front err:", e);
 					}
 				}
