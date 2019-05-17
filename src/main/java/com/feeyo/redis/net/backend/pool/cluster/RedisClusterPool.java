@@ -589,12 +589,17 @@ public class RedisClusterPool extends AbstractPool {
 
 	private void latencyCheck(PhysicalNode physicalNode) {
 
-		for (int i = 0; i < 3; i++) {
-			//
-			long time = System.nanoTime();
-			JedisConnection conn = null;
-			try {
-				//指定超时值的 SO_TIMEOUT，以毫秒为单位。将此选项设为非零的超时值时，在与此 Socket 关联的 InputStream 上调用 read() 将只阻塞此时间长度
+		long firstTime = System.nanoTime();
+		
+		JedisConnection conn = null;
+		int repairIdx = 0;
+		try {
+			for (int i = 0; i < 3; i++) {
+				//
+				long time = System.nanoTime();
+
+				// 指定超时值的 SO_TIMEOUT，以毫秒为单位。将此选项设为非零的超时值时，在与此 Socket 关联的
+				// InputStream 上调用 read() 将只阻塞此时间长度
 				conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 3000, 3000);
 				conn.sendCommand(RedisCommand.PING);
 				String value = conn.getBulkReply();
@@ -604,24 +609,26 @@ public class RedisClusterPool extends AbstractPool {
 					latencySample.latency = (int) (System.nanoTime() - time);
 					physicalNode.addLatencySample(latencySample);
 				}
-				//
-			} catch (Throwable e) {
-				//
-				LOGGER.warn("check latency err, host:" + physicalNode.getHost(), e);
 				
-				//增加 3个错误延时的采样
-				for (int j = 0; j < 3; j++) {
-					PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-					latencySample.time = time;
-					latencySample.latency = (int) (System.nanoTime() - time);
-					physicalNode.addLatencySample(latencySample);
-				}
+				repairIdx =  i;
+			}
+			
+		} catch (Throwable e) {
+			//
+			LOGGER.warn("check latency err, host:" + physicalNode.getHost(), e);
+			
+			//补偿错误采样
+			for (int j = repairIdx; j < 3; j++) {
+				PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
+				latencySample.time = firstTime;
+				latencySample.latency = (int) (System.nanoTime() - firstTime);
+				physicalNode.addLatencySample(latencySample);
+			}
 
-			} finally {
-				if (conn != null) {
-					conn.disconnect();
-					conn = null;
-				}
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+				conn = null;
 			}
 		}
 		physicalNode.calculateOverloadByLatencySample(poolCfg.getLatencyThreshold());
