@@ -199,12 +199,17 @@ public class PhysicalNode {
     public void calculateOverloadByLatencySample(float latencyThreshold) {
     	//
     	int latency = this.latencyTimeSeries.calculateLatency();
-    	if ( latency == -1 ) {
-    		this.isOverload = false;
-    		
-    	} else {
-    		this.isOverload = (latency >= ( latencyThreshold * 1000000 ) );
-    	}
+    	//
+    	boolean newOverload = false;
+		if ( latency != -1 )
+			newOverload = (latency >= ( latencyThreshold * 1000000 ) );
+		
+		//
+		if ( newOverload != this.isOverload )
+			LOGGER.warn("physicalNode overload change, host={}, port={}, isOverload={}/{} latencyThreshold={} latency={}",
+					new Object[]{ this.host , this.port, this.isOverload, newOverload, latencyThreshold, latency } );
+			
+		this.isOverload = newOverload;
     }
 	
     public List<LatencySample> getLatencySamples() {
