@@ -118,14 +118,13 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 				int backendWaitTimeMills = (int)(conn.getLastReadTime() - conn.getLastWriteTime());
 
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false,false);
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false);
 			}
 			
 			// 后端链接释放
 			conn.release();	
 			
 		} catch (Exception e) {
-		    //TODO  统计和 异常抛出
 			LOGGER.error("", e);
 		} finally {
 			NetSystem.getInstance().getBufferPool().recycle(responseBuf);

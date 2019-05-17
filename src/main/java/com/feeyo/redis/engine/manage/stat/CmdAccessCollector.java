@@ -18,9 +18,8 @@ public class CmdAccessCollector implements StatCollector {
 	
 
 	@Override
-	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass, boolean isException ) {
+	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
 
-	    //TODO  区分 正常和异常 读写次数 统计
 		UserCommand userCommand = userCommandCountMap.get(password);
 		if ( userCommand == null ) {
 			userCommand = new UserCommand( password );

@@ -80,19 +80,20 @@ public class BypassService {
 				
 				@Override
 				public void run() {
-					//判断前端连接
-                    if (frontConn == null) {
-                        return;
-                    }
-                    String password = frontConn.getPassword();
-                    String cmd = frontConn.getSession().getRequestCmd();
-                    String key = frontConn.getSession().getRequestKey();
-                    int requestSize = frontConn.getSession().getRequestSize();
-                    long requestTimeMills = frontConn.getSession().getRequestTimeMills();
-                    int responseSize = 0;
+
 
 					try {
-						
+                        //判断前端连接
+                        if (frontConn == null) {
+                            return;
+                        }
+                        String password = frontConn.getPassword();
+                        String cmd = frontConn.getSession().getRequestCmd();
+                        String key = frontConn.getSession().getRequestKey();
+                        int requestSize = frontConn.getSession().getRequestSize();
+                        long requestTimeMills = frontConn.getSession().getRequestTimeMills();
+                        int responseSize = 0;
+
 						BypassIoConnection backConn = new BypassIoConnection(host, port);
 						List<RedisResponse> resps = backConn.writeToBackend(request);
 
@@ -113,18 +114,14 @@ public class BypassService {
 							
 							// 数据收集
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
-							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false, true,false);
+							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false, true);
 						}
 						
 					} catch(IOException e) {
 
-                        long responseTimeMills = TimeUtil.currentTimeMillis();
-                        int procTimeMills = (int) (responseTimeMills - requestTimeMills);
                         if (frontConn != null) {
                             frontConn.close("write err");
                         }
-
-                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false, true,true);
 
                         LOGGER.error("bypass write to front err:", e);
 					}

@@ -81,19 +81,19 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
 				List<DataOffset> offsets = result.getDataOffsets();
 
 				if (offsets != null) {
-                    if (frontCon == null) {
-                        // 是否释放后端连接
-                        return;
-                    }
 
-                    int responseSize = 0;
-                    String password = frontCon.getPassword();
-                    String cmd = frontCon.getSession().getRequestCmd();
-                    String key = frontCon.getSession().getRequestKey();
-                    int requestSize = frontCon.getSession().getRequestSize();
-                    long requestTimeMills = frontCon.getSession().getRequestTimeMills();
-                    int backendWaitTimeMills =0;
                     try {
+                        if (frontCon == null) {
+                            // 是否释放后端连接
+                            return;
+                        }
+
+                        int responseSize = 0;
+                        String password = frontCon.getPassword();
+                        String cmd = frontCon.getSession().getRequestCmd();
+                        String key = frontCon.getSession().getRequestKey();
+                        int requestSize = frontCon.getSession().getRequestSize();
+                        long requestTimeMills = frontCon.getSession().getRequestTimeMills();
 
                         for (DataOffset offset : offsets) {
 							byte[] data = offset.getData();
@@ -102,27 +102,18 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                         long responseTimeMills = TimeUtil.currentTimeMillis();
                         
                         int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
-						 backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 
                         // 释放
                         releaseBackendConnection(backendCon);
                         
                         // 数据收集
-                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false,false);
+                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false);
                         
                     } catch (IOException e2) {
-                        long responseTimeMills = TimeUtil.currentTimeMillis();
-                        int procTimeMills = (int) (responseTimeMills - requestTimeMills);
-
                         if (frontCon != null) {
                             frontCon.close("write err");
                         }
-                        if (backendCon != null) {
-                            backendWaitTimeMills = (int) (backendCon.getLastReadTime() - backendCon.getLastWriteTime());
-                        }
-
-                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false,true);
-
                         // 由 reactor close
                         LOGGER.error("backend write to front err:", e2);
                         throw e2;
