@@ -1,8 +1,5 @@
 package com.feeyo.redis.net.front.route;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.feeyo.kafka.net.front.route.strategy.KafkaRouteStrategy;
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisRequestPolicy;
@@ -16,6 +13,11 @@ import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategySet;
 import com.feeyo.redis.net.front.route.strategy.AbstractRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.DefaultRouteStrategy;
 import com.feeyo.redis.net.front.route.strategy.SegmentRouteStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 路由功能
@@ -28,7 +30,7 @@ public class RouteService {
 	private static DefaultRouteStrategy _DEFAULT = new DefaultRouteStrategy();
 	private static SegmentRouteStrategy _SEGMENT = new SegmentRouteStrategy();
 	private static KafkaRouteStrategy _KAFKA = new KafkaRouteStrategy();
-	
+    private static Logger LOGGER = LoggerFactory.getLogger( RouteService.class );
 	
 	private static AbstractRouteStrategy getStrategy(int poolType, boolean isNeedSegment) {
 		
@@ -96,10 +98,20 @@ public class RouteService {
 					|| (policy.getHandleType() == CommandParse.EXISTS_CMD && request.getArgs().length > 2) ) ) {
 				isNeedSegment = true;
 			}
-						
-			// 前缀、默认值 改写策略 
+
+	        // 前缀、默认值 改写策略
 			KeyRewriteStrategy strategy = KeyRewriteStrategySet.getStrategy(cmd);
 			strategy.rewriteKey(request, userCfg);
+
+            //针对 写指令 里面的删除指令
+            if (!policy.isRead()) {
+                if(LOGGER.isDebugEnabled()){
+                    if ("ZREM".equals(cmd) || "LREM".equals(cmd) || "SMOVE".equals(cmd) || "ZREM".equals(cmd) || "EXPIRE".equals(cmd) ||  "EXPIREAT".equals(cmd) ||
+                            "BLPOP".equals(cmd) ||   "LREM".equals(cmd) || "DEL".equals(cmd) || "HDEL ".equals(cmd) || "LTRIM".equals(cmd) || "SREM".equals(cmd) ) {
+                        LOGGER.info("from{} u{} cmd{} msg{} ", new Object[]{frontCon.getHost(), frontCon.getPassword(), frontCon.getSession().getRequestCmd(), frontCon.getSession().getRequestKey()});
+                    }
+                }
+            }
 		}
 		
 		// 全部自动回复
