@@ -214,12 +214,6 @@ public class RedisFrontSession {
 					return;
 				}
 				
-				// pipeline过大，输出告警日志
-				if (  requests.size() > 10000 ) {
-					LOGGER.info("pipeline too many entries, size={}, firstReq={}, front={}/{}", 
-							new Object[]{ requests.size(), requests.get(0), frontCon.getHost(), frontCon.getPassword() });
-				}
-				
 				//
 				currentCommandHandler = this.getCommandHandler( routeResult.getRequestType() );
 				currentCommandHandler.handle(routeResult);

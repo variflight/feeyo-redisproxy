@@ -18,7 +18,8 @@ public class CmdAccessCollector implements StatCollector {
 	
 
 	@Override
-	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
+	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
+			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
 
 		UserCommand userCommand = userCommandCountMap.get(password);
 		if ( userCommand == null ) {
@@ -143,6 +144,7 @@ public class CmdAccessCollector implements StatCollector {
 		public AtomicLong writeCommandCount;
 		public AtomicLong readComandCount;
 		public ConcurrentHashMap<String, AtomicLong> commandCount = new ConcurrentHashMap<String, AtomicLong>();
+		
 		
 		public UserCommand(String user) {
 			this.user = user;

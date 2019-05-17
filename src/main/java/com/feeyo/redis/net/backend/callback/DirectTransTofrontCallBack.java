@@ -131,7 +131,8 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				backendCon.release();	
 				
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false);
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, 
+						procTimeMills, backendWaitTimeMills, false, false);
 				
 			} catch(IOException e2) {
 

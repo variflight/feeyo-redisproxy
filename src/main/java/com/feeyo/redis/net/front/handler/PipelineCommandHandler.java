@@ -71,11 +71,12 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 				if (offsets != null) {
 
 					try {
-
+						//
                         if (frontCon == null) {
                             //是否处理后端连接
                             return;
                         }
+                        //
                         String password = frontCon.getPassword();
                         int requestSize = frontCon.getSession().getRequestSize();
                         long requestTimeMills = frontCon.getSession().getRequestTimeMills();
@@ -85,6 +86,7 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 							byte[] data = offset.getData();
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
+						//
                         long responseTimeMills = TimeUtil.currentTimeMillis();
 						int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
@@ -101,7 +103,9 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						for (RedisRequest req : rrs.getRequests()) {
 							String childCmd = new String( req.getArgs()[0] );
 							String requestKey = req.getNumArgs() > 1 ? new String(req.getArgs()[1]) : null;
-							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize, procTimeMills,  backendWaitTimeMills, true, false);
+							//
+							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize, 
+									procTimeMills,  backendWaitTimeMills, true, false);
 						}
 						
 					} catch (IOException e2) {

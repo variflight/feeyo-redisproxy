@@ -73,6 +73,8 @@ import com.feeyo.util.Versions;
 public class Manage {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( Manage.class );
+	
+	//
 	private static String JAVA_BIN_PATH = "/usr/local/software/jdk1.7.0_72/bin/";
 	
 	private static List<String> getOS_JVM_INFO(String cmd) {
@@ -304,19 +306,24 @@ public class Manage {
 
 					List<String> lines = new ArrayList<String>();
 					
-					StringBuffer title = new StringBuffer();
-					title.append("USER").append("      ").append("READ").append("      ").append("WRITE").append("      ").append("TOTAL");
-					lines.add(title.toString());
+					StringBuffer titleSB = new StringBuffer();
+					titleSB.append("USER").append("      ");
+					titleSB.append("READ").append("      ");
+					titleSB.append("WRITE").append("      ");
+					titleSB.append("TOTAL");
+					lines.add(titleSB.toString());
 
+					//
 					Set<Entry<String, UserCommand>> entrys = StatUtil.getUserCommandCountMap().entrySet();
 					for (Entry<String, UserCommand> entry : entrys) {
 						UserCommand userCommand = entry.getValue();
-						StringBuffer sBuffer = new StringBuffer();
-						sBuffer.append(userCommand.user).append("  ").append(userCommand.readComandCount.get())
-								.append("  ").append(userCommand.writeCommandCount.get()).append("  ")
-								.append( userCommand.readComandCount.get() + userCommand.writeCommandCount.get() );
-						
-						lines.add( sBuffer.toString() );
+						//
+						StringBuffer bodySB = new StringBuffer();
+						bodySB.append(userCommand.user).append("  ");
+						bodySB.append(userCommand.readComandCount.get()).append("  ");
+						bodySB.append(userCommand.writeCommandCount.get()).append("  ");
+						bodySB.append( userCommand.readComandCount.get() + userCommand.writeCommandCount.get() );
+						lines.add( bodySB.toString() );
 					}
 
 					return encode(lines);
@@ -327,18 +334,25 @@ public class Manage {
 					
 					List<String> lines = new ArrayList<String>();
 					
-					StringBuffer title = new StringBuffer();
-					title.append("USER").append("      ").append("CMD").append("      ").append("COUNT");
-					lines.add( title.toString() );
+					//
+					StringBuffer titleSB = new StringBuffer();
+					titleSB.append("USER").append("      ");
+					titleSB.append("CMD").append("      ");
+					titleSB.append("COUNT");
+					//
+					lines.add( titleSB.toString() );
 
 					int sum = 0;
 					ConcurrentHashMap<String, UserCommand> userCommandMap = StatUtil.getUserCommandCountMap();
 					UserCommand userCommand = userCommandMap.get(user);
 					if (userCommand != null) {
 						for (Entry<String, AtomicLong> entry : userCommand.commandCount.entrySet()) {
-							StringBuffer sBuffer = new StringBuffer();
-							sBuffer.append(user).append("  ").append(entry.getKey()).append("  ").append(entry.getValue().get());
-							lines.add( sBuffer.toString() );
+							StringBuffer bodySB = new StringBuffer();
+							bodySB.append(user).append("  ");
+							bodySB.append(entry.getKey()).append("  ");
+							bodySB.append(entry.getValue().get());
+							//
+							lines.add( bodySB.toString() );
 						}
 					}
 					
