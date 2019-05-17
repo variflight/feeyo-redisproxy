@@ -588,6 +588,9 @@ public class RedisClusterPool extends AbstractPool {
     }
 
 	private void latencyCheck(PhysicalNode physicalNode) {
+		
+		//
+		int latencyThreshold = poolCfg.getLatencyThreshold();
 
 		JedisConnection conn = null;
 		int repairIdx = 0;
@@ -618,6 +621,7 @@ public class RedisClusterPool extends AbstractPool {
 			long latency = (System.currentTimeMillis() - repairTime);
 			//
 			LOGGER.warn("check latency err, host:" + physicalNode.getHost() 
+							+ ", latencyThreshold=" + latencyThreshold
 							+ ", repairIdx=" + repairIdx + ", latency=" + latency, e);
 			
 			//补偿错误采样
@@ -634,7 +638,7 @@ public class RedisClusterPool extends AbstractPool {
 				conn = null;
 			}
 		}
-		physicalNode.calculateOverloadByLatencySample(poolCfg.getLatencyThreshold());
+		physicalNode.calculateOverloadByLatencySample( latencyThreshold );
 		
 	}
     
