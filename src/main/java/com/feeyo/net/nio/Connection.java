@@ -231,7 +231,6 @@ public class Connection extends ClosableConnection {
 		
 		//检查是否正在写,看CAS更新reading值是否成功
 		if ( !reading.compareAndSet(false, true) ) {
-			LOGGER.info(" connection reading cas ... ");
 			return;
 		}
 		
