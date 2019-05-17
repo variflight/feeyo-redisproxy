@@ -142,7 +142,6 @@ public class RedisServer {
                     NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
                         @Override
                         public void run() {
-                        	
                             Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
                             for(AbstractPool pool : pools.values() ) {
                                 pool.latencyCheck();

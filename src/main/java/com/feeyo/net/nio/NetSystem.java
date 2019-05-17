@@ -143,7 +143,7 @@ public class NetSystem {
 			        errBuffer.append( " , socket isConnected: " ).append(backendCon.getSocketChannel().socket().isConnected());
 			        errBuffer.append( " , socket isClosed: " ).append(backendCon.getSocketChannel().socket().isClosed());
 			        
-					LOGGER.warn( errBuffer.toString() );
+					LOGGER.error( errBuffer.toString() );
 					
 					c.close("backend timeout");
 				}

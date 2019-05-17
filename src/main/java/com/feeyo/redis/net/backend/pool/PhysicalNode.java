@@ -2,7 +2,6 @@ package com.feeyo.redis.net.backend.pool;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -186,7 +185,7 @@ public class PhysicalNode {
 		}
 	}	
 	
-	//
+	// 节点的负载
     public boolean isOverload() {
         return this.isOverload;
     }
@@ -198,17 +197,16 @@ public class PhysicalNode {
     
     public void calculateOverloadByLatencySample(float latencyThreshold) {
     	//
-    	int latency = this.latencyTimeSeries.calculateLatency();
-    	//
     	boolean newOverload = false;
+    	//
+    	int latency = this.latencyTimeSeries.calculateLatency();
 		if ( latency != -1 )
-			newOverload = (latency >= ( latencyThreshold * 1000000 ) );
-		
+			newOverload = (latency >= ( latencyThreshold * 1000000 ) ); // 配置中采用毫秒单位， 此处转为纳秒
 		//
 		if ( newOverload != this.isOverload )
-			LOGGER.warn("physicalNode overload change, host={}, port={}, isOverload={}/{} latencyThreshold={} latency={}",
+			LOGGER.warn("physicalNode overload value changed, host={}, port={}, isOverload={}/{} latencyThreshold={} latency={}",
 					new Object[]{ this.host , this.port, this.isOverload, newOverload, latencyThreshold, latency } );
-			
+		//
 		this.isOverload = newOverload;
     }
 	
@@ -279,21 +277,19 @@ public class PhysicalNode {
 		// 计算负载
 		private static final int NUM = 9; 
 		
-		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
+		public ConcurrentLinkedDeque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
 
 		public void addSample(LatencySample sample) {
-			
 			if ( samples.size() >= SAMPLE_SIZE) {
-				samples.removeLast();
+				samples.pollLast();
 			}
-			samples.addFirst( sample );
-
+			samples.offerFirst( sample );
 		}
 		
 		public int calculateLatency() {
 			
 			 // 必须确认有足够的样本
-	        if ( samples.size() > NUM ) {
+	        if ( samples.size() >= NUM ) {
 	        	
 	        	int[] latencys = new int[ NUM ];
 		       
@@ -344,9 +340,8 @@ public class PhysicalNode {
 				}
 			}
 			
-			
+			//
 			List<LatencySample> sampleList = new ArrayList<LatencySample>();
-			
 			for (Map.Entry<Long, List<LatencySample>> entry : sampleMap.entrySet()) {
 
 				int total = 0;
@@ -356,11 +351,10 @@ public class PhysicalNode {
 					cnt++;
 					
 				}
-				
+				//
 				LatencySample avgSample =  new LatencySample();
 				avgSample.time = entry.getKey();
 				avgSample.latency =  total / cnt ;
-				
 				sampleList.add( avgSample );
 			}
 
