@@ -79,13 +79,18 @@ public class BigLengthCollector implements StatCollector {
 						// 前置设置 readonly
 						conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 1000, 0);
 
-						if (cmd.equals("HMSET") || cmd.equals("HSET") || cmd.equals("HSETNX") || cmd.equals("HINCRBY")
-								|| cmd.equals("HINCRBYFLOAT")) { // hash
+						if (cmd.equals("HMSET") || 
+								cmd.equals("HSET") || 
+								cmd.equals("HSETNX") || 
+								cmd.equals("HINCRBY") || 
+								cmd.equals("HINCRBYFLOAT")) { // hash
 
 							conn.sendCommand(RedisCommand.HLEN, key);
 
-						} else if (cmd.equals("LPUSH") || cmd.equals("LPUSHX") || cmd.equals("RPUSH")
-								|| cmd.equals("RPUSHX")) { // list
+						} else if (cmd.equals("LPUSH") || 
+								cmd.equals("LPUSHX") || 
+								cmd.equals("RPUSH") || 
+								cmd.equals("RPUSHX")) { // list
 
 							conn.sendCommand(RedisCommand.LLEN, key);
 
@@ -93,7 +98,9 @@ public class BigLengthCollector implements StatCollector {
 
 							conn.sendCommand(RedisCommand.SCARD, key);
 
-						} else if (cmd.equals("ZADD") || cmd.equals("ZINCRBY") || cmd.equals("ZREMRANGEBYLEX")) { // sortedset
+						} else if (cmd.equals("ZADD") || 
+								   cmd.equals("ZINCRBY") || 
+								   cmd.equals("ZREMRANGEBYLEX")) { // sortedset
 
 							conn.sendCommand(RedisCommand.ZCARD, key);
 						}
@@ -135,7 +142,7 @@ public class BigLengthCollector implements StatCollector {
 
 					} catch (Exception e2) {
 						connectionExceptionIps.add(ip);
-						LOGGER.error("", e2);
+						LOGGER.error("check big length err:", e2);
 					} finally {
 						if (conn != null) {
 							conn.disconnect();
