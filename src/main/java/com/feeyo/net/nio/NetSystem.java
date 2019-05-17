@@ -1,5 +1,12 @@
 package com.feeyo.net.nio;
 
+import com.feeyo.net.nio.buffer.BufferPool;
+import com.feeyo.net.nio.util.TimeUtil;
+import com.feeyo.redis.net.backend.BackendConnection;
+import com.feeyo.redis.net.front.RedisFrontConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
@@ -7,14 +14,6 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.feeyo.net.nio.buffer.BufferPool;
-import com.feeyo.net.nio.util.TimeUtil;
-import com.feeyo.redis.net.backend.BackendConnection;
-import com.feeyo.redis.net.front.RedisFrontConnection;
 
 
 /**
@@ -40,7 +39,7 @@ public class NetSystem {
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
 	
-	private final int TIMEOUT = 1000 * 60 * 3; //3分钟
+	private final int TIMEOUT = 1000 * 60 * 5; //5分钟
 	
 	private final ConcurrentHashMap<Long, ClosableConnection> allConnections;
 	private SystemConfig netConfig;
