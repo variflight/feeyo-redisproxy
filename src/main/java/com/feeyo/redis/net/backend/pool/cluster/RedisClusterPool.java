@@ -589,10 +589,11 @@ public class RedisClusterPool extends AbstractPool {
 
 	private void latencyCheck(PhysicalNode physicalNode) {
 
-		long firstTime = System.nanoTime();
+		
 		
 		JedisConnection conn = null;
 		int repairIdx = 0;
+		long repairTime = System.nanoTime();
 		try {
 			for (int i = 0; i < 3; i++) {
 				//
@@ -611,6 +612,7 @@ public class RedisClusterPool extends AbstractPool {
 				}
 				
 				repairIdx =  i;
+				repairTime = time;
 			}
 			
 		} catch (Throwable e) {
@@ -620,8 +622,8 @@ public class RedisClusterPool extends AbstractPool {
 			//补偿错误采样
 			for (int j = repairIdx; j < 3; j++) {
 				PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-				latencySample.time = firstTime;
-				latencySample.latency = (int) (System.nanoTime() - firstTime);
+				latencySample.time = repairTime;
+				latencySample.latency = (int) (System.nanoTime() - repairTime);
 				physicalNode.addLatencySample(latencySample);
 			}
 
