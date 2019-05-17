@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feeyo.net.nio.NIOHandler;
-import com.feeyo.net.nio.util.StringUtil;
 
 /** 
  * 负责处理前端发来的 Redis Command
@@ -46,11 +45,11 @@ public class RedisFrontConnectionHandler implements NIOHandler<RedisFrontConnect
 	@Override
 	public void handleReadEvent(RedisFrontConnection conn, byte[] data) throws IOException {
 		// 日志HEX
-		if ( LOGGER.isDebugEnabled() ) {
-			final String hexs = StringUtil.dumpAsHex(data, 0, data.length);
-			LOGGER.debug("C#{} front request len = {}, buffer bytes\n {}", 
-					new Object[]{ conn.getId(), data.length, hexs });
-		}
+//		if ( LOGGER.isDebugEnabled() ) {
+//			final String hexs = com.feeyo.net.nio.util.StringUtil.dumpAsHex(data, 0, data.length);
+//			LOGGER.debug("C#{} front request len = {}, buffer bytes\n {}", 
+//					new Object[]{ conn.getId(), data.length, hexs });
+//		}
 
 		// 分发
 		conn.getSession().handle(data);	

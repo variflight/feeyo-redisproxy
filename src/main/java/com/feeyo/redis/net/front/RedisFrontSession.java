@@ -266,7 +266,6 @@ public class RedisFrontSession {
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
-				
 				//
 				if (LOGGER.isDebugEnabled() )
 					LOGGER.debug("node unavailable err:", e);

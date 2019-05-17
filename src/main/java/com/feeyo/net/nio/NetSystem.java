@@ -40,8 +40,6 @@ public class NetSystem {
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
 	
-	private final int TIMEOUT = 1000 * 60 * 5; //5分钟
-	
 	private final ConcurrentHashMap<Long, ClosableConnection> allConnections;
 	private SystemConfig netConfig;
 	private NIOConnector connector;
@@ -119,6 +117,9 @@ public class NetSystem {
 	 */
 	public void checkConnections() {
 		
+		//
+		int backendSlowTime = netConfig != null ? netConfig.getBackendSlowTimeout() : 5 * 60 * 1000;
+		
 		Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 		while (it.hasNext()) {
 			ClosableConnection c = it.next().getValue();
@@ -133,7 +134,7 @@ public class NetSystem {
 				BackendConnection backendCon = (BackendConnection)c;
 				if ( backendCon.isBorrowed() ) {
 					
-					if (  backendCon.getLastTime() < TimeUtil.currentTimeMillis() - TIMEOUT ) {
+					if ( backendCon.getLastTime() < ( TimeUtil.currentTimeMillis() - backendSlowTime ) ) {
 						
 						StringBuffer errSB = new StringBuffer();
 						errSB.append("backend timeout, close it" ).append( c );
