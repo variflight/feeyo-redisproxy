@@ -336,7 +336,6 @@ public class Manage {
 					
 					//
 					StringBuffer titleSB = new StringBuffer();
-					titleSB.append("USER").append("      ");
 					titleSB.append("CMD").append("      ");
 					titleSB.append("COUNT");
 					//
@@ -348,7 +347,6 @@ public class Manage {
 					if (userCommand != null) {
 						for (Entry<String, AtomicLong> entry : userCommand.commandCount.entrySet()) {
 							StringBuffer bodySB = new StringBuffer();
-							bodySB.append(user).append("  ");
 							bodySB.append(entry.getKey()).append("  ");
 							bodySB.append(entry.getValue().get());
 							//
