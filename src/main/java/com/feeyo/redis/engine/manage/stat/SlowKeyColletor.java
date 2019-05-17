@@ -16,11 +16,11 @@ public class SlowKeyColletor implements StatCollector {
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
-			int waitTimeMills, boolean isCommandOnly, boolean isBypass) {
-		
-		if (isCommandOnly) {
-			return;
-		}
+			int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
+
+        if (isCommandOnly) {
+            return;
+        }
 		
 		// 小于 50毫秒不记录
 		if( procTimeMills < 50 )

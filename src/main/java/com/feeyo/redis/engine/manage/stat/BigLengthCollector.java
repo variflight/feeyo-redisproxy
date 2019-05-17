@@ -5,10 +5,9 @@ import com.feeyo.redis.config.UserCfg;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
+import com.feeyo.redis.net.backend.pool.PoolType;
 import com.feeyo.util.jedis.JedisConnection;
 import com.feeyo.util.jedis.RedisCommand;
-import com.feeyo.util.jedis.exception.JedisConnectionException;
-import com.feeyo.util.jedis.exception.JedisDataException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,78 +59,77 @@ public class BigLengthCollector implements StatCollector {
 				String cmd = value[1];
 				
 				UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get( password );
-				
 				if (userCfg != null) {
+					//
 					AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get( userCfg.getPoolId() );
-					PhysicalNode physicalNode;
-					if (pool.getType() == 1) {
-						physicalNode = pool.getPhysicalNode(cmd, key);
-					} else {
-						physicalNode = pool.getPhysicalNode();
-					}
-
-                    //连接异常IP 其他需要连接到这个IP的 本周期内不连接
-                    if (connectionExceptionIps.contains(physicalNode.getHost() + ":" + physicalNode.getPort())) {
+					PhysicalNode physicalNode = (pool.getType() == PoolType.REDIS_CLUSTER ? pool.getPhysicalNode(cmd, key) : pool.getPhysicalNode());
+                    if (physicalNode == null) {
                         continue;
                     }
 
-					JedisConnection conn = null;		
+                    String ip = physicalNode.getHost() + ":" + physicalNode.getPort();
+                    //连接异常IP 其他需要连接到这个IP的 本周期内不连接
+                    if (connectionExceptionIps.contains(ip)) {
+                        continue;
+                    }
+
+					JedisConnection conn = null;
 					try {
-						
+
 						// 前置设置 readonly
 						conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 1000, 0);
-						
-						if ( cmd.equals("HMSET") 	
-								|| cmd.equals("HSET") 	
-								|| cmd.equals("HSETNX") 	
-								|| cmd.equals("HINCRBY") 	
-								|| cmd.equals("HINCRBYFLOAT") 	) { // hash
-							
-							conn.sendCommand( RedisCommand.HLEN, key );
-							
-						} else if (cmd.equals("LPUSH") 	
-								|| cmd.equals("LPUSHX") 
-								|| cmd.equals("RPUSH") 
-								|| cmd.equals("RPUSHX") ) { // list
-							
-							conn.sendCommand( RedisCommand.LLEN, key );
-							
-						} else if(  cmd.equals("SADD") ) {  // set
-								
-								conn.sendCommand( RedisCommand.SCARD, key );
-							
-						} else if ( cmd.equals("ZADD")  
-								|| cmd.equals("ZINCRBY") 
-								|| cmd.equals("ZREMRANGEBYLEX")) { // sortedset
-							
-							conn.sendCommand( RedisCommand.ZCARD, key );
+
+						if (cmd.equals("HMSET") || 
+								cmd.equals("HSET") || 
+								cmd.equals("HSETNX") || 
+								cmd.equals("HINCRBY") || 
+								cmd.equals("HINCRBYFLOAT")) { // hash
+
+							conn.sendCommand(RedisCommand.HLEN, key);
+
+						} else if (cmd.equals("LPUSH") || 
+								cmd.equals("LPUSHX") || 
+								cmd.equals("RPUSH") || 
+								cmd.equals("RPUSHX")) { // list
+
+							conn.sendCommand(RedisCommand.LLEN, key);
+
+						} else if (cmd.equals("SADD")) { // set
+
+							conn.sendCommand(RedisCommand.SCARD, key);
+
+						} else if (cmd.equals("ZADD") || 
+								   cmd.equals("ZINCRBY") || 
+								   cmd.equals("ZREMRANGEBYLEX")) { // sortedset
+
+							conn.sendCommand(RedisCommand.ZCARD, key);
 						}
-						
+
 						// 获取集合长度
 						long length = conn.getIntegerReply();
-						if ( length > THRESHOLD ) {
-							
+						if (length > THRESHOLD) {
+
 							BigLength bigLen = bigLengthMap.get(key);
-							if ( bigLen == null ) {
+							if (bigLen == null) {
 								bigLen = new BigLength();
 								bigLen.cmd = cmd;
 								bigLen.key = key;
 								bigLen.password = password;
 								bigLengthMap.put(key, bigLen);
 							}
-							bigLen.length.set( (int)length );
-							
+							bigLen.length.set((int) length);
+
 						} else {
-							bigLengthMap.remove( key );
+							bigLengthMap.remove(key);
 						}
-						
+
 						keyMap.remove(key);
-						
-						//###########################################
+
+						// ###########################################
 						if (bigLengthMap.size() > 100) {
 							BigLength min = null;
 							for (BigLength bigLen : bigLengthMap.values()) {
-								if ( min == null ) {
+								if (min == null) {
 									min = bigLen;
 								} else {
 									if (bigLen.length.get() < min.length.get()) {
@@ -139,17 +137,14 @@ public class BigLengthCollector implements StatCollector {
 									}
 								}
 							}
-							bigLengthMap.remove( min.key );
+							bigLengthMap.remove(min.key);
 						}
-						
-						
-					} catch (JedisDataException e1) {
-                        LOGGER.warn(" big length check data exception key {} user {} error {} ", new Object[]{key, password, e1.getMessage()});
-                    } catch (JedisConnectionException e2) {
-                        connectionExceptionIps.add(physicalNode.getHost() + ":" + physicalNode.getPort());
-                        LOGGER.error("", e2);
-                    }finally {
-						if ( conn != null ) {
+
+					} catch (Exception e2) {
+						connectionExceptionIps.add(ip);
+						LOGGER.error("check big length err:", e2);
+					} finally {
+						if (conn != null) {
 							conn.disconnect();
 						}
 					}
@@ -174,7 +169,7 @@ public class BigLengthCollector implements StatCollector {
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
 			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
-		
+
 		// 统计集合类型key
 		if (  	cmd.equals("HMSET") 	// hash
 				|| cmd.equals("HSET") 	
@@ -229,7 +224,7 @@ public class BigLengthCollector implements StatCollector {
 	
 	@Override
 	public void onSchedulePeroid(int peroid) {
-		if (TimeUtil.currentTimeMillis() - lastCheckTime >= peroid * 1000 ) {
+		if (TimeUtil.currentTimeMillis() - lastCheckTime >= peroid * 1000 * 10 ) {
 			checkListKeyLength();
         }
 	}

@@ -207,7 +207,7 @@ public class XClusterPool extends AbstractPool{
             //
             for(int i=0; i<3; i++) {
 
-        		long time = System.nanoTime();
+        		long time = System.currentTimeMillis();
             	
 	            conn.sendCommand(RedisCommand.PING);
 	            String value = conn.getBulkReply();
@@ -215,7 +215,7 @@ public class XClusterPool extends AbstractPool{
 	            	
 	            	PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
 	            	latencySample.time = time;
-		            latencySample.latency = (int) (System.nanoTime() - time);
+		            latencySample.latency =  (System.currentTimeMillis() - time);
 					physicalNode.addLatencySample( latencySample );
 	            }
             }

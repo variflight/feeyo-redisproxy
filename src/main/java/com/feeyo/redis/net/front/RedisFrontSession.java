@@ -214,9 +214,10 @@ public class RedisFrontSession {
 					return;
 				}
 				
+				//
 				currentCommandHandler = this.getCommandHandler( routeResult.getRequestType() );
 				currentCommandHandler.handle(routeResult);
-				
+				//
 				if ( routeResult.getRequestType() != RedisRequestType.DEFAULT ) {
 					// pipeline mget mset mdel 暂时不释放锁
 					isImmediateReleaseConReadLock = false;
@@ -237,7 +238,7 @@ public class RedisFrontSession {
 					frontCon.write( getDefaultErrorInvalidCommand(e) );
 				}
 				
-				LOGGER.warn("con: {}, invalid request err: {}", this.frontCon, requests);
+				LOGGER.error("con: {}, invalid request err: {}", this.frontCon, requests);
 			
 			// auto response
 			} catch (FullRequestNoThroughtException e) {
@@ -266,6 +267,7 @@ public class RedisFrontSession {
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
+				
 			} catch (KeyIllegalException e) {
 				frontCon.write( getDefaultErrorInvalidCommand(e) );
 			}

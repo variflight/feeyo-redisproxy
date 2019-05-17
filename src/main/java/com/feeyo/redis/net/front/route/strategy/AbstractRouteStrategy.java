@@ -40,11 +40,12 @@ public abstract class AbstractRouteStrategy {
 			RouteNode node = new RouteNode();
 			
 			PhysicalNode physicalNode = pool.getPhysicalNode();
-			if ( physicalNode == null )
+			if ( physicalNode == null ) {
 				throw new PhysicalNodeUnavailableException("node unavailable.");
-			
-			if( physicalNode != null && physicalNode.isOverload() )
-				throw new PhysicalNodeUnavailableException("node overload.");
+			//
+			} else if ( physicalNode.isOverload() ) {
+				throw new PhysicalNodeUnavailableException("node overload. " );
+			}
 			
 			for(int i = 0; i < requests.size(); i++) {
 				node.addRequestIndex(i);
@@ -72,11 +73,12 @@ public abstract class AbstractRouteStrategy {
 				
 				// 根据 slot 获取 redis物理节点
 				PhysicalNode physicalNode = clusterPool.getPhysicalNodeBySlot(slot) ;
-				if ( physicalNode == null )
+				if ( physicalNode == null ) {
 					throw new PhysicalNodeUnavailableException("node unavailable.");
-				
-				if( physicalNode != null && physicalNode.isOverload() )
+				//
+				} else if ( physicalNode.isOverload() ) {
 					throw new PhysicalNodeUnavailableException("node overload.");
+				}
 
 				allocateRequestIdxToPhysicalNode(nodes, i, physicalNode);
 			}
@@ -94,11 +96,12 @@ public abstract class AbstractRouteStrategy {
 				// 根据后缀 路由节点
 				String suffix = XNodeUtil.getSuffix( request );
 				PhysicalNode physicalNode = xPool.getPhysicalNode( suffix );
-				if ( physicalNode == null )
+				if ( physicalNode == null ) {
 					throw new PhysicalNodeUnavailableException("node unavailable.");
-				
-				if( physicalNode != null && physicalNode.isOverload() )
+					
+				} else if ( physicalNode.isOverload() ) {
 					throw new PhysicalNodeUnavailableException("node overload.");
+				}
 				
 				allocateRequestIdxToPhysicalNode(nodes, i, physicalNode);
 			}

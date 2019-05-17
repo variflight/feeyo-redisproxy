@@ -1,24 +1,21 @@
 package com.feeyo.redis.net.front.bypass;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.codec.redis.RedisRequest;
 import com.feeyo.net.codec.redis.RedisResponse;
-
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.config.loader.ConfigLoader;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.front.RedisFrontConnection;
-
 import com.feeyo.util.ThreadFactoryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /*
  * 旁路服务
@@ -83,21 +80,27 @@ public class BypassService {
 				
 				@Override
 				public void run() {
-					//
+
+
 					try {
-						
+                        //判断前端连接
+                        if (frontConn == null) {
+                            return;
+                        }
+                        String password = frontConn.getPassword();
+                        String cmd = frontConn.getSession().getRequestCmd();
+                        String key = frontConn.getSession().getRequestKey();
+                        int requestSize = frontConn.getSession().getRequestSize();
+                        long requestTimeMills = frontConn.getSession().getRequestTimeMills();
+                        int responseSize = 0;
+
 						BypassIoConnection backConn = new BypassIoConnection(host, port);
 						List<RedisResponse> resps = backConn.writeToBackend(request);
+
 						if (resps != null) {
-						
-							String password = frontConn.getPassword();
-							String cmd = frontConn.getSession().getRequestCmd();
-							String key = frontConn.getSession().getRequestKey();
-							int requestSize = frontConn.getSession().getRequestSize();
-							long requestTimeMills = frontConn.getSession().getRequestTimeMills();
+
 							long responseTimeMills = TimeUtil.currentTimeMillis();
-							int responseSize = 0;
-							
+
 							for (RedisResponse resp : resps)
 								responseSize += backConn.writeToFront(frontConn, resp, 0);
 							
@@ -111,16 +114,17 @@ public class BypassService {
 							
 							// 数据收集
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
-							StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, procTimeMills, false, true);
+							StatUtil.collect(password, cmd, key, requestSize, responseSize, 
+									procTimeMills, procTimeMills, false, true);
 						}
 						
 					} catch(IOException e) {
-						
-						if ( frontConn != null) {
-							frontConn.close("bypass write err");
-						}
-	
-						LOGGER.error("bypass write to front err:", e);
+
+                        if (frontConn != null) {
+                            frontConn.close("write err");
+                        }
+
+                        LOGGER.error("bypass write to front err:", e);
 					}
 				}
 			});
@@ -130,9 +134,9 @@ public class BypassService {
 			// front rejected 
 			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
 			
-			LOGGER.warn("Bypass rejected, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, frontConn={}/{}/{}/{}",
+			LOGGER.error("Bypass rejected, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, completedTaskCount={}, frontConn={}/{}/{}/{}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(),
-							threadPoolExecutor.getMaxSubmittedTaskCount(),threadPoolExecutor.getSubmittedTasksCount(),
+							threadPoolExecutor.getMaxSubmittedTaskCount(),threadPoolExecutor.getSubmittedTasksCount(), threadPoolExecutor.getCompletedTaskCount(),
 							frontConn.getHost(), frontConn.getPassword(), frontConn.getSession().getRequestCmd(), frontConn.getSession().getRequestKey() } );
 		}	
 	}

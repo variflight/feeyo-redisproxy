@@ -20,7 +20,7 @@ public class RedisFrontConnection extends FrontConnection {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( RedisFrontConnection.class );
 	
-	private static final long AUTH_TIMEOUT = 15 * 1000L;
+	private static final long AUTH_TIMEOUT = 10 * 1000L;
 	
 	// 用户配置
 	private UserCfg userCfg;
@@ -111,11 +111,10 @@ public class RedisFrontConnection extends FrontConnection {
 		
 		if ( netflowGuard != null && netflowGuard.consumeBytes(this.getPassword(), length) ) {
 			
-			LOGGER.warn("##flow clean##, front: {} ", this);
-			
+			LOGGER.error("flow guard, clean front: {} ", this);
 			//
-			this.write( "-ERR netflow problem, request clean. \r\n".getBytes() );
-			this.close("flow limit");
+			this.write( "-ERR flow guard, clean. \r\n".getBytes() );
+			this.close("flow guard, clean");
 			return true;
 		}
 		

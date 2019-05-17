@@ -37,13 +37,14 @@ public class EvalKey extends KeyRewriteStrategy {
 
 	@Override
 	public void rewriteKey(RedisRequest request, UserCfg userCfg) throws KeyIllegalException {
+		//
 		byte[][] args = request.getArgs();
 		if (args.length < 4) {
-			throw new KeyIllegalException("EVAL command must put keys to params, if this is no params, please do not use 'EVAL' !");
+			throw new KeyIllegalException("EVAL err, You need to use this format, eval script numkeys key [key...] arg [arg...]!");
 		}
 		
-		int keySize = Integer.parseInt(new String(args[2]));
-		for (int i = 3; i < keySize + 3; i++) {
+		int numOfKeys = Integer.parseInt(new String(args[2]));
+		for (int i = 3; i < numOfKeys + 3; i++) {
 			checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[i]);
 			//
 			args[i] = concat(userCfg.getPrefix(), args[i]);

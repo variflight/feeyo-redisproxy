@@ -1,12 +1,12 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.feeyo.net.codec.redis.RedisRequestPolicy;
 import com.feeyo.net.codec.redis.RedisRequestType;
 import com.feeyo.redis.net.front.handler.CommandParse;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class CmdAccessCollector implements StatCollector {
 	
@@ -18,8 +18,9 @@ public class CmdAccessCollector implements StatCollector {
 	
 
 	@Override
-	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
-	
+	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
+			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
+
 		UserCommand userCommand = userCommandCountMap.get(password);
 		if ( userCommand == null ) {
 			userCommand = new UserCommand( password );
@@ -143,6 +144,7 @@ public class CmdAccessCollector implements StatCollector {
 		public AtomicLong writeCommandCount;
 		public AtomicLong readComandCount;
 		public ConcurrentHashMap<String, AtomicLong> commandCount = new ConcurrentHashMap<String, AtomicLong>();
+		
 		
 		public UserCommand(String user) {
 			this.user = user;

@@ -1,11 +1,5 @@
 package com.feeyo.kafka.net.backend.callback;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.kafka.codec.ResponseHeader;
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
@@ -13,6 +7,11 @@ import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.callback.AbstractBackendCallback;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * @see https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-Responses
@@ -119,7 +118,8 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 				int backendWaitTimeMills = (int)(conn.getLastReadTime() - conn.getLastWriteTime());
 
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false);
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, 
+						procTimeMills, backendWaitTimeMills, false, false);
 			}
 			
 			// 后端链接释放

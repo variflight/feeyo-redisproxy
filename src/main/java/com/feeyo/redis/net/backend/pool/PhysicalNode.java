@@ -2,7 +2,6 @@ package com.feeyo.redis.net.backend.pool;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -186,7 +185,7 @@ public class PhysicalNode {
 		}
 	}	
 	
-	//
+	// 节点的负载
     public boolean isOverload() {
         return this.isOverload;
     }
@@ -198,13 +197,17 @@ public class PhysicalNode {
     
     public void calculateOverloadByLatencySample(float latencyThreshold) {
     	//
-    	int latency = this.latencyTimeSeries.calculateLatency();
-    	if ( latency == -1 ) {
-    		this.isOverload = false;
-    		
-    	} else {
-    		this.isOverload = (latency >= ( latencyThreshold * 1000000 ) );
-    	}
+    	boolean newOverload = false;
+    	//
+    	long latency = this.latencyTimeSeries.calculateLatency();
+		if ( latency != -1 )												
+			newOverload = (latency >=  latencyThreshold  );  
+		//
+		if ( newOverload != this.isOverload )
+			LOGGER.warn("host={}/port overload state changed, isOverload=[{}/{}] latencyThreshold={}ms latency={}ms",
+					new Object[]{ this.host , this.port, this.isOverload, newOverload, latencyThreshold, latency } );
+		//
+		this.isOverload = newOverload;
     }
 	
     public List<LatencySample> getLatencySamples() {
@@ -274,40 +277,36 @@ public class PhysicalNode {
 		// 计算负载
 		private static final int NUM = 9; 
 		
-		public Deque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
+		public ConcurrentLinkedDeque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
 
 		public void addSample(LatencySample sample) {
-			
 			if ( samples.size() >= SAMPLE_SIZE) {
-				samples.removeLast();
+				samples.pollLast();
 			}
-			samples.addFirst( sample );
-
+			samples.offerFirst( sample );
 		}
 		
-		public int calculateLatency() {
+		public long calculateLatency() {
 			
 			 // 必须确认有足够的样本
-	        if ( samples.size() > NUM ) {
-	        	
-	        	int[] latencys = new int[ NUM ];
-		       
+	        if ( samples.size() >= NUM ) {
+	        	long[] latencys = new long[ NUM ];
+	        	//
 		        int i = 0;
 		        Iterator<LatencySample> itr = samples.iterator();
 		        while( itr.hasNext() ) {
 		        	if ( i == NUM )
 		                break;
-		            
 		            latencys[i] = itr.next().latency;
 		            i++;
 		        }
 		        
 		        // 计算，去掉最高值&最低值, 利用中间值计算平均
-		        int total = 0;
-		        int max = latencys[0];
-		        int min = latencys[0];
+		        long total = 0;
+		        long max = latencys[0];
+		        long min = latencys[0];
 		        for(int j = 0; j < latencys.length; j++) {
-		        	int v = latencys[j];
+		        	long v = latencys[j];
 		        	if ( max < v ) max = v;
 		        	if ( min > v ) min = v;
 		        	total += v;
@@ -339,9 +338,8 @@ public class PhysicalNode {
 				}
 			}
 			
-			
+			//
 			List<LatencySample> sampleList = new ArrayList<LatencySample>();
-			
 			for (Map.Entry<Long, List<LatencySample>> entry : sampleMap.entrySet()) {
 
 				int total = 0;
@@ -351,11 +349,10 @@ public class PhysicalNode {
 					cnt++;
 					
 				}
-				
+				//
 				LatencySample avgSample =  new LatencySample();
 				avgSample.time = entry.getKey();
 				avgSample.latency =  total / cnt ;
-				
 				sampleList.add( avgSample );
 			}
 
@@ -366,7 +363,7 @@ public class PhysicalNode {
 
 	public static class LatencySample {
 		public long time;
-		public int latency;
+		public long latency;	// 毫秒
 	}
 	
 }

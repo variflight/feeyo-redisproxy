@@ -13,6 +13,7 @@ public final class SystemConfig {
 	
 	private int frontIdleTimeout    = 5 * 60 * 1000;	// 单位毫秒
 	private int backendIdleTimeout	= 30 * 60 * 1000;	
+	private int backendSlowTimeout  = 5 * 60 * 1000;	//
 	
 	private final int frontSocketSoRcvbuf;
 	private final int frontSocketSoSndbuf;
@@ -79,6 +80,16 @@ public final class SystemConfig {
 	public void setBackendIdleTimeout(int backendIdleTimeout) {
 		this.backendIdleTimeout = backendIdleTimeout;
 	}
+	
+	public int getBackendSlowTimeout() {
+		return backendSlowTimeout;
+	}
+
+	public void setBackendSlowTimeout(int backendSlowTimeout) {
+		this.backendSlowTimeout = backendSlowTimeout;
+	}
+	
+	///
 
 	public int getFrontsocketsorcvbuf() {
 		return frontSocketSoRcvbuf;

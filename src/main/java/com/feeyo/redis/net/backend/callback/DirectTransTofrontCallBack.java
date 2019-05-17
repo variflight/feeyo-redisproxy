@@ -1,17 +1,16 @@
 package com.feeyo.redis.net.backend.callback;
 
-import java.io.IOException;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.codec.redis.RedisResponse;
 import com.feeyo.net.codec.redis.RedisResponseDecoderV2;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.StatUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.front.RedisFrontConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * direct transfer bakend data to front connection must attach (setAttachement)
@@ -105,21 +104,26 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 			// 获取前端 connection
 			// --------------------------------------------------------------
 			RedisFrontConnection frontCon = getFrontCon( backendCon );
-			try {
-				String password = frontCon.getPassword();
-				String cmd = frontCon.getSession().getRequestCmd();
-				String key = frontCon.getSession().getRequestKey();
-				int requestSize = frontCon.getSession().getRequestSize();
-				long requestTimeMills = frontCon.getSession().getRequestTimeMills();			
-				long responseTimeMills = TimeUtil.currentTimeMillis();
-				int responseSize = 0;
-				
+
+
+            try {
+                if (frontCon == null) {
+                    //  清理后端连接
+                    return;
+                }
+                String password = frontCon.getPassword();
+                String cmd = frontCon.getSession().getRequestCmd();
+                String key = frontCon.getSession().getRequestKey();
+                int requestSize = frontCon.getSession().getRequestSize();
+                long requestTimeMills = frontCon.getSession().getRequestTimeMills();
+                int responseSize = 0;
+
 				for(RedisResponse resp: resps) 
 					responseSize += this.writeToFront(frontCon, resp, 0);
 				
 				resps.clear();	// help GC
 				resps = null;
-				
+                long responseTimeMills = TimeUtil.currentTimeMillis();
 				int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 				int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 				
@@ -127,16 +131,16 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				backendCon.release();	
 				
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false);
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, 
+						procTimeMills, backendWaitTimeMills, false, false);
 				
 			} catch(IOException e2) {
-				
-				if ( frontCon != null) {
-					frontCon.close("write err");
-				}
 
-				long backId =  backendCon != null ? backendCon.getId() : -1;
-				LOGGER.error("backend write to front err, back id=" + backId , e2);
+                if (frontCon != null) {
+                    frontCon.close("write err");
+                }
+                long backId = backendCon == null ? -1 : backendCon.getId();
+                LOGGER.error("backend write to front err, back id=" + backId , e2);
 
 				// 由 reactor close
 				throw e2;
