@@ -71,11 +71,6 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 				if (offsets != null) {
 
 					try {
-						//
-                        if (frontCon == null) {
-                            //是否处理后端连接
-                            return;
-                        }
                         //
                         String password = frontCon.getPassword();
                         int requestSize = frontCon.getSession().getRequestSize();
@@ -109,11 +104,10 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						}
 						
 					} catch (IOException e2) {
-						if (frontCon != null) {
-                            frontCon.close("write err");
-						}
-						// 由 reactor close
-						LOGGER.error("backend write to front err:", e2);
+
+					    frontCon.close("write err");
+                        long backId = backendCon == null ? -1 : backendCon.getId();
+                        LOGGER.error("backend write to front err, back id=" + backId , e2);
 						throw e2;
 						
 					} finally {
