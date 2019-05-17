@@ -39,7 +39,7 @@ public class NetSystem {
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
 	
-	private final int TIMEOUT = 1000 * 60 * 5; //5分钟
+	private final int TIMEOUT = 1000 * 60 * 3; //3分钟
 	
 	private final ConcurrentHashMap<Long, ClosableConnection> allConnections;
 	private SystemConfig netConfig;
@@ -159,6 +159,7 @@ public class NetSystem {
 					c.doNextWriteCheck();
 				}
 
+				// 闲置的检查
 				c.idleCheck();
 			}
 		}

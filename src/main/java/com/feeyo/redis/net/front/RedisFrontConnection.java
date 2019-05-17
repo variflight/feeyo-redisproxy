@@ -111,10 +111,10 @@ public class RedisFrontConnection extends FrontConnection {
 		
 		if ( netflowGuard != null && netflowGuard.consumeBytes(this.getPassword(), length) ) {
 			
-			LOGGER.warn("##flow clean##, front: {} ", this);
+			LOGGER.error("flow guard, clean front: {} ", this);
 			//
-			this.write( "-ERR netflow problem, request clean. \r\n".getBytes() );
-			this.close("flow limit");
+			this.write( "-ERR flow guard, clean. \r\n".getBytes() );
+			this.close("flow guard, clean");
 			return true;
 		}
 		
