@@ -1,9 +1,9 @@
 package com.feeyo.redis.net.front.handler;
 
+import com.feeyo.net.codec.redis.RedisRequestPolicy;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import com.feeyo.net.codec.redis.RedisRequestPolicy;
 
 /**
  * 
@@ -68,6 +68,9 @@ public class CommandParse {
 		
 		// Cluster
 		_cmds.put("CLUSTER", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
+
+        // Print
+        _cmds.put("PRINT", 			new RedisRequestPolicy(MANAGE_CMD, NO_THROUGH_CMD, WRITE_CMD));
 
 		//Key
 		_cmds.put("DEL", 				new RedisRequestPolicy(COMMON_CMD, DEL_CMD, WRITE_CMD));
