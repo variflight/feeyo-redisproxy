@@ -216,7 +216,7 @@ public class RedisFrontSession {
 				
 				// pipeline过大，输出告警日志
 				if (  requests.size() > 10000 ) {
-					LOGGER.warn("pipeline too many entries, size={}, firstReq={}, front={}/{}", 
+					LOGGER.info("pipeline too many entries, size={}, firstReq={}, front={}/{}", 
 							new Object[]{ requests.size(), requests.get(0), frontCon.getHost(), frontCon.getPassword() });
 				}
 				
@@ -273,9 +273,6 @@ public class RedisFrontSession {
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
-				//
-				if (LOGGER.isDebugEnabled() )
-					LOGGER.debug("node unavailable err:", e);
 				
 			} catch (KeyIllegalException e) {
 				frontCon.write( getDefaultErrorInvalidCommand(e) );
