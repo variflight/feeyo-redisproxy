@@ -394,14 +394,11 @@ public class Connection extends ClosableConnection {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void close(String reason) {
-		//
-		if ( !isClosed.get() ) {
-			
+		// 
+		if ( isClosed.compareAndSet(false,  true) ) {
+			//
 			closeSocket();
-			isClosed.set(true);
-
 			this.cleanup();		
-			
 			//
 			NetSystem.getInstance().removeConnection(this);
 			if ( this.handler != null )
@@ -414,7 +411,7 @@ public class Connection extends ClosableConnection {
 			this.attachement = null; //help GC
 			
 		} else {
-		    this.cleanup();
+			  this.cleanup();
 		}
 	}
 	

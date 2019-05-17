@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.feeyo.net.nio.buffer.BufferPool;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
+import com.feeyo.redis.net.front.RedisFrontConnection;
 
 
 /**
@@ -127,25 +128,36 @@ public class NetSystem {
 				continue;
 			}
 
-			// 后端超时的连接关闭
+			// 后端在用连接的超时处理
 			if ( c instanceof BackendConnection ) {
 				BackendConnection backendCon = (BackendConnection)c;
-				if (backendCon.isBorrowed() && backendCon.getLastTime() < TimeUtil.currentTimeMillis() - TIMEOUT ) {
+				if ( backendCon.isBorrowed() ) {
 					
-					StringBuffer errBuffer = new StringBuffer();
-					errBuffer.append("backend timeout, close it " ).append( c );
-					if ( c.getAttachement() != null ) {
-						errBuffer.append(" , and attach it " ).append( c.getAttachement() );
+					if (  backendCon.getLastTime() < TimeUtil.currentTimeMillis() - TIMEOUT ) {
+						
+						StringBuffer errSB = new StringBuffer();
+						errSB.append("backend timeout, close it" ).append( c );
+						errSB.append(" , and attach it " ).append( c.getAttachement() );
+						LOGGER.error( errSB.toString() );
+						
+						c.close("backend timeout");
+						
+					}  else {
+						
+						//
+						StringBuffer errSB = new StringBuffer();
+						errSB.append("backend kill, close it" ).append( c );
+						errSB.append(" , and attach it " ).append( c.getAttachement() );
+						LOGGER.error( errSB.toString() );
+						
+						//
+						if ( backendCon.getAttachement() != null && backendCon.getAttachement() instanceof RedisFrontConnection) {
+							RedisFrontConnection frontCon = (RedisFrontConnection) backendCon.getAttachement();
+							if ( frontCon.isClosed() ) {
+								c.close("backend kill, because front con is close! ");
+							}
+						}
 					}
-					errBuffer.append( " , channel isConnected: " ).append(backendCon.getSocketChannel().isConnected());
-			        errBuffer.append( " , channel isBlocking: " ).append(backendCon.getSocketChannel().isBlocking());
-			        errBuffer.append( " , channel isOpen: " ).append(backendCon.getSocketChannel().isOpen());
-			        errBuffer.append( " , socket isConnected: " ).append(backendCon.getSocketChannel().socket().isConnected());
-			        errBuffer.append( " , socket isClosed: " ).append(backendCon.getSocketChannel().socket().isClosed());
-			        
-					LOGGER.error( errBuffer.toString() );
-					
-					c.close("backend timeout");
 				}
 			}
 			
