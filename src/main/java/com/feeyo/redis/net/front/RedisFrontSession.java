@@ -3,6 +3,7 @@ package com.feeyo.redis.net.front;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -213,6 +214,14 @@ public class RedisFrontSession {
 				if ( intercept( routeResult ) ) {
 					return;
 				}
+				
+				// 
+//				if ( LOGGER.isDebugEnabled() ) {
+//					
+//					StringBuffer infoSB = new StringBuffer(200);
+//					infoSB.append( )
+//					LOGGER.info( );
+//				}
 				
 				currentCommandHandler = this.getCommandHandler( routeResult.getRequestType() );
 				currentCommandHandler.handle(routeResult);
