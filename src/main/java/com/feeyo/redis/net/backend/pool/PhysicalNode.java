@@ -204,7 +204,7 @@ public class PhysicalNode {
 			newOverload = (latency >= ( latencyThreshold * 1000000 ) ); // 配置中采用毫秒单位， 此处转为纳秒
 		//
 		if ( newOverload != this.isOverload )
-			LOGGER.warn("physicalNode overload value changed, host={}, port={}, isOverload={}/{} latencyThreshold={} latency={}",
+			LOGGER.warn("physicalNode overload value changed, host={}, port={}, isOverload=[{}/{}] latencyThreshold={} latency={}",
 					new Object[]{ this.host , this.port, this.isOverload, newOverload, latencyThreshold, latency } );
 		//
 		this.isOverload = newOverload;
