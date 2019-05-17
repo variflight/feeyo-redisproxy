@@ -103,22 +103,12 @@ public class RouteService {
 			KeyRewriteStrategy strategy = KeyRewriteStrategySet.getStrategy(cmd);
 			strategy.rewriteKey(request, userCfg);
 
-            if (requests.size() > 10000) {
-                LOGGER.error("pipeline large size={}, front={}/{}/{}",
-                        new Object[]{requests.size(), frontCon.getHost(), frontCon.getPort(), frontCon.getPassword()});
-            }
-
-            //针对 写指令 里面的删除指令
-            if (LOGGER.isDebugEnabled()) {
-                if (!policy.isRead()) {
-                    if ("ZREM".equals(cmd) || "LREM".equals(cmd) || "SMOVE".equals(cmd) || "ZREM".equals(cmd) || "EXPIRE".equals(cmd) || "EXPIREAT".equals(cmd) ||
-                            "BLPOP".equals(cmd) || "LREM".equals(cmd) || "DEL".equals(cmd) || "HDEL ".equals(cmd) || "LTRIM".equals(cmd) || "SREM".equals(cmd)) {
-                        LOGGER.info("front= {} pwd={}  req={} ", new Object[]{frontCon.getHost(), frontCon.getPassword(), request});
-                    }
-                }
-            }
         }
-		
+
+        if (requests.size() > 10000) {
+            LOGGER.error("pipeline large size={}, front={}/{}/{}",
+                    new Object[]{requests.size(), frontCon.getHost(), frontCon.getPort(), frontCon.getPassword()});
+        }
 		// 全部自动回复
 		if ( noThroughtIndexs != null && noThroughtIndexs.size() == requests.size() ) {
 			throw new FullRequestNoThroughtException("full request no throught", requests);
