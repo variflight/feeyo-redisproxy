@@ -3,7 +3,6 @@ package com.feeyo.redis.net.front;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -215,17 +214,10 @@ public class RedisFrontSession {
 					return;
 				}
 				
-				// 
-//				if ( LOGGER.isDebugEnabled() ) {
-//					
-//					StringBuffer infoSB = new StringBuffer(200);
-//					infoSB.append( )
-//					LOGGER.info( );
-//				}
-				
+				//
 				currentCommandHandler = this.getCommandHandler( routeResult.getRequestType() );
 				currentCommandHandler.handle(routeResult);
-				
+				//
 				if ( routeResult.getRequestType() != RedisRequestType.DEFAULT ) {
 					// pipeline mget mset mdel 暂时不释放锁
 					isImmediateReleaseConReadLock = false;
@@ -275,10 +267,6 @@ public class RedisFrontSession {
 			} catch (PhysicalNodeUnavailableException e) {
 				//-ERR node unavaliable error \r\n
 				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
-				
-				//
-				if (LOGGER.isDebugEnabled() )
-					LOGGER.debug("node unavailable err:", e);
 				
 			} catch (KeyIllegalException e) {
 				frontCon.write( getDefaultErrorInvalidCommand(e) );

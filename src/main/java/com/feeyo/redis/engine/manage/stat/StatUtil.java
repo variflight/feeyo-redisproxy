@@ -247,7 +247,8 @@ public class StatUtil {
 				
 				for(StatCollector listener: collectors) {
 					try {
-                        listener.onCollect(password, cmd, key, requestSize, responseSize, procTimeMills, waitTimeMills, isCommandOnly, isBypass);
+                        listener.onCollect(password, cmd, key, requestSize, responseSize, 
+                        		procTimeMills, waitTimeMills, isCommandOnly, isBypass);
 					} catch(Exception e) {
 						LOGGER.error("error:",e);
 					}

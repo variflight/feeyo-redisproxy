@@ -199,12 +199,12 @@ public class PhysicalNode {
     	//
     	boolean newOverload = false;
     	//
-    	int latency = this.latencyTimeSeries.calculateLatency();
-		if ( latency != -1 )
-			newOverload = (latency >= ( latencyThreshold * 1000000 ) ); // 配置中采用毫秒单位， 此处转为纳秒
+    	long latency = this.latencyTimeSeries.calculateLatency();
+		if ( latency != -1 )												
+			newOverload = (latency >=  latencyThreshold  );  
 		//
 		if ( newOverload != this.isOverload )
-			LOGGER.warn("physicalNode overload value changed, host={}, port={}, isOverload=[{}/{}] latencyThreshold={} latency={}",
+			LOGGER.warn("host={}/port overload state changed, isOverload=[{}/{}] latencyThreshold={}ms latency={}ms",
 					new Object[]{ this.host , this.port, this.isOverload, newOverload, latencyThreshold, latency } );
 		//
 		this.isOverload = newOverload;
@@ -286,29 +286,27 @@ public class PhysicalNode {
 			samples.offerFirst( sample );
 		}
 		
-		public int calculateLatency() {
+		public long calculateLatency() {
 			
 			 // 必须确认有足够的样本
 	        if ( samples.size() >= NUM ) {
-	        	
-	        	int[] latencys = new int[ NUM ];
-		       
+	        	long[] latencys = new long[ NUM ];
+	        	//
 		        int i = 0;
 		        Iterator<LatencySample> itr = samples.iterator();
 		        while( itr.hasNext() ) {
 		        	if ( i == NUM )
 		                break;
-		            
 		            latencys[i] = itr.next().latency;
 		            i++;
 		        }
 		        
 		        // 计算，去掉最高值&最低值, 利用中间值计算平均
-		        int total = 0;
-		        int max = latencys[0];
-		        int min = latencys[0];
+		        long total = 0;
+		        long max = latencys[0];
+		        long min = latencys[0];
 		        for(int j = 0; j < latencys.length; j++) {
-		        	int v = latencys[j];
+		        	long v = latencys[j];
 		        	if ( max < v ) max = v;
 		        	if ( min > v ) min = v;
 		        	total += v;
@@ -365,7 +363,7 @@ public class PhysicalNode {
 
 	public static class LatencySample {
 		public long time;
-		public int latency;
+		public long latency;	// 毫秒
 	}
 	
 }

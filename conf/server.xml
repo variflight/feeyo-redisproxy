@@ -23,6 +23,7 @@
 	<!-- Connection idle timeout -->
 	<property name="frontIdleTimeout">300000</property>
 	<property name="backendIdleTimeout">1800000</property>
+	<property name="backendSlowTimeout">300000</property>
 
 	<!-- bypass cfg -->
 	<property name="bypassRequireSize">262144</property>

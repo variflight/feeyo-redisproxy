@@ -148,8 +148,10 @@ public class RedisEngineCtx {
 
         String frontIdleTimeoutString = this.serverMap.get("frontIdleTimeout");
         String backendIdleTimeoutString = this.serverMap.get("backendIdleTimeout");
+        String backendSlowTimeoutString = this.serverMap.get("backendSlowTimeout");
         int frontIdleTimeout = frontIdleTimeoutString == null ? 1 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
         int backendIdleTimeout = backendIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
+        int backendSlowTimeout = backendSlowTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( backendSlowTimeoutString );
 
         int frontSocketSoRcvbuf = frontSocketSoRcvbufString == null ? 2097152 : Integer.parseInt( frontSocketSoRcvbufString );
         int frontSocketSoSndbuf = frontSocketSoSndbufString == null ? 4194304 : Integer.parseInt( frontSocketSoSndbufString );
@@ -164,6 +166,7 @@ public class RedisEngineCtx {
         SystemConfig systemConfig = new SystemConfig(frontSocketSoRcvbuf, frontSocketSoSndbuf, backSocketSoRcvbuf, backSocketSoSndbuf);
         systemConfig.setFrontIdleTimeout(  frontIdleTimeout );
         systemConfig.setBackendIdleTimeout( backendIdleTimeout );
+        systemConfig.setBackendSlowTimeout( backendSlowTimeout );
         NetSystem.getInstance().setNetConfig( systemConfig );
 
         // output
@@ -309,8 +312,10 @@ public class RedisEngineCtx {
 				// server.xml 部分设置生效
 				String frontIdleTimeoutString = this.serverMap.get("frontIdleTimeout");
 		        String backendIdleTimeoutString = this.serverMap.get("backendIdleTimeout");
+		        String backendSlowTimeoutString = this.serverMap.get("backendSlowTimeout");
 		        int frontIdleTimeout = frontIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
 		        int backendIdleTimeout = backendIdleTimeoutString == null ? 30 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
+		        int backendSlowTimeout = backendSlowTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( backendSlowTimeoutString );
 
 		        String frontSocketSoRcvbufString = this.serverMap.get("frontSocketSoRcvbuf");
 		        String frontSocketSoSndbufString = this.serverMap.get("frontSocketSoSndbuf");
@@ -327,8 +332,10 @@ public class RedisEngineCtx {
 		 		if ( backSocketSoSndbuf < 524288 ) backSocketSoSndbuf = 524288;
 
 		        SystemConfig systemConfig = new SystemConfig(frontSocketSoRcvbuf, frontSocketSoSndbuf, backSocketSoRcvbuf, backSocketSoSndbuf);
-		        systemConfig.setFrontIdleTimeout(  frontIdleTimeout );
+		        systemConfig.setFrontIdleTimeout( frontIdleTimeout );
 		        systemConfig.setBackendIdleTimeout( backendIdleTimeout );
+		        systemConfig.setBackendSlowTimeout( backendSlowTimeout );
+		        //
 		        NetSystem.getInstance().setNetConfig( systemConfig );
 
 	            //清理 old
@@ -429,8 +436,10 @@ public class RedisEngineCtx {
 			// 3. 生效部分 server.xml 配置
 			String frontIdleTimeoutString = this.serverMap.get("frontIdleTimeout");
 			String backendIdleTimeoutString = this.serverMap.get("backendIdleTimeout");
+			String backendSlowTimeoutString = this.serverMap.get("backendSlowTimeout");
 			int frontIdleTimeout = frontIdleTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( frontIdleTimeoutString );
 			int backendIdleTimeout = backendIdleTimeoutString == null ? 30 * 60 * 1000: Integer.parseInt( backendIdleTimeoutString );
+			int backendSlowTimeout = backendSlowTimeoutString == null ? 5 * 60 * 1000: Integer.parseInt( backendSlowTimeoutString );
 			
 			String frontSocketSoRcvbufString = this.serverMap.get("frontSocketSoRcvbuf");
 			String frontSocketSoSndbufString = this.serverMap.get("frontSocketSoSndbuf");
@@ -449,6 +458,7 @@ public class RedisEngineCtx {
 			SystemConfig systemConfig = new SystemConfig(frontSocketSoRcvbuf, frontSocketSoSndbuf, backSocketSoRcvbuf, backSocketSoSndbuf);
 			systemConfig.setFrontIdleTimeout(  frontIdleTimeout );
 			systemConfig.setBackendIdleTimeout( backendIdleTimeout );
+			systemConfig.setBackendSlowTimeout( backendSlowTimeout );
 			NetSystem.getInstance().setNetConfig( systemConfig );
 
 			// 4. 生效新的 ZK

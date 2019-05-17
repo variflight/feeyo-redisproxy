@@ -1,12 +1,5 @@
 package com.feeyo.net.nio;
 
-import com.feeyo.net.nio.buffer.BufferPool;
-import com.feeyo.net.nio.util.TimeUtil;
-import com.feeyo.redis.net.backend.BackendConnection;
-import com.feeyo.redis.net.front.RedisFrontConnection;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
@@ -14,6 +7,14 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.feeyo.net.nio.buffer.BufferPool;
+import com.feeyo.net.nio.util.TimeUtil;
+import com.feeyo.redis.net.backend.BackendConnection;
+import com.feeyo.redis.net.front.RedisFrontConnection;
 
 
 /**
@@ -38,9 +39,7 @@ public class NetSystem {
 	
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
-	
-	private final int TIMEOUT = 1000 * 60 * 5; //5分钟
-	
+
 	private final ConcurrentHashMap<Long, ClosableConnection> allConnections;
 	private SystemConfig netConfig;
 	private NIOConnector connector;
@@ -118,6 +117,9 @@ public class NetSystem {
 	 */
 	public void checkConnections() {
 		
+		//
+		int backendSlowTime = netConfig != null ? netConfig.getBackendSlowTimeout() : 5 * 60 * 1000;
+
 		Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 		while (it.hasNext()) {
 			ClosableConnection c = it.next().getValue();
@@ -132,7 +134,7 @@ public class NetSystem {
 				BackendConnection backendCon = (BackendConnection)c;
 				if ( backendCon.isBorrowed() ) {
 					
-					if (  backendCon.getLastTime() < TimeUtil.currentTimeMillis() - TIMEOUT ) {
+					if ( backendCon.getLastTime() < ( TimeUtil.currentTimeMillis() - backendSlowTime ) ) {
 						
 						StringBuffer errSB = new StringBuffer();
 						errSB.append("backend timeout, close it" ).append( c );
@@ -142,18 +144,18 @@ public class NetSystem {
 						c.close("backend timeout");
 						
 					}  else {
-						
 						//
-						StringBuffer errSB = new StringBuffer();
-						errSB.append("backend kill, close it" ).append( c );
-						errSB.append(" , and attach it " ).append( c.getAttachement() );
-						LOGGER.error( errSB.toString() );
-						
 						//
 						if ( backendCon.getAttachement() != null && backendCon.getAttachement() instanceof RedisFrontConnection) {
 							RedisFrontConnection frontCon = (RedisFrontConnection) backendCon.getAttachement();
 							if ( frontCon.isClosed() ) {
-								c.close("backend kill, because front con is close! ");
+								//
+								StringBuffer errSB = new StringBuffer();
+								errSB.append("front is closed, close it" ).append( c );
+								errSB.append(" , and attach it " ).append( c.getAttachement() );
+								LOGGER.error( errSB.toString() );
+
+								c.close("because the front con is closed! ");
 							}
 						}
 					}
