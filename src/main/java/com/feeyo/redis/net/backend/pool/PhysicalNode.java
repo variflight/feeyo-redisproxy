@@ -200,12 +200,12 @@ public class PhysicalNode {
     	boolean newOverload = false;
     	//
     	long latency = this.latencyTimeSeries.calculateLatency();
-		if ( latency != -1 )												// 1秒(s)=1000000000纳秒(ns)
-			newOverload = (latency >= ( latencyThreshold * 1000000000L ));  // 配置中采用秒单位， 此处转为纳秒
+		if ( latency != -1 )												
+			newOverload = (latency >=  latencyThreshold  );  
 		//
 		if ( newOverload != this.isOverload )
-			LOGGER.warn("host={}/port overload state changed, isOverload=[{}/{}] latencyThreshold={}s latency={}s",
-					new Object[]{ this.host , this.port, this.isOverload, newOverload, latencyThreshold, latency / 1000000000F } );
+			LOGGER.warn("host={}/port overload state changed, isOverload=[{}/{}] latencyThreshold={}ms latency={}ms",
+					new Object[]{ this.host , this.port, this.isOverload, newOverload, latencyThreshold, latency } );
 		//
 		this.isOverload = newOverload;
     }
@@ -363,7 +363,7 @@ public class PhysicalNode {
 
 	public static class LatencySample {
 		public long time;
-		public long latency;
+		public long latency;	// 毫秒
 	}
 	
 }

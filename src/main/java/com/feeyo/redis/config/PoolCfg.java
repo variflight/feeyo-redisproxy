@@ -17,11 +17,11 @@ public class PoolCfg {
 	protected final int maxCon;
 	protected final int minCon;
 	
-	protected final float latencyThreshold;
+	protected final int latencyThreshold;
 
 	protected List<String> nodes = new ArrayList<String>();
 
-	public PoolCfg(int id, String name, int type, int minCon, int maxCon, float latencyThreshold) {
+	public PoolCfg(int id, String name, int type, int minCon, int maxCon, int latencyThreshold) {
 		this.id = id;
 		this.name = name;
 		this.type = type;
@@ -52,7 +52,7 @@ public class PoolCfg {
 		return minCon;
 	}
 	
-	public float getLatencyThreshold() {
+	public int getLatencyThreshold() {
 		return latencyThreshold;
 	}
 

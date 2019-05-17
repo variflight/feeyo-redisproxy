@@ -591,11 +591,11 @@ public class RedisClusterPool extends AbstractPool {
 
 		JedisConnection conn = null;
 		int repairIdx = 0;
-		long repairTime = System.nanoTime();
+		long repairTime = System.currentTimeMillis();
 		try {
 			for (int i = 0; i < 3; i++) {
 				//
-				long time = System.nanoTime();
+				long time = System.currentTimeMillis();
 
 				// 指定超时值的 SO_TIMEOUT，以毫秒为单位。将此选项设为非零的超时值时，在与此 Socket 关联的
 				// InputStream 上调用 read() 将只阻塞此时间长度
@@ -605,7 +605,7 @@ public class RedisClusterPool extends AbstractPool {
 				if (value != null && "PONG".equalsIgnoreCase(value)) {
 					PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
 					latencySample.time = time;
-					latencySample.latency = (int) (System.nanoTime() - time);
+					latencySample.latency =  (System.currentTimeMillis() - time);
 					physicalNode.addLatencySample(latencySample);
 				}
 				
@@ -615,8 +615,8 @@ public class RedisClusterPool extends AbstractPool {
 			
 		} catch (Throwable e) {
 			
-			long nanoTime = System.nanoTime();
-			int latency = (int)(nanoTime - repairTime);
+			long nanoTime = System.currentTimeMillis();
+			long latency = (nanoTime - repairTime);
 			//
 			LOGGER.warn("check latency err, host:" + physicalNode.getHost() 
 							+ ", repairIdx=" + repairIdx + ", latency=" + latency, e);
