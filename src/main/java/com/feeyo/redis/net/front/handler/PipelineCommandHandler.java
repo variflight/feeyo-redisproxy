@@ -1,12 +1,5 @@
 package com.feeyo.redis.net.front.handler;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.codec.redis.RedisPipelineResponse;
 import com.feeyo.net.codec.redis.RedisPipelineResponseDecoderV2;
 import com.feeyo.net.codec.redis.RedisRequest;
@@ -18,6 +11,12 @@ import com.feeyo.redis.net.backend.callback.DirectTransTofrontCallBack;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.RouteResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
 
 public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 	
@@ -70,21 +69,26 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 				// 获取所有应答
 				List<DataOffset> offsets = result.getDataOffsets();
 				if (offsets != null) {
+                    if (frontCon == null) {
+                        //是否处理后端连接
+                        return;
+                    }
+                    String password = frontCon.getPassword();
+                    int requestSize = frontCon.getSession().getRequestSize();
+                    long requestTimeMills = frontCon.getSession().getRequestTimeMills();
 
+                    int responseSize = 0;
+                    int backendWaitTimeMills =0;
 					try {
-						String password = frontCon.getPassword();
-						int requestSize = frontCon.getSession().getRequestSize();
-						long requestTimeMills = frontCon.getSession().getRequestTimeMills();
-						long responseTimeMills = TimeUtil.currentTimeMillis();
-						int responseSize = 0;
+
 
 						for (DataOffset offset : offsets) {
 							byte[] data = offset.getData();
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
-
+                        long responseTimeMills = TimeUtil.currentTimeMillis();
 						int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
-						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+						 backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 						
 						// 后段链接释放
 						releaseBackendConnection(backendCon);
@@ -92,21 +96,28 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
 						// 数据收集
 						StatUtil.collect(password, RedisRequestType.PIPELINE.getCmd(), 
 								RedisRequestType.PIPELINE.getCmd(), requestSize, responseSize,
-								procTimeMills, backendWaitTimeMills, false, false);
+								procTimeMills, backendWaitTimeMills, false, false,false);
 
 						// child 收集
 						for (RedisRequest req : rrs.getRequests()) {
 							String childCmd = new String( req.getArgs()[0] );
 							String requestKey = req.getNumArgs() > 1 ? new String(req.getArgs()[1]) : null;
-							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize, procTimeMills,  backendWaitTimeMills, true, false);
+							StatUtil.collect(password, childCmd, requestKey, requestSize, responseSize, procTimeMills,  backendWaitTimeMills, true, false,false);
 						}
 						
 					} catch (IOException e2) {
-
+                        long responseTimeMills = TimeUtil.currentTimeMillis();
+                        int procTimeMills = (int) (responseTimeMills - requestTimeMills);
 						if (frontCon != null) {
-							frontCon.close("write err");
+                            frontCon.close("write err");
 						}
-
+                        if (backendCon != null) {
+                            backendWaitTimeMills = (int) (backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+                        }
+                        // 数据收集
+                        StatUtil.collect(password, RedisRequestType.PIPELINE.getCmd(),
+                                RedisRequestType.PIPELINE.getCmd(), requestSize, responseSize,
+                                procTimeMills, backendWaitTimeMills, false, false,true);
 						// 由 reactor close
 						LOGGER.error("backend write to front err:", e2);
 						throw e2;

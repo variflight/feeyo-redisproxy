@@ -1,28 +1,22 @@
 package com.feeyo.redis.engine.manage.stat;
 
-import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
-import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
+import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 数据埋点收集器
@@ -218,16 +212,29 @@ public class StatUtil {
 		collectors.remove(collector);
 	}
 	
-	
+
 	/**
 	 * 收集
-	 * 
+	 *
 	 * @param spot
-	 * @param isCommandOnly 用于判断此次收集是否只用于command（pipeline指令的子指令）收集。
+	 * @param 。
 	 */
+    /**
+     *  收集
+     * @param password password
+     * @param cmd cmd
+     * @param key key
+     * @param requestSize requestSize
+     * @param responseSize responseSize
+     * @param procTimeMills procTimeMills
+     * @param waitTimeMills waitTimeMills
+     * @param isCommandOnly isCommandOnly 用于判断此次收集是否只用于command（pipeline指令的子指令）收集
+     * @param isBypass isBypass 是否旁路
+     * @param isException 是否异常
+     */
 	public static void collect(final String password, final String cmd, final String key, 
 			final int requestSize, final int responseSize, final int procTimeMills, 
-			final int waitTimeMills, final boolean isCommandOnly, final boolean isBypass) {
+			final int waitTimeMills, final boolean isCommandOnly, final boolean isBypass, final boolean isException) {
 		
 		if ( cmd == null ) {
 			return;
@@ -241,7 +248,7 @@ public class StatUtil {
 				
 				for(StatCollector listener: collectors) {
 					try {
-						listener.onCollect(password, cmd, key, requestSize, responseSize, procTimeMills, waitTimeMills, isCommandOnly, isBypass);
+                        listener.onCollect(password, cmd, key, requestSize, responseSize, procTimeMills, waitTimeMills, isCommandOnly, isBypass, isException);
 					} catch(Exception e) {
 						LOGGER.error("error:",e);
 					}
