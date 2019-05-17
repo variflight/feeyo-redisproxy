@@ -40,7 +40,7 @@ public class NetSystem {
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
 	
-	private final int TIMEOUT = 1000 * 60 * 3; //3分钟
+	private final int TIMEOUT = 1000 * 60 * 5; //5分钟
 	
 	private final ConcurrentHashMap<Long, ClosableConnection> allConnections;
 	private SystemConfig netConfig;
@@ -143,18 +143,18 @@ public class NetSystem {
 						c.close("backend timeout");
 						
 					}  else {
-						
 						//
-						StringBuffer errSB = new StringBuffer();
-						errSB.append("backend kill, close it" ).append( c );
-						errSB.append(" , and attach it " ).append( c.getAttachement() );
-						LOGGER.error( errSB.toString() );
-						
 						//
 						if ( backendCon.getAttachement() != null && backendCon.getAttachement() instanceof RedisFrontConnection) {
 							RedisFrontConnection frontCon = (RedisFrontConnection) backendCon.getAttachement();
 							if ( frontCon.isClosed() ) {
-								c.close("backend kill, because front con is close! ");
+								//
+								StringBuffer errSB = new StringBuffer();
+								errSB.append("front is closed, close it" ).append( c );
+								errSB.append(" , and attach it " ).append( c.getAttachement() );
+								LOGGER.error( errSB.toString() );
+								
+								c.close("because the front con is closed! ");
 							}
 						}
 					}
