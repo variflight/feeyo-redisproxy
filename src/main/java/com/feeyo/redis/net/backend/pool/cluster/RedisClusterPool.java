@@ -615,8 +615,7 @@ public class RedisClusterPool extends AbstractPool {
 			
 		} catch (Throwable e) {
 			
-			long nanoTime = System.currentTimeMillis();
-			long latency = (nanoTime - repairTime);
+			long latency = (System.currentTimeMillis() - repairTime);
 			//
 			LOGGER.warn("check latency err, host:" + physicalNode.getHost() 
 							+ ", repairIdx=" + repairIdx + ", latency=" + latency, e);
