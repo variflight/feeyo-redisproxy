@@ -11,11 +11,12 @@ public class UserFlowCollector implements StatCollector {
 
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
-			int waitTimeMills, boolean isCommandOnly, boolean isBypass) {
-		
+			int waitTimeMills, boolean isCommandOnly, boolean isBypass, boolean isException) {
+        //TODO  区分 正常和异常 读写次数 统计
 		if (isCommandOnly) {
 			return;
 		}
+
 		
 		UserFlow flow = userFlowMap.get(password);
 		if ( flow == null ) {

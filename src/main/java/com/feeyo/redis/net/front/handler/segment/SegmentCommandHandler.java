@@ -1,12 +1,5 @@
 package com.feeyo.redis.net.front.handler.segment;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.codec.redis.RedisPipelineResponse;
 import com.feeyo.net.codec.redis.RedisPipelineResponseDecoderV2;
 import com.feeyo.net.nio.util.TimeUtil;
@@ -17,6 +10,12 @@ import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.handler.AbstractPipelineCommandHandler;
 import com.feeyo.redis.net.front.route.RouteNode;
 import com.feeyo.redis.net.front.route.RouteResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  * handler for mget and mset command in clust pool
@@ -80,36 +79,49 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
             
 			if ( result.getStatus() == ResponseMargeResult.ALL_NODE_COMPLETED ) {
 				List<DataOffset> offsets = result.getDataOffsets();
-				if (offsets != null) {
-                    try {
-                        String password = frontCon.getPassword();
-        				String cmd = frontCon.getSession().getRequestCmd();
-        				String key = frontCon.getSession().getRequestKey();
-                        int requestSize = frontCon.getSession().getRequestSize();
-                        long requestTimeMills = frontCon.getSession().getRequestTimeMills();
-                        long responseTimeMills = TimeUtil.currentTimeMillis();
 
-                        int responseSize = 0;
+				if (offsets != null) {
+                    if (frontCon == null) {
+                        // 是否释放后端连接
+                        return;
+                    }
+
+                    int responseSize = 0;
+                    String password = frontCon.getPassword();
+                    String cmd = frontCon.getSession().getRequestCmd();
+                    String key = frontCon.getSession().getRequestKey();
+                    int requestSize = frontCon.getSession().getRequestSize();
+                    long requestTimeMills = frontCon.getSession().getRequestTimeMills();
+                    int backendWaitTimeMills =0;
+                    try {
+
                         for (DataOffset offset : offsets) {
 							byte[] data = offset.getData();
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
-                        
+                        long responseTimeMills = TimeUtil.currentTimeMillis();
                         
                         int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
-						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
-                        
-             
+						 backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+
                         // 释放
                         releaseBackendConnection(backendCon);
                         
                         // 数据收集
-                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false);
+                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false,false);
                         
                     } catch (IOException e2) {
+                        long responseTimeMills = TimeUtil.currentTimeMillis();
+                        int procTimeMills = (int) (responseTimeMills - requestTimeMills);
+
                         if (frontCon != null) {
                             frontCon.close("write err");
                         }
+                        if (backendCon != null) {
+                            backendWaitTimeMills = (int) (backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+                        }
+
+                        StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false,true);
 
                         // 由 reactor close
                         LOGGER.error("backend write to front err:", e2);

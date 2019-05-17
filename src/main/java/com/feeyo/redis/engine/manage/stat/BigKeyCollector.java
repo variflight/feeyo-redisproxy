@@ -1,5 +1,7 @@
 package com.feeyo.redis.engine.manage.stat;
 
+import com.feeyo.net.nio.util.TimeUtil;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -8,8 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.feeyo.net.nio.util.TimeUtil;
 
 // 
 public class BigKeyCollector implements StatCollector {
@@ -56,9 +56,9 @@ public class BigKeyCollector implements StatCollector {
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
-			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass) {
+			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass, boolean isException) {
 		
-		if ( isCommandOnly) 
+		if ( isCommandOnly || isException)
 			return;
 		
 		//  check size
