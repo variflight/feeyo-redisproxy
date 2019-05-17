@@ -168,11 +168,7 @@ public class BigLengthCollector implements StatCollector {
 	
 	@Override
 	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
-			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass, boolean isException ) {
-        //异常情况 不统计
-        if (isException) {
-            return;
-        }
+			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
 
 		// 统计集合类型key
 		if (  	cmd.equals("HMSET") 	// hash

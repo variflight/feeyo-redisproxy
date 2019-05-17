@@ -104,19 +104,19 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 			// 获取前端 connection
 			// --------------------------------------------------------------
 			RedisFrontConnection frontCon = getFrontCon( backendCon );
-            if (frontCon == null) {
-                //  清理后端连接
-                return;
-            }
-            String password = frontCon.getPassword();
-            String cmd = frontCon.getSession().getRequestCmd();
-            String key = frontCon.getSession().getRequestKey();
-            int requestSize = frontCon.getSession().getRequestSize();
-            long requestTimeMills = frontCon.getSession().getRequestTimeMills();
-            int responseSize = 0;
-            int backendWaitTimeMills = 0;
+
 
             try {
+                if (frontCon == null) {
+                    //  清理后端连接
+                    return;
+                }
+                String password = frontCon.getPassword();
+                String cmd = frontCon.getSession().getRequestCmd();
+                String key = frontCon.getSession().getRequestKey();
+                int requestSize = frontCon.getSession().getRequestSize();
+                long requestTimeMills = frontCon.getSession().getRequestTimeMills();
+                int responseSize = 0;
 
 				for(RedisResponse resp: resps) 
 					responseSize += this.writeToFront(frontCon, resp, 0);
@@ -125,27 +125,20 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				resps = null;
                 long responseTimeMills = TimeUtil.currentTimeMillis();
 				int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
-				 backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
+				int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 				
 				// 后段链接释放
 				backendCon.release();	
 				
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false,false);
+				StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false);
 				
 			} catch(IOException e2) {
-                long responseTimeMills = TimeUtil.currentTimeMillis();
-                int procTimeMills = (int) (responseTimeMills - requestTimeMills);
+
                 if (frontCon != null) {
                     frontCon.close("write err");
                 }
-                long backId =-1;
-                if (backendCon != null) {
-                    backendWaitTimeMills = (int) (backendCon.getLastReadTime() - backendCon.getLastWriteTime());
-                    backId = backendCon.getId();
-                }
-                StatUtil.collect(password, cmd, key, requestSize, responseSize, procTimeMills, backendWaitTimeMills, false, false,true);
-
+                long backId = backendCon == null ? -1 : backendCon.getId();
                 LOGGER.error("backend write to front err, back id=" + backId , e2);
 
 				// 由 reactor close
