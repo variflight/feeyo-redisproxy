@@ -1144,7 +1144,7 @@ public class Manage {
                             	strBuffer.append(" ").append( physicalNode.getHost() );
                             	strBuffer.append(":").append( physicalNode.getPort() );
                             	strBuffer.append(" ").append( (s.time) );
-                            	strBuffer.append(" ").append( (s.latency) );
+                            	strBuffer.append(" ").append( (s.latency) ).append("ms");
                             	strBuffer.append(" ").append( ( physicalNode.isOverload() ) );
 
                             	lines.add( strBuffer.toString() );
@@ -1200,26 +1200,26 @@ public class Manage {
 			}
             // PRINT
         } else if ( arg1.length == 5 ) {
-
-            if ( (arg1[0] == 'P' || arg1[0] == 'p' ) &&
-                    (arg1[1] == 'R' || arg1[1] == 'r' ) &&
-                    (arg1[2] == 'I' || arg1[2] == 'i' ) &&
-                    (arg1[3] == 'N' || arg1[3] == 'n' ) &&
-                    (arg1[4] == 'T' || arg1[4] == 't' ) ) {
-                // print keys
-                if (arg2.equalsIgnoreCase("KEYS") && request.getNumArgs() >= 4) {
-
-                    String startTime = new String(request.getArgs()[2]);
-                    String endTime = new String(request.getArgs()[3]);
-                    String size = null;
-                    if (request.getNumArgs() == 5) {
-                        size = new String(request.getArgs()[4]);
-                    }
-                    boolean result=StatUtil.setAllKeyCollector(startTime, endTime, size);
-
-                    return ("+" + String.valueOf(result) + "\r\n").getBytes();
-                }
-            }
+//
+//            if ( (arg1[0] == 'P' || arg1[0] == 'p' ) &&
+//                    (arg1[1] == 'R' || arg1[1] == 'r' ) &&
+//                    (arg1[2] == 'I' || arg1[2] == 'i' ) &&
+//                    (arg1[3] == 'N' || arg1[3] == 'n' ) &&
+//                    (arg1[4] == 'T' || arg1[4] == 't' ) ) {
+//                // print keys
+//                if (arg2.equalsIgnoreCase("KEYS") && request.getNumArgs() >= 4) {
+//
+//                    String startTime = new String(request.getArgs()[2]);
+//                    String endTime = new String(request.getArgs()[3]);
+//                    String size = null;
+//                    if (request.getNumArgs() == 5) {
+//                        size = new String(request.getArgs()[4]);
+//                    }
+//                    boolean result=StatUtil.setAllKeyCollector(startTime, endTime, size);
+//
+//                    return ("+" + String.valueOf(result) + "\r\n").getBytes();
+//                }
+//            }
 		// RELOAD
 		} else if ( arg1.length == 6 ) {
 			
