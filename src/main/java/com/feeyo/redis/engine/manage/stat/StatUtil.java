@@ -52,7 +52,7 @@ public class StatUtil {
 	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
 	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
 	private static SlowKeyColletor slowKeyCollector = new SlowKeyColletor();
-    private static AllCmdCollector allKeyCollector = new AllCmdCollector();
+    //private static AllCmdCollector allKeyCollector = new AllCmdCollector();
 	
 	static {
 		
@@ -61,7 +61,7 @@ public class StatUtil {
 		addCollector( bigKeyCollector );
 		addCollector( bigLengthCollector );
 		addCollector( slowKeyCollector );
-        addCollector( allKeyCollector );
+       // addCollector( allKeyCollector );
 		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
@@ -329,9 +329,9 @@ public class StatUtil {
     	return slowKeyCollector.getSlowKeys();
     }
 
-    public static boolean setAllKeyCollector(String start, String end, String size) {
-        return allKeyCollector.setStatTime(start,end,size);
-    }
+//    public static boolean setAllKeyCollector(String start, String end, String size) {
+//        return allKeyCollector.setStatTime(start,end,size);
+//    }
   
 	public static class AccessStatInfo  {
 		

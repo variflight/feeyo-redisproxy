@@ -322,12 +322,12 @@ public class PhysicalNode {
 			Iterator<LatencySample> itr = samples.iterator();
 			while ( itr.hasNext() ) {
 				LatencySample s = itr.next();
-				long mill = s.time / 1000;
-				List<LatencySample> list = sampleMap.get(mill);
+				long second = s.time / 1000;
+				List<LatencySample> list = sampleMap.get(second);
 				if (list == null) {
 					list = new ArrayList<LatencySample>();
 					list.add(s);
-					sampleMap.put(mill, list);
+					sampleMap.put(second, list);
 				} else {
 					list.add(s);
 				}

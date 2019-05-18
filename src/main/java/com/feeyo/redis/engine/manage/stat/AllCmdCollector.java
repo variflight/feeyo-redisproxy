@@ -26,8 +26,8 @@ public class AllCmdCollector implements StatCollector {
 
     private volatile long size = 10000;
 
-    private ConcurrentLinkedQueue<String> linkedQueue=new ConcurrentLinkedQueue();
-    private static final String format = "yyyy-MM-dd HH:mm:ss";
+	private ConcurrentLinkedQueue<String> linkedQueue = new ConcurrentLinkedQueue<>();
+	private static final String format = "yyyy-MM-dd HH:mm:ss";
 
     /**
      *  设置统计时间段及每次打印的size
@@ -68,7 +68,7 @@ public class AllCmdCollector implements StatCollector {
                 linkedQueue.clear();
             }
         } else {
-            if (linkedQueue.size() == 0) {
+            if (linkedQueue.isEmpty()) {
                 return;
             }
             logger.info(JsonUtils.marshalToString(linkedQueue));
