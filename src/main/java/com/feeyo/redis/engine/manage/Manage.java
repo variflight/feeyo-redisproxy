@@ -141,7 +141,7 @@ public class Manage {
 	 *  SHOW LOG_INFO
 	 *  SHOW LOG_DEBUG
      *
-     * PRINT  KEY
+     * PRINT  KEYS  'starttime' 'endtime'  size
 	 *  
 	 */
 	public static byte[] execute(final RedisRequest request, RedisFrontConnection frontCon) {
