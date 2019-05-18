@@ -1,5 +1,5 @@
 <redis>
-	<property name="port">8066</property>
+	<property name="port">8080</property>
 	
 	<!-- Reactor -->
 	<property name="reactorSize">4</property>
