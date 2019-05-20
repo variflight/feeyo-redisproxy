@@ -188,14 +188,16 @@ public class StatUtil {
 		});
 	}
 	
-	
-	
+	//
     private static AccessStatInfo getAccessStatInfo(String key, long currentTime) {
         AccessStatInfo item = accessStats.get(key);
         if (item == null) {
-        	//
-            accessStats.putIfAbsent(key, new AccessStatInfo(key, currentTime));
-            item = accessStats.get(key);
+        	synchronized ( StatUtil.class ) {
+        		if (item == null) {
+        			item = new AccessStatInfo(key, currentTime);
+        			accessStats.put(key, item);
+        		}
+			}
         }
         return item;
     }
