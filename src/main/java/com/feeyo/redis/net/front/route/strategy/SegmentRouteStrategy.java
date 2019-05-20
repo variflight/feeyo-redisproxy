@@ -131,7 +131,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			if ( CommandParse.MGETSET_CMD == policy.getHandleType()
 					|| (CommandParse.DEL_CMD == policy.getHandleType()  && request.getArgs().length > 2 )
 					|| (CommandParse.EXISTS_CMD == policy.getHandleType() && request.getArgs().length > 2)) {
-                requestType = rewrite(request, newRequests, segments, userCfg.getExpireTime());
+                requestType = rewrite(request, newRequests, segments, userCfg.getKeyExpireTime());
 
 			} else {
 				newRequests.add(request);

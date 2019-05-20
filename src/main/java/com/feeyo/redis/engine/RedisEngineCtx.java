@@ -461,8 +461,6 @@ public class RedisEngineCtx {
 			systemConfig.setBackendSlowTimeout( backendSlowTimeout );
 			NetSystem.getInstance().setNetConfig( systemConfig );
 
-			// 4. 生效新的 ZK
-//			ZkClient.INSTANCE().reloadZkCfg();
 			
 			return "+OK\r\n".getBytes();
 		} catch (Exception e) {
