@@ -45,7 +45,7 @@ public class EvalKey extends KeyRewriteStrategy {
 		
 		int numOfKeys = Integer.parseInt(new String(args[2]));
 		for (int i = 3; i < numOfKeys + 3; i++) {
-			checkKeyIllegalCharacter(userCfg.getKeyRegularExpr(), args[i]);
+			checkKeyIllegalCharacter(userCfg.getKeyExpr(), args[i]);
 			//
 			args[i] = concat(userCfg.getPrefix(), args[i]);
 		}

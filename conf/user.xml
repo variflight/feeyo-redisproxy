@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <redis>
 	
-	<user password="pwd01" poolId="1" prefix="pre1_" selectDb="0" isAdmin="1"  keyRegularExpr="^[A-Za-z0-9]*$" />
+	<user password="pwd01" poolId="1" prefix="pre1_" selectDb="0" isAdmin="1" keyExpr="^[A-Za-z0-9]*$" idleTimeout="60000"/>
 	<!--
 	<user password="pwd02" poolId="1" prefix="pre2_" selectDb="-1" readonly="true" />
 	<user password="pwd03" poolId="2" prefix="pre_fy_" selectDb="1" />
 	 -->
 	  
 	<user password="pwd04" poolId="1" prefix="pre1_" selectDb="0" isAdmin="1"/>
-	<user password="pwd05" poolId="1" prefix="" selectDb="1" maxCon="200" keyRegularExpr="^[A-Za-z0-9-_: \.]*$" />
+	<user password="pwd05" poolId="1" prefix="" selectDb="1" maxCon="200" keyExpr="^[A-Za-z0-9-_: \.]*$" />
 	
 </redis>
