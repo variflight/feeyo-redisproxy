@@ -9,8 +9,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.kafka.clients.ClientRequest;
-import org.apache.kafka.clients.ClientResponse;
 import org.apache.kafka.common.Node;
 
 import com.feeyo.kafka.admin.KafkaAdmin;
@@ -31,8 +29,6 @@ import com.feeyo.redis.net.backend.TodoTask;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.redis.net.backend.pool.PhysicalNode;
 import com.google.common.collect.Sets;
-
-import org.apache.kafka.common.protocol.Errors;
 
 public class KafkaPool extends AbstractPool {
 	
@@ -367,71 +363,6 @@ public class KafkaPool extends AbstractPool {
 		}
 
 	}
-	
-	
-    /**
-     * 延迟时间统计
-     */
-    @Override
-    public void latencyCheck() {
-    	
-    	// CAS， 避免网络不好的情况下，频繁并发的检测
-		if (!latencyCheckFlag.compareAndSet(false, true)) {
-			return;
-		}
-
-        PhysicalNode physicalNode;
-        for (Integer id : physicalNodes.keySet()) {
-
-            physicalNode = physicalNodes.get(id);
-
-			KafkaNodeClient client = null;
-			try {
-
-				client = new KafkaNodeClient(id, physicalNode.getHost(), physicalNode.getPort());
-				
-				//
-				for(int i=0; i<3; i++) {
-
-		    		long time = System.currentTimeMillis();
-					
-					org.apache.kafka.common.requests.ApiVersionsRequest.Builder build = 
-							new org.apache.kafka.common.requests.ApiVersionsRequest.Builder((short) 1);
-					
-					ClientRequest clientRequest = client.newClientRequest(build);
-					ClientResponse response = client.sendAndRecvice(clientRequest);
-					if (response != null) {
-						org.apache.kafka.common.requests.ApiVersionsResponse rs = 
-								(org.apache.kafka.common.requests.ApiVersionsResponse) response.responseBody();
-						if (rs.error() == Errors.NONE) {
-							
-							PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-			            	latencySample.time = time;
-				            latencySample.latency = (System.currentTimeMillis() - time);
-							physicalNode.addLatencySample( latencySample );
-							
-						}
-					} 
-				}
-				
-				//
-				physicalNode.calculateOverloadByLatencySample( poolCfg.getLatencyThreshold() );
-
-			} catch (IOException e) {
-				LOGGER.warn("latency err, host:" + physicalNode.getHost(), e);
-				
-			} finally {
-				
-				if (client != null) {
-					client.close();
-					client = null;
-				}
-				
-				latencyCheckFlag.set( false );
-			}
-        }  
-    }
-    
 
 	@Override
 	public PhysicalNode getPhysicalNode(int id) {

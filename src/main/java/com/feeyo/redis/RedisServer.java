@@ -35,9 +35,6 @@ public class RedisServer {
 	//心跳独立，避免被其他任务影响
 	private static final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
 	
-    // 延迟时间定时检查执行器
-    private static final ScheduledExecutorService latencyScheduler = Executors.newSingleThreadScheduledExecutor();
-	
     
 	public static void main(String[] args) throws IOException {
 		
@@ -129,28 +126,6 @@ public class RedisServer {
 					});
 				}			
 			}, 30L, 30L, TimeUnit.SECONDS);
-
-			
-            /*
-             * 节点延迟 检测
-             */
-            latencyScheduler.scheduleAtFixedRate(new Runnable(){
-
-                @Override
-                public void run() {
-
-                    NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            Map<Integer, AbstractPool> pools = RedisEngineCtx.INSTANCE().getPoolMap();
-                            for(AbstractPool pool : pools.values() ) {
-                                pool.latencyCheck();
-                            }
-                        }
-                    });
-                }
-                
-            }, 15L, 3L, TimeUnit.SECONDS);
 
 			// CONSOLE
 			StringBuffer strBuffer = new StringBuffer();

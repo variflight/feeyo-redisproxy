@@ -108,21 +108,21 @@ public class JedisConnection {
 		}
 	}
 	
-	  public void close() {
-	    if (dataSource != null) {
-	      if (isBroken()) {
-	        this.dataSource.returnBrokenResource(this);
-	      } else {
-	        this.dataSource.returnResource(this);
-	      }
-	    } else {
-	    		disconnect();
-	    }
-	  }
+	public void close() {
+		if (dataSource != null) {
+			if (isBroken()) {
+				this.dataSource.returnBrokenResource(this);
+			} else {
+				this.dataSource.returnResource(this);
+			}
+		} else {
+			disconnect();
+		}
+	}
 
-	  public void setDataSource(Pool<JedisConnection> jedisPool) {
-	    this.dataSource = jedisPool;
-	  }
+	public void setDataSource(Pool<JedisConnection> jedisPool) {
+		this.dataSource = jedisPool;
+	}
 	
 	public boolean isConnected() {
 		return socket != null && socket.isBound() && !socket.isClosed() && socket.isConnected()

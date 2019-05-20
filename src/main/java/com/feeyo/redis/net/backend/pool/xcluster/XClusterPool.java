@@ -178,59 +178,6 @@ public class XClusterPool extends AbstractPool{
 		}
 		
 	}
-	
-    @Override
-    public void latencyCheck() {
-    	
-    	// CAS， 避免网络不好的情况下，频繁并发的检测
-		if (!latencyCheckFlag.compareAndSet(false, true)) {
-			return;
-		}
-		
-		try {
-	        for(XNode node : nodes.values()) {
-	            PhysicalNode physicalNode = node.getPhysicalNode();
-	            latencyCheck(physicalNode);
-	        }
-	        
-		} finally {
-			latencyCheckFlag.set( false );
-		}
-    }
-
-    private void latencyCheck(PhysicalNode physicalNode) {
-
-    	JedisConnection conn = null;
-        try {
-            conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 3000, 0);
-            
-            //
-            for(int i=0; i<3; i++) {
-
-        		long time = System.currentTimeMillis();
-            	
-	            conn.sendCommand(RedisCommand.PING);
-	            String value = conn.getBulkReply();
-	            if ( value != null && "PONG".equalsIgnoreCase(value) ) {
-	            	
-	            	PhysicalNode.LatencySample latencySample = new PhysicalNode.LatencySample();
-	            	latencySample.time = time;
-		            latencySample.latency =  (System.currentTimeMillis() - time);
-					physicalNode.addLatencySample( latencySample );
-	            }
-            }
-            physicalNode.calculateOverloadByLatencySample( poolCfg.getLatencyThreshold() );
-
-        } catch (JedisConnectionException e) {
-            LOGGER.error("latency err:" + physicalNode.getHost(), e);
-            
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
-    }
-	
     
     public PhysicalNode getPhysicalNode(String suffix) {
     	PhysicalNode node = nodes.get( suffix ).getPhysicalNode();
