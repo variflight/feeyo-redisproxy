@@ -8,11 +8,14 @@ import com.feeyo.redis.net.front.rewrite.KeyRewriteStrategy;
 /**
  * 针对Set指令
  * 
+ * SET key value [EX seconds] [PX milliseconds] [NX|XX]
+ * 
  * @author dsliu
  *
  */
 public class SetKey extends KeyRewriteStrategy {
 	
+	// EX， 将键的过期时间设置为 seconds 秒
 	private static final byte[] EX_BYTES = "EX".getBytes();
 
 	@Override
@@ -32,10 +35,12 @@ public class SetKey extends KeyRewriteStrategy {
 
         //针对没有过期时间的添加 默认过期时间
         if (numArgs == 3) {
+        	// SET key value EX seconds
             byte[][] newArgs = new byte[][]{args[0], args[1], args[2], EX_BYTES, userCfg.getKeyExpireTime()};
             request.setArgs(newArgs);
             
         } else if (numArgs == 4) {
+        	// SET key value EX seconds NX or XX
             byte[][] newArgs = new byte[][]{args[0], args[1], args[2], EX_BYTES, userCfg.getKeyExpireTime(), args[3]};
             request.setArgs(newArgs);
         }
