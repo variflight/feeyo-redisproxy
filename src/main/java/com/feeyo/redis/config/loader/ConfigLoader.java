@@ -131,7 +131,7 @@ public class ConfigLoader extends AbstractConfigLoader {
 					keyExpr = Pattern.compile(keyExprStr);
 				
 				//
-                int keyExpireTime = getIntAttribute(nameNodeMap, "keyExpireTime", 12 * 60 * 60);  // 12 Hour
+                int keyExpireTime = getIntAttribute(nameNodeMap, "keyExpireTime", 12 * 60 * 60*1000);  // 12 Hour 单位毫秒
 
 				//
 				int idleTimeout = getIntAttribute(nameNodeMap, "idleTimeout", -1);
