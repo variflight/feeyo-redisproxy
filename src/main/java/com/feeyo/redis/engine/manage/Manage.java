@@ -1,26 +1,5 @@
 package com.feeyo.redis.engine.manage;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.BufferOverflowException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.kafka.config.KafkaPoolCfg;
 import com.feeyo.kafka.config.TopicCfg;
 import com.feeyo.kafka.net.backend.KafkaBackendConnection;
@@ -57,12 +36,27 @@ import com.feeyo.redis.net.backend.pool.RedisStandalonePool;
 import com.feeyo.redis.net.backend.pool.cluster.ClusterNode;
 import com.feeyo.redis.net.backend.pool.cluster.RedisClusterPool;
 import com.feeyo.redis.net.front.NetFlowGuard;
-import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.NetFlowGuard.Guard;
+import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.bypass.BypassService;
+import com.feeyo.redis.net.front.bypass.BypassThreadExecutor;
 import com.feeyo.util.JavaUtils;
 import com.feeyo.util.ShellUtils;
 import com.feeyo.util.Versions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.BufferOverflowException;
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 自定义后端指令
@@ -147,6 +141,8 @@ public class Manage {
 	 *  SHOW LOG_WARN
 	 *  SHOW LOG_INFO
 	 *  SHOW LOG_DEBUG
+     *
+     * PRINT  KEYS  'starttime' 'endtime'  size
 	 *  
 	 */
 	public static byte[] execute(final RedisRequest request, RedisFrontConnection frontCon) {
@@ -336,7 +332,6 @@ public class Manage {
 					
 					//
 					StringBuffer titleSB = new StringBuffer();
-					titleSB.append("USER").append("      ");
 					titleSB.append("CMD").append("      ");
 					titleSB.append("COUNT");
 					//
@@ -348,7 +343,6 @@ public class Manage {
 					if (userCommand != null) {
 						for (Entry<String, AtomicLong> entry : userCommand.commandCount.entrySet()) {
 							StringBuffer bodySB = new StringBuffer();
-							bodySB.append(user).append("  ");
 							bodySB.append(entry.getKey()).append("  ");
 							bodySB.append(entry.getValue().get());
 							//
@@ -451,8 +445,22 @@ public class Manage {
 					sBuffer.append("\r\n");
 					
 					return sBuffer.toString().getBytes();
-					
-				// SHOW USER
+                } else if ( arg2.equalsIgnoreCase("BY_CONN") ) {
+
+                    BypassThreadExecutor threadPoolExecutor=BypassService.INSTANCE().getThreadPoolExecutor();
+
+                    StringBuffer sBuffer = new StringBuffer();
+                    sBuffer.append("+");
+                    sBuffer.append("active=").append( threadPoolExecutor.getActiveCount()).append(", ");
+                    sBuffer.append("poolSize=").append( threadPoolExecutor.getPoolSize()).append(", ");
+                    sBuffer.append("corePoolSize=").append( threadPoolExecutor.getCorePoolSize()).append(", ");
+                    sBuffer.append("maxSubmittedTaskCount=").append( threadPoolExecutor.getMaxSubmittedTaskCount()).append(", ");
+                    sBuffer.append("submittedTasksCount=").append( threadPoolExecutor.getSubmittedTasksCount()).append(", ");
+                    sBuffer.append("completedTaskCount=").append( threadPoolExecutor.getCompletedTaskCount()).append(", ");
+                    sBuffer.append("\r\n");
+                    return sBuffer.toString().getBytes();
+
+                    // SHOW USER
 				} else if ( arg2.equalsIgnoreCase("USER") ) {
 					
 					// 
@@ -1151,7 +1159,7 @@ public class Manage {
                             	strBuffer.append(" ").append( physicalNode.getHost() );
                             	strBuffer.append(":").append( physicalNode.getPort() );
                             	strBuffer.append(" ").append( (s.time) );
-                            	strBuffer.append(" ").append( (s.latency) );
+                            	strBuffer.append(" ").append( (s.latency) ).append("ms");
                             	strBuffer.append(" ").append( ( physicalNode.isOverload() ) );
 
                             	lines.add( strBuffer.toString() );
@@ -1204,9 +1212,29 @@ public class Manage {
 
                     return encode(lines);
                 }
-			} 
-			
-
+			}
+            // PRINT
+        } else if ( arg1.length == 5 ) {
+//
+//            if ( (arg1[0] == 'P' || arg1[0] == 'p' ) &&
+//                    (arg1[1] == 'R' || arg1[1] == 'r' ) &&
+//                    (arg1[2] == 'I' || arg1[2] == 'i' ) &&
+//                    (arg1[3] == 'N' || arg1[3] == 'n' ) &&
+//                    (arg1[4] == 'T' || arg1[4] == 't' ) ) {
+//                // print keys
+//                if (arg2.equalsIgnoreCase("KEYS") && request.getNumArgs() >= 4) {
+//
+//                    String startTime = new String(request.getArgs()[2]);
+//                    String endTime = new String(request.getArgs()[3]);
+//                    String size = null;
+//                    if (request.getNumArgs() == 5) {
+//                        size = new String(request.getArgs()[4]);
+//                    }
+//                    boolean result=StatUtil.setAllKeyCollector(startTime, endTime, size);
+//
+//                    return ("+" + String.valueOf(result) + "\r\n").getBytes();
+//                }
+//            }
 		// RELOAD
 		} else if ( arg1.length == 6 ) {
 			

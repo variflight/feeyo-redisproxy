@@ -15,8 +15,10 @@ public class UserCfg {
 	
 	private final boolean isAdmin;
 	private final boolean isReadonly;
-	private final Pattern keyRegularExpr;
-    private final byte[] expireTime;//过期时间 单位s 默认 12小时=43200s
+	private final Pattern keyExpr;
+    private final byte[] keyExpireTime;	// 过期时间 & 单位ms 默认：12小时=12 * 60 * 60*1000
+    
+    private final int idleTimeout;
 	
 	
 	// 通过管理指令 use pool 改变
@@ -27,7 +29,7 @@ public class UserCfg {
 	
 	public UserCfg(int poolId, int poolType, String password,  String prefix, 
 			int selectDb, int maxCon, boolean isAdmin, boolean isReadonly, 
-			Pattern keyRegularExpr, int expireTime) {
+			Pattern keyExpr, int keyExpireTime, int idleTimeout) {
 		this.poolId = poolId;
 		this.poolType = poolType;
 		this.password = password;		
@@ -40,8 +42,9 @@ public class UserCfg {
 		this.usePoolId = poolId;
 		this.usePoolType = poolType;
 		//
-		this.keyRegularExpr = keyRegularExpr;
-        this.expireTime = String.valueOf(expireTime).getBytes();
+		this.keyExpr = keyExpr;
+        this.keyExpireTime = String.valueOf(keyExpireTime).getBytes();
+        this.idleTimeout = idleTimeout;
 	}
 	
 
@@ -80,17 +83,22 @@ public class UserCfg {
 		return isReadonly;
 	}
 
-    public byte[] getExpireTime() {
-        return expireTime;
-    }
-
-    public void setUsePool(int poolId, int poolType) {
-		this.usePoolId = poolId;
-		this.usePoolType = poolType;
+	public Pattern getKeyExpr() {
+		return keyExpr;
 	}
 
-	public Pattern getKeyRegularExpr() {
-		return keyRegularExpr;
+    public byte[] getKeyExpireTime() {
+        return keyExpireTime;
+    }
+
+    public int getIdleTimeout() {
+		return idleTimeout;
+	}
+
+
+	public void setUsePool(int poolId, int poolType) {
+		this.usePoolId = poolId;
+		this.usePoolType = poolType;
 	}
 
 

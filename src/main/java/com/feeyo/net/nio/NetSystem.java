@@ -1,5 +1,12 @@
 package com.feeyo.net.nio;
 
+import com.feeyo.net.nio.buffer.BufferPool;
+import com.feeyo.net.nio.util.TimeUtil;
+import com.feeyo.redis.net.backend.BackendConnection;
+import com.feeyo.redis.net.front.RedisFrontConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
@@ -7,14 +14,6 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.feeyo.net.nio.buffer.BufferPool;
-import com.feeyo.net.nio.util.TimeUtil;
-import com.feeyo.redis.net.backend.BackendConnection;
-import com.feeyo.redis.net.front.RedisFrontConnection;
 
 
 /**
@@ -39,7 +38,7 @@ public class NetSystem {
 	
 	// 用来执行定时任务
 	private final NameableExecutor timerExecutor;
-	
+
 	private final ConcurrentHashMap<Long, ClosableConnection> allConnections;
 	private SystemConfig netConfig;
 	private NIOConnector connector;
@@ -117,9 +116,9 @@ public class NetSystem {
 	 */
 	public void checkConnections() {
 		
-		//
+		//后端清理 超时时间
 		int backendSlowTime = netConfig != null ? netConfig.getBackendSlowTimeout() : 5 * 60 * 1000;
-		
+
 		Iterator<Entry<Long, ClosableConnection>> it = allConnections.entrySet().iterator();
 		while (it.hasNext()) {
 			ClosableConnection c = it.next().getValue();
@@ -144,8 +143,7 @@ public class NetSystem {
 						c.close("backend timeout");
 						
 					}  else {
-						//
-						//
+						// 清理 后端链接 中前端链接已经关闭的情况下 后端链接释放
 						if ( backendCon.getAttachement() != null && backendCon.getAttachement() instanceof RedisFrontConnection) {
 							RedisFrontConnection frontCon = (RedisFrontConnection) backendCon.getAttachement();
 							if ( frontCon.isClosed() ) {
@@ -154,7 +152,7 @@ public class NetSystem {
 								errSB.append("front is closed, close it" ).append( c );
 								errSB.append(" , and attach it " ).append( c.getAttachement() );
 								LOGGER.error( errSB.toString() );
-								
+
 								c.close("because the front con is closed! ");
 							}
 						}

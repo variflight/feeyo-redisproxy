@@ -45,7 +45,11 @@ public class BypassService {
 		
 		return _INSTANCE;
 	}
-	
+
+	public BypassThreadExecutor getThreadPoolExecutor(){
+	   return this.threadPoolExecutor;
+    }
+
 	private BypassService () {
 	
 		Map<String, String> map = RedisEngineCtx.INSTANCE().getServerMap();
@@ -81,12 +85,8 @@ public class BypassService {
 				@Override
 				public void run() {
 
-
 					try {
-                        //判断前端连接
-                        if (frontConn == null) {
-                            return;
-                        }
+						//
                         String password = frontConn.getPassword();
                         String cmd = frontConn.getSession().getRequestCmd();
                         String key = frontConn.getSession().getRequestKey();
@@ -119,11 +119,7 @@ public class BypassService {
 						}
 						
 					} catch(IOException e) {
-
-                        if (frontConn != null) {
-                            frontConn.close("write err");
-                        }
-
+					    frontConn.close("write err");
                         LOGGER.error("bypass write to front err:", e);
 					}
 				}
@@ -132,7 +128,7 @@ public class BypassService {
 		} catch (RejectedExecutionException re) {	
 			
 			// front rejected 
-			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
+			frontConn.write( "-ERR Bypass is busy, rejected execution. \r\n".getBytes() );
 			
 			LOGGER.error("Bypass rejected, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, completedTaskCount={}, frontConn={}/{}/{}/{}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(),

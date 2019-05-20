@@ -107,10 +107,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 
 
             try {
-                if (frontCon == null) {
-                    //  清理后端连接
-                    return;
-                }
+
                 String password = frontCon.getPassword();
                 String cmd = frontCon.getSession().getRequestCmd();
                 String key = frontCon.getSession().getRequestKey();
@@ -135,10 +132,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 						procTimeMills, backendWaitTimeMills, false, false);
 				
 			} catch(IOException e2) {
-
-                if (frontCon != null) {
-                    frontCon.close("write err");
-                }
+                frontCon.close("write err");
                 long backId = backendCon == null ? -1 : backendCon.getId();
                 LOGGER.error("backend write to front err, back id=" + backId , e2);
 

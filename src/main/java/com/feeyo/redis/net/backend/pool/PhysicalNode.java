@@ -1,20 +1,15 @@
 package com.feeyo.redis.net.backend.pool;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.net.backend.BackendConnection;
 import com.feeyo.redis.net.backend.BackendConnectionFactory;
 import com.feeyo.redis.net.backend.callback.BackendCallback;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 
 /**
@@ -327,12 +322,12 @@ public class PhysicalNode {
 			Iterator<LatencySample> itr = samples.iterator();
 			while ( itr.hasNext() ) {
 				LatencySample s = itr.next();
-				long mill = s.time / 1000000;
-				List<LatencySample> list = sampleMap.get(mill);
+				long second = s.time / 1000;
+				List<LatencySample> list = sampleMap.get(second);
 				if (list == null) {
 					list = new ArrayList<LatencySample>();
 					list.add(s);
-					sampleMap.put(mill, list);
+					sampleMap.put(second, list);
 				} else {
 					list.add(s);
 				}

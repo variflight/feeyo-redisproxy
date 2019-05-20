@@ -45,15 +45,16 @@ pidFile="$FEEYO_HOME/bin/run.pid"
 #===========================================================================================
 # JVM Configuration
 #===========================================================================================
-JAVA_OPTS="${JAVA_OPTS} -server -Xms2g -Xmx2g -Xmn1g"
-JAVA_OPTS="${JAVA_OPTS} -XX:+UseG1GC -XX:G1HeapRegionSize=16m -XX:G1ReservePercent=25 -XX:InitiatingHeapOccupancyPercent=30 -XX:SoftRefLRUPolicyMSPerMB=0 -XX:SurvivorRatio=18"
+JAVA_OPTS="${JAVA_OPTS} -server -Xms6g -Xmx6g -Xmn3g"
+JAVA_OPTS="${JAVA_OPTS} -XX:MaxDirectMemorySize=3g"
+
+JAVA_OPTS="${JAVA_OPTS} -XX:+UseG1GC -XX:G1HeapRegionSize=16m -XX:G1ReservePercent=25 -XX:InitiatingHeapOccupancyPercent=30 -XX:SoftRefLRUPolicyMSPerMB=0"
 JAVA_OPTS="${JAVA_OPTS} -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$FEEYO_HOME/logs/feeyoredisproxy_java.hprof"
 JAVA_OPTS="${JAVA_OPTS} -verbose:gc -Xloggc:$FEEYO_HOME/logs/feeyoredisproxy_gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
 JAVA_OPTS="${JAVA_OPTS} -XX:+PrintGCApplicationStoppedTime -XX:+PrintAdaptiveSizePolicy"
 JAVA_OPTS="${JAVA_OPTS} -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=30m"
 JAVA_OPTS="${JAVA_OPTS} -XX:-OmitStackTraceInFastThrow"
 JAVA_OPTS="${JAVA_OPTS} -XX:+AlwaysPreTouch"
-JAVA_OPTS="${JAVA_OPTS} -XX:MaxDirectMemorySize=10g"
 JAVA_OPTS="${JAVA_OPTS} -XX:-UseLargePages -XX:-UseBiasedLocking"
 
 #JAVA_OPTS="${JAVA_OPTS} -Xdebug -Xrunjdwp:transport=dt_socket,address=9555,server=y,suspend=n"

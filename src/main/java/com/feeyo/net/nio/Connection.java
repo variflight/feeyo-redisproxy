@@ -149,6 +149,10 @@ public class Connection extends ClosableConnection {
 			LOGGER.error("write err, id="+ id + " direction=" + direction, e);
 			this.close("write err:" + e);
 			//throw new IOException( e );
+		} finally {
+			//
+			if ( isClosed.get() )
+				this.cleanup();
 		}
 	}
 	
@@ -348,6 +352,10 @@ public class Connection extends ClosableConnection {
 		} finally {
 			//CAS RESET
 			reading.set(false);	
+			
+			//
+			if ( isClosed.get() )
+				this.cleanup();
 		}
 
 	}

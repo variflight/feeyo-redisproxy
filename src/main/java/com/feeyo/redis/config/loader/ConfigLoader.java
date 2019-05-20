@@ -68,7 +68,7 @@ public class ConfigLoader extends AbstractConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-				int latencyThreshold = getIntAttribute(nameNodeMap, "latencyThreshold", 500); //毫秒单位
+				int latencyThreshold = getIntAttribute(nameNodeMap, "latencyThreshold", 10 * 1000); //毫秒单位
 				
 				PoolCfg poolCfg;
 				if (type == PoolType.KAFKA_CLUSTER ) {
@@ -113,29 +113,35 @@ public class ConfigLoader extends AbstractConfigLoader {
 				NamedNodeMap nameNodeMap = node.getAttributes();				
 				int poolId = getIntAttribute(nameNodeMap, "poolId", -1);
 				String password = getAttribute(nameNodeMap, "password", null);
+				//
 				String prefix = getAttribute(nameNodeMap, "prefix", null);
 				if ( prefix != null && prefix.trim().equals("") ) {
 					prefix = null;
 				}
+				//
 				int selectDb = getIntAttribute(nameNodeMap, "selectDb", -1);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 800);
 				boolean isAdmin = getIntAttribute(nameNodeMap, "isAdmin", 0)  == 0 ? false : true;				
 				boolean isReadonly = getBooleanAttribute(nameNodeMap, "readonly", false);
-				String keyRegularExprStr = getAttribute(nameNodeMap, "keyRegularExpr", null);
-                int expireTime = getIntAttribute(nameNodeMap, "expireTime", 12 * 60 * 60);  // 12H
-                //
-				Pattern keyRegularExpr = null;
-				if (keyRegularExprStr != null  && !keyRegularExprStr.isEmpty()) 
-					keyRegularExpr = Pattern.compile(keyRegularExprStr);
-//				else 
-//					keyRegularExpr = Pattern.compile("^[A-Za-z0-9-_: \\.]*$");
+				
+				//
+				String keyExprStr = getAttribute(nameNodeMap, "keyExpr", null);
+				Pattern keyExpr = null;
+				if (keyExprStr != null && !keyExprStr.isEmpty()) 
+					keyExpr = Pattern.compile(keyExprStr);
+				
+				//
+                int keyExpireTime = getIntAttribute(nameNodeMap, "keyExpireTime", 12 * 60 * 60*1000);  // 12 Hour 单位毫秒
+
+				//
+				int idleTimeout = getIntAttribute(nameNodeMap, "idleTimeout", -1);
 				
 				
 				PoolCfg poolCfg = poolMap.get(poolId);
 				int poolType = poolCfg.getType();
 				
 				UserCfg userCfg = new UserCfg(poolId, poolType, password, prefix, selectDb, 
-						maxCon, isAdmin, isReadonly, keyRegularExpr, expireTime);
+						maxCon, isAdmin, isReadonly, keyExpr, keyExpireTime, idleTimeout);
 				
 				// 非kafka pool的用户不能充当生产者 和 消费者
 				if (poolType != 3) {

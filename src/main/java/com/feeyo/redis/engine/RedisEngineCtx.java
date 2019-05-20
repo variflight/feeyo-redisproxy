@@ -96,7 +96,7 @@ public class RedisEngineCtx {
         String backSocketSoRcvbufString = this.serverMap.get("backSocketSoRcvbuf");
         String backSocketSoSndbufString = this.serverMap.get("backSocketSoSndbuf");
 
-        int port = portString == null ? 8066: Integer.parseInt( portString );
+        int port = portString == null ? 8080: Integer.parseInt( portString );
 
         int processors = Runtime.getRuntime().availableProcessors();
         int reactorSize = reactorSizeString == null ? processors + 1 : Integer.parseInt( reactorSizeString );
@@ -461,8 +461,6 @@ public class RedisEngineCtx {
 			systemConfig.setBackendSlowTimeout( backendSlowTimeout );
 			NetSystem.getInstance().setNetConfig( systemConfig );
 
-			// 4. 生效新的 ZK
-//			ZkClient.INSTANCE().reloadZkCfg();
 			
 			return "+OK\r\n".getBytes();
 		} catch (Exception e) {

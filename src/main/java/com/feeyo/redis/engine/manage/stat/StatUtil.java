@@ -47,11 +47,13 @@ public class StatUtil {
 	// 收集器
 	private static List<StatCollector> collectors = new CopyOnWriteArrayList<>();
 	
+	//
 	private static UserFlowCollector userflowCollector = new UserFlowCollector();
 	private static CmdAccessCollector cmdAccessCollector = new CmdAccessCollector();
 	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
 	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
 	private static SlowKeyColletor slowKeyCollector = new SlowKeyColletor();
+    //private static AllCmdCollector allKeyCollector = new AllCmdCollector();
 	
 	static {
 		
@@ -60,6 +62,7 @@ public class StatUtil {
 		addCollector( bigKeyCollector );
 		addCollector( bigLengthCollector );
 		addCollector( slowKeyCollector );
+       // addCollector( allKeyCollector );
 		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
 			@Override
@@ -86,92 +89,6 @@ public class StatUtil {
 					
 					//
 					if ( zeroTimeMillis > 0 ) {
-						
-						// send mail
-						// ##################################################################################
-						
-						// ignore send mail
-						/*
-						try {
-							
-							
-							StringBuffer subject = new StringBuffer( 50 );
-							subject.append(" ###RedisProxy report, host:" ).append( NetworkUtil.getLocalIp() );
-							
-							StringBuffer body = new StringBuffer( 500 );
-							
-							// COMMAND 
-							long sum = 0;
-							body.append("#############   command asscess  #################\n");
-							body.append("|    cmd    |     count     |");
-							for (Command command : cmdAccessCollector.getCommandCountMap().values() ) {
-								body.append("\n");
-								body.append("|    ");
-								body.append(command.cmd).append("    |    ");
-								body.append(command.count.get() ).append("    |    ");
-	
-								sum += command.count.get();
-							}
-							body.append("\r\n");
-							body.append("\r\n");
-							
-							LOGGER.info("Through cmd count:" + sum);
-							
-							
-							// SLOW KEY
-							body.append("#############   slowkey status ( >50ms )   #################\n");
-							body.append("|    cmd    |     key     |    count    |");
-							for (SlowKey slowKey : slowKeyCollector.getSlowKeys() ) {
-								body.append("\n");
-								body.append("|    ");
-								body.append(slowKey.cmd).append("    |    ");
-								body.append(slowKey.key).append("    |    ");
-								body.append(slowKey.count).append("    |");
-							}
-							body.append("\r\n");
-							body.append("\r\n");
-							
-							// BIG KEY
-							body.append("#############   bigkey status   #################\n");
-							body.append("|    cmd    |     key     |    size    |    count    |");
-							for (BigKey bigkey : bigKeyCollector.getTop100() ) {
-								body.append("\n");
-								body.append("|    ");
-								body.append(bigkey.lastCmd).append("    |    ");
-								body.append(bigkey.key).append("    |    ");
-								body.append(bigkey.size).append("    |    ");
-								body.append(bigkey.count).append("    |");
-							}
-							body.append("\r\n");
-							body.append("\r\n");
-	
-							// BIG LENGTH
-							body.append("#############   biglenght status   #################\n");
-							body.append("|    key    |     type     |    length    |    count_1k    |    count_10k    |");
-							for (BigLength bigLength : bigLengthCollector.getBigLengthMap().values() ) {
-								body.append("\n");
-								body.append("|    ");
-								body.append(bigLength.key).append("    |    ");
-								body.append(bigLength.cmd).append("    |    ");
-								body.append(bigLength.length).append("    |    ");
-								body.append(bigLength.count_1k).append("    |    ");
-								body.append(bigLength.count_10k).append("    |");
-							}
-							body.append("\r\n");
-							body.append("\r\n");
-							
-							String[] attachments = null;
-							
-							Properties prop = RedisEngineCtx.INSTANCE().getMailProperties();
-							MailUtil.send(prop, subject.toString(), body.toString(), attachments);
-							
-							
-						} catch(Throwable t) {
-							//ignore
-						}
-						*/
-						// ##################################################################################
-						
 						
 						// 触发0 点事件
 						for(StatCollector listener: collectors) {
@@ -213,12 +130,6 @@ public class StatUtil {
 	}
 	
 
-	/**
-	 * 收集
-	 *
-	 * @param spot
-	 * @param 。
-	 */
     /**
      *  收集
      * @param password password
@@ -271,18 +182,22 @@ public class StatUtil {
 		            stat2.collect(currentTimeMillis, procTimeMills, waitTimeMills, requestSize, responseSize);
 		            
 		        } catch (Exception e) {
+		        	// ignore
 		        }
 			}
 		});
 	}
 	
-	
-	
+	//
     private static AccessStatInfo getAccessStatInfo(String key, long currentTime) {
         AccessStatInfo item = accessStats.get(key);
         if (item == null) {
-            accessStats.putIfAbsent(key, new AccessStatInfo(key, currentTime));
-            item = accessStats.get(key);
+        	synchronized ( StatUtil.class ) {
+        		if (item == null) {
+        			item = new AccessStatInfo(key, currentTime);
+        			accessStats.put(key, item);
+        		}
+			}
         }
         return item;
     }
@@ -326,7 +241,10 @@ public class StatUtil {
     public static List<SlowKey> getSlowKey() {
     	return slowKeyCollector.getSlowKeys();
     }
-    
+
+//    public static boolean setAllKeyCollector(String start, String end, String size) {
+//        return allKeyCollector.setStatTime(start,end,size);
+//    }
   
 	public static class AccessStatInfo  {
 		
@@ -408,7 +326,7 @@ public class StatUtil {
 	            slowCounter[currentIndex].incrementAndGet();
 	        }	        
 	        if (waitTimeMills >= SLOW_COST) {
-	        		waitSlowCounter[currentIndex].incrementAndGet();
+	        	waitSlowCounter[currentIndex].incrementAndGet();
 	        }	        
 	    }
 	    
@@ -437,6 +355,7 @@ public class StatUtil {
 
 				if (totalCounter[currentIndex].get() > result.maxCount) {
 					result.maxCount = totalCounter[currentIndex].get();
+					
 				} else if (totalCounter[currentIndex].get() < result.minCount || result.minCount == -1) {
 					result.minCount = totalCounter[currentIndex].get();
 				}
@@ -445,16 +364,18 @@ public class StatUtil {
 				result.netInBytes[0] += netInBytes[currentIndex].get();
 				result.netOutBytes[0] += netOutBytes[currentIndex].get();
 				
-				//max min net/in bytes
+				// 输入流量
 				if (netInBytes[currentIndex].get() > result.netInBytes[1]) {
-					result.netInBytes[1] = netInBytes[currentIndex].get();
+					result.netInBytes[1] = netInBytes[currentIndex].get();		// max
+					
 				} else if (netInBytes[currentIndex].get() < result.netInBytes[2] || result.netInBytes[2] == -1) {
-					result.netInBytes[2] = netInBytes[currentIndex].get();
+					result.netInBytes[2] = netInBytes[currentIndex].get();		// min
 				}
 				
-				// max min net/out bytes
+				// 输出流量
 				if (netOutBytes[currentIndex].get() > result.netOutBytes[1]) {
 					result.netOutBytes[1] = netOutBytes[currentIndex].get();
+					
 				} else if (netOutBytes[currentIndex].get() < result.netOutBytes[2] || result.netOutBytes[2] == -1) {
 					result.netOutBytes[2] = netOutBytes[currentIndex].get();
 				}
@@ -502,8 +423,8 @@ public class StatUtil {
 		public int  minCount = -1;	
 		public int avgCount = -1;
 		
-		public long[] netInBytes = new long[]{0,0,-1,0};  // 0 total 1 max 2 min 3 avg
-		public long[] netOutBytes = new long[]{0,0,-1,0};
+		public long[] netInBytes = new long[] { 0, 0, -1, 0 }; // 0 total 1 max  2 min 3 avg
+		public long[] netOutBytes = new long[] { 0, 0, -1, 0 };
 		
 		public long created;
 	}

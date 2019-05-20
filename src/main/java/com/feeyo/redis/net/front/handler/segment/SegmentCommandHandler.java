@@ -83,10 +83,6 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
 				if (offsets != null) {
 
                     try {
-                        if (frontCon == null) {
-                            // 是否释放后端连接
-                            return;
-                        }
 
                         int responseSize = 0;
                         String password = frontCon.getPassword();
@@ -112,11 +108,10 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                         		procTimeMills, backendWaitTimeMills, false, false);
                         
                     } catch (IOException e2) {
-                        if (frontCon != null) {
-                            frontCon.close("write err");
-                        }
-                        // 由 reactor close
-                        LOGGER.error("backend write to front err:", e2);
+
+                        frontCon.close("write err");
+                        long backId = backendCon == null ? -1 : backendCon.getId();
+                        LOGGER.error("backend write to front err, back id=" + backId , e2);
                         throw e2;
                         
                     } finally {
