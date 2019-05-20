@@ -81,9 +81,8 @@ public class BypassService {
 				@Override
 				public void run() {
 
-
 					try {
-
+						//
                         String password = frontConn.getPassword();
                         String cmd = frontConn.getSession().getRequestCmd();
                         String key = frontConn.getSession().getRequestKey();
@@ -97,7 +96,6 @@ public class BypassService {
 						if (resps != null) {
 
 							long responseTimeMills = TimeUtil.currentTimeMillis();
-
 							for (RedisResponse resp : resps)
 								responseSize += backConn.writeToFront(frontConn, resp, 0);
 							
@@ -125,7 +123,7 @@ public class BypassService {
 		} catch (RejectedExecutionException re) {	
 			
 			// front rejected 
-			frontConn.write( "-ERR Bypass traffic congestion, rejected execution. \r\n".getBytes() );
+			frontConn.write( "-ERR Bypass is busy, rejected execution. \r\n".getBytes() );
 			
 			LOGGER.error("Bypass rejected, active={} poolSize={} corePoolSize={} maxSubmittedTaskCount={} submittedTasksCount={}, completedTaskCount={}, frontConn={}/{}/{}/{}",
 					new Object[]{ threadPoolExecutor.getActiveCount(), threadPoolExecutor.getPoolSize(), threadPoolExecutor.getCorePoolSize(),
