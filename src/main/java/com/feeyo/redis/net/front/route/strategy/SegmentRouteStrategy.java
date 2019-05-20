@@ -41,7 +41,7 @@ public class SegmentRouteStrategy extends AbstractRouteStrategy {
 			int[] indexs = new int[(args.length - 1) / 2];
 			for (int j = 1; j < args.length; j += 2) {
 				RedisRequest newRequest = new RedisRequest();
-                newRequest.setArgs(new byte[][]{"SET".getBytes(), args[j], args[j + 1], "EX".getBytes(), expireTime});
+                newRequest.setArgs(new byte[][]{"SET".getBytes(), args[j], args[j + 1], "PX".getBytes(), expireTime});
 				newRequest.setPolicy( request.getPolicy() );
 				newRequests.add(newRequest);
 	

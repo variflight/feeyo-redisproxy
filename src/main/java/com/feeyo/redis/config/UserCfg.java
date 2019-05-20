@@ -16,7 +16,7 @@ public class UserCfg {
 	private final boolean isAdmin;
 	private final boolean isReadonly;
 	private final Pattern keyExpr;
-    private final byte[] keyExpireTime;	//过期时间 单位s 默认 12小时=43200s
+    private final byte[] keyExpireTime;	//过期时间 单位ms 默认 12小时=12*60*60*1000
     
     private final int idleTimeout;
 	
