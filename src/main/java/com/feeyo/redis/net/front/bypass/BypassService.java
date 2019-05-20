@@ -45,7 +45,11 @@ public class BypassService {
 		
 		return _INSTANCE;
 	}
-	
+
+	public BypassThreadExecutor getThreadPoolExecutor(){
+	   return this.threadPoolExecutor;
+    }
+
 	private BypassService () {
 	
 		Map<String, String> map = RedisEngineCtx.INSTANCE().getServerMap();

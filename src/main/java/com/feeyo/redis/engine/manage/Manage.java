@@ -39,6 +39,7 @@ import com.feeyo.redis.net.front.NetFlowGuard;
 import com.feeyo.redis.net.front.NetFlowGuard.Guard;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.bypass.BypassService;
+import com.feeyo.redis.net.front.bypass.BypassThreadExecutor;
 import com.feeyo.util.JavaUtils;
 import com.feeyo.util.ShellUtils;
 import com.feeyo.util.Versions;
@@ -444,8 +445,22 @@ public class Manage {
 					sBuffer.append("\r\n");
 					
 					return sBuffer.toString().getBytes();
-					
-				// SHOW USER
+                } else if ( arg2.equalsIgnoreCase("BY_CONN") ) {
+
+                    BypassThreadExecutor threadPoolExecutor=BypassService.INSTANCE().getThreadPoolExecutor();
+
+                    StringBuffer sBuffer = new StringBuffer();
+                    sBuffer.append("+");
+                    sBuffer.append("active=").append( threadPoolExecutor.getActiveCount()).append(", ");
+                    sBuffer.append("poolSize=").append( threadPoolExecutor.getPoolSize()).append(", ");
+                    sBuffer.append("corePoolSize=").append( threadPoolExecutor.getCorePoolSize()).append(", ");
+                    sBuffer.append("maxSubmittedTaskCount=").append( threadPoolExecutor.getMaxSubmittedTaskCount()).append(", ");
+                    sBuffer.append("submittedTasksCount=").append( threadPoolExecutor.getSubmittedTasksCount()).append(", ");
+                    sBuffer.append("completedTaskCount=").append( threadPoolExecutor.getCompletedTaskCount()).append(", ");
+                    sBuffer.append("\r\n");
+                    return sBuffer.toString().getBytes();
+
+                    // SHOW USER
 				} else if ( arg2.equalsIgnoreCase("USER") ) {
 					
 					// 
