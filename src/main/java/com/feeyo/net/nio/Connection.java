@@ -151,9 +151,8 @@ public class Connection extends ClosableConnection {
 			//throw new IOException( e );
 		} finally {
 			//
-			if ( isClosed.get() ) {
-				this.close("clean.");
-			}
+			if ( isClosed.get() )
+				this.cleanup();
 		}
 	}
 	
@@ -353,6 +352,10 @@ public class Connection extends ClosableConnection {
 		} finally {
 			//CAS RESET
 			reading.set(false);	
+			
+			//
+			if ( isClosed.get() )
+				this.cleanup();
 		}
 
 	}
