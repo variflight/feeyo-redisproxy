@@ -149,6 +149,11 @@ public class Connection extends ClosableConnection {
 			LOGGER.error("write err, id="+ id + " direction=" + direction, e);
 			this.close("write err:" + e);
 			//throw new IOException( e );
+		} finally {
+			//
+			if ( isClosed.get() ) {
+				this.close("clean.");
+			}
 		}
 	}
 	
