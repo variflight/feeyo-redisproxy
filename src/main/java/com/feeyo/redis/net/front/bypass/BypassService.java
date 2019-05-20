@@ -96,6 +96,7 @@ public class BypassService {
 						if (resps != null) {
 
 							long responseTimeMills = TimeUtil.currentTimeMillis();
+
 							for (RedisResponse resp : resps)
 								responseSize += backConn.writeToFront(frontConn, resp, 0);
 							
