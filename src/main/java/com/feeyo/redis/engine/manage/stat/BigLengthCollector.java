@@ -36,18 +36,17 @@ public class BigLengthCollector implements StatCollector {
     private static ConcurrentHashMap<String, BigLength> bLengthKeyMap = new ConcurrentHashMap<String, BigLength>();
 
     private static long lastCheckTime = TimeUtil.currentTimeMillis();
+  
+    
     private static AtomicBoolean isChecking = new AtomicBoolean(false);
+    
+    //
+    private void detection() {
 
-
-    /**
-     * 检查 redis key
-     */
-    private void checkListKeyLength() {
-
-        if (!isChecking.compareAndSet(false, true)) {
+        if (!isChecking.compareAndSet(false, true)) 
             return;
-        }
-
+        
+        //
         try {
 
             lastCheckTime = TimeUtil.currentTimeMillis();
@@ -223,7 +222,7 @@ public class BigLengthCollector implements StatCollector {
                 if (waitForConfirmKeyMap.size() < 1000) {
                     waitForConfirmKeyMap.put(key, new String[]{password, cmd, key});
                 } else {
-                    checkListKeyLength();
+                    detection();
                 }
             }
         }
@@ -246,7 +245,7 @@ public class BigLengthCollector implements StatCollector {
     @Override
     public void onSchedulePeroid(int peroid) {
         if (TimeUtil.currentTimeMillis() - lastCheckTime >= peroid * 1000 * 10) {
-            checkListKeyLength();
+            detection();
         }
     }
 
