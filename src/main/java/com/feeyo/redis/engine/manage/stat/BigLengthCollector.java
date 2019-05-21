@@ -30,9 +30,10 @@ public class BigLengthCollector implements StatCollector {
 
 
     // key -> password,cmd
-    private static ConcurrentHashMap<String, String[]> keyMap = new ConcurrentHashMap<String, String[]>();
+    private static ConcurrentHashMap<String, String[]> waitForConfirmKeyMap = new ConcurrentHashMap<String, String[]>();
 
-    private static ConcurrentHashMap<String, BigLength> bigLengthMap = new ConcurrentHashMap<String, BigLength>();
+    // 已确认 big length
+    private static ConcurrentHashMap<String, BigLength> bLengthKeyMap = new ConcurrentHashMap<String, BigLength>();
 
     private static long lastCheckTime = TimeUtil.currentTimeMillis();
     private static AtomicBoolean isChecking = new AtomicBoolean(false);
@@ -51,129 +52,127 @@ public class BigLengthCollector implements StatCollector {
 
             lastCheckTime = TimeUtil.currentTimeMillis();
 
-            Map<PhysicalNode, List<String[]>> toCheckKeys = new HashMap<>(14);
-
             // 按照物理节点分组 然后发送 验证
-            for (java.util.Map.Entry<String, String[]> entry : keyMap.entrySet()) {
+            Map<PhysicalNode, List<String[]>> nodeToKeysMap = new HashMap<>(14);
+            for (String[] item : waitForConfirmKeyMap.values()) {
 
-                String key = entry.getKey();
-                String[] value = entry.getValue();
-
-                String password = value[0];
-                String cmd = value[1];
-
+            	String password = item[0];
+                String cmd = item[1];
+                String key = item[2];
+                //
                 UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(password);
                 if (userCfg == null) {
                     continue;
                 }
-
+                
+                //
                 AbstractPool pool = RedisEngineCtx.INSTANCE().getPoolMap().get(userCfg.getPoolId());
-                PhysicalNode physicalNode = (pool.getType() == PoolType.REDIS_CLUSTER ? pool.getPhysicalNode(cmd, key) : pool.getPhysicalNode());
-                if (physicalNode == null) {
+                PhysicalNode physicalNode = (pool.getType() == PoolType.REDIS_CLUSTER ? 
+                		pool.getPhysicalNode(cmd, key) : pool.getPhysicalNode());
+                if ( physicalNode == null ) {
                     continue;
                 }
-
-                List<String[]> keyAndCmdList = toCheckKeys.get(physicalNode);
-                if (keyAndCmdList == null) {
-                    keyAndCmdList = new ArrayList<>();
-                    toCheckKeys.put(physicalNode, keyAndCmdList);
+                
+                //
+                List<String[]> itemList = nodeToKeysMap.get(physicalNode);
+                if (itemList == null) {
+                    itemList = new ArrayList<>();
+                    nodeToKeysMap.put(physicalNode, itemList);
                 }
-
-                String[] keyAndCmd = new String[]{key, cmd};
-                keyAndCmdList.add(keyAndCmd);
+                itemList.add( new String[]{ cmd, key } );
             }
 
-            for (java.util.Map.Entry<PhysicalNode, List<String[]>> entry : toCheckKeys.entrySet()) {
+            // 按主机进行校验
+            for (java.util.Map.Entry<PhysicalNode, List<String[]>> entry : nodeToKeysMap.entrySet()) {
 
-                PhysicalNode physicalNode = entry.getKey();
-                List<String[]> keyAndCmdList = entry.getValue();
+                //
+                JedisConnection conn = null;
+                try {
+                    // 前置设置 readonly
+                    conn = new JedisConnection(entry.getKey().getHost(), entry.getKey().getPort(), 1000, 1000);
+                    
+                    //
+                    for (String[] item: entry.getValue()) {
 
-                    JedisConnection conn = null;
-                    try {
-                        // 前置设置 readonly
-                        conn = new JedisConnection(physicalNode.getHost(), physicalNode.getPort(), 1000, 1000);
+                    	String cmd = item[0];
+                        String key = item[1];
+                        //
+                        if (cmd.equals("HMSET") ||
+                                cmd.equals("HSET") ||
+                                cmd.equals("HSETNX") ||
+                                cmd.equals("HINCRBY") ||
+                                cmd.equals("HINCRBYFLOAT")) { // hash
 
-                        for (String[] strings: keyAndCmdList) {
+                            conn.sendCommand(RedisCommand.HLEN, key);
 
-                            String key = strings[0];
-                            String cmd = strings[1];
+                        } else if (cmd.equals("LPUSH") ||
+                                cmd.equals("LPUSHX") ||
+                                cmd.equals("RPUSH") ||
+                                cmd.equals("RPUSHX")) { // list
 
-                            if (cmd.equals("HMSET") ||
-                                    cmd.equals("HSET") ||
-                                    cmd.equals("HSETNX") ||
-                                    cmd.equals("HINCRBY") ||
-                                    cmd.equals("HINCRBYFLOAT")) { // hash
+                            conn.sendCommand(RedisCommand.LLEN, key);
 
-                                conn.sendCommand(RedisCommand.HLEN, key);
+                        } else if (cmd.equals("SADD")) { // set
 
-                            } else if (cmd.equals("LPUSH") ||
-                                    cmd.equals("LPUSHX") ||
-                                    cmd.equals("RPUSH") ||
-                                    cmd.equals("RPUSHX")) { // list
+                            conn.sendCommand(RedisCommand.SCARD, key);
 
-                                conn.sendCommand(RedisCommand.LLEN, key);
+                        } else if (cmd.equals("ZADD") ||
+                                cmd.equals("ZINCRBY") ||
+                                cmd.equals("ZREMRANGEBYLEX")) { // sortedset
 
-                            } else if (cmd.equals("SADD")) { // set
+                            conn.sendCommand(RedisCommand.ZCARD, key);
+                        }
 
-                                conn.sendCommand(RedisCommand.SCARD, key);
+                        // 获取集合长度
+                        long length = conn.getIntegerReply();
+                        if (length > THRESHOLD) {
 
-                            } else if (cmd.equals("ZADD") ||
-                                    cmd.equals("ZINCRBY") ||
-                                    cmd.equals("ZREMRANGEBYLEX")) { // sortedset
-
-                                conn.sendCommand(RedisCommand.ZCARD, key);
-                            }
-
-                            // 获取集合长度
-                            long length = conn.getIntegerReply();
-                            if (length > THRESHOLD) {
-
-                                BigLength bigLen = bigLengthMap.get(key);
-                                if (bigLen == null) {
-                                    bigLen = new BigLength();
-                                    bigLen.cmd = cmd;
-                                    bigLen.key = key;
-                                    String[] value = keyMap.get(key);
-                                    if (value != null) {
-                                        bigLen.password = value[0];
-                                        bigLengthMap.put(key, bigLen);
-                                    }
+                            BigLength bLength = bLengthKeyMap.get(key);
+                            if (bLength == null) {
+                                bLength = new BigLength();
+                                bLength.cmd = cmd;
+                                bLength.key = key;
+                                String[] value = waitForConfirmKeyMap.get(key);
+                                if (value != null) {
+                                    bLength.password = value[0];
+                                    bLengthKeyMap.put(key, bLength);
                                 }
-                                bigLen.length.set((int) length);
-
-                            } else {
-                                bigLengthMap.remove(key);
                             }
+                            bLength.length.set((int) length);
 
-                            keyMap.remove(key);
+                        } else {
+                            bLengthKeyMap.remove(key);
+                        }
 
-                            // ###########################################
-                            if (bigLengthMap.size() > 100) {
-                                BigLength min = null;
-                                for (BigLength bigLen : bigLengthMap.values()) {
-                                    if (min == null) {
+                        waitForConfirmKeyMap.remove(key);
+
+                        // ###########################################
+                        if (bLengthKeyMap.size() > 100) {
+                        	//
+                            BigLength min = null;
+                            for (BigLength bigLen : bLengthKeyMap.values()) {
+                                if (min == null) {
+                                    min = bigLen;
+                                } else {
+                                    if (bigLen.length.get() < min.length.get()) {
                                         min = bigLen;
-                                    } else {
-                                        if (bigLen.length.get() < min.length.get()) {
-                                            min = bigLen;
-                                        }
                                     }
                                 }
-                                bigLengthMap.remove(min.key);
                             }
+                            bLengthKeyMap.remove(min.key);
                         }
-                    } catch (Exception e2) {
-                        LOGGER.error("check big length err:", e2);
-                    } finally {
-                        if (conn != null) {
-                            conn.disconnect();
-                        }
-                        keyAndCmdList.clear();
                     }
-
+                } catch (Exception e2) {
+                    LOGGER.error("big length chk err:", e2);
+                } finally {
+                    if (conn != null) {
+                        conn.disconnect();
+                    }
+                }
             }
-
-            toCheckKeys.clear();
+            //
+            nodeToKeysMap.clear();
+            
         } finally {
             isChecking.set(false);
         }
@@ -181,7 +180,7 @@ public class BigLengthCollector implements StatCollector {
 
 
     public ConcurrentHashMap<String, BigLength> getBigLengthMap() {
-        return bigLengthMap;
+        return bLengthKeyMap;
     }
 
 
@@ -208,7 +207,7 @@ public class BigLengthCollector implements StatCollector {
                 || cmd.equals("ZREMRANGEBYLEX")) {
 
 
-            BigLength bigLength = bigLengthMap.get(key);
+            BigLength bigLength = bLengthKeyMap.get(key);
             if (bigLength != null) {
                 if (requestSize > SIZE_OF_10K) {
                     bigLength.count_10k.incrementAndGet();
@@ -219,11 +218,10 @@ public class BigLengthCollector implements StatCollector {
             }
 
             //
-            if (!keyMap.containsKey(key)) {
-
-                if (keyMap.size() < 1000) {
-                    ;
-                    keyMap.put(key, new String[]{password, cmd});
+            if (!waitForConfirmKeyMap.containsKey(key)) {
+            	//
+                if (waitForConfirmKeyMap.size() < 1000) {
+                    waitForConfirmKeyMap.put(key, new String[]{password, cmd, key});
                 } else {
                     checkListKeyLength();
                 }
@@ -235,12 +233,14 @@ public class BigLengthCollector implements StatCollector {
 
     @Override
     public void onScheduleToZore() {
+    	//
         ConcurrentHashMap<String, String[]> tmp = new ConcurrentHashMap<String, String[]>();
-        for (BigLength bigLength : bigLengthMap.values()) {
-            tmp.put(bigLength.key, new String[]{bigLength.password, bigLength.cmd});
+        for (BigLength bigLength : bLengthKeyMap.values()) {
+            tmp.put(bigLength.key, new String[]{bigLength.password, bigLength.cmd, bigLength.key});
         }
 
-        keyMap.putAll(tmp);
+        //
+        waitForConfirmKeyMap.putAll(tmp);
     }
 
     @Override
