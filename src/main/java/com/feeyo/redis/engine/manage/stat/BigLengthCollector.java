@@ -29,7 +29,7 @@ public class BigLengthCollector implements StatCollector {
     private final static int SIZE_OF_10K = 10 * SIZE_OF_1K;
 
 
-    // key -> password,cmd
+    // key -> password,cmd，key
     private static ConcurrentHashMap<String, String[]> waitForConfirmKeyMap = new ConcurrentHashMap<String, String[]>();
 
     // 已确认 big length
