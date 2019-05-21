@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Objects;
 
 
 /**
@@ -210,6 +211,19 @@ public class PhysicalNode {
 		this.port = port;
 	}	
 	
+	
+    @Override
+    public int hashCode() {
+        return Objects.hash(host, port);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PhysicalNode that = (PhysicalNode) o;
+        return host == that.host && port == that.port;
+    }
 
 	@Override
 	public String toString() {

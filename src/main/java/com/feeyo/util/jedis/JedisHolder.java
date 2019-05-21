@@ -11,8 +11,8 @@ public class JedisHolder {
 	private ConcurrentHashMap<String, JedisPool> pools = new ConcurrentHashMap<>();
 	
 	// 连接池中最大空闲的连接数
-	private int maxIdle = 10;
-	private int minIdle = 2;
+	private int maxIdle = 15;
+	private int minIdle = 5;
 	
 	// 当调用borrow Object方法时，是否进行有效性检查
 	private boolean testOnBorrow = false;

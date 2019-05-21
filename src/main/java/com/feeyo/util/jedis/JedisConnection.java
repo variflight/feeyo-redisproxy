@@ -89,37 +89,20 @@ public class JedisConnection {
 	}
 
 	public void disconnect() {
-		try {
-			if ( outputStream != null)
+		if (isConnected()) {
+			try {
 				outputStream.flush();
-			
-			if ( socket != null )
 				socket.close();
-			
-		} catch (IOException ex) {
-			broken = true;
-			throw new JedisConnectionException(ex);
-		} finally {
-			
-			if ( inputStream != null )
-				try {
-					inputStream.close();
-				} catch (IOException e1) {
-					// ignored
-				}
-			
-			if ( outputStream != null)
-				try {
-					outputStream.close();
-				} catch (IOException e1) {
-					// ignore
-				}
-			
-			if (socket != null) {
-				try {
-					socket.close();
-				} catch (IOException e) {
-					// ignored
+			} catch (IOException ex) {
+				broken = true;
+				throw new JedisConnectionException(ex);
+			} finally {
+				if (socket != null) {
+					try {
+						socket.close();
+					} catch (IOException e) {
+						// ignored
+					}
 				}
 			}
 		}
