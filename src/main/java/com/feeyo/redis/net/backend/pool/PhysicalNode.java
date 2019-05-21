@@ -8,8 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 
 /**
@@ -36,10 +34,6 @@ public class PhysicalNode {
 	protected int minCon;
 	protected int maxCon;
 	
-    // 
-	private volatile boolean isOverload = false;
-    private LatencyTimeSeries latencyTimeSeries = new LatencyTimeSeries();
-
 	protected final BackendConnectionFactory factory;
 	
 	public PhysicalNode(BackendConnectionFactory factory, int poolType, String poolName, 
@@ -180,36 +174,6 @@ public class PhysicalNode {
 		}
 	}	
 	
-	// 节点的负载
-    public boolean isOverload() {
-        return this.isOverload;
-    }
-
-    //
-    public void addLatencySample(LatencySample sample) {
-    	this.latencyTimeSeries.addSample(sample);
-    }
-    
-    public void calculateOverloadByLatencySample(float latencyThreshold) {
-    	//
-    	boolean newOverload = false;
-    	//
-    	long latency = this.latencyTimeSeries.calculateLatency();
-		if ( latency != -1 )												
-			newOverload = (latency >=  latencyThreshold  );  
-		//
-		if ( newOverload != this.isOverload )
-			LOGGER.warn("host={}/port overload state changed, isOverload=[{}/{}] latencyThreshold={}ms latency={}ms",
-					new Object[]{ this.host , this.port, this.isOverload, newOverload, latencyThreshold, latency } );
-		//
-		this.isOverload = newOverload;
-    }
-	
-    public List<LatencySample> getLatencySamples() {
-    	return this.latencyTimeSeries.getSparseSamples();
-    }
-    
-	
 	public String getName() {
 		return name;
 	}
@@ -261,104 +225,4 @@ public class PhysicalNode {
 		sb.append("maxCon=").append(maxCon).append(" ) ");
 		return sb.toString();
 	}
-	
-	
-	//
-	//
-	public static class LatencyTimeSeries {
-		
-		private static final int SAMPLE_SIZE = 15;	
-		
-		// 计算负载
-		private static final int NUM = 9; 
-		
-		public ConcurrentLinkedDeque<LatencySample> samples = new ConcurrentLinkedDeque<LatencySample>();
-
-		public void addSample(LatencySample sample) {
-			if ( samples.size() >= SAMPLE_SIZE) {
-				samples.pollLast();
-			}
-			samples.offerFirst( sample );
-		}
-		
-		public long calculateLatency() {
-			
-			 // 必须确认有足够的样本
-	        if ( samples.size() >= NUM ) {
-	        	long[] latencys = new long[ NUM ];
-	        	//
-		        int i = 0;
-		        Iterator<LatencySample> itr = samples.iterator();
-		        while( itr.hasNext() ) {
-		        	if ( i == NUM )
-		                break;
-		            latencys[i] = itr.next().latency;
-		            i++;
-		        }
-		        
-		        // 计算，去掉最高值&最低值, 利用中间值计算平均
-		        long total = 0;
-		        long max = latencys[0];
-		        long min = latencys[0];
-		        for(int j = 0; j < latencys.length; j++) {
-		        	long v = latencys[j];
-		        	if ( max < v ) max = v;
-		        	if ( min > v ) min = v;
-		        	total += v;
-		        }
-		        
-		        // 纳秒
-		        return ((total - min - max) / (NUM - 2));
-	        }
-	        
-			return -1;
-		}
-		
-		public List<LatencySample> getSparseSamples() {
-
-			Map<Long, List<LatencySample>> sampleMap = new HashMap<Long, List<LatencySample>>();
-
-			// 抽稀
-			Iterator<LatencySample> itr = samples.iterator();
-			while ( itr.hasNext() ) {
-				LatencySample s = itr.next();
-				long second = s.time / 1000;
-				List<LatencySample> list = sampleMap.get(second);
-				if (list == null) {
-					list = new ArrayList<LatencySample>();
-					list.add(s);
-					sampleMap.put(second, list);
-				} else {
-					list.add(s);
-				}
-			}
-			
-			//
-			List<LatencySample> sampleList = new ArrayList<LatencySample>();
-			for (Map.Entry<Long, List<LatencySample>> entry : sampleMap.entrySet()) {
-
-				int total = 0;
-				int cnt = 0;
-				for (LatencySample v : entry.getValue()) {
-					total += v.latency;
-					cnt++;
-					
-				}
-				//
-				LatencySample avgSample =  new LatencySample();
-				avgSample.time = entry.getKey();
-				avgSample.latency =  total / cnt ;
-				sampleList.add( avgSample );
-			}
-
-			return sampleList;
-		}
-		
-	}
-
-	public static class LatencySample {
-		public long time;
-		public long latency;	// 毫秒
-	}
-	
 }

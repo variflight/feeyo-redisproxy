@@ -151,9 +151,7 @@ public class KafkaRouteStrategy extends AbstractRouteStrategy {
 		if ( physicalNode == null ) {
 			throw new PhysicalNodeUnavailableException("node unavailable.");
 		//	
-		} else if ( physicalNode.isOverload() ) {
-			throw new PhysicalNodeUnavailableException("node overload.");
-		}
+		} 
 
 		// 注入 offset & partition & maxBytes
 		//

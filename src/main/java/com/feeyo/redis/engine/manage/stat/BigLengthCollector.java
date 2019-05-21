@@ -51,10 +51,12 @@ public class BigLengthCollector implements StatCollector {
 			lastCheckTime = TimeUtil.currentTimeMillis();
 
             Set<String> connectionExceptionIps = new HashSet<>();
-			for (java.util.Map.Entry<String, String[]>  listKey : keyMap.entrySet()) {
+            // key -> password & cmd
+			for (java.util.Map.Entry<String, String[]>  entry : keyMap.entrySet()) {
 				
-				String key = listKey.getKey();
-				String[] value = listKey.getValue();
+				String key = entry.getKey();
+				String[] value = entry.getValue();
+				//
 				String password = value[0];
 				String cmd = value[1];
 				
@@ -199,6 +201,7 @@ public class BigLengthCollector implements StatCollector {
 					}
 				}
 				
+				//
 				if ( !keyMap.containsKey(key) ) {
 					
 					if (keyMap.size() < 1000) {;
