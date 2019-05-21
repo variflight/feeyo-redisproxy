@@ -89,40 +89,57 @@ public class JedisConnection {
 	}
 
 	public void disconnect() {
-		if (isConnected()) {
-			try {
+		try {
+			if ( outputStream != null)
 				outputStream.flush();
+			
+			if ( socket != null )
 				socket.close();
-			} catch (IOException ex) {
-				broken = true;
-				throw new JedisConnectionException(ex);
-			} finally {
-				if (socket != null) {
-					try {
-						socket.close();
-					} catch (IOException e) {
-						// ignored
-					}
+			
+		} catch (IOException ex) {
+			broken = true;
+			throw new JedisConnectionException(ex);
+		} finally {
+			
+			if ( inputStream != null )
+				try {
+					inputStream.close();
+				} catch (IOException e1) {
+					// ignored
+				}
+			
+			if ( outputStream != null)
+				try {
+					outputStream.close();
+				} catch (IOException e1) {
+					// ignore
+				}
+			
+			if (socket != null) {
+				try {
+					socket.close();
+				} catch (IOException e) {
+					// ignored
 				}
 			}
 		}
 	}
 	
-	  public void close() {
-	    if (dataSource != null) {
-	      if (isBroken()) {
-	        this.dataSource.returnBrokenResource(this);
-	      } else {
-	        this.dataSource.returnResource(this);
-	      }
-	    } else {
-	    		disconnect();
-	    }
-	  }
+	public void close() {
+		if (dataSource != null) {
+			if (isBroken()) {
+				this.dataSource.returnBrokenResource(this);
+			} else {
+				this.dataSource.returnResource(this);
+			}
+		} else {
+			disconnect();
+		}
+	}
 
-	  public void setDataSource(Pool<JedisConnection> jedisPool) {
-	    this.dataSource = jedisPool;
-	  }
+	public void setDataSource(Pool<JedisConnection> jedisPool) {
+		this.dataSource = jedisPool;
+	}
 	
 	public boolean isConnected() {
 		return socket != null && socket.isBound() && !socket.isClosed() && socket.isConnected()

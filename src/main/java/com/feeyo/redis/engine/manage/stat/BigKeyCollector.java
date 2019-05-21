@@ -168,15 +168,7 @@ public class BigKeyCollector implements StatCollector {
 	}
 	
 	public void deleteResponseBigkey(String key) {
-		
 		bkHashMap.remove(key);
-		
-//		BigKey bk = bkHashMap.get(key);
-//		if (bk != null && bk.fromReq) {
-//			bk.fromResp = false;
-//		} else {
-//			bkHashMap.remove(key);
-//		}
 	}
 	
 	public long getBigKeyCount() {

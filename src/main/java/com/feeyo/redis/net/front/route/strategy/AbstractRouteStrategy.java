@@ -43,9 +43,7 @@ public abstract class AbstractRouteStrategy {
 			if ( physicalNode == null ) {
 				throw new PhysicalNodeUnavailableException("node unavailable.");
 			//
-			} else if ( physicalNode.isOverload() ) {
-				throw new PhysicalNodeUnavailableException("node overload. " );
-			}
+			} 
 			
 			for(int i = 0; i < requests.size(); i++) {
 				node.addRequestIndex(i);
@@ -76,9 +74,7 @@ public abstract class AbstractRouteStrategy {
 				if ( physicalNode == null ) {
 					throw new PhysicalNodeUnavailableException("node unavailable.");
 				//
-				} else if ( physicalNode.isOverload() ) {
-					throw new PhysicalNodeUnavailableException("node overload.");
-				}
+				} 
 
 				allocateRequestIdxToPhysicalNode(nodes, i, physicalNode);
 			}
@@ -99,9 +95,7 @@ public abstract class AbstractRouteStrategy {
 				if ( physicalNode == null ) {
 					throw new PhysicalNodeUnavailableException("node unavailable.");
 					
-				} else if ( physicalNode.isOverload() ) {
-					throw new PhysicalNodeUnavailableException("node overload.");
-				}
+				} 
 				
 				allocateRequestIdxToPhysicalNode(nodes, i, physicalNode);
 			}

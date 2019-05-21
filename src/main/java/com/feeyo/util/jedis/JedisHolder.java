@@ -11,12 +11,15 @@ public class JedisHolder {
 	private ConcurrentHashMap<String, JedisPool> pools = new ConcurrentHashMap<>();
 	
 	// 连接池中最大空闲的连接数
-	private int maxIdle = 50;
-	private int minIdle = 10;
+	private int maxIdle = 10;
+	private int minIdle = 2;
+	
 	// 当调用borrow Object方法时，是否进行有效性检查
 	private boolean testOnBorrow = false;
+	
 	// 当调用return Object方法时，是否进行有效性检查
 	private boolean testOnReturn = false;
+	
 	// 如果为true，表示有一个idle object evitor线程对idle
 	// object进行扫描，如果validate失败，此object会被从pool中drop掉
 	// TODO: 这一项只有在timeBetweenEvictionRunsMillis大于0时才有意义

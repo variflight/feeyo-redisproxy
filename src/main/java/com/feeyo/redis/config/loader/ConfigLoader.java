@@ -68,13 +68,12 @@ public class ConfigLoader extends AbstractConfigLoader {
 				int type = getIntAttribute(nameNodeMap, "type", 0);
 				int minCon = getIntAttribute(nameNodeMap, "minCon", 5);
 				int maxCon = getIntAttribute(nameNodeMap, "maxCon", 100);
-				int latencyThreshold = getIntAttribute(nameNodeMap, "latencyThreshold", 10 * 1000); //毫秒单位
-				
+
 				PoolCfg poolCfg;
 				if (type == PoolType.KAFKA_CLUSTER ) {
-					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon, latencyThreshold);
+					poolCfg = new KafkaPoolCfg(id, name, type, minCon, maxCon);
 				} else {
-					poolCfg = new PoolCfg(id, name, type, minCon, maxCon, latencyThreshold);
+					poolCfg = new PoolCfg(id, name, type, minCon, maxCon);
 				}
 				
 				List<Node> nodeList = getChildNodes(nodesElement, "node");

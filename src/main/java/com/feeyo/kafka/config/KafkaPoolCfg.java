@@ -27,8 +27,8 @@ public class KafkaPoolCfg extends PoolCfg {
 	// topicName -> topicCfg
 	private volatile Map<String, TopicCfg> topicCfgMap = null;
 
-	public KafkaPoolCfg(int id, String name, int type, int minCon, int maxCon, int latencyThreshold) {
-		super(id, name, type, minCon, maxCon, latencyThreshold);
+	public KafkaPoolCfg(int id, String name, int type, int minCon, int maxCon) {
+		super(id, name, type, minCon, maxCon);
 	}
 	
 	@Override
