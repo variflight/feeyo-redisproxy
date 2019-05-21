@@ -1,19 +1,13 @@
 package com.feeyo.util.jedis;
 
+import com.feeyo.util.jedis.exception.*;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.feeyo.util.jedis.exception.JedisAskDataException;
-import com.feeyo.util.jedis.exception.JedisBusyException;
-import com.feeyo.util.jedis.exception.JedisClusterException;
-import com.feeyo.util.jedis.exception.JedisConnectionException;
-import com.feeyo.util.jedis.exception.JedisDataException;
-import com.feeyo.util.jedis.exception.JedisMovedDataException;
-import com.feeyo.util.jedis.exception.JedisNoScriptException;
 
 /**
  * BIO 实现，独立通道用于心跳及信息检测服务
@@ -89,23 +83,45 @@ public class JedisConnection {
 	}
 
 	public void disconnect() {
-		if (isConnected()) {
-			try {
-				outputStream.flush();
-				socket.close();
-			} catch (IOException ex) {
-				broken = true;
-				throw new JedisConnectionException(ex);
-			} finally {
-				if (socket != null) {
-					try {
-						socket.close();
-					} catch (IOException e) {
-						// ignored
-					}
-				}
-			}
-		}
+        try {
+            if ( outputStream != null)
+                outputStream.flush();
+
+            if ( socket != null ) {
+                socket.close();
+                socket = null;
+            }
+
+        } catch (IOException ex) {
+            broken = true;
+            throw new JedisConnectionException(ex);
+        } finally {
+
+            if ( inputStream != null )
+                try {
+                    inputStream.close();
+                    inputStream = null;
+                } catch (IOException e1) {
+                    // ignored
+                }
+
+            if ( outputStream != null)
+                try {
+                    outputStream.close();
+                    outputStream = null;
+                } catch (IOException e1) {
+                    // ignore
+                }
+
+            if (socket != null) {
+                try {
+                    socket.close();
+                    socket = null;
+                } catch (IOException e) {
+                    // ignored
+                }
+            }
+        }
 	}
 	
 	public void close() {
