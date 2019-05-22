@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -169,6 +168,7 @@ public class JedisConnection {
         }
 	}
 	
+	@SuppressWarnings("deprecation")
 	public void close() {
 
 		if (dataSource != null) {
