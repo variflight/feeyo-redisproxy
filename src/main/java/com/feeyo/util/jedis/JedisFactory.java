@@ -12,6 +12,7 @@ import com.feeyo.util.jedis.exception.JedisException;
  * PoolableObjectFactory custom impl.
  */
 class JedisFactory implements PooledObjectFactory<JedisConnection> {
+	//
 	private final AtomicReference<HostAndPort> hostAndPort = new AtomicReference<HostAndPort>();
 	private final int connectionTimeout;
 	private final int soTimeout;

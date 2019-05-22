@@ -190,7 +190,7 @@ public class RedisClusterPool extends AbstractPool {
 				LOGGER.warn("discover cluster err:", e);	
 			} finally {
 				if (conn != null) {
-					conn.disconnect();
+					conn.close();
 				}
 			}
 		}

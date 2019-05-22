@@ -63,7 +63,7 @@ public class KeepAlived {
 					LOGGER.info("###self check### err:", e);	
 				} finally {
 					if (conn != null) {
-						conn.disconnect();
+						conn.close();
 					}
 				}
 				return false;

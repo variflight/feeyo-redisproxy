@@ -165,7 +165,7 @@ public class BigLengthCollector implements StatCollector {
                     LOGGER.error("big length chk err:", e2);
                 } finally {
                     if (conn != null) {
-                        conn.disconnect();
+                        conn.close();
                     }
                 }
             }

@@ -118,7 +118,7 @@ public class PerformanceTest {
 						errCC.incrementAndGet();
 					} finally {
 						if (conn != null) {
-							conn.disconnect();
+							conn.close();
 						}
 					}
 					

@@ -38,7 +38,7 @@ public class JedisConnectionTest {
 			
 		} finally {
 			if ( conn != null ) {
-				conn.disconnect();
+				conn.close();
 			}
 		}
 	}

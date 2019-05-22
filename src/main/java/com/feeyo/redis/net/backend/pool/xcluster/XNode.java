@@ -78,7 +78,7 @@ public class XNode {
             }
         } finally {
             if ( conn != null ) {
-                conn.disconnect();
+                conn.close();
             }
         }
 

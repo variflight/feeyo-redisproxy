@@ -8,6 +8,10 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * BIO 实现，独立通道用于心跳及信息检测服务
@@ -16,6 +20,8 @@ import java.util.List;
  *
  */
 public class JedisConnection {
+	
+	private static Logger LOGGER = LoggerFactory.getLogger( JedisConnection.class );
 	
 	// redis command header
 	public static final byte DOLLAR_BYTE = '$';
@@ -44,10 +50,17 @@ public class JedisConnection {
 	private RedisInputStream inputStream;
 	
 	protected Pool<JedisConnection> dataSource = null;	
+	
+	
+	private static AtomicLong createCnt = new AtomicLong(0);
+	private static AtomicLong closeCnt = new AtomicLong(0);
 
 	public JedisConnection(final String host, final int port) {
 		this.host = host;
 		this.port = port;
+		
+		//
+		createCnt.incrementAndGet();
 	}
 	
 	public JedisConnection(final String host, final int port, int connectionTimeout, int soTimeout ) {
@@ -55,9 +68,18 @@ public class JedisConnection {
 		this.port = port;
 		this.connectionTimeout = connectionTimeout;
 		this.soTimeout = soTimeout;
+		
+		//
+		createCnt.incrementAndGet();
+		
+		//
+		int s = (int) (createCnt.get() - closeCnt.get());
+		if ( s > 50 ) {
+			LOGGER.info("jedis connection size={}", s);
+		}
 	}
 	
-	public void connect() {
+	void connect() {
 
 		if (!isConnected()) {
 
@@ -82,49 +104,73 @@ public class JedisConnection {
 		}
 	}
 
-	public void disconnect() {
-        try {
-            if ( outputStream != null)
-                outputStream.flush();
-
-            if ( socket != null ) {
-                socket.close();
-                socket = null;
-            }
-
-        } catch (IOException ex) {
-            broken = true;
-            throw new JedisConnectionException(ex);
-        } finally {
-
-            if ( inputStream != null )
-                try {
-                    inputStream.close();
-                    inputStream = null;
-                } catch (IOException e1) {
-                    // ignored
-                }
-
-            if ( outputStream != null)
-                try {
-                    outputStream.close();
-                    outputStream = null;
-                } catch (IOException e1) {
-                    // ignore
-                }
-
-            if (socket != null) {
-                try {
-                    socket.close();
-                    socket = null;
-                } catch (IOException e) {
-                    // ignored
-                }
-            }
-        }
+	 void disconnect() {
+		
+		if (isConnected()) {
+			try {
+				outputStream.flush();
+				socket.close();
+			} catch (IOException ex) {
+				broken = true;
+				throw new JedisConnectionException(ex);
+			} finally {
+				if (socket != null) {
+					try {
+						socket.close();
+					} catch (IOException e) {
+						// ignored
+					}
+				}
+			}
+		}
+		
+		
+		
+//        try {
+//            if ( outputStream != null)
+//                outputStream.flush();
+//
+//            if ( socket != null ) {
+//                socket.close();
+//                socket = null;
+//            }
+//
+//        } catch (IOException ex) {
+//            broken = true;
+//            throw new JedisConnectionException(ex);
+//        } finally {
+//
+//            if ( inputStream != null )
+//                try {
+//                    inputStream.close();
+//                    inputStream = null;
+//                } catch (IOException e1) {
+//                    // ignored
+//                }
+//
+//            if ( outputStream != null)
+//                try {
+//                    outputStream.close();
+//                    outputStream = null;
+//                } catch (IOException e1) {
+//                    // ignore
+//                }
+//
+//            if (socket != null) {
+//                try {
+//                    socket.close();
+//                    socket = null;
+//                } catch (IOException e) {
+//                    // ignored
+//                }
+//            }
+//        }
 	}
 	
 	public void close() {
+		
+		closeCnt.incrementAndGet();
+		
 		if (dataSource != null) {
 			if (isBroken()) {
 				this.dataSource.returnBrokenResource(this);

@@ -32,7 +32,7 @@ public class RedisClusterPoolTest {
 			System.out.println("discover cluster node err:");	
 		} finally {
 			if (conn != null) {
-				conn.disconnect();
+				conn.close();
 			}
 		}
 	}
