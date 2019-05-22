@@ -73,7 +73,11 @@ public class RedisServer {
 					NetSystem.getInstance().getTimerExecutor().execute(new Runnable() {
 						@Override
 						public void run() {
-							NetSystem.getInstance().checkConnections();
+							try {
+								NetSystem.getInstance().checkConnections();
+							} catch (Throwable e) {
+								LOGGER.error("check conns err:", e);
+							}
 						}
 					});
 				}			

@@ -111,6 +111,8 @@ public class NetSystem {
 
 	
 	
+	
+	
 	/**
 	 * 定时执行该方法，回收部分资源。
 	 */
@@ -144,13 +146,11 @@ public class NetSystem {
 						
 					}  else {
 						// 清理 后端链接 中前端链接已经关闭的情况下 后端链接释放
-                        Object object = backendCon.getAttachement();
-                        if (object == null) {
-                            continue;
-                        }
-                        if (object instanceof RedisFrontConnection) {
-                            RedisFrontConnection frontCon = (RedisFrontConnection) object;
-                            if (frontCon.isClosed()) {
+                        Object front = backendCon.getAttachement();
+                        if ( front != null && front instanceof RedisFrontConnection) {
+                        	//
+                            RedisFrontConnection frontCon = (RedisFrontConnection) front;
+                            if ( frontCon.isClosed()) {
                                 //
                                 StringBuffer errSB = new StringBuffer();
                                 errSB.append("front is closed, close it").append(c);
