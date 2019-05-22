@@ -1,19 +1,19 @@
 package com.feeyo.redis;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.feeyo.net.nio.NetSystem;
 import com.feeyo.net.nio.util.TimeUtil;
 import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.net.backend.pool.AbstractPool;
 import com.feeyo.util.Log4jInitializer;
+import com.feeyo.util.Versions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * redis-benchmark -p 8066 -c 100 -t set,get,lpush,LPOP,sAdd,spop,incr -n 500000
@@ -130,9 +130,10 @@ public class RedisServer {
 			// CONSOLE
 			StringBuffer strBuffer = new StringBuffer();
 			strBuffer.append(" ================================================== ").append("\n");
-			strBuffer.append(" Feeyo-RedisProxy & Feeyo-KafkaProxy ").append("\n");
-			strBuffer.append(" path=").append( System.getProperty("FEEYO_HOME")  ).append("\n");
-			strBuffer.append(" startup=").append( System.currentTimeMillis() ).append("\n");
+            strBuffer.append(" Feeyo-RedisProxy & Feeyo-KafkaProxy ").append("\n");
+            strBuffer.append(" version=").append(Versions.SERVER_VERSION).append("\n");
+            strBuffer.append(" path=").append(System.getProperty("FEEYO_HOME")).append("\n");
+            strBuffer.append(" startup=").append(System.currentTimeMillis()).append("\n");
 			System.out.println( strBuffer.toString() );
 			
 		} catch (Throwable e) {
