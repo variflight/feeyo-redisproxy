@@ -60,9 +60,6 @@ public class JedisConnection {
 	public JedisConnection(final String host, final int port) {
 		this.host = host;
 		this.port = port;
-		
-		//
-		createCnt.incrementAndGet();
 	}
 	
 	public JedisConnection(final String host, final int port, int connectionTimeout, int soTimeout ) {
@@ -70,14 +67,6 @@ public class JedisConnection {
 		this.port = port;
 		this.connectionTimeout = connectionTimeout;
 		this.soTimeout = soTimeout;
-		
-		//
-		createCnt.incrementAndGet();		
-		//
-		usedCnt = (int) (createCnt.get() - closeCnt.get());
-		if ( usedCnt > 50 ) {
-			LOGGER.info("jedis connection size={}", usedCnt);
-		}
 	}
 	
 	public static int getUsedCnt() {
@@ -87,6 +76,13 @@ public class JedisConnection {
 	void connect() {
 
 		if (!isConnected()) {
+			
+			createCnt.incrementAndGet();
+			//
+			usedCnt = (int) (createCnt.get() - closeCnt.get());
+			if ( usedCnt > 50 ) {
+				LOGGER.info("jedis connection size={}", usedCnt);
+			}
 
 			try {
 				socket = new Socket();
@@ -110,6 +106,8 @@ public class JedisConnection {
 	}
 
 	 void disconnect() {
+		 
+		 closeCnt.incrementAndGet();
 		
 //		if (isConnected()) {
 //			try {
@@ -173,9 +171,7 @@ public class JedisConnection {
 	}
 	
 	public void close() {
-		
-		closeCnt.incrementAndGet();
-		
+
 		if (dataSource != null) {
 			if (isBroken()) {
 				this.dataSource.returnBrokenResource(this);
