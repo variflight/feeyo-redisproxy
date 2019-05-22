@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
@@ -50,12 +51,9 @@ public class JedisConnection {
 	private RedisInputStream inputStream;
 	
 	protected Pool<JedisConnection> dataSource = null;	
+
 	
-	
-	private static AtomicLong createCnt = new AtomicLong(0);
-	private static AtomicLong closeCnt = new AtomicLong(0);
-	
-	private static volatile int usedCnt = 0;
+	private static volatile AtomicInteger connectedSize = new AtomicInteger(0);
 
 	public JedisConnection(final String host, final int port) {
 		this.host = host;
@@ -69,19 +67,17 @@ public class JedisConnection {
 		this.soTimeout = soTimeout;
 	}
 	
-	public static int getUsedCnt() {
-		return usedCnt;
+	public static int getConnectedSize() {
+		return connectedSize.get();
 	}
 	
 	void connect() {
 
 		if (!isConnected()) {
 			
-			createCnt.incrementAndGet();
-			//
-			usedCnt = (int) (createCnt.get() - closeCnt.get());
-			if ( usedCnt > 50 ) {
-				LOGGER.info("jedis connection size={}", usedCnt);
+			int size = connectedSize.incrementAndGet();
+			if ( size > 50 ) {
+				LOGGER.info("jedis connection size={}", size);
 			}
 
 			try {
@@ -107,7 +103,7 @@ public class JedisConnection {
 
 	 void disconnect() {
 		 
-		 closeCnt.incrementAndGet();
+		
 		
 //		if (isConnected()) {
 //			try {
@@ -126,10 +122,13 @@ public class JedisConnection {
 //				}
 //			}
 //		}
-		
-		
+
 		
         try {
+        	
+        	//
+        	connectedSize.decrementAndGet();
+        	
             if ( outputStream != null)
                 outputStream.flush();
 

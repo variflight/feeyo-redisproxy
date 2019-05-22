@@ -362,7 +362,7 @@ public class Manage {
 				} else if ( arg2.equalsIgnoreCase("JEDIS") ) {
 					
 					List<String> lines = new ArrayList<String>();	
-					lines.add( String.valueOf( JedisConnection.getUsedCnt() ) );
+					lines.add( String.valueOf( JedisConnection.getConnectedSize() ) );
 					return encode( lines );
 					
 				// SHOW VER
