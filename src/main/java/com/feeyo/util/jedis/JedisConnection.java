@@ -54,6 +54,8 @@ public class JedisConnection {
 	
 	private static AtomicLong createCnt = new AtomicLong(0);
 	private static AtomicLong closeCnt = new AtomicLong(0);
+	
+	private static volatile int usedCnt = 0;
 
 	public JedisConnection(final String host, final int port) {
 		this.host = host;
@@ -70,13 +72,16 @@ public class JedisConnection {
 		this.soTimeout = soTimeout;
 		
 		//
-		createCnt.incrementAndGet();
-		
+		createCnt.incrementAndGet();		
 		//
-		int s = (int) (createCnt.get() - closeCnt.get());
-		if ( s > 50 ) {
-			LOGGER.info("jedis connection size={}", s);
+		usedCnt = (int) (createCnt.get() - closeCnt.get());
+		if ( usedCnt > 50 ) {
+			LOGGER.info("jedis connection size={}", usedCnt);
 		}
+	}
+	
+	public static int getUsedCnt() {
+		return usedCnt;
 	}
 	
 	void connect() {

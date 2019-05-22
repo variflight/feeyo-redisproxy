@@ -42,6 +42,8 @@ import com.feeyo.redis.net.front.bypass.BypassThreadExecutor;
 import com.feeyo.util.JavaUtils;
 import com.feeyo.util.ShellUtils;
 import com.feeyo.util.Versions;
+import com.feeyo.util.jedis.JedisConnection;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -355,6 +357,14 @@ public class Manage {
 					lines.add( end.toString() );
 
 					return encode( lines );
+				
+				// SHOW JEDIS
+				} else if ( arg2.equalsIgnoreCase("JEDIS") ) {
+					
+					List<String> lines = new ArrayList<String>();	
+					lines.add( String.valueOf( JedisConnection.getUsedCnt() ) );
+					return encode( lines );
+					
 				// SHOW VER
 				} else if ( arg2.equalsIgnoreCase("VER") ) {
 					
