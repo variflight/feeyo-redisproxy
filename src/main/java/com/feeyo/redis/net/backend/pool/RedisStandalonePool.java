@@ -102,7 +102,7 @@ public class RedisStandalonePool extends AbstractPool {
 				result = false;
 			} finally {
 				if ( conn != null ) {
-					conn.disconnect();
+					conn.close();
 				}
 			}
 		}
@@ -150,7 +150,7 @@ public class RedisStandalonePool extends AbstractPool {
 			
 			heartbeatTime = TimeUtil.currentTimeMillis();
 			if ( conn != null ) {
-				conn.disconnect();
+				conn.close();
 			}
 		}
 		

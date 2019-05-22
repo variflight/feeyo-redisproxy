@@ -97,7 +97,7 @@ public class XClusterPool extends AbstractPool{
                 return false;
             } finally {
                 if (conn != null) {
-                    conn.disconnect();
+                    conn.close();
                 }
             }
         }
