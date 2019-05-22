@@ -146,15 +146,15 @@ public class NetSystem {
 						// 清理 后端链接 中前端链接已经关闭的情况下 后端链接释放
 						if ( backendCon.getAttachement() != null && backendCon.getAttachement() instanceof RedisFrontConnection) {
 							RedisFrontConnection frontCon = (RedisFrontConnection) backendCon.getAttachement();
-							if ( frontCon.isClosed() ) {
-								//
-								StringBuffer errSB = new StringBuffer();
-								errSB.append("front is closed, close it" ).append( c );
-								errSB.append(" , and attach it " ).append( c.getAttachement() );
-								LOGGER.error( errSB.toString() );
+                            if (frontCon != null && frontCon.isClosed()) {
+                                //
+                                StringBuffer errSB = new StringBuffer();
+                                errSB.append("front is closed, close it").append(c);
+                                errSB.append(" , and attach it ").append(c.getAttachement());
+                                LOGGER.error(errSB.toString());
 
-								c.close("because the front con is closed! ");
-							}
+                                c.close("because the front con is closed! ");
+                            }
 						}
 					}
 				}
