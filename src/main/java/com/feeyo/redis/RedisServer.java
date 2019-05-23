@@ -139,6 +139,7 @@ public class RedisServer {
             strBuffer.append(" path=").append(System.getProperty("FEEYO_HOME")).append("\n");
             strBuffer.append(" startup=").append(System.currentTimeMillis()).append("\n");
 			System.out.println( strBuffer.toString() );
+			LOGGER.info(strBuffer.toString() );
 			
 		} catch (Throwable e) {
 			
