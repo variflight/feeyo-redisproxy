@@ -21,7 +21,8 @@ public class RedisBackendConnectionHandler implements NIOHandler<RedisBackendCon
 	@Override
 	public void onConnected(RedisBackendConnection con) throws IOException {	
         // 已经连接成功
-		con.getCallback().connectionAcquired( con );		
+		if( con.getCallback() != null )
+			con.getCallback().connectionAcquired( con );		
 	}
 	
 	@Override
@@ -36,7 +37,9 @@ public class RedisBackendConnectionHandler implements NIOHandler<RedisBackendCon
 		
 		
 		// 回调
-		con.getCallback().handleResponse(con, data);	
+		if( con.getCallback() != null )
+			con.getCallback().handleResponse(con, data);	
+		//
 		return;	
 	}	
 
