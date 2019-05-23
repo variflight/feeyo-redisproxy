@@ -171,7 +171,7 @@ public class RedisEngineCtx {
 
         // output
         String engineInfo = String.format("processors=%s, reactorSize=%s, bossSize=%s, timerSize=%s, frontIdleTimeout=%s, backendIdleTimeout=%s",
-                processors, reactorSize, bossSize, timerSize, frontIdleTimeout, backendIdleTimeout)
+                processors, reactorSize, bossSize, timerSize, frontIdleTimeout, backendIdleTimeout);
         System.out.println(engineInfo);
         LOGGER.info(engineInfo);
 
