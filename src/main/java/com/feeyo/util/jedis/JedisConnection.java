@@ -102,13 +102,10 @@ public class JedisConnection {
 
 	 void disconnect() {
 		 
-		
+		 //
+     	connectedSize.decrementAndGet();
 		
 		if (isConnected()) {
-			
-			//
-        	connectedSize.decrementAndGet();
-			
 			try {
 				outputStream.flush();
 				socket.close();
