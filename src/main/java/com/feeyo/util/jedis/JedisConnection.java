@@ -8,10 +8,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * BIO 实现，独立通道用于心跳及信息检测服务
@@ -20,8 +17,6 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class JedisConnection {
-	
-	private static Logger LOGGER = LoggerFactory.getLogger( JedisConnection.class );
 	
 	// redis command header
 	public static final byte DOLLAR_BYTE = '$';
@@ -52,7 +47,8 @@ public class JedisConnection {
 	protected Pool<JedisConnection> dataSource = null;	
 
 	
-	private static volatile AtomicInteger connectedSize = new AtomicInteger(0);
+	private static volatile AtomicLong connectSize = new AtomicLong(0);
+	private static volatile AtomicLong disconnectSize = new AtomicLong(0);
 
 	public JedisConnection(final String host, final int port) {
 		this.host = host;
@@ -66,18 +62,17 @@ public class JedisConnection {
 		this.soTimeout = soTimeout;
 	}
 	
-	public static int getConnectedSize() {
-		return connectedSize.get();
+	public static long getConnectSize() {
+		return connectSize.get();
+	}
+	
+	public static long getDisConnectSize() {
+		return disconnectSize.get();
 	}
 	
 	void connect() {
 
 		if (!isConnected()) {
-			
-			int size = connectedSize.incrementAndGet();
-			if ( size > 50 ) {
-				LOGGER.info("jedis connection size={}", size);
-			}
 
 			try {
 				socket = new Socket();
@@ -93,6 +88,9 @@ public class JedisConnection {
 		        outputStream = new RedisOutputStream(socket.getOutputStream());
 		        inputStream = new RedisInputStream(socket.getInputStream());
 		        
+		        //
+		        connectSize.incrementAndGet();
+		        
 			} catch (IOException ex) {
 				broken = true;
 				throw new JedisConnectionException("Failed connecting to host " + host + ":" + port, ex);
@@ -102,10 +100,11 @@ public class JedisConnection {
 
 	 void disconnect() {
 		 
-		 //
-     	connectedSize.decrementAndGet();
 		
 		if (isConnected()) {
+			
+			disconnectSize.incrementAndGet();
+			
 			try {
 				outputStream.flush();
 				socket.close();
