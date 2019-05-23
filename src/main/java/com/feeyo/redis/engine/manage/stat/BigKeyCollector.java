@@ -94,6 +94,7 @@ public class BigKeyCollector implements StatCollector {
             bk.count.incrementAndGet();
             bk.fromReq = requestSize >= REQUIRED_SIZE;
             bk.fromResp = responseSize >= REQUIRED_SIZE;
+            bkSize.incrementAndGet();
             //添加
             bkHashMap.put(key,bk);
         }else {
@@ -141,6 +142,7 @@ public class BigKeyCollector implements StatCollector {
         bypassCount.incrementAndGet();
         totalCount.incrementAndGet();
         bkHashMap.remove(key);
+        bkSize.decrementAndGet();
     }
 
     public long getBigKeyCount() {
@@ -156,7 +158,7 @@ public class BigKeyCollector implements StatCollector {
         if (bigKeySet == null || bigKeySet.isEmpty()) {
             return;
         }
-        if (bigKeySet.size() < LENGTH) {
+        if (bkSize.get() < LENGTH) {
             return;
         }
 
@@ -170,6 +172,7 @@ public class BigKeyCollector implements StatCollector {
         for (int i = size - 1; i > 400; i--) {
             BigKey bk = keyList.get(i);
             if (bk != null && bk.count.get() == minCount) {
+                bkSize.decrementAndGet();
                 bkHashMap.remove(bk.key);
             }
         }
