@@ -189,14 +189,18 @@ public class BypassService {
 		int new_queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
 		
 		// code safe
-		if ( new_requireSize < 100 * 1024) new_requireSize = 100 * 1024;
+		if ( new_requireSize < 256 * 1024) new_requireSize = 256 * 1024;
 		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
 		if ( new_maxPoolSize > 6 ) new_maxPoolSize = 6;
 		if ( new_queueSize > 100 ) new_queueSize = 100;
+		
+		
+		String info = String.format("update bypass info,  bypassRequireSize=%s, bypassCorePoolSize=%s, bypassMaxPoolSize=%s, bypassQueueSize=%s",
+                new_requireSize, new_corePoolSize, new_maxPoolSize, new_queueSize);
 
         // output
-        System.out.println( String.format("bypassRequireSize=%s, bypassCorePoolSize=%s, bypassMaxPoolSize=%s, bypassQueueSize=%s",
-                new_requireSize, new_corePoolSize, new_maxPoolSize, new_queueSize) );
+        System.out.println( info );
+        LOGGER.info( info );
 
 		if ( this.requireSize == new_requireSize &&
 			 this.corePoolSize == new_corePoolSize &&

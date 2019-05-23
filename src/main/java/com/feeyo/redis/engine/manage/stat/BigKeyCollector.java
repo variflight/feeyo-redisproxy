@@ -17,18 +17,23 @@ public class BigKeyCollector implements StatCollector {
 	public static int LENGTH = 500;
 	
 	// required size
-	public static int REQUIRED_SIZE = 1024 * 256;  				
+	public static volatile int REQUIRED_SIZE = 1024 * 256;  		
+	
+	public static final int MAX_SIZE = 1024 * 1024 * 5;
+	public static final int MIN_SIZE = 1024 * 256;
 	
 	//
 	//
 	private ConcurrentHashMap<String, BigKey> bkHashMap = new ConcurrentHashMap<String, BigKey>();	// use search
 	private List<BigKey> bkList = new ArrayList<BigKey>(); 											// use sort, 降序
 	private AtomicBoolean locking = new AtomicBoolean(false);
+	
+	//
 	private AtomicLong totalCount = new AtomicLong(0);
 	private AtomicLong bypassCount = new AtomicLong(0);
 	
 	public void setSize(int size) {
-		if ( size >= 1024 * 100 && size <= 1024 * 1024 * 2 )
+		if ( size >= MIN_SIZE && size <= MAX_SIZE )
 			REQUIRED_SIZE = size;
 	}
 	
@@ -71,11 +76,13 @@ public class BigKeyCollector implements StatCollector {
 			bypassCount.incrementAndGet();
 		}
 		
+		///
 		//
 		if ( !locking.compareAndSet(false, true) ) {
 			return;
 		}
 		
+		/// 
 		//
 		try {
 			if ( bkList.size() >= LENGTH ) {
@@ -97,16 +104,18 @@ public class BigKeyCollector implements StatCollector {
 			int index = bkList.indexOf( newBK );
 			if (index >= 0) {
 				
-				BigKey oldBK = bkHashMap.get(key);
-				
 				// 通过deleteResponseBigkey删掉的key
+				BigKey oldBK = bkHashMap.get(key);
 				if (oldBK == null) {
 					oldBK = bkList.get(index);
 					if (!key.equals(oldBK.key)) {
 						return; // 防止此时List被清理掉，活着排序导致位置变换，导致记录混乱
 					}
+					//
 					bkHashMap.put( key, oldBK );
 				}
+			
+				//
 				oldBK.lastCmd = cmd;
 				oldBK.size = requestSize > responseSize ? requestSize : responseSize;
 				oldBK.lastUseTime = TimeUtil.currentTimeMillis();

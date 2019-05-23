@@ -110,9 +110,6 @@ public class NetSystem {
 	}
 
 	
-	
-	
-	
 	/**
 	 * 定时执行该方法，回收部分资源。
 	 */
