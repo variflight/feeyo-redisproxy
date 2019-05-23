@@ -922,6 +922,10 @@ public class Manage {
 					titleLine.append("MaxCon").append("   ");
 					titleLine.append("IdlCon").append("   ");
 					titleLine.append("ActiveCon").append("   ");
+					
+					titleLine.append("NumOfGet").append("   ");
+					titleLine.append("NumOfCreate").append("   ");
+					titleLine.append("NumOfRefused").append("   ");
 					titleLine.append("ClusterNodeState");
 					list.add(titleLine.toString());
 					
@@ -941,7 +945,11 @@ public class Manage {
 							sb.append(physicalNode.getMinCon()).append("       ");
 							sb.append(physicalNode.getMaxCon()).append("       ");
 							sb.append(physicalNode.getIdleCount()).append("          ");
-							sb.append(physicalNode.getActiveCount());
+							sb.append(physicalNode.getActiveCount()).append("          ");
+							
+							sb.append(physicalNode.getNumOfGet()).append("          ");
+							sb.append(physicalNode.getNumOfCreate()).append("          ");
+							sb.append(physicalNode.getNumOfRefused());
 							list.add(sb.toString());
 							
 						} else if ( pool instanceof RedisClusterPool ) {
@@ -958,7 +966,12 @@ public class Manage {
 								sb.append(physicalNode.getMinCon()).append("       ");
 								sb.append(physicalNode.getMaxCon()).append("       ");
 								sb.append(physicalNode.getIdleCount()).append("       ");
-								sb.append(physicalNode.getActiveCount()).append("          ");;
+								sb.append(physicalNode.getActiveCount()).append("          ");
+								
+								sb.append(physicalNode.getNumOfGet()).append("          ");
+								sb.append(physicalNode.getNumOfCreate()).append("          ");
+								sb.append(physicalNode.getNumOfRefused()).append("          ");
+								
 								sb.append(!clusterNode.isFail());
 								clusterInfo.add(sb.toString());
 								sb.append(clusterNode.getConnectInfo());
@@ -977,7 +990,11 @@ public class Manage {
 								sb.append(physicalNode.getMinCon()).append("       ");
 								sb.append(physicalNode.getMaxCon()).append("       ");
 								sb.append(physicalNode.getIdleCount()).append("          ");
-								sb.append(physicalNode.getActiveCount());
+								sb.append(physicalNode.getActiveCount()).append("          ");
+								sb.append(physicalNode.getNumOfGet()).append("          ");
+								sb.append(physicalNode.getNumOfCreate()).append("          ");
+								sb.append(physicalNode.getNumOfRefused());
+								
 								list.add(sb.toString());
 							}
 							
