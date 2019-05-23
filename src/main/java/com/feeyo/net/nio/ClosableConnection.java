@@ -163,7 +163,7 @@ public abstract class ClosableConnection {
 	}
 
 	public boolean isIdleTimeout() {
- 		return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + idleTimeout;
+ 		return TimeUtil.currentTimeMillis() > ( Math.max(lastWriteTime, lastReadTime) + idleTimeout );
 	}
 
 	public void idleCheck() {	

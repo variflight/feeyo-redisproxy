@@ -58,12 +58,12 @@ public class RedisFrontConnection extends FrontConnection {
 		if ( isAuthenticated ) {
 			// 如果用户设置了 idleTimeout ，优先走自己的设置
 			if ( userCfg.getIdleTimeout() > 0 )
-				return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + userCfg.getIdleTimeout();
+				return TimeUtil.currentTimeMillis() > ( Math.max(lastWriteTime, lastReadTime) + userCfg.getIdleTimeout() );
 			// 走全局设置
 			return super.isIdleTimeout();
 			
 		} else {
-			return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + AUTH_TIMEOUT;
+			return TimeUtil.currentTimeMillis() > ( Math.max(lastWriteTime, lastReadTime) + AUTH_TIMEOUT );
 		}
 	}
 	
