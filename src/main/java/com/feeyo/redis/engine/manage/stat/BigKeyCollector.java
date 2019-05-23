@@ -115,7 +115,7 @@ public class BigKeyCollector implements StatCollector {
         bkHashMap.clear();
         totalCount.set(0);
         bypassCount.set(0);
-
+        bkSize.set(0);
     }
 
     @Override
