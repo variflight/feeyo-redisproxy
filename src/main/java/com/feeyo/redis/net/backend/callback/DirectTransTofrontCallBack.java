@@ -107,7 +107,7 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 
 
             try {
-
+                String host = frontCon.getHost();
                 String password = frontCon.getPassword();
                 String cmd = frontCon.getSession().getRequestCmd();
                 String key = frontCon.getSession().getRequestKey();
@@ -128,8 +128,8 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
 				backendCon.release();	
 				
 				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, 
-						procTimeMills, backendWaitTimeMills, false, false);
+                StatUtil.collect(host, password, cmd, key, requestSize, responseSize,
+                        procTimeMills, backendWaitTimeMills, false, false);
 				
 			} catch(IOException e2) {
                 frontCon.close("write err");

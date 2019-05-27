@@ -85,6 +85,7 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                     try {
 
                         int responseSize = 0;
+                        String host = frontCon.getHost();
                         String password = frontCon.getPassword();
                         String cmd = frontCon.getSession().getRequestCmd();
                         String key = frontCon.getSession().getRequestKey();
@@ -104,8 +105,8 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                         releaseBackendConnection(backendCon);
                         
                         // 数据收集
-                        StatUtil.collect(password, cmd, key, requestSize, responseSize, 
-                        		procTimeMills, backendWaitTimeMills, false, false);
+                        StatUtil.collect(host, password, cmd, key, requestSize, responseSize,
+                                procTimeMills, backendWaitTimeMills, false, false);
                         
                     } catch (IOException e2) {
 
