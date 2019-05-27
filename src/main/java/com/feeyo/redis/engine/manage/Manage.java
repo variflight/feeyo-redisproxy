@@ -384,6 +384,28 @@ public class Manage {
 
                     return encode(lines);
 
+                    // SHOW IP_CMD
+                } else if (arg2.equalsIgnoreCase("HOT_KEY")) {
+
+                    List<String> lines = new ArrayList<String>();
+
+                    StringBuffer titleSB = new StringBuffer();
+                    titleSB.append("KEY").append("      ");
+                    titleSB.append("COUNT").append("      ");
+                    lines.add(titleSB.toString());
+
+                    //
+                    Set<Entry<String, Integer>> entrys = StatUtil.getHotKeyCountMap().entrySet();
+                    for (Entry<String, Integer> entry : entrys) {
+                        //
+                        StringBuffer bodySB = new StringBuffer();
+                        bodySB.append(entry.getKey()).append("  ");
+                        bodySB.append(entry.getValue()).append("  ");
+                        lines.add( bodySB.toString() );
+                    }
+
+                    return encode(lines);
+
                     // SHOW JEDIS
 				} else if ( arg2.equalsIgnoreCase("JEDIS") ) {
 					
