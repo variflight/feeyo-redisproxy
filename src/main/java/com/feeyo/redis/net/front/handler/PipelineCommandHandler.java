@@ -77,13 +77,14 @@ public class PipelineCommandHandler extends AbstractPipelineCommandHandler {
                         int requestSize = frontCon.getSession().getRequestSize();
                         long requestTimeMills = frontCon.getSession().getRequestTimeMills();
                         int responseSize = 0;
+                        //
+                        long responseTimeMills = TimeUtil.currentTimeMillis();
 
 						for (DataOffset offset : offsets) {
 							byte[] data = offset.getData();
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
-						//
-                        long responseTimeMills = TimeUtil.currentTimeMillis();
+
 						int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 						

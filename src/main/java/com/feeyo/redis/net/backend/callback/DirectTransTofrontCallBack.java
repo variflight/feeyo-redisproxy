@@ -114,13 +114,14 @@ public class DirectTransTofrontCallBack extends AbstractBackendCallback {
                 int requestSize = frontCon.getSession().getRequestSize();
                 long requestTimeMills = frontCon.getSession().getRequestTimeMills();
                 int responseSize = 0;
+                long responseTimeMills = TimeUtil.currentTimeMillis();
 
 				for(RedisResponse resp: resps) 
 					responseSize += this.writeToFront(frontCon, resp, 0);
 				
 				resps.clear();	// help GC
 				resps = null;
-                long responseTimeMills = TimeUtil.currentTimeMillis();
+
 				int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 				int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
 				

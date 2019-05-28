@@ -91,12 +91,13 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                         String key = frontCon.getSession().getRequestKey();
                         int requestSize = frontCon.getSession().getRequestSize();
                         long requestTimeMills = frontCon.getSession().getRequestTimeMills();
+                        long responseTimeMills = TimeUtil.currentTimeMillis();
 
                         for (DataOffset offset : offsets) {
 							byte[] data = offset.getData();
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
-                        long responseTimeMills = TimeUtil.currentTimeMillis();
+
                         
                         int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
