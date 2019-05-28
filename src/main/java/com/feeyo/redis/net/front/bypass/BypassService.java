@@ -85,6 +85,8 @@ public class BypassService {
 				@Override
 				public void run() {
 
+                    BypassIoConnection backConn = new BypassIoConnection(host, port);
+
 					try {
 						//
                         String frontConnHost= frontConn.getHost();
@@ -95,7 +97,6 @@ public class BypassService {
                         long requestTimeMills = frontConn.getSession().getRequestTimeMills();
                         int responseSize = 0;
 
-						BypassIoConnection backConn = new BypassIoConnection(host, port);
 						List<RedisResponse> resps = backConn.writeToBackend(request);
 
 						if (resps != null) {
@@ -122,7 +123,10 @@ public class BypassService {
 					} catch(IOException e) {
 					    frontConn.close("write err");
                         LOGGER.error("bypass write to front err:", e);
-					}
+					}finally {
+                        //后端链接
+                        backConn=null;
+                    }
 				}
 			});
 			
