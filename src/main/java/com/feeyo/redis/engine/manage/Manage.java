@@ -1056,9 +1056,16 @@ public class Manage {
 					Collection<Entry<String, AtomicLong>> entrys = StatUtil.getCommandProcTimeMap().entrySet();
 
 					List<String> lines = new ArrayList<String>();
+                    Long total = new Long(0);
+                    for (Entry<String, AtomicLong> entry : entrys) {
+                        total = total + entry.getValue().get();
+                    }
+
 					for (Entry<String, AtomicLong> entry : entrys) {
 						StringBuffer sBuffer = new StringBuffer();
 						sBuffer.append(entry.getKey()).append(": ").append(entry.getValue().get());
+                        sBuffer.append("   ").append( String.format("%.2f", ((entry.getValue().get() / total.doubleValue()) * 100)));
+                        sBuffer.append("%");
 						lines.add(sBuffer.toString());
 					}
 					return encode(lines);
