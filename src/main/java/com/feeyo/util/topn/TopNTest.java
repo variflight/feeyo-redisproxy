@@ -12,6 +12,9 @@ public class TopNTest {
 			vs.offer(i);
 		}
 
+		//
+		vs.retain(5);
+		
 		List<Counter<String>> topk = vs.topK(6);
 
 		for (Counter<String> top : topk) {
