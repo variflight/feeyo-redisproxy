@@ -8,6 +8,7 @@ import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
+import com.feeyo.util.topn.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +64,7 @@ public class StatUtil {
 		addCollector( bigKeyCollector );
 		addCollector( bigLengthCollector );
 		addCollector( slowKeyCollector );
-        //addCollector( hotKeyCollector );
+        addCollector( hotKeyCollector );
        // addCollector( allKeyCollector );
 		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
@@ -248,7 +249,7 @@ public class StatUtil {
         return cmdAccessCollector.getIPCommandCountMap();
     }
 
-    public static Map<String,Integer> getHotKeyCountMap() {
+    public static  List<Counter<String>> getHotKeyCountMap() {
         return hotKeyCollector.getHotKey();
     }
 //    public static boolean setAllKeyCollector(String start, String end, String size) {

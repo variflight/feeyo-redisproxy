@@ -44,6 +44,7 @@ import com.feeyo.util.JavaUtils;
 import com.feeyo.util.ShellUtils;
 import com.feeyo.util.Versions;
 import com.feeyo.util.jedis.JedisConnection;
+import com.feeyo.util.topn.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -395,12 +396,12 @@ public class Manage {
                     lines.add(titleSB.toString());
 
                     //
-                    Set<Entry<String, Integer>> entrys = StatUtil.getHotKeyCountMap().entrySet();
-                    for (Entry<String, Integer> entry : entrys) {
+                    List<Counter<String>> entrys = StatUtil.getHotKeyCountMap();
+                    for (Counter<String> entry : entrys) {
                         //
                         StringBuffer bodySB = new StringBuffer();
-                        bodySB.append(entry.getKey()).append("  ");
-                        bodySB.append(entry.getValue()).append("  ");
+                        bodySB.append(entry.getItem()).append("  ");
+                        bodySB.append(entry.getCount()).append("  ");
                         lines.add( bodySB.toString() );
                     }
 

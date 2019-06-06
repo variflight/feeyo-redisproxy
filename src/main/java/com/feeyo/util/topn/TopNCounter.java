@@ -1,16 +1,9 @@
 package com.feeyo.util.topn;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import java.util.*;
 
 /**
  * Modified from the StreamSummary.java in https://github.com/addthis/stream-lib
@@ -228,6 +221,13 @@ public class TopNCounter<T> implements Iterable<Counter<T>>, java.io.Serializabl
 	private static final Comparator DESC_COMPARATOR = new Comparator<Counter>() {
         @Override
         public int compare(Counter o1, Counter o2) {
+            if (o1 == null && o2 == null) {
+                return 0;
+            } else if (o1 == null) {
+                return 1;
+            } else if (o2 == null) {
+                return -1;
+            }
             return o1.getCount() > o2.getCount() ? -1 : o1.getCount() == o2.getCount() ? 0 : 1;
         }
 
