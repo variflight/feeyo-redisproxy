@@ -106,7 +106,8 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 			RedisFrontConnection frontCon = getFrontCon( conn );
 			if (frontCon != null) {
 				frontCon.releaseLock();
-				
+
+                String host = frontCon.getHost();
 				String password = frontCon.getPassword();
 				String cmd = frontCon.getSession().getRequestCmd();
 				String key = frontCon.getSession().getRequestKey();
@@ -117,9 +118,9 @@ public abstract class KafkaCmdCallback extends AbstractBackendCallback {
 				int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 				int backendWaitTimeMills = (int)(conn.getLastReadTime() - conn.getLastWriteTime());
 
-				// 数据收集
-				StatUtil.collect(password, cmd, key, requestSize, responseSize, 
-						procTimeMills, backendWaitTimeMills, false, false);
+                // 数据收集
+                StatUtil.collect(host, password, cmd, key, requestSize, responseSize,
+                        procTimeMills, backendWaitTimeMills, false, false);
 			}
 			
 			// 后端链接释放

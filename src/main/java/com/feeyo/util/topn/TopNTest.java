@@ -7,7 +7,7 @@ public class TopNTest {
 	public static void main(String[] args) {
 
 		TopNCounter<String> vs = new TopNCounter<String>(3);
-		String[] stream = { "X", "X", "Y", "Z", "A", "B", "C", "X", "X", "A", "A", "A", "Y" };
+		String[] stream = { "X", "X", "Y", "Z", "A", "B", "C", "X", "X", "A", "A", "A", "Y", "E", "E", "W","5", "W","6"};
 		for (String i : stream) {
 			vs.offer(i);
 		}

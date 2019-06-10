@@ -55,7 +55,7 @@ public class AllCmdCollector implements StatCollector {
    private final String info="p=%s c=%s k=%s r=%s p=%s pT=%s wT=%s";
 
     @Override
-    public void onCollect(String password, String cmd, String key, int requestSize, int responseSize,
+    public void onCollect(String host, String password, String cmd, String key, int requestSize, int responseSize,
                           int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass) {
         long time = TimeUtil.currentTimeMillis();
         if (time < startTime) {
