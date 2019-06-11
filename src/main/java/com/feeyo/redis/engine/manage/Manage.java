@@ -385,7 +385,7 @@ public class Manage {
 
                     return encode(lines);
 
-                    // SHOW IP_CMD
+                    // SHOW HOT_KEY
                 } else if (arg2.equalsIgnoreCase("HOT_KEY")) {
 
                     List<String> lines = new ArrayList<String>();
