@@ -13,9 +13,9 @@ public class LFUCache {
 
     Map<String, Integer> vals;//cache K and V
     Map<String, Integer> counts;//K and counters
-    Map<Integer, LinkedHashSet<String>> lists;//Counter and item list
-    int cap;
-    int min = -1;
+    Map<Integer, Set<String>> lists;//Counter and item list
+    volatile  int cap;
+    volatile int min = -1;
 
     public LFUCache(int capacity) {
         cap = capacity;
@@ -44,7 +44,7 @@ public class LFUCache {
         return vals.get(key);
     }
 
-    public void set(String key, int value) {
+    public synchronized void set(String key, int value) {
         if (cap <= 0)
             return;
         // If key does exist, we are returning from here
