@@ -115,7 +115,7 @@ public final class NIOAcceptor extends Thread {
 			reactor.postRegister(c);
 
 		} catch (Exception e) {
-			LOGGER.warn(getName(), e);
+			LOGGER.error(getName(), e);
 			closeChannel(channel);
 		}
 	}
