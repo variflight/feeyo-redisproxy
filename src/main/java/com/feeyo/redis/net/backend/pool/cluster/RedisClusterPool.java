@@ -70,7 +70,7 @@ public class RedisClusterPool extends AbstractPool {
 		2fa5e82a0d41eba6251450e248e1efa27a5de3a4 127.0.0.1:7006 master - 0 1482834596600 6 connected 1365-5460
 	*/
 	private List<ClusterNode> discoverClusterNodes() {
-		
+		//
 		// cluster nodes
 		List<ClusterNode> nodes = new ArrayList<ClusterNode>();
 		
@@ -78,7 +78,7 @@ public class RedisClusterPool extends AbstractPool {
 		if ( theHostList.isEmpty() ) {
 			theHostList = backupHostList;
 		}
-		
+		//
 		for(String availableHost: theHostList) {
 			
 			String[] hostAndPort = availableHost.split(":");
