@@ -365,12 +365,11 @@ public class RedisFrontSession {
 	
 	// Auth
 	private boolean auth(RedisRequest request) {
-
 		if (request.getArgs().length < 2) {
 			frontCon.write(ERR_NO_AUTH_NO_PASSWORD);
 			return false;
 		}
-
+		//
 		String password = new String(request.getArgs()[1], _charset);
 		UserCfg userCfg = RedisEngineCtx.INSTANCE().getUserMap().get(password);
 		if (userCfg != null) {

@@ -102,7 +102,7 @@ public class KafkaConsumerCmdCallback extends KafkaCmdCallback {
 				
 				frontCon.write(responseBuf);
 			}
-		
+		//
 		// 消费offset超出范围
 		} else if (fr.getFetchErr() != null && fr.getFetchErr().getCode() == Errors.OFFSET_OUT_OF_RANGE.code()) {
 			
