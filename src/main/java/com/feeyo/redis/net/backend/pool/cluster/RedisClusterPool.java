@@ -92,10 +92,10 @@ public class RedisClusterPool extends AbstractPool {
 				for (String nodeInfo : nodeInfoArray) {
 					
 					String[] fields = nodeInfo.split(" ");	
-					
+					//
 					ClusterNode node = new ClusterNode();
 					node.setId( fields[0] );
-					
+					//
 					// 主机
 					String host = fields[1].split(":")[0];
 					
@@ -160,7 +160,7 @@ public class RedisClusterPool extends AbstractPool {
 						while ( slotIndex  < fields.length ) {					
 							List<SlotRange> ranges = new ArrayList<SlotRange>();							
 							String slotInfo = fields[ slotIndex ];
-							
+							//
 							// 迁移slot时有这种数据 
 							// 2626347285976ee42d5c8f923cd87f0f8ddc04e7 192.168.219.136:7000 myself,master - 0 0 1 connected 10-5460 [10->-9ba2af94af911cbbe8ca2e19c689185dbd87936c]
 							if (slotInfo.contains("->-")) {
@@ -182,7 +182,7 @@ public class RedisClusterPool extends AbstractPool {
 					}					
 		            nodes.add( node );
 		        }
-				
+				//
 				// 只需一个node 查询成功, 即跳出
 				break;
 				
