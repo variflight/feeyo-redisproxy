@@ -185,66 +185,67 @@ public class RedisFrontSession {
 				}	
 			} 
 			
-			// 执行路由
+			///
+			// BEGIN
+			//
 			try {
-				
+				//
 				// 管理指令检测
-				if ( frontCon.getUserCfg().isAdmin() && requests.size() == 1 ) {
-					
-					String cmd = new String( firstRequest.getArgs()[0] ).toUpperCase();
-					RedisRequestPolicy policy = CommandParse.getPolicy( cmd );
-					
-					if( policy.getCategory() == CommandParse.MANAGE_CMD ) {
+				if (frontCon.getUserCfg().isAdmin() && requests.size() == 1) {
+
+					String cmd = new String(firstRequest.getArgs()[0]).toUpperCase();
+					RedisRequestPolicy policy = CommandParse.getPolicy(cmd);
+					if (policy.getCategory() == CommandParse.MANAGE_CMD) {
 						byte[] buff = Manage.execute(firstRequest, frontCon);
 						if (buff != null)
 							frontCon.write(buff);
 						return;
 					}
 				}
-				
+				//
 				// 指令路由
 				RouteResult routeResult = RouteService.route(requests, frontCon);
-				if ( routeResult == null ) {
-					frontCon.write( "-ERR unkonw command \r\n".getBytes() );
-					return;
-				} 
-				
-				// 指令提前返回
-				if ( intercept( routeResult ) ) {
+				if (routeResult == null) {
+					frontCon.write("-ERR unkonw command \r\n".getBytes());
 					return;
 				}
-				
 				//
-				currentCommandHandler = this.getCommandHandler( routeResult.getRequestType() );
+				// 指令提前返回
+				if (intercept(routeResult)) {
+					return;
+				}
+
+				//
+				currentCommandHandler = this.getCommandHandler(routeResult.getRequestType());
 				currentCommandHandler.handle(routeResult);
 				//
-				if ( routeResult.getRequestType() != RedisRequestType.DEFAULT ) {
+				if (routeResult.getRequestType() != RedisRequestType.DEFAULT) {
 					// pipeline mget mset mdel 暂时不释放锁
 					isImmediateReleaseConReadLock = false;
 				}
-				
-			} catch (InvalidRequestException e) {
-				
-				if ( e.isIsfaultTolerant() ) {
-				
-					if ( requests.size() > 1 ) {
-						frontCon.write( ERR_INVALID_COMMAND );
+
+			} catch (InvalidRequestException e1) {
+
+				if (e1.isIsfaultTolerant()) {
+
+					if (requests.size() > 1) {
+						frontCon.write(ERR_INVALID_COMMAND);
 					} else {
 						// 此处用于兼容
-						frontCon.write( OK );
+						frontCon.write(OK);
 					}
-					
-				} else {
-					frontCon.write( getDefaultErrorInvalidCommand(e) );
-				}
-				
-				LOGGER.error("con: {}, invalid request err: {}", this.frontCon, requests);
-			
-			// auto response
-			} catch (FullRequestNoThroughtException e) {
 
-				for (int i = 0; i < e.getRequests().size(); i++) {
-					RedisRequest request = e.getRequests().get(i);
+				} else {
+					frontCon.write(getDefaultErrorInvalidCommand(e1));
+				}
+
+				LOGGER.error("con: {}, invalid request err: {}", this.frontCon, requests);
+
+				// auto response
+			} catch (FullRequestNoThroughtException e2) {
+
+				for (int i = 0; i < e2.getRequests().size(); i++) {
+					RedisRequest request = e2.getRequests().get(i);
 					if (request == null) {
 						continue;
 					}
@@ -262,29 +263,34 @@ public class RedisFrontSession {
 						frontCon.close("quit");
 					}
 				}
-				
-			// node unavailable
-			} catch (PhysicalNodeUnavailableException e) {
-				//-ERR node unavaliable error \r\n
-				frontCon.write( "-ERR node unavailable error \r\n".getBytes() );
-				
-			} catch (KeyIllegalException e) {
-				frontCon.write( getDefaultErrorInvalidCommand(e) );
+
+				// node unavailable
+			} catch (PhysicalNodeUnavailableException e3) {
+				// -ERR node unavaliable error \r\n
+				frontCon.write("-ERR node unavailable error \r\n".getBytes());
+
+			} catch (KeyIllegalException e4) {
+				frontCon.write(getDefaultErrorInvalidCommand(e4));
 			}
-			
+			//
+			// END
+			///
+
 		} catch (UnknowProtocolException e0) {
 			frontCon.close("unknow redis client .");
-
-		} catch (IOException e1) {
-			String error = "-ERR " + e1.getMessage() + ".\r\n";
-			frontCon.write(error.getBytes());
-			
+			//
+		} catch (Throwable e1) {
+			//
+			StringBuilder errorSb = new StringBuilder(32);
+			errorSb.append("-ERR ");
+			errorSb.append(e1.getMessage());
+			errorSb.append(".\r\n");
+			frontCon.write(errorSb.toString().getBytes());
+			//
 		} finally {
-			
-			if ( isImmediateReleaseConReadLock )
+			if (isImmediateReleaseConReadLock)
 				frontCon.releaseLock();
 		}
-		
 	}
 
 	private byte[] getDefaultErrorInvalidCommand(Exception e) {

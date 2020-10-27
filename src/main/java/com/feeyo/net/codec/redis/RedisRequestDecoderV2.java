@@ -72,6 +72,9 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     }
                     case READ_ARG_COUNT: {
                         argCount = readInt();
+                        if ( argCount < 1 || argCount > 4096 )	// Fix attack
+                        	throw new UnknowProtocolException("Args error, argCount=" + argCount);
+                        //
                         byte[][] args = new byte[argCount][];
                         request.setArgs(args);
                         this.state = State.READ_INIT;
@@ -133,7 +136,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     }
 
 
-    private int readInt() throws IndexOutOfBoundsException {
+    private int readInt() throws IndexOutOfBoundsException, UnknowProtocolException {
     	
         long size = 0;
         boolean isNeg = false;
@@ -162,19 +165,19 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
             
             b = c.get(readOffset);
         }
-
+        //
         // skip \r\n
         readOffset++;
         readOffset++;
-
+        //
         size = (isNeg ? -size : size);
         if (size > Integer.MAX_VALUE) {
-            throw new RuntimeException("Cannot allocate more than " + Integer.MAX_VALUE + " bytes");
+            throw new UnknowProtocolException("Cannot allocate more than " + Integer.MAX_VALUE + " bytes");
         }
+        //
         if (size < Integer.MIN_VALUE) {
-            throw new RuntimeException("Cannot allocate less than " + Integer.MIN_VALUE + " bytes");
+            throw new UnknowProtocolException("Cannot allocate less than " + Integer.MIN_VALUE + " bytes");
         }
-
         return (int) size;
     }
 
@@ -201,12 +204,12 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     }
 
     private enum State {
-        READ_SKIP,            // 跳过空格
-        READ_INIT,            // 开始
-        READ_ARG_COUNT,    // 读取参数数量(新协议)
-        READ_ARG_LENGTH,    // 读取参数长度(新协议)
-        READ_ARG,            // 读取参数(新协议)
-        READ_END            // 结束
+        READ_SKIP,            	// 跳过空格
+        READ_INIT,           	// 开始
+        READ_ARG_COUNT,   	 	// 读取参数数量(新协议)
+        READ_ARG_LENGTH,    	// 读取参数长度(新协议)
+        READ_ARG,            	// 读取参数(新协议)
+        READ_END            	// 结束
     }
 
     /**
