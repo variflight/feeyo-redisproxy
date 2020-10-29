@@ -276,16 +276,11 @@ public class RedisFrontSession {
 			// END
 			///
 
-		} catch (UnknowProtocolException e0) {
+		} catch (UnknowProtocolException e11) {
 			frontCon.close("unknow redis client .");
 			//
-		} catch (Throwable e1) {
-			//
-			StringBuilder errorSb = new StringBuilder(32);
-			errorSb.append("-ERR ");
-			errorSb.append(e1.getMessage());
-			errorSb.append(".\r\n");
-			frontCon.write(errorSb.toString().getBytes());
+		} catch (Throwable e12) {
+			frontCon.close(e12.getMessage());
 			//
 		} finally {
 			if (isImmediateReleaseConReadLock)
