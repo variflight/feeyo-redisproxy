@@ -100,9 +100,8 @@ public class RedisFrontConnection extends FrontConnection {
 
 	@Override
 	public void close(String reason) {
-		
-		super.close(reason);
 		this.releaseLock();
+		super.close(reason);
 	}
 	
 	public void releaseLock() {
