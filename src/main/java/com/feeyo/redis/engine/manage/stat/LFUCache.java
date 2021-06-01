@@ -78,7 +78,9 @@ public class LFUCache {
     public  Map<String, Integer> getCounts(){
         return counts;
     }
-    public List<Counter<String>> getTop(){
+    
+    @SuppressWarnings("unchecked")
+	public List<Counter<String>> getTop(){
          LinkedList<Counter<String>> counterList =new LinkedList<>();
         for (Map.Entry<String,Integer> entry:counts.entrySet()){
             counterList.add(new Counter<String>(entry.getKey(),entry.getValue()));
