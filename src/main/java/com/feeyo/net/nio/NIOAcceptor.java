@@ -9,9 +9,12 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.feeyo.net.nio.util.TimeSamplingSLF4JLogger;
 
 /**
  * @author wuzh
@@ -20,6 +23,7 @@ import org.slf4j.LoggerFactory;
 public final class NIOAcceptor extends Thread {
 	
 	private static Logger LOGGER = LoggerFactory.getLogger( NIOAcceptor.class );
+	private static Logger THROTTLED_LOGGER = new TimeSamplingSLF4JLogger(LOGGER, 100, TimeUnit.MILLISECONDS);	// 间隔100毫秒, 限流
 	
 	private final int port;
 	private final Selector selector;
@@ -37,13 +41,13 @@ public final class NIOAcceptor extends Thread {
 		this.selector = Selector.open();
 		this.serverChannel = ServerSocketChannel.open();
 		this.serverChannel.configureBlocking(false);
-		
+		//
 		// recv buf
 		this.serverChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
 		this.serverChannel.setOption(StandardSocketOptions.SO_RCVBUF, 1024 * 32); // 32K
-		
-		// backlog=2048
-		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 2048);
+		//
+		// backlog=1024
+		this.serverChannel.bind(new InetSocketAddress(bindIp, port), 1024);
 		this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 		
 		this.factory = factory;
@@ -115,7 +119,7 @@ public final class NIOAcceptor extends Thread {
 			reactor.postRegister(c);
 
 		} catch (Exception e) {
-			LOGGER.warn(getName(), e);
+			THROTTLED_LOGGER.warn(getName(), e);
 			closeChannel(channel);
 		}
 	}

@@ -8,6 +8,7 @@ import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
+import com.feeyo.util.topn.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,7 @@ public class StatUtil {
 	private static BigKeyCollector bigKeyCollector = new BigKeyCollector();
 	private static BigLengthCollector bigLengthCollector = new BigLengthCollector();
 	private static SlowKeyColletor slowKeyCollector = new SlowKeyColletor();
+    private static HotKeyCollector hotKeyCollector = new HotKeyCollector();
     //private static AllCmdCollector allKeyCollector = new AllCmdCollector();
 	
 	static {
@@ -62,6 +64,7 @@ public class StatUtil {
 		addCollector( bigKeyCollector );
 		addCollector( bigLengthCollector );
 		addCollector( slowKeyCollector );
+        addCollector( hotKeyCollector );
        // addCollector( allKeyCollector );
 		
 		scheduledFuture = executorService.scheduleAtFixedRate(new Runnable() {
@@ -142,9 +145,9 @@ public class StatUtil {
      * @param isCommandOnly isCommandOnly 用于判断此次收集是否只用于command（pipeline指令的子指令）收集
      * @param isBypass isBypass 是否旁路
      */
-	public static void collect(final String password, final String cmd, final String key, 
-			final int requestSize, final int responseSize, final int procTimeMills, 
-			final int waitTimeMills, final boolean isCommandOnly, final boolean isBypass) {
+	public static void collect(final String host, final String password, final String cmd, final String key,
+                               final int requestSize, final int responseSize, final int procTimeMills,
+                               final int waitTimeMills, final boolean isCommandOnly, final boolean isBypass) {
 		
 		if ( cmd == null ) {
 			return;
@@ -158,8 +161,8 @@ public class StatUtil {
 				
 				for(StatCollector listener: collectors) {
 					try {
-                        listener.onCollect(password, cmd, key, requestSize, responseSize, 
-                        		procTimeMills, waitTimeMills, isCommandOnly, isBypass);
+                        listener.onCollect(host, password, cmd, key, requestSize,
+                                responseSize, procTimeMills, waitTimeMills, isCommandOnly, isBypass);
 					} catch(Exception e) {
 						LOGGER.error("error:",e);
 					}
@@ -242,6 +245,13 @@ public class StatUtil {
     	return slowKeyCollector.getSlowKeys();
     }
 
+    public static ConcurrentHashMap<String, CmdAccessCollector.IPCommand> getIPCommandCountMap() {
+        return cmdAccessCollector.getIPCommandCountMap();
+    }
+
+    public static  List<Counter<String>> getHotKeyCountMap() {
+        return hotKeyCollector.getHotKey();
+    }
 //    public static boolean setAllKeyCollector(String start, String end, String size) {
 //        return allKeyCollector.setStatTime(start,end,size);
 //    }

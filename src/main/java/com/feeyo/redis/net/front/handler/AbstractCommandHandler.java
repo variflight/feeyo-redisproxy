@@ -10,6 +10,7 @@ import com.feeyo.redis.net.backend.pool.PoolType;
 import com.feeyo.redis.net.front.RedisFrontConnection;
 import com.feeyo.redis.net.front.route.RouteResult;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +44,12 @@ public abstract class AbstractCommandHandler {
 		try {
 			commonHandle( rrs );
 		} catch (IOException e1) {
-			LOGGER.error("front handle err:", e1);
-			frontCon.writeErrMessage( e1.getMessage() );
+			
+			String reason = ExceptionUtils.getStackTrace(e1);
+			LOGGER.error("front handle err: {}", reason);
+			//frontCon.writeErrMessage( e1.getMessage() );
+			//
+			frontCon.close( e1.getMessage() );
 			return;
 		}
 	}

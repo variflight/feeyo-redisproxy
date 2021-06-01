@@ -83,11 +83,10 @@ public final class NIOReactor {
 					
 					keys = selector.selectedKeys();
 					for (final SelectionKey key : keys) {
-
+						//
 						ClosableConnection con = null;
-						
 						try {
-							
+							//
 							Object att = key.attachment();
 							if ( att != null ) {
 								

@@ -18,11 +18,12 @@ public class FrontConnection extends Connection {
 	}
 
 	public void writeErrMessage(String msg) {
-		StringBuffer errorBuffer = new StringBuffer();
-		errorBuffer.append("-ERR ");
-		errorBuffer.append(msg);
-		errorBuffer.append("\r\n");
-		write(errorBuffer.toString().getBytes());
+		StringBuffer errorSB = new StringBuffer();
+		errorSB.append("-ERR ");
+		errorSB.append(msg);
+		errorSB.append("\r\n");
+		//
+		write( errorSB.toString().getBytes() );
 	}
 	
 	public long getLastTime() {

@@ -163,10 +163,11 @@ public abstract class ClosableConnection {
 	}
 
 	public boolean isIdleTimeout() {
- 		return TimeUtil.currentTimeMillis() > Math.max(lastWriteTime, lastReadTime) + idleTimeout;
+ 		return TimeUtil.currentTimeMillis() > ( Math.max(lastWriteTime, lastReadTime) + idleTimeout );
 	}
 
-	public void idleCheck() {		
+	public void idleCheck() {	
+		
 		if ( isIdleTimeout() ) {			
 			if ( LOGGER.isDebugEnabled() ) {
 				LOGGER.debug(toString() + " idle timeout");

@@ -85,17 +85,19 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                     try {
 
                         int responseSize = 0;
+                        String host = frontCon.getHost();
                         String password = frontCon.getPassword();
                         String cmd = frontCon.getSession().getRequestCmd();
                         String key = frontCon.getSession().getRequestKey();
                         int requestSize = frontCon.getSession().getRequestSize();
                         long requestTimeMills = frontCon.getSession().getRequestTimeMills();
+                        long responseTimeMills = TimeUtil.currentTimeMillis();
 
                         for (DataOffset offset : offsets) {
 							byte[] data = offset.getData();
 							responseSize += this.writeToFront(frontCon, data, 0);
 						}
-                        long responseTimeMills = TimeUtil.currentTimeMillis();
+
                         
                         int procTimeMills =  (int)(responseTimeMills - requestTimeMills);
 						int backendWaitTimeMills = (int)(backendCon.getLastReadTime() - backendCon.getLastWriteTime());
@@ -104,8 +106,8 @@ public class SegmentCommandHandler extends AbstractPipelineCommandHandler {
                         releaseBackendConnection(backendCon);
                         
                         // 数据收集
-                        StatUtil.collect(password, cmd, key, requestSize, responseSize, 
-                        		procTimeMills, backendWaitTimeMills, false, false);
+                        StatUtil.collect(host, password, cmd, key, requestSize, responseSize,
+                                procTimeMills, backendWaitTimeMills, false, false);
                         
                     } catch (IOException e2) {
 

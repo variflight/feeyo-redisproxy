@@ -21,6 +21,7 @@ import com.feeyo.redis.engine.RedisEngineCtx;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector;
 import com.feeyo.redis.engine.manage.stat.BigKeyCollector.BigKey;
 import com.feeyo.redis.engine.manage.stat.BigLengthCollector.BigLength;
+import com.feeyo.redis.engine.manage.stat.CmdAccessCollector;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
@@ -42,6 +43,8 @@ import com.feeyo.redis.net.front.bypass.BypassThreadExecutor;
 import com.feeyo.util.JavaUtils;
 import com.feeyo.util.ShellUtils;
 import com.feeyo.util.Versions;
+import com.feeyo.util.jedis.JedisConnection;
+import com.feeyo.util.topn.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -355,6 +358,63 @@ public class Manage {
 					lines.add( end.toString() );
 
 					return encode( lines );
+                    // SHOW IP_CMD
+                } else if (arg2.equalsIgnoreCase("IP_CMD")) {
+
+                    List<String> lines = new ArrayList<String>();
+
+                    StringBuffer titleSB = new StringBuffer();
+                    titleSB.append("IP").append("      ");
+                    titleSB.append("READ").append("      ");
+                    titleSB.append("WRITE").append("      ");
+                    titleSB.append("TOTAL");
+                    lines.add(titleSB.toString());
+
+                    //
+                    Set<Entry<String, CmdAccessCollector.IPCommand>> entrys = StatUtil.getIPCommandCountMap().entrySet();
+                    for (Entry<String, CmdAccessCollector.IPCommand> entry : entrys) {
+                        CmdAccessCollector.IPCommand ipCommand = entry.getValue();
+                        //
+                        StringBuffer bodySB = new StringBuffer();
+                        bodySB.append(ipCommand.ip).append("  ");
+                        bodySB.append(ipCommand.readComandCount.get()).append("  ");
+                        bodySB.append(ipCommand.writeCommandCount.get()).append("  ");
+                        bodySB.append( ipCommand.readComandCount.get() + ipCommand.writeCommandCount.get() );
+                        lines.add( bodySB.toString() );
+                    }
+
+                    return encode(lines);
+
+                    // SHOW HOT_KEY
+                } else if (arg2.equalsIgnoreCase("HOT_KEY")) {
+
+                    List<String> lines = new ArrayList<String>();
+
+                    StringBuffer titleSB = new StringBuffer();
+                    titleSB.append("KEY").append("      ");
+                    titleSB.append("COUNT").append("      ");
+                    lines.add(titleSB.toString());
+
+                    //
+                    List<Counter<String>> entrys = StatUtil.getHotKeyCountMap();
+                    for (Counter<String> entry : entrys) {
+                        //
+                        StringBuffer bodySB = new StringBuffer();
+                        bodySB.append(entry.getItem()).append("  ");
+                        bodySB.append(entry.getCount()).append("  ");
+                        lines.add( bodySB.toString() );
+                    }
+
+                    return encode(lines);
+
+                    // SHOW JEDIS
+				} else if ( arg2.equalsIgnoreCase("JEDIS") ) {
+					
+					List<String> lines = new ArrayList<String>();	
+					lines.add( "connect=" + JedisConnection.getConnectSize() );
+					lines.add(  "disconnect=" + JedisConnection.getDisConnectSize() );
+					return encode( lines );
+					
 				// SHOW VER
 				} else if ( arg2.equalsIgnoreCase("VER") ) {
 					
@@ -912,6 +972,10 @@ public class Manage {
 					titleLine.append("MaxCon").append("   ");
 					titleLine.append("IdlCon").append("   ");
 					titleLine.append("ActiveCon").append("   ");
+					
+					titleLine.append("NumOfGet").append("   ");
+					titleLine.append("NumOfCreate").append("   ");
+					titleLine.append("NumOfRefused").append("   ");
 					titleLine.append("ClusterNodeState");
 					list.add(titleLine.toString());
 					
@@ -931,7 +995,11 @@ public class Manage {
 							sb.append(physicalNode.getMinCon()).append("       ");
 							sb.append(physicalNode.getMaxCon()).append("       ");
 							sb.append(physicalNode.getIdleCount()).append("          ");
-							sb.append(physicalNode.getActiveCount());
+							sb.append(physicalNode.getActiveCount()).append("          ");
+							
+							sb.append(physicalNode.getNumOfGet()).append("          ");
+							sb.append(physicalNode.getNumOfCreate()).append("          ");
+							sb.append(physicalNode.getNumOfRefused());
 							list.add(sb.toString());
 							
 						} else if ( pool instanceof RedisClusterPool ) {
@@ -948,7 +1016,12 @@ public class Manage {
 								sb.append(physicalNode.getMinCon()).append("       ");
 								sb.append(physicalNode.getMaxCon()).append("       ");
 								sb.append(physicalNode.getIdleCount()).append("       ");
-								sb.append(physicalNode.getActiveCount()).append("          ");;
+								sb.append(physicalNode.getActiveCount()).append("          ");
+								
+								sb.append(physicalNode.getNumOfGet()).append("          ");
+								sb.append(physicalNode.getNumOfCreate()).append("          ");
+								sb.append(physicalNode.getNumOfRefused()).append("          ");
+								
 								sb.append(!clusterNode.isFail());
 								clusterInfo.add(sb.toString());
 								sb.append(clusterNode.getConnectInfo());
@@ -967,7 +1040,11 @@ public class Manage {
 								sb.append(physicalNode.getMinCon()).append("       ");
 								sb.append(physicalNode.getMaxCon()).append("       ");
 								sb.append(physicalNode.getIdleCount()).append("          ");
-								sb.append(physicalNode.getActiveCount());
+								sb.append(physicalNode.getActiveCount()).append("          ");
+								sb.append(physicalNode.getNumOfGet()).append("          ");
+								sb.append(physicalNode.getNumOfCreate()).append("          ");
+								sb.append(physicalNode.getNumOfRefused());
+								
 								list.add(sb.toString());
 							}
 							
@@ -980,9 +1057,16 @@ public class Manage {
 					Collection<Entry<String, AtomicLong>> entrys = StatUtil.getCommandProcTimeMap().entrySet();
 
 					List<String> lines = new ArrayList<String>();
+                    Long total = new Long(0);
+                    for (Entry<String, AtomicLong> entry : entrys) {
+                        total = total + entry.getValue().get();
+                    }
+
 					for (Entry<String, AtomicLong> entry : entrys) {
 						StringBuffer sBuffer = new StringBuffer();
 						sBuffer.append(entry.getKey()).append(": ").append(entry.getValue().get());
+                        sBuffer.append("   ").append( String.format("%.2f", ((entry.getValue().get() / total.doubleValue()) * 100)));
+                        sBuffer.append("%");
 						lines.add(sBuffer.toString());
 					}
 					return encode(lines);

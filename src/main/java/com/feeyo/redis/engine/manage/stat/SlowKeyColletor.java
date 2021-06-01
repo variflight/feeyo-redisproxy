@@ -15,8 +15,8 @@ public class SlowKeyColletor implements StatCollector {
 	private AtomicBoolean locking = new AtomicBoolean(false);
 	
 	@Override
-	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
-			int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
+	public void onCollect(String host, String password, String cmd, String key, int requestSize, int responseSize, int procTimeMills,
+                          int waitTimeMills, boolean isCommandOnly, boolean isBypass) {
 
         if (isCommandOnly) {
             return;

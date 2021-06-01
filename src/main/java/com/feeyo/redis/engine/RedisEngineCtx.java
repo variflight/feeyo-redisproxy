@@ -170,8 +170,10 @@ public class RedisEngineCtx {
         NetSystem.getInstance().setNetConfig( systemConfig );
 
         // output
-        System.out.println( String.format("processors=%s, reactorSize=%s, bossSize=%s, timerSize=%s, frontIdleTimeout=%s, backendIdleTimeout=%s",
-        		processors, reactorSize, bossSize, timerSize, frontIdleTimeout, backendIdleTimeout) );
+        String engineInfo = String.format("processors=%s, reactorSize=%s, bossSize=%s, timerSize=%s, frontIdleTimeout=%s, backendIdleTimeout=%s",
+                processors, reactorSize, bossSize, timerSize, frontIdleTimeout, backendIdleTimeout);
+        System.out.println(engineInfo);
+        LOGGER.info(engineInfo);
 
 
         // 2、 NIO 反应器配置

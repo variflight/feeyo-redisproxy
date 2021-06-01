@@ -85,8 +85,11 @@ public class BypassService {
 				@Override
 				public void run() {
 
+                    BypassIoConnection backConn = new BypassIoConnection(host, port);
+
 					try {
 						//
+                        String frontConnHost= frontConn.getHost();
                         String password = frontConn.getPassword();
                         String cmd = frontConn.getSession().getRequestCmd();
                         String key = frontConn.getSession().getRequestKey();
@@ -94,7 +97,6 @@ public class BypassService {
                         long requestTimeMills = frontConn.getSession().getRequestTimeMills();
                         int responseSize = 0;
 
-						BypassIoConnection backConn = new BypassIoConnection(host, port);
 						List<RedisResponse> resps = backConn.writeToBackend(request);
 
 						if (resps != null) {
@@ -114,14 +116,17 @@ public class BypassService {
 							
 							// 数据收集
 							int procTimeMills = (int) (responseTimeMills - requestTimeMills);
-							StatUtil.collect(password, cmd, key, requestSize, responseSize, 
-									procTimeMills, procTimeMills, false, true);
+                            StatUtil.collect(frontConnHost, password, cmd, key, requestSize, responseSize,
+                                    procTimeMills, procTimeMills, false, true);
 						}
 						
 					} catch(IOException e) {
 					    frontConn.close("write err");
                         LOGGER.error("bypass write to front err:", e);
-					}
+					}finally {
+                        //后端链接
+                        backConn=null;
+                    }
 				}
 			});
 			
@@ -189,14 +194,18 @@ public class BypassService {
 		int new_queueSize = queueSizeString == null ? 20 : Integer.parseInt(queueSizeString);
 		
 		// code safe
-		if ( new_requireSize < 100 * 1024) new_requireSize = 100 * 1024;
+		if ( new_requireSize < 256 * 1024) new_requireSize = 256 * 1024;
 		if ( new_corePoolSize > 4 ) new_corePoolSize = 4;
 		if ( new_maxPoolSize > 6 ) new_maxPoolSize = 6;
 		if ( new_queueSize > 100 ) new_queueSize = 100;
+		
+		
+		String info = String.format("update bypass info,  bypassRequireSize=%s, bypassCorePoolSize=%s, bypassMaxPoolSize=%s, bypassQueueSize=%s",
+                new_requireSize, new_corePoolSize, new_maxPoolSize, new_queueSize);
 
         // output
-        System.out.println( String.format("bypassRequireSize=%s, bypassCorePoolSize=%s, bypassMaxPoolSize=%s, bypassQueueSize=%s",
-                new_requireSize, new_corePoolSize, new_maxPoolSize, new_queueSize) );
+        System.out.println( info );
+        LOGGER.info( info );
 
 		if ( this.requireSize == new_requireSize &&
 			 this.corePoolSize == new_corePoolSize &&

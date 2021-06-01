@@ -110,7 +110,6 @@ pool.xml, 连接池配置信息
 | pool       | minCon   		  |   最小的连接数   										 		|
 | node       | ip      			  |   实际redis node ip   										|
 | node       | port     		  |   实际redis node port    									|
-| node       | latencyThreshold   |   物理节点的延迟阀值，单位毫秒，支持float    						|
 
   
 user.xml, 用户配置信息

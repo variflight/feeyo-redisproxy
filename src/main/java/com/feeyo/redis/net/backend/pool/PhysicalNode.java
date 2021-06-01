@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -34,6 +35,11 @@ public class PhysicalNode {
 	protected int port;
 	protected int minCon;
 	protected int maxCon;
+	
+	// 后端连接的使用计数
+	protected AtomicLong numOfGet = new AtomicLong(0);
+	protected AtomicLong numOfCreate = new AtomicLong(0);
+	protected AtomicLong numOfRefused = new AtomicLong(0);
 	
 	protected final BackendConnectionFactory factory;
 	
@@ -80,20 +86,27 @@ public class PhysicalNode {
 	
 	public BackendConnection createNewConnection(BackendCallback callback, Object attachment) throws IOException {
 		
-		 int activeCons = this.getActiveCount();// 当前最大活动连接
-         if ( activeCons + 1 > size ) {// 下一个连接大于最大连接数
-         		LOGGER.error("PN={} the max activeConns={} size can not be max than maxConns={}", new Object[]{ name, (activeCons+1), size } );
-             	throw new IOException("the max activeConnnections size can not be max than maxconnections");                
-         } else {      
-         	
-         	if ( LOGGER.isDebugEnabled() ) 
-         		LOGGER.debug( " no ilde connection in pool, create new connection for " + this.name + " of " + poolName);           
-             
-         	// create connection
-        	BackendConnection con = factory.make(this, callback, attachment);
-    		con.setLastTime( TimeUtil.currentTimeMillis() );
-    		return con;
-         }
+		// 计数
+		numOfCreate.incrementAndGet();
+
+		int activeCons = this.getActiveCount();// 当前最大活动连接
+		if (activeCons + 1 > size) {// 下一个连接大于最大连接数
+			//
+			numOfRefused.incrementAndGet();
+			
+			LOGGER.error("PN={} the max activeConns={} size can not be max than maxConns={}",
+					new Object[] { name, (activeCons + 1), size });
+			throw new IOException("the max activeConnnections size can not be max than maxconnections");
+		} else {
+
+			if (LOGGER.isDebugEnabled())
+				LOGGER.debug(" no ilde connection in pool, create new connection for " + this.name + " of " + poolName);
+
+			// create connection
+			BackendConnection con = factory.make(this, callback, attachment);
+			con.setLastTime(TimeUtil.currentTimeMillis());
+			return con;
+		}
 	}
 	
 	public boolean initConnections() {
@@ -134,6 +147,8 @@ public class PhysicalNode {
 
     public BackendConnection getConnection(BackendCallback callback, Object attachment)
             throws IOException {
+    	// 计数
+    	numOfGet.incrementAndGet();
     	
     	BackendConnection con = this.conQueue.takeIdleCon();
         if (con != null) {
@@ -210,9 +225,22 @@ public class PhysicalNode {
 	public void setPort(int port) {
 		this.port = port;
 	}	
+
+	//
+    public long getNumOfGet() {
+		return numOfGet.get();
+	}
+
+	public long getNumOfCreate() {
+		return numOfCreate.get();
+	}
 	
-	
-    @Override
+	public long getNumOfRefused() {
+		return numOfRefused.get();
+	}
+
+
+	@Override
     public int hashCode() {
         return Objects.hash(host, port);
     }

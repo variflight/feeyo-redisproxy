@@ -69,6 +69,9 @@ public class RedisRequestDecoder implements Decoder<List<RedisRequest>> {
 				}
 				case READ_ARG_COUNT: {
 					argCount = readInt();
+					if ( argCount < 1 || argCount > 4096 )	// Fix attack
+                    	throw new UnknowProtocolException("Args error, argCount=" + argCount);
+					//
 					byte[][] args = new byte[ argCount ][];
 					request.setArgs( args );
 					this.state = State.READ_INIT;
@@ -147,7 +150,7 @@ public class RedisRequestDecoder implements Decoder<List<RedisRequest>> {
 		}
 	}
 	
-	private int readInt() throws IndexOutOfBoundsException {
+	private int readInt() throws IndexOutOfBoundsException, UnknowProtocolException {
 
 		long size = 0;
 		boolean isNeg = false;
@@ -177,10 +180,10 @@ public class RedisRequestDecoder implements Decoder<List<RedisRequest>> {
 
 		size = (isNeg ? -size : size);
 		if (size > Integer.MAX_VALUE) {
-			throw new RuntimeException("Cannot allocate more than " + Integer.MAX_VALUE + " bytes");
+			throw new UnknowProtocolException("Cannot allocate more than " + Integer.MAX_VALUE + " bytes");
 		}
 		if (size < Integer.MIN_VALUE) {
-			throw new RuntimeException("Cannot allocate less than " + Integer.MIN_VALUE + " bytes");
+			throw new UnknowProtocolException("Cannot allocate less than " + Integer.MIN_VALUE + " bytes");
 		}
 		return (int) size;
 	}

@@ -110,7 +110,6 @@ public class NetSystem {
 	}
 
 	
-	
 	/**
 	 * 定时执行该方法，回收部分资源。
 	 */
@@ -144,19 +143,21 @@ public class NetSystem {
 						
 					}  else {
 						// 清理 后端链接 中前端链接已经关闭的情况下 后端链接释放
-						if ( backendCon.getAttachement() != null && backendCon.getAttachement() instanceof RedisFrontConnection) {
-							RedisFrontConnection frontCon = (RedisFrontConnection) backendCon.getAttachement();
-							if ( frontCon.isClosed() ) {
-								//
-								StringBuffer errSB = new StringBuffer();
-								errSB.append("front is closed, close it" ).append( c );
-								errSB.append(" , and attach it " ).append( c.getAttachement() );
-								LOGGER.error( errSB.toString() );
+                        Object front = backendCon.getAttachement();
+                        if ( front != null && front instanceof RedisFrontConnection) {
+                        	//
+                            RedisFrontConnection frontCon = (RedisFrontConnection) front;
+                            if ( frontCon.isClosed()) {
+                                //
+                                StringBuffer errSB = new StringBuffer();
+                                errSB.append("front is closed, close it").append(c);
+                                errSB.append(" , and attach it ").append(c.getAttachement());
+                                LOGGER.error(errSB.toString());
 
-								c.close("because the front con is closed! ");
-							}
-						}
-					}
+                                c.close("because the front con is closed! ");
+                            }
+                        }
+                    }
 				}
 			}
 			

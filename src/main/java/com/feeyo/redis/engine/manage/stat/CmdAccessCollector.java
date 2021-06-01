@@ -15,11 +15,11 @@ public class CmdAccessCollector implements StatCollector {
 	private static ConcurrentHashMap<String, UserCommand> userCommandCountMap = new ConcurrentHashMap<String, UserCommand>();
 	private static ConcurrentHashMap<String, AtomicLong> commandProcTimeMap = new ConcurrentHashMap<String, AtomicLong>();
 	private static ConcurrentHashMap<String, AtomicLong> commandWaitTimeMap = new ConcurrentHashMap<String, AtomicLong>();
-	
+    private static ConcurrentHashMap<String, IPCommand> ipCommandCountMap = new ConcurrentHashMap<String, IPCommand>();
 
 	@Override
-	public void onCollect(String password, String cmd, String key, int requestSize, int responseSize, 
-			int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass ) {
+	public void onCollect(String host, String password, String cmd, String key, int requestSize, int responseSize,
+                          int procTimeMills, int waitTimeMills, boolean isCommandOnly, boolean isBypass) {
 
 		UserCommand userCommand = userCommandCountMap.get(password);
 		if ( userCommand == null ) {
@@ -67,7 +67,14 @@ public class CmdAccessCollector implements StatCollector {
 		timeMillsCollect(procTimeMills, commandProcTimeMap);
 		// 计算等待消耗
 		timeMillsCollect(waitTimeMills, commandWaitTimeMap);
-		
+
+        //IP读写次数统计
+        IPCommand ipCommand = ipCommandCountMap.get(host);
+        if (ipCommand == null) {
+            ipCommand = new IPCommand(host);
+            ipCommandCountMap.put(host, ipCommand);
+        }
+        ipCommand.incrementCommandCount(cmd);
 	}
 
 	private void timeMillsCollect(int timeMills, ConcurrentHashMap<String, AtomicLong> timeMap) {
@@ -99,6 +106,7 @@ public class CmdAccessCollector implements StatCollector {
 		userCommandCountMap.clear();
 		commandProcTimeMap.clear();
 		commandWaitTimeMap.clear();
+        ipCommandCountMap.clear();
 	}
 
 	@Override
@@ -120,8 +128,11 @@ public class CmdAccessCollector implements StatCollector {
     public ConcurrentHashMap<String, UserCommand> getUserCommandCountMap() {
     		return userCommandCountMap;
     }
-    
-    
+
+    public ConcurrentHashMap<String, IPCommand> getIPCommandCountMap() {
+        return ipCommandCountMap;
+    }
+
     //
 	public static class Command {
 		
@@ -170,4 +181,25 @@ public class CmdAccessCollector implements StatCollector {
 		}
 	}
 
+    public static class IPCommand {
+        public String ip;
+        public AtomicLong writeCommandCount;
+        public AtomicLong readComandCount;
+
+
+        public IPCommand(String user) {
+            this.ip = user;
+            writeCommandCount = new AtomicLong(0);
+            readComandCount = new AtomicLong(0);
+        }
+
+        public void incrementCommandCount(String cmd) {
+            RedisRequestPolicy policy = CommandParse.getPolicy(cmd);
+            if ( policy.isRead() ) {
+                readComandCount.incrementAndGet();
+            } else {
+                writeCommandCount.incrementAndGet();
+            }
+        }
+    }
 }
