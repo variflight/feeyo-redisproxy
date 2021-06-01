@@ -11,16 +11,17 @@
   <dependencies>
 	
 		<dependency>
-			<groupId>com.google.guava</groupId>
-			<artifactId>guava</artifactId>
-			<version>19.0</version>
+		  <groupId>com.google.guava</groupId>
+		  <artifactId>guava</artifactId>
+		  <version>[30.0-jre,)</version>
 		</dependency>
 		
 		<dependency>
-		    <groupId>org.apache.zookeeper</groupId>
-		    <artifactId>zookeeper</artifactId>
-		    <version>3.4.10</version>
+		  <groupId>org.apache.zookeeper</groupId>
+		  <artifactId>zookeeper</artifactId>
+		  <version>[3.4.14,)</version>
 		</dependency>
+		
 		
 		<dependency>
 			<groupId>com.101tec</groupId>
@@ -87,23 +88,36 @@
   </dependencies>
 
   <repositories>
-        <repository>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <id>central</id>
-            <name>Central Repository</name>
-            <url>http://repo.maven.apache.org/maven2</url>
-        </repository>
-        <repository>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <id>mvnrepo</id>
-            <name>mvnrepo</name>
-            <url>http://central.maven.org/maven2</url>
-        </repository>
-    </repositories>
+  
+  	   <repository>  
+            <id>alimaven</id>  
+            <name>aliyun maven</name>  
+            <url>http://maven.aliyun.com/nexus/content/groups/public/</url>  
+            <releases>  
+                <enabled>true</enabled>  
+            </releases>  
+            <snapshots>  
+                <enabled>false</enabled>  
+            </snapshots>  
+       </repository>  
+        
+       <repository>
+          <snapshots>
+              <enabled>true</enabled>
+          </snapshots>
+          <id>central</id>
+          <name>Central Repository</name>
+          <url>http://repo.maven.apache.org/maven2</url>
+      </repository>
+      <repository>
+          <snapshots>
+              <enabled>true</enabled>
+          </snapshots>
+          <id>mvnrepo</id>
+          <name>mvnrepo</name>
+          <url>http://central.maven.org/maven2</url>
+      </repository>
+  </repositories>
 
   <build>
         <plugins>

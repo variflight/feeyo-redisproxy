@@ -259,7 +259,6 @@ public class BrokerOffsetService {
 	
 	// 修复offset
 	public boolean repairOffset(String user, TopicCfg topicCfg, int partition, long offset) {
-
 		if (runningMonitor.isMineRunning()) {
 			localAdmin.repairOffset(user, topicCfg, partition, offset);
 			return true;
