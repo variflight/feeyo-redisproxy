@@ -20,10 +20,16 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     private int readOffset;
     
     private State state = State.READ_SKIP;
+    
+    private static final int MAX_BYTES = 1024 * 1024 * 64; // 64MB
 
     @Override
     public List<RedisRequest> decode(byte[] buffer) throws UnknowProtocolException {
         append(buffer);
+        //
+        if (compositeArray != null && compositeArray.getByteCount() > MAX_BYTES) {
+        	throw new UnknowProtocolException("Maximum limit exceeded");
+        }
 
         // pipeline
         List<RedisRequest> pipeline = new ArrayList<>();
