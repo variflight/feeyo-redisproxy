@@ -26,7 +26,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     private static final int MIN_ARG_LENGTH = 1;
     private static final int MAX_ARG_LENGTH = 1024 * 1024 * 64; // 64MB
     //
-    private static final int MAX_BYTES = 1024 * 1024 * 256; // 256MB
+    private static final int MAX_BYTES = 1024 * 1024 * 128; // 128MB
     //
     @Override
     public List<RedisRequest> decode(byte[] buffer) throws UnknowProtocolException {
