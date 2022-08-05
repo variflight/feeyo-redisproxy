@@ -86,6 +86,12 @@
 		  	<version>3.16.1</version>
 		</dependency>
 		
+		<dependency>
+			<groupId>com.github.spotbugs</groupId>
+			<artifactId>spotbugs</artifactId>
+			<version>4.7.1</version>
+		</dependency>
+		
   </dependencies>
 
   <repositories>
@@ -122,12 +128,36 @@
 
   <build>
         <plugins>
+        
+            <!-- SpotBugs Static Analysis -->
+			<plugin>
+			    <groupId>com.github.spotbugs</groupId>
+			    <artifactId>spotbugs-maven-plugin</artifactId>
+			    <version>4.7.0.0</version>
+			    <configuration>
+				<effort>Max</effort>
+				<threshold>Low</threshold>
+				<failOnError>true</failOnError>
+				<includeFilterFile>${session.executionRootDirectory}/spotbugs-security-include.xml</includeFilterFile>
+				<excludeFilterFile>${session.executionRootDirectory}/spotbugs-security-exclude.xml</excludeFilterFile>
+				<plugins>
+				    <plugin>
+					<groupId>com.h3xstream.findsecbugs</groupId>
+					<artifactId>findsecbugs-plugin</artifactId>
+					<version>LATEST</version> <!-- Auto-update to the latest stable -->
+				    </plugin>
+				</plugins>
+			    </configuration>
+			</plugin>
+            
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.1</version>
                 <configuration>
                     <source>1.7</source>
                     <target>1.7</target>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
 
