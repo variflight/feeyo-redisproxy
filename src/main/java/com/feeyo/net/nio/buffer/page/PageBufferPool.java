@@ -148,12 +148,14 @@ public class PageBufferPool extends BufferPool {
     @SuppressWarnings("restriction")
 	@Override
     public void recycle(ByteBuffer theBuf) {
-    	
-      	if(theBuf !=null && (!(theBuf instanceof sun.nio.ch.DirectBuffer) )){
+    	if(theBuf == null) {
+    		return;
+    	}
+    	//
+      	if(!(theBuf instanceof sun.nio.ch.DirectBuffer)){
     		theBuf.clear();
     		return;
-         }
-
+        }
       	final long size = theBuf.capacity();
 		boolean recycled = false;
 		sun.nio.ch.DirectBuffer thisNavBuf = (sun.nio.ch.DirectBuffer) theBuf;

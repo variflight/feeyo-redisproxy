@@ -16,7 +16,7 @@ import com.feeyo.redis.net.front.handler.CommandParse;
 import com.feeyo.redis.net.front.route.RouteResult;
 
 public class KafkaCommandHandler extends AbstractCommandHandler {
-	
+	//
 	// encoder
 	private KafkaEncoder encoder = new KafkaEncoder();
 	
@@ -28,7 +28,6 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 	protected void commonHandle(RouteResult routeResult) throws IOException {
 		
 		KafkaRouteNode node = (KafkaRouteNode) routeResult.getRouteNodes().get(0);
-		
 		//
 		ByteBuffer requestBuf = null;
 		KafkaCmdCallback callback = null;
@@ -37,7 +36,6 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		switch (request.getPolicy().getHandleType()) {
 			case CommandParse.PRODUCE_CMD: {
 				int partition = node.getPartition();
-	
 				requestBuf = encoder.encodeProduceRequest(request, partition);
 				callback = new KafkaProduceCmdCallback(node.getPartition());
 				break;
@@ -60,13 +58,15 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 				break;
 			}
 		}
-
+		//
 		// 埋点
 		frontCon.getSession().setRequestTimeMills(TimeUtil.currentTimeMillis());
-		frontCon.getSession().setRequestCmd( new String(request.getArgs()[0]).toUpperCase() );
-		frontCon.getSession().setRequestKey( new String( request.getArgs()[1] ) );
-		frontCon.getSession().setRequestSize( requestBuf.position() );
-		
+		frontCon.getSession().setRequestCmd(new String(request.getArgs()[0]).toUpperCase());
+		frontCon.getSession().setRequestKey(new String(request.getArgs()[1]));
+		if (requestBuf != null) {
+			frontCon.getSession().setRequestSize(requestBuf.position());
+		}
+		//
 		// 透传
 		this.writeToBackend(node.getPhysicalNode(), requestBuf, callback);
 	}
@@ -76,12 +76,9 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 		super.frontConnectionClose(reason);
 	}
 	
-	
 	@Override
     public void backendConnectionError(Exception e) {
-		
 		super.backendConnectionError(e);
-		
 		if( frontCon != null && !frontCon.isClosed() ) {
 			frontCon.writeErrMessage(e.toString());
 		}
@@ -89,9 +86,7 @@ public class KafkaCommandHandler extends AbstractCommandHandler {
 
 	@Override
 	public void backendConnectionClose(String reason) {
-		
 		super.backendConnectionClose(reason);
-
 		if( frontCon != null && !frontCon.isClosed() ) {
 			frontCon.writeErrMessage( reason );
 		}

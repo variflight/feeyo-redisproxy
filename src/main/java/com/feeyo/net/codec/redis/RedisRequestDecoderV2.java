@@ -114,7 +114,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                         // 处理粘包
                         if (compositeArray.getByteCount() < readOffset) {
                             throw new IndexOutOfBoundsException("Not enough data.");
-                            
+                            //
                         } else if (compositeArray.getByteCount() == readOffset) {
                             if (argCount == argIndex + 1) {
                                 pipeline.add(request);

@@ -108,7 +108,7 @@ public class UserCfg {
 		int result = 1;
 		result = prime * result + ((poolId == 0) ? 0 : poolId);
 		result = prime * result + ((password == null) ? 0 : password.hashCode());
-		result = prime * result + ((prefix == null) ? 0 : prefix.hashCode());
+		result = prime * result + ((prefix == null) ? 0 : Arrays.hashCode(prefix));
 		result = prime * result + ((selectDb == 0) ? 0 : selectDb);
 		return result;
 	}

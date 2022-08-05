@@ -13,8 +13,9 @@ public class ClusterCRC16Cache {
 	/**
 	 * TODO: CRC16 计算耗CPU, 此处对  list/ hash 指令的 slot 做 cache 
 	 */	
-	private static LoadingCache<String, Integer> cache = CacheBuilder.newBuilder().maximumSize( 9000 )
-			.expireAfterWrite(30, TimeUnit.MINUTES)
+	private static LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
+			.maximumSize( 9000 ) //
+			.expireAfterWrite(30, TimeUnit.MINUTES) //
 			.build(new CacheLoader<String, Integer>(){
 				 @Override
 	             public Integer load(String key) throws Exception {

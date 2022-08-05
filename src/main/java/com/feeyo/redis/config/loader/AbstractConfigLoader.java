@@ -16,6 +16,7 @@ public class AbstractConfigLoader {
 
 	protected static Document loadXmlDoc(String uri) throws Exception {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
 		DocumentBuilder db = dbf.newDocumentBuilder();
 		Document doc = db.parse(uri);
 		return doc;
