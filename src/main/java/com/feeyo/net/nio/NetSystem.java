@@ -135,7 +135,7 @@ public class NetSystem {
 					if ( backendCon.getLastTime() < ( TimeUtil.currentTimeMillis() - backendSlowTime ) ) {
 						
 						StringBuffer errSB = new StringBuffer();
-						errSB.append("backend timeout, close it" ).append( c );
+						errSB.append("backend timeout, close it ").append( c );
 						errSB.append(" , and attach it " ).append( c.getAttachement() );
 						LOGGER.error( errSB.toString() );
 						
@@ -150,7 +150,7 @@ public class NetSystem {
                             if ( frontCon.isClosed()) {
                                 //
                                 StringBuffer errSB = new StringBuffer();
-                                errSB.append("front is closed, close it").append(c);
+                                errSB.append("front is closed, close it ").append(c);
                                 errSB.append(" , and attach it ").append(c.getAttachement());
                                 LOGGER.error(errSB.toString());
 
