@@ -278,9 +278,11 @@ public class RedisFrontSession {
 
 		} catch (UnknowProtocolException e11) {
 			frontCon.close("unknow redis client .");
+			requestDecoder.reset(); // fast GC
 			//
 		} catch (Throwable e12) {
 			frontCon.close(e12.getMessage());
+			requestDecoder.reset(); // fast GC
 			//
 		} finally {
 			if (isImmediateReleaseConReadLock)
