@@ -74,6 +74,7 @@ public class LFUCache {
 	            set1.remove(evit);
 	            keyValueMap.remove(evit);
 	            keyCountersMap.remove(evit);
+	            
         	}
         }
         //
