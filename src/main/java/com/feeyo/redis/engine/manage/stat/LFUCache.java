@@ -7,82 +7,95 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * lfu
-
  */
 public class LFUCache {
 
-    Map<String, Integer> vals;//cache K and V
-    Map<String, Integer> counts;//K and counters
-    Map<Integer, Set<String>> lists;//Counter and item list
-    volatile  int cap;
+    Map<String, Integer> keyValueMap;//cache K and V
+    Map<String, Integer> keyCountersMap;//K and counters
+    Map<Integer, Set<String>> counterListMap;//Counter and item list
+    volatile  int capacity;
     volatile int min = -1;
 
     public LFUCache(int capacity) {
-        cap = capacity;
-        vals = new ConcurrentHashMap<>();
-        counts = new ConcurrentHashMap<>();
-        lists = new ConcurrentHashMap<>();
-        lists.put(1, new LinkedHashSet<String>());
+        this.capacity = capacity;
+        this.keyValueMap = new ConcurrentHashMap<>();
+        this.keyCountersMap = new ConcurrentHashMap<>();
+        this.counterListMap = new ConcurrentHashMap<>();
+        this.counterListMap.put(1, new LinkedHashSet<String>());
     }
 
     public int get(String key) {
-        if (!vals.containsKey(key))
+        if (!keyValueMap.containsKey(key)) {
             return -1;
-        // Get the count from counts map
-        int count = counts.get(key);
-        // increase the counter
-        counts.put(key, count + 1);
-        // remove the element from the counter to linkedhashset
-        lists.get(count).remove(key);
-
-
-
-        // when current min does not have any data, next one would be the min
-        if (lists.get(count).size() == 0) {
-            if (count > 1) {
-                lists.remove(count);
-            }
-            if (count == min) {
-                min++;
-            }
         }
-
-        if (!lists.containsKey(count + 1))
-            lists.put(count + 1, new LinkedHashSet<String>());
-        lists.get(count + 1).add(key);
-        return vals.get(key);
+        // Get the count from counts map
+        int count = keyCountersMap.get(key);
+        keyCountersMap.put(key, count + 1);  // increase the counter
+        //
+        // remove the element from the counter to linkedhashset
+		Set<String> set1 = counterListMap.get(count);
+		if (set1 != null) {
+			set1.remove(key);
+			//
+			// when current min does not have any data, next one would be the min
+	        if (set1.size() == 0) {
+	            if (count > 1) {
+	                counterListMap.remove(count);
+	            }
+	            if (count == min) {
+	                min++;
+	            }
+	        }
+		}
+		//
+		Set<String> set2 = counterListMap.get(count + 1);
+        if (set2 == null) {
+        	set2 = new LinkedHashSet<String>();
+            counterListMap.put(count + 1, set2);
+        }
+        set2.add(key);
+        return keyValueMap.get(key);
     }
 
     public synchronized void set(String key, int value) {
-        if (cap <= 0)
+        if (capacity <= 0) {
             return;
+        }
         // If key does exist, we are returning from here
-        if (vals.containsKey(key)) {
-            vals.put(key, value);
+        if (keyValueMap.containsKey(key)) {
+            keyValueMap.put(key, value);
             get(key);
             return;
         }
-        if (vals.size() >= cap) {
-            String evit = lists.get(min).iterator().next();
-            lists.get(min).remove(evit);
-            vals.remove(evit);
-            counts.remove(evit);
+        if (keyValueMap.size() >= capacity) {
+        	Set<String> set1 = counterListMap.get(min);
+        	if (set1 != null) {
+	            String evit = set1.iterator().next();
+	            set1.remove(evit);
+	            keyValueMap.remove(evit);
+	            keyCountersMap.remove(evit);
+        	}
         }
+        //
         // If the key is new, insert the value and current min should be 1 of course
-        vals.put(key, value);
-        counts.put(key, 1);
+        keyValueMap.put(key, value);
+        keyCountersMap.put(key, 1);
         min = 1;
-        lists.get(1).add(key);
+        //
+        Set<String> set2 = counterListMap.get(1);
+        if (set2 != null) {
+        	set2.add(key);
+        }
     }
 
     public  Map<String, Integer> getCounts(){
-        return counts;
+        return keyCountersMap;
     }
     
     @SuppressWarnings("unchecked")
 	public List<Counter<String>> getTop(){
          LinkedList<Counter<String>> counterList =new LinkedList<>();
-        for (Map.Entry<String,Integer> entry:counts.entrySet()){
+        for (Map.Entry<String,Integer> entry:keyCountersMap.entrySet()){
             counterList.add(new Counter<String>(entry.getKey(),entry.getValue()));
         }
         Collections.sort(counterList, DESC_COMPARATOR);
@@ -106,9 +119,9 @@ public class LFUCache {
     };
 
     public void  clear(){
-        vals.clear();
-        counts.clear();
-        lists.clear();
+        keyValueMap.clear();
+        keyCountersMap.clear();
+        counterListMap.clear();
     }
 
 }
