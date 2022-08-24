@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 //
-//
 public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     
 	private RedisRequest request = null;
@@ -20,14 +19,9 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     private int readOffset;
     
     private State state = State.READ_SKIP;
-    //
-    private static final int MIN_ARG_COUNT = 1;
-    private static final int MAX_ARG_COUNT = 4096;
-    private static final int MIN_ARG_LENGTH = 1;
-    private static final int MAX_ARG_LENGTH = 1024 * 1024 * 64; // 64MB
-    //
-    private static final int MAX_BYTES = 1024 * 1024 * 128; // 128MB
-    //
+    
+    private static final int MAX_BYTES = 1024 * 1024 * 64; // 64MB
+
     @Override
     public List<RedisRequest> decode(byte[] buffer) throws UnknowProtocolException {
         append(buffer);
@@ -83,7 +77,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     }
                     case READ_ARG_COUNT: {
                         argCount = readInt();
-                        if ( argCount < MIN_ARG_COUNT || argCount > MAX_ARG_COUNT )	// Fix attack
+                        if ( argCount < 1 || argCount > 4096 )	// Fix attack
                         	throw new UnknowProtocolException("Args error, argCount=" + argCount);
                         //
                         byte[][] args = new byte[argCount][];
@@ -94,9 +88,6 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                     case READ_ARG_LENGTH: {
                         // 读取参数长度给下个阶段READ_ARG使用
                         argLength = readInt();
-                        if ( argLength < MIN_ARG_LENGTH || argLength > MAX_ARG_LENGTH )	// Fix attack
-                        	throw new UnknowProtocolException("Args error, argLength=" + argLength);
-                        //
                         argIndex++;
                         this.state = State.READ_ARG;
                         break;
@@ -114,7 +105,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
                         // 处理粘包
                         if (compositeArray.getByteCount() < readOffset) {
                             throw new IndexOutOfBoundsException("Not enough data.");
-                            //
+                            
                         } else if (compositeArray.getByteCount() == readOffset) {
                             if (argCount == argIndex + 1) {
                                 pipeline.add(request);

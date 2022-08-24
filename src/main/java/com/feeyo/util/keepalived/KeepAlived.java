@@ -60,7 +60,7 @@ public class KeepAlived {
 					}
 					
 				} catch (JedisConnectionException e) {
-					LOGGER.info("###self check### err:", e);	
+					LOGGER.info("###self check### err: {}, {}", port, authString, e);	
 				} finally {
 					if (conn != null) {
 						conn.close();
