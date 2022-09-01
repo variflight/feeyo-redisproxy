@@ -26,7 +26,7 @@ public class RedisRequestDecoderV2 implements Decoder<List<RedisRequest>> {
     public List<RedisRequest> decode(byte[] buffer) throws UnknowProtocolException {
         append(buffer);
         //
-        if (compositeArray != null && compositeArray.getByteCount() > MAX_BYTES) {
+        if (compositeArray != null && compositeArray.remaining(readOffset)> MAX_BYTES) {
         	throw new UnknowProtocolException("Maximum limit exceeded");
         }
 

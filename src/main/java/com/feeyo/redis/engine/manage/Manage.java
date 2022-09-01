@@ -44,7 +44,6 @@ import com.feeyo.util.JavaUtils;
 import com.feeyo.util.ShellUtils;
 import com.feeyo.util.Versions;
 import com.feeyo.util.jedis.JedisConnection;
-import com.feeyo.util.topn.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -380,28 +379,6 @@ public class Manage {
                         bodySB.append(ipCommand.readComandCount.get()).append("  ");
                         bodySB.append(ipCommand.writeCommandCount.get()).append("  ");
                         bodySB.append( ipCommand.readComandCount.get() + ipCommand.writeCommandCount.get() );
-                        lines.add( bodySB.toString() );
-                    }
-
-                    return encode(lines);
-
-                    // SHOW HOT_KEY
-                } else if (arg2.equalsIgnoreCase("HOT_KEY")) {
-
-                    List<String> lines = new ArrayList<String>();
-
-                    StringBuffer titleSB = new StringBuffer();
-                    titleSB.append("KEY").append("      ");
-                    titleSB.append("COUNT").append("      ");
-                    lines.add(titleSB.toString());
-
-                    //
-                    List<Counter<String>> entrys = StatUtil.getHotKeyCountMap();
-                    for (Counter<String> entry : entrys) {
-                        //
-                        StringBuffer bodySB = new StringBuffer();
-                        bodySB.append(entry.getItem()).append("  ");
-                        bodySB.append(entry.getCount()).append("  ");
                         lines.add( bodySB.toString() );
                     }
 
