@@ -53,12 +53,14 @@ public class RedisFrontSession {
 	public static final byte[] ERR_NO_AUTH_NO_PASSWORD = "-ERR Client sent AUTH, but no password is set\r\n".getBytes();
 	public static final byte[] ERR_PIPELINE_BACKEND = "-ERR pipeline error\r\n".getBytes();
 	public static final byte[] ERR_INVALID_COMMAND = "-ERR invalid command exist.\r\n".getBytes();
-	
+	public static final byte[] ERR_NO_PROTO_HELLO4 = "-NOPROTO sorry this protocol version is not supported\r\n".getBytes();
+	public static final byte[] ERR_NO_HELLO = "-ERR unknown command 'HELLO'\r\n".getBytes();
+	//
 	public static final String NOT_SUPPORTED = "Not supported.";
 	public static final String NOT_ADMIN_USER = "Not supported:manage cmd but not admin user.";
 	public static final String UNKNOW_COMMAND = "Unknow command.";
 	public static final String NOT_READ_COMMAND = "Not read command.";
-
+	//
 	public static final byte[] NULL =  "$-1\r\n".getBytes();
 	
 	// PUBSUB
@@ -71,7 +73,7 @@ public class RedisFrontSession {
 	private long requestTimeMills; 
 	
     // 解析器 
-	private RedisRequestDecoderV2 requestDecoder = new RedisRequestDecoderV2();
+	private RedisRequestDecoderV2 requestDecoderV2 = new RedisRequestDecoderV2();
 	
 	private AbstractCommandHandler defaultCommandHandler;
 	private AbstractCommandHandler segmentCommandHandler;
@@ -99,7 +101,7 @@ public class RedisFrontSession {
 		
 		try {
 			// parse
-			requests = requestDecoder.decode(byteBuff);
+			requests = requestDecoderV2.decode(byteBuff);
 			if (requests == null || requests.size() == 0 ) {
 				return;
 			}
@@ -126,22 +128,58 @@ public class RedisFrontSession {
 						return;
 					
 					// ECHO
-					} else if ( (cmd[0] == 'E' || cmd[0] == 'e') && (cmd[1] == 'C' || cmd[1] == 'c') 
-							 && (cmd[2] == 'H' || cmd[2] == 'h') && (cmd[3] == 'O' || cmd[3] == 'o') ) {
+					} else if ( (cmd[0] == 'E' || cmd[0] == 'e') 
+							&& (cmd[1] == 'C' || cmd[1] == 'c') 
+							&& (cmd[2] == 'H' || cmd[2] == 'h') 
+							&& (cmd[3] == 'O' || cmd[3] == 'o') ) {
 						echo( firstRequest );
 						return;
 
 					// PING
-					} else if ( (cmd[0] == 'P' || cmd[0] == 'p') && (cmd[1] == 'I' || cmd[1] == 'i') 
-							 && (cmd[2] == 'N' || cmd[2] == 'n') && (cmd[3] == 'G' || cmd[3] == 'g') ) {
+					} else if ( (cmd[0] == 'P' || cmd[0] == 'p') 
+							&& (cmd[1] == 'I' || cmd[1] == 'i') 
+							&& (cmd[2] == 'N' || cmd[2] == 'n') 
+							&& (cmd[3] == 'G' || cmd[3] == 'g') ) {
 						frontCon.write(PONG);
 						return;
 						
 					// QUIT
-					} else if ( (cmd[0] == 'Q' || cmd[0] == 'q') && (cmd[1] == 'U' || cmd[1] == 'u') 
-							 && (cmd[2] == 'I' || cmd[2] == 'i') && (cmd[3] == 'T' || cmd[3] == 't') ) {
+					} else if ( (cmd[0] == 'Q' || cmd[0] == 'q') 
+							&& (cmd[1] == 'U' || cmd[1] == 'u') 
+							&& (cmd[2] == 'I' || cmd[2] == 'i') 
+							&& (cmd[3] == 'T' || cmd[3] == 't') ) {
 						frontCon.write(OK);
 						frontCon.close("quit");
+						return;
+					}
+				} else if ( len == 5 ) {
+					//
+					// https://github.com/redis/redis-specifications/blob/master/protocol/RESP3.md
+					// The HELLO command and connection handshake
+					// HELLO <protocol-version> [AUTH <username> <password>]
+					//
+					if ( (cmd[0] == 'H' || cmd[0] == 'h') 
+						 && (cmd[1] == 'E' || cmd[1] == 'e') 
+						 && (cmd[2] == 'L' || cmd[2] == 'l') 
+						 && (cmd[3] == 'L' || cmd[3] == 'l')
+						 && (cmd[4] == 'O' || cmd[4] == 'o')) {
+						//
+						// "*5\r\n$5\r\nHELLO\r\n$1\r\n3\r\n$4\r\nAUTH\r\n$7\r\ndefault\r\n$15\r\ntoc_app_service\r\n"
+						/*
+						 	inline=false
+							arg=HELLO
+							arg=3
+							arg=AUTH
+							arg=default
+							arg=toc_app_service
+						 */
+						
+						//
+						// Then the client may retry with a lower protocol version.
+						// Similarly the client can easily detect a server that is only able to speak RESP2:
+						// Client: HELLO 3 AUTH default mypassword
+						// Server: -ERR unknown command 'HELLO'
+						frontCon.write(ERR_NO_HELLO);
 						return;
 					}
 					
@@ -278,11 +316,11 @@ public class RedisFrontSession {
 
 		} catch (UnknowProtocolException e11) {
 			frontCon.close("unknow redis client .");
-			requestDecoder.reset(); // fast GC
+			requestDecoderV2.reset(); // fast GC
 			//
 		} catch (Throwable e12) {
 			frontCon.close(e12.getMessage());
-			requestDecoder.reset(); // fast GC
+			requestDecoderV2.reset(); // fast GC
 			//
 		} finally {
 			if (isImmediateReleaseConReadLock)

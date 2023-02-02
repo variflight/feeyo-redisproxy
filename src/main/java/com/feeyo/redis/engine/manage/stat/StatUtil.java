@@ -8,7 +8,6 @@ import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.Command;
 import com.feeyo.redis.engine.manage.stat.CmdAccessCollector.UserCommand;
 import com.feeyo.redis.engine.manage.stat.SlowKeyColletor.SlowKey;
 import com.feeyo.redis.engine.manage.stat.UserFlowCollector.UserFlow;
-import com.feeyo.util.topn.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,9 +29,7 @@ public class StatUtil {
 	private static Logger LOGGER = LoggerFactory.getLogger( StatUtil.class );
 	
 	public static final String STAT_KEY = "RedisProxyStat";
-
-
-	
+	//
 	public static final int SLOW_COST = 50; 			  			// 超过50毫秒	
 	public static final int STATISTIC_PEROID = 30; 		  			// 30秒
 	
